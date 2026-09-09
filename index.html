@@ -181,7 +181,7 @@
         // ==========================================
         // 🛠️ 請將下方雙引號內換成您自己的 Google Apps Script 網址
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrX7dpfRIdzTZu_f0fD7IymyU8gZKt5BxSo6FtwXs0nRyBoQkNxRsd9c_rFf105p5K/exec"; 
+        const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
         
         let attendanceData = {};
         let viewDate = new Date(); 
@@ -192,7 +192,7 @@
         }
 
         function loadCloudData() {
-            if (GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzrX7dpfRIdzTZu_f0fD7IymyU8gZKt5BxSo6FtwXs0nRyBoQkNxRsd9c_rFf105p5K/exec") {
+            if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
                 hideLoading();
                 initCalendar();
                 return;
@@ -293,3 +293,4 @@
                         noteDiv.className = 'note';
                         noteDiv.innerText = attendanceData[dateKey].note;
                         noteDiv.title = attendanceData[dateKey].note;
+                        dayDiv.appendChild(noteDiv);}}grid.appendChild(dayDiv);}}function changeMonth(direction) {viewDate.setMonth(viewDate.getMonth() + direction);initCalendar();}function checkIn() {const note = prompt("🎉 歡迎回家！要留給爸爸媽媽什麼備註嗎？(選填):");if (note === null) return;const dateKey = ${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')};const now = new Date();const timeStr = ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')};attendanceData[dateKey] = { checked: true, note: note, time: timeStr };saveData(dateKey, 'checkin', note);}function cancelCheckIn() {if (confirm("確定要移除今天的打卡紀錄嗎？")) {const dateKey = ${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')};delete attendanceData[dateKey];saveData(dateKey, 'cancel', '');}}function saveData(date, action, note) {localStorage.setItem('checkInDB', JSON.stringify(attendanceData));initCalendar();document.getElementById('loadingView').style.display = 'flex';document.getElementById('loadingView').innerText = "正在同步資料至雲端...";fetch(GOOGLE_SCRIPT_URL, {method: 'POST',mode: 'no-cors',headers: { 'Content-Type': 'text/plain;charset=utf-8' },body: JSON.stringify({ date: date, action: action, note: note })}).then(() => {setTimeout(loadCloudData, 1200);}).catch(error => {console.error('Error:', error);alert('同步時發生錯誤，本地已保留紀錄。');hideLoading();});}window.onload = loadCloudData;
