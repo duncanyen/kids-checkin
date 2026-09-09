@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寶貝回家打卡系統</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --primary-light: #e8f5e9;
+            --accent-color: #4caf50;
+            --cancel-color: #e53935;
+            --bg-color: #f4f9f4;
+            --today-bg: #fffde7;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
+            background-color: var(--bg-color);
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 25px;
+        }
+        button {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px 28px;
+            margin: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-check {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        .btn-cancel {
+            background-color: var(--cancel-color);
+            color: white;
+        }
+        .calendar-container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .calendar-header {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+        }
+        .month-btn {
+            background: none;
+            border: none;
+            box-shadow: none;
+            font-size: 20px;
+            color: var(--primary-color);
+            padding: 5px 15px;
+            margin: 0;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .weekday {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            padding: 12px 0;
+            border-radius: 4px;
+            color: #666;
+        }
+        .day {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            min-height: 85px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+        }
+        .day .date-num {
+            font-size: 14px;
+            font-weight: bold;
+            color: #777;
+            align-self: flex-start;
+        }
+        .day .status {
+            font-size: 26px;
+            color: var(--accent-color);
+            font-weight: bold;
+            line-height: 1;
+            margin: 4px 0;
+        }
+        .day .note {
+            font-size: 11px;
+            color: #555;
+            background: var(--primary-light);
+            border-radius: 3px;
+            padding: 2px 4px;
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+        .today {
+            border: 2px solid var(--primary-color);
+            background-color: var(--today-bg);
+        }
+        .today .date-num {
+            color: var(--primary-color);
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(250,250,250,0.8);
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loading-overlay" id="loadingView">連線中，請稍候...</div>
+
+    <h1>🏡 小朋友回家打卡系統</h1>
+    
+    <div class="controls">
+        <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
+        <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button class="month-btn" onclick="changeMonth(-1)">❮</button>
+            <span id="calendarMonth">2026 年 9 月</span>
+            <button class="month-btn" onclick="changeMonth(1)">❯</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+            <!-- 由 JavaScript 動態渲染 -->
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🛠️ 請在下方雙引號內填入您的 Google Apps Script 網址
+        // ==========================================
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUyjqGw-ASHqAUf33P0NjpqsaAWpabIbPlmnkQlllMfMQHKfzKdZglesI3FAvGUzOn/exec"; 
+        
+        // 本地快取快照，確保斷網或未連網時仍有基礎紀錄
+        let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
+
+        let viewDate = new Date(); // 當前切換查看的月分
+        const today = new Date();  // 真正的今天
+
+        // 初始化與渲染日曆
+        function initCalendar() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
+            
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            // 1. 星期標題
+            const weeks = ['日', '一', '二', '三', '四', '五', '六'];
+            weeks.forEach(w => {
+                const div = document.createElement('div');
+                div.className = 'weekday';
+                div.innerText = w;
+                grid.appendChild(div);
+            });
+
+            // 2. 計算日期邊界
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            // 3. 填充當月第一天之前的空格
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            // 4. 生成日期格子
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day';
+                
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                // 高亮標記「今天」
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    dayDiv.classList.add('today');
+                }
+
+                // 日期數字
+                const numSpan = document.createElement('span');
+                numSpan.className = 'date-num';
+                numSpan.innerText = day;
+                dayDiv.appendChild(numSpan);
+
+                // 檢查並渲染打卡勾選狀態
+                if (attendanceData[dateKey]) {
+                    const statusSpan = document.createElement('span');
+                    statusSpan.className = 'status';
+                    statusSpan.innerText = '✓';
+                    dayDiv.appendChild(statusSpan);
+
+                    if (attendanceData[dateKey].note) {
+                        const noteDiv = document.createElement('div');
+                        noteDiv.className = 'note';
+                        noteDiv.innerText = attendanceData[dateKey].note;
+                        noteDiv.title = attendanceData[dateKey].note;
+                        dayDiv.appendChild(noteDiv);
+                    }
+                }
+
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        // 月份切換邏輯
+        function changeMonth(direction) {
+            viewDate.setMonth(viewDate.getMonth() + direction);
+            initCalendar();
+        }
+
+        // 點擊打卡
+        function checkIn() {
+            const note = prompt("🎉 歡迎回家！要留給爸爸媽媽什麼備註嗎？(選填):");
+            if (note === null) return; // 使用者按取消
+
+            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            attendanceData[dateKey] = { checked: true, note: note };
+            saveData(dateKey, 'checkin', note);
+        }
+
+        // 取消打卡
+        function cancelCheckIn() {
+            if (confirm("確定要移除今天的打卡紀錄嗎？")) {
+                const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                if (attendanceData[dateKey]) {
+                    delete attendanceData[dateKey];
+                    saveData(dateKey, 'cancel', '');
+                } else {
+                    alert('今天本來就沒有打卡紀錄喔！');
+                }
+            }
+        }
+
+        // 資料儲存與 API 傳送
+        function saveData(date, action, note) {
+            // 先儲存在本地瀏覽器做即時預覽
+            localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
+            initCalendar();
+
+            // 若尚未更換網址，僅顯示本地操作
+            if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+                alert('本地更新成功！(請記得將程式碼中的 API 網址替換為您的 Google Apps Script 網址以達成雲端同步。)');
+                return;
+            }
+
+            // 顯示連線中遮罩
+            document.getElementById('loadingView').style.display = 'flex';
+
+            // 同步發送至 Google Sheets 後端
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // 避免跨網域封鎖
+                headers: { 'Content-Type': 'application/json' },
