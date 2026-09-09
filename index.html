@@ -172,7 +172,7 @@
         // ==========================================
         // 🛠️ 請將下方雙引號內換成您自己的 Google Apps Script 網址
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrX7dpfRIdzTZu_f0fD7IymyU8gZKt5BxSo6FtwXs0nRyBoQkNxRsd9c_rFf105p5K/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMGUq7hXt4k0a6FXNmfQ9ndeX-48GZTXQcF5gb6awiSgheeLkFH_d01CaT3hwSS_iF/exec"; 
         
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
@@ -267,7 +267,7 @@
             localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
             initCalendar();
 
-            if (GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzrX7dpfRIdzTZu_f0fD7IymyU8gZKt5BxSo6FtwXs0nRyBoQkNxRsd9c_rFf105p5K/exec") {
+            if (GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbwMGUq7hXt4k0a6FXNmfQ9ndeX-48GZTXQcF5gb6awiSgheeLkFH_d01CaT3hwSS_iF/exec") {
                 alert('本地更新成功！(請記得替換為您的 API 網址以啟用雲端同步。)');
                 return;
             }
