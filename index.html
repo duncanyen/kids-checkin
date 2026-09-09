@@ -92,7 +92,7 @@
         .day {
             border: 1px solid #e0e0e0;
             border-radius: 4px;
-            min-height: 95px;
+            min-height: 85px;
             padding: 6px;
             display: flex;
             flex-direction: column;
@@ -106,21 +106,12 @@
             color: #777;
             align-self: flex-start;
         }
-        .day .time-stamp {
-            font-size: 12px;
-            font-weight: bold;
-            color: #e65100;
-            background-color: #fff3e0;
-            padding: 1px 4px;
-            border-radius: 3px;
-            margin-top: 2px;
-        }
         .day .status {
-            font-size: 24px;
+            font-size: 26px;
             color: var(--accent-color);
             font-weight: bold;
             line-height: 1;
-            margin: 2px 0;
+            margin: 4px 0;
         }
         .day .note {
             font-size: 11px;
@@ -142,7 +133,7 @@
             color: var(--primary-color);
         }
         .loading-overlay {
-            display: flex;
+            display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(250,250,250,0.8);
@@ -157,7 +148,7 @@
 </head>
 <body>
 
-    <div class="loading-overlay" id="loadingView">同步雲端資料中，請稍候...</div>
+    <div class="loading-overlay" id="loadingView">連線中，請稍候...</div>
 
     <h1>🏡 小朋友回家打卡系統</h1>
     
@@ -181,59 +172,11 @@
         // ==========================================
         // 🛠️ 請將下方雙引號內換成您自己的 Google Apps Script 網址
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrX7dpfRIdzTZu_f0fD7IymyU8gZKt5BxSo6FtwXs0nRyBoQkNxRsd9c_rFf105p5K/exec"; 
         
-        let attendanceData = {};
+        let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
         const today = new Date();  
-
-        function hideLoading() {
-            document.getElementById('loadingView').style.display = 'none';
-        }
-
-        function loadCloudData() {
-            if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-                hideLoading();
-                initCalendar();
-                return;
-            }
-
-            document.getElementById('loadingView').style.display = 'flex';
-            document.getElementById('loadingView').innerText = "同步雲端資料中，請稍候...";
-
-            // 防死鎖：設定 3.5 秒強制逾時，避免網頁無限轉圈
-            const timeoutId = setTimeout(() => {
-                console.warn('Cloud sync timeout.');
-                fallbackToLocal('雲端連線逾時，已為您載入暫存資料。');
-            }, 3500);
-
-            fetch(GOOGLE_SCRIPT_URL)
-            .then(response => {
-                if (!response.ok) throw new Error('Network response error');
-                return response.json();
-            })
-            .then(data => {
-                clearTimeout(timeoutId);
-                attendanceData = data || {};
-                // 同步成功，順便備份一份到本地，斷網時可以用
-                localStorage.setItem('checkInDB_backup', JSON.stringify(attendanceData));
-                initCalendar();
-                hideLoading();
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                console.error('Error fetching data:', error);
-                fallbackToLocal('無法與雲端連線，目前顯示本機快取。');
-            });
-        }
-
-        function fallbackToLocal(message) {
-            attendanceData = JSON.parse(localStorage.getItem('checkInDB_backup')) || JSON.parse(localStorage.getItem('checkInDB')) || {};
-            initCalendar();
-            hideLoading();
-            // 只在後台提示，不彈窗打擾小朋友
-            console.log(message); 
-        }
 
         function initCalendar() {
             const year = viewDate.getFullYear();
@@ -276,13 +219,6 @@
                 dayDiv.appendChild(numSpan);
 
                 if (attendanceData[dateKey]) {
-                    if (attendanceData[dateKey].time) {
-                        const timeSpan = document.createElement('span');
-                        timeSpan.className = 'time-stamp';
-                        timeSpan.innerText = attendanceData[dateKey].time;
-                        dayDiv.appendChild(timeSpan);
-                    }
-
                     const statusSpan = document.createElement('span');
                     statusSpan.className = 'status';
                     statusSpan.innerText = '✓';
@@ -293,4 +229,70 @@
                         noteDiv.className = 'note';
                         noteDiv.innerText = attendanceData[dateKey].note;
                         noteDiv.title = attendanceData[dateKey].note;
-                        dayDiv.appendChild(noteDiv);}}grid.appendChild(dayDiv);}}function changeMonth(direction) {viewDate.setMonth(viewDate.getMonth() + direction);initCalendar();}function checkIn() {const note = prompt("🎉 歡迎回家！要留給爸爸媽媽什麼備註嗎？(選填):");if (note === null) return;const dateKey = ${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')};const now = new Date();const timeStr = ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')};attendanceData[dateKey] = { checked: true, note: note, time: timeStr };saveData(dateKey, 'checkin', note);}function cancelCheckIn() {if (confirm("確定要移除今天的打卡紀錄嗎？")) {const dateKey = ${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')};delete attendanceData[dateKey];saveData(dateKey, 'cancel', '');}}function saveData(date, action, note) {localStorage.setItem('checkInDB', JSON.stringify(attendanceData));initCalendar();document.getElementById('loadingView').style.display = 'flex';document.getElementById('loadingView').innerText = "正在同步資料至雲端...";fetch(GOOGLE_SCRIPT_URL, {method: 'POST',mode: 'no-cors',headers: { 'Content-Type': 'text/plain;charset=utf-8' },body: JSON.stringify({ date: date, action: action, note: note })}).then(() => {setTimeout(loadCloudData, 1200);}).catch(error => {console.error('Error:', error);alert('同步時發生錯誤，本地已保留紀錄。');hideLoading();});}window.onload = loadCloudData;
+                        dayDiv.appendChild(noteDiv);
+                    }
+                }
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function changeMonth(direction) {
+            viewDate.setMonth(viewDate.getMonth() + direction);
+            initCalendar();
+        }
+
+        function checkIn() {
+            const note = prompt("🎉 歡迎回家！要留給爸爸媽媽什麼備註嗎？(選填):");
+            if (note === null) return; 
+
+            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            attendanceData[dateKey] = { checked: true, note: note };
+            saveData(dateKey, 'checkin', note);
+        }
+
+        function cancelCheckIn() {
+            if (confirm("確定要移除今天的打卡紀錄嗎？")) {
+                const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                if (attendanceData[dateKey]) {
+                    delete attendanceData[dateKey];
+                    saveData(dateKey, 'cancel', '');
+                } else {
+                    alert('今天本來就沒有打卡紀錄喔！');
+                }
+            }
+        }
+
+        function saveData(date, action, note) {
+            localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
+            initCalendar();
+
+            if (GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzrX7dpfRIdzTZu_f0fD7IymyU8gZKt5BxSo6FtwXs0nRyBoQkNxRsd9c_rFf105p5K/exec") {
+                alert('本地更新成功！(請記得替換為您的 API 網址以啟用雲端同步。)');
+                return;
+            }
+
+            document.getElementById('loadingView').style.display = 'flex';
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ date: date, action: action, note: note })
+            })
+            .then(() => {
+                alert('發送完成！');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('同步時發生錯誤，本地已保留紀錄。');
+            })
+            .finally(() => {
+                document.getElementById('loadingView').style.display = 'none';
+            });
+        }
+
+        window.onload = initCalendar;
+    </script>
+</body>
+</html>
