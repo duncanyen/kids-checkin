@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>寶貝回家打卡系統</title>
+    <title>程寶回家打卡系統</title>
     <style>
         :root {
             --primary-color: #2e7d32;
@@ -16,13 +16,98 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
             background-color: var(--bg-color);
-            text-align: center;
             margin: 0;
             padding: 20px;
             color: #333;
         }
-        h1 {
+        
+        /* === 登入畫面樣式 === */
+        #loginView {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+        #loginView h1 {
             color: var(--primary-color);
+            margin-bottom: 40px;
+        }
+        .user-selection {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap; /* 手機版自動換行 */
+        }
+        .user-card {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            width: 120px;
+        }
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            margin: 0 auto 15px auto;
+            border: 3px solid var(--primary-color);
+        }
+        .user-name-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #444;
+        }
+
+        /* === 打卡主系統樣式 === */
+        #mainSystemView {
+            display: none; /* 預設隱藏，登入後顯示 */
+            text-align: center;
+        }
+
+        /* 右上角登入身分標籤 */
+        .header-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .current-user-badge {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--primary-color);
+            transition: background 0.2s;
+        }
+        .current-user-badge:hover {
+            background: #f0f0f0;
+        }
+        .logout-text {
+            font-size: 12px;
+            color: #888;
+            font-weight: normal;
+        }
+
+        h1.system-title {
+            color: var(--primary-color);
+            margin-top: 0;
             margin-bottom: 20px;
         }
         .controls {
@@ -113,7 +198,6 @@
             line-height: 1;
             margin: 0;
         }
-        /* 新增的打卡時間樣式 */
         .day .time {
             font-size: 12px;
             color: #888;
@@ -160,21 +244,55 @@
         <span id="loadingText">連線中，請稍候...</span>
     </div>
 
-    <h1>🏡 小朋友回家打卡系統</h1>
-    
-    <div class="controls">
-        <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
-        <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
+    <!-- ================= 登入選擇畫面 ================= -->
+    <div id="loginSection">
+        <div id="loginView">
+            <h1>👋 請問你是哪一位呢？</h1>
+            <div class="user-selection">
+                <div class="user-card" onclick="login('程寶', '👦')">
+                    <div class="avatar">👦</div>
+                    <div class="user-name-title">程寶</div>
+                </div>
+                <div class="user-card" onclick="login('媽咪', '👩')">
+                    <div class="avatar">👩</div>
+                    <div class="user-name-title">媽咪</div>
+                </div>
+                <div class="user-card" onclick="login('爸爸', '👨')">
+                    <div class="avatar">👨</div>
+                    <div class="user-name-title">爸爸</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="calendar-container">
-        <div class="calendar-header">
-            <button class="month-btn" onclick="changeMonth(-1)">❮</button>
-            <span id="calendarMonth">月份載入中...</span>
-            <button class="month-btn" onclick="changeMonth(1)">❯</button>
+    <!-- ================= 打卡主系統畫面 ================= -->
+    <div id="mainSystemView">
+        
+        <!-- 右上角使用者標籤 -->
+        <div class="header-bar">
+            <div class="current-user-badge" onclick="logout()" title="點擊切換使用者">
+                <span id="displayUserIcon"></span>
+                <span id="displayUserName"></span>
+                <span class="logout-text">(登出)</span>
+            </div>
         </div>
-        <div class="calendar-grid" id="calendarGrid">
-            <!-- 由 JavaScript 動態渲染 -->
+
+        <h1 class="system-title">🏡 小朋友回家打卡系統</h1>
+        
+        <div class="controls">
+            <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
+            <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
+        </div>
+
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button class="month-btn" onclick="changeMonth(-1)">❮</button>
+                <span id="calendarMonth">月份載入中...</span>
+                <button class="month-btn" onclick="changeMonth(1)">❯</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- 由 JavaScript 動態渲染 -->
+            </div>
         </div>
     </div>
 
@@ -187,8 +305,56 @@
         let attendanceData = {};
         let viewDate = new Date(); 
         const today = new Date();  
+        
+        // 記錄目前登入的使用者
+        let currentUser = { name: '', icon: '' };
 
-        // 網頁啟動時，先去 Google Sheet 抓最新資料
+        // 網頁啟動時，檢查是否有登入紀錄
+        function initApp() {
+            const savedUser = localStorage.getItem('familyCheckInUser');
+            if (savedUser) {
+                // 如果有紀錄，直接進入主系統並載入資料
+                currentUser = JSON.parse(savedUser);
+                showMainSystem();
+            } else {
+                // 如果沒紀錄，顯示登入畫面
+                showLoginScreen();
+            }
+        }
+
+        // 點擊頭像登入
+        function login(name, icon) {
+            currentUser = { name: name, icon: icon };
+            localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+            showMainSystem();
+        }
+
+        // 登出 (切換使用者)
+        function logout() {
+            localStorage.removeItem('familyCheckInUser');
+            showLoginScreen();
+        }
+
+        function showLoginScreen() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('mainSystemView').style.display = 'none';
+        }
+
+        function showMainSystem() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainSystemView').style.display = 'block';
+            
+            // 更新右上角的名稱與圖示
+            document.getElementById('displayUserIcon').innerText = currentUser.icon;
+            document.getElementById('displayUserName').innerText = currentUser.name;
+
+            // 進入系統後，載入雲端打卡資料
+            loadData();
+        }
+
+        // ==========================================
+        // 核心打卡功能 (與上一版相同)
+        // ==========================================
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在同步雲端資料...';
@@ -196,20 +362,17 @@
             fetch(GOOGLE_SCRIPT_URL)
                 .then(response => response.json())
                 .then(data => {
-                    // 將雲端拿回來的資料覆蓋到本地端
                     attendanceData = data;
                     localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
                     initCalendar();
                 })
                 .catch(error => {
                     console.error('讀取雲端資料失敗:', error);
-                    // 如果斷網或出錯，退回使用本地端紀錄
                     attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
                     initCalendar();
                 })
                 .finally(() => {
                     document.getElementById('loadingView').style.display = 'none';
-                    document.getElementById('loadingText').innerText = '連線中，請稍候...';
                 });
         }
 
@@ -254,13 +417,11 @@
                 dayDiv.appendChild(numSpan);
 
                 if (attendanceData[dateKey]) {
-                    // 顯示打勾
                     const statusSpan = document.createElement('span');
                     statusSpan.className = 'status';
                     statusSpan.innerText = '✓';
                     dayDiv.appendChild(statusSpan);
 
-                    // 新增：顯示打卡時間
                     if (attendanceData[dateKey].time) {
                         const timeDiv = document.createElement('div');
                         timeDiv.className = 'time';
@@ -268,7 +429,6 @@
                         dayDiv.appendChild(timeDiv);
                     }
 
-                    // 顯示備註
                     if (attendanceData[dateKey].note) {
                         const noteDiv = document.createElement('div');
                         noteDiv.className = 'note';
@@ -287,32 +447,33 @@
         }
 
         function checkIn() {
-            const note = prompt("🎉 歡迎回家！要留給爸爸媽媽什麼備註嗎？(選填):");
+            // 在提示框中加入使用者稱呼，感覺更親切
+            const note = prompt(`🎉 歡迎！${currentUser.name}，要留什麼備註嗎？(選填):`);
             if (note === null) return; 
 
-            // 取得現在的時間 (小時:分鐘)
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             
             attendanceData[dateKey] = { checked: true, note: note, time: timeStr };
-            saveData(dateKey, 'checkin', note, timeStr);
+            
+            // 將操作者 (currentUser.name) 一起傳給後端
+            saveData(dateKey, 'checkin', note, timeStr, currentUser.name);
         }
 
         function cancelCheckIn() {
-            if (confirm("確定要移除今天的打卡紀錄嗎？")) {
+            if (confirm(`確定要移除今天的打卡紀錄嗎？\n(操作者: ${currentUser.name})`)) {
                 const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                 if (attendanceData[dateKey]) {
                     delete attendanceData[dateKey];
-                    saveData(dateKey, 'cancel', '', '');
+                    saveData(dateKey, 'cancel', '', '', currentUser.name);
                 } else {
                     alert('今天本來就沒有打卡紀錄喔！');
                 }
             }
         }
 
-        // 新增接收 time 參數
-        function saveData(date, action, note, time) {
+        function saveData(date, action, note, time, operator) {
             localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
             initCalendar();
 
@@ -324,15 +485,15 @@
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '資料寫入雲端中...';
 
+            // 這裡把 operator (操作者) 一起打包進去，雖然目前的 Apps Script 沒用到，但方便未來擴充！
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                // 已移除 mode: 'no-cors' 以獲得更穩定的資料回傳
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ date: date, action: action, note: note, time: time })
+                body: JSON.stringify({ date: date, action: action, note: note, time: time, operator: operator })
             })
             .then(response => response.json())
             .then(() => {
-                alert('發送完成！');
+                // 靜默完成，不一直跳 Alert 比較順暢
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -340,12 +501,11 @@
             })
             .finally(() => {
                 document.getElementById('loadingView').style.display = 'none';
-                document.getElementById('loadingText').innerText = '連線中，請稍候...';
             });
         }
 
-        // 啟動時改為執行 loadData，載入完成後才會呼叫 initCalendar
-        window.onload = loadData;
+        // 啟動程式 (改由 initApp 進行登入判斷)
+        window.onload = initApp;
     </script>
 </body>
 </html>
