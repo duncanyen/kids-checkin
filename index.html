@@ -393,27 +393,43 @@
             const text = input.value.trim();
             if (!text) return;
 
-            input.value = ''; // 清空輸入框
+            input.value = ''; // 瞬間清空輸入框
             
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-            // 1. 先把自己的訊息顯示在畫面上 (追求速度感)
+            // 1. 🚀 瞬間把自己的訊息顯示在畫面上 (秒現，給使用者無延遲的體驗)
             appendMessageUI(currentUser.name, text, timeStr);
 
-            // 2. 背景傳送給 Google Apps Script
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ 
-                    action: 'sendChat', 
-                    date: currentChatDate, 
-                    time: timeStr, 
-                    operator: currentUser.name, 
-                    message: text 
-                })
-            }).catch(e => console.error("傳送訊息失敗:", e));
+            // 2. 透過 JSONP 確保穩固寫入雲端（避開 no-cors 的盲發缺點）
+            const callbackName = 'chatSendCallback_' + new Date().getTime();
+            window[callbackName] = function(res) {
+                // 雲端寫入成功後的清理動作
+                delete window[callbackName];
+                const scriptTag = document.getElementById(callbackName);
+                if (scriptTag) scriptTag.remove();
+            };
+
+            // 將資料包裝成 JSON 透過網址參數傳遞給 Apps Script (POST 改用 GET JSONP 確保高穩定性)
+            const payload = encodeURIComponent(JSON.stringify({ 
+                action: 'sendChat', 
+                date: currentChatDate, 
+                time: timeStr, 
+                operator: currentUser.name, 
+                message: text,
+                callback: callbackName
+            }));
+
+            const script = document.createElement('script');
+            script.id = callbackName;
+            script.src = `${GOOGLE_SCRIPT_URL}?data=${payload}&t=${new Date().getTime()}`;
+            
+            script.onerror = function() {
+                console.error("雲端同步訊息失敗");
+                // 即使雲端網路有狀況，畫面上已經順利顯示了，不影響使用者當下體驗
+            };
+            
+            document.body.appendChild(script);
         }
 
         function appendMessageUI(user, text, time) {
