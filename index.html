@@ -115,7 +115,7 @@
             </div>
         </div>
 
-        <h1 class="system-title">🏡 程寶回家打卡系統</h1>
+        <h1 class="system-title">🏡 小朋友回家打卡系統</h1>
         
         <div class="controls" id="actionControls">
             <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
@@ -155,13 +155,13 @@
         // ==========================================
         // 🛠️ 請替換為您的 Google Apps Script 網址
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxu8TqoBBuYU9IwLoI8PGgEDD8BiEhf6brXZyLN_9f4xs_u_DzEUkIkAFHAnL74uJPm/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnRgd7TMgiua37oks_ETmAeCEBM6My5Z9TBiLTHwDFV-QbUMggBjuhlKiwAtQ5ROBx/exec"; 
         
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
         const today = new Date();  
         let currentUser = { name: '', icon: '' };
-        let currentChatDate = null; 
+        let currentChatDate = null; // 記錄目前打開的聊天室日期
 
         // === 登入邏輯 ===
         function initApp() {
@@ -234,6 +234,7 @@
             };
 
             const script = document.createElement('script');
+            // 這裡加上 type=checkin 讓後端知道是要抓打卡紀錄
             script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
             script.onerror = function() {
                 clearTimeout(loadTimeout);
@@ -277,6 +278,7 @@
                     dayDiv.classList.add('today');
                 }
 
+                // 🌟 設定點擊日曆格子開啟聊天室
                 dayDiv.onclick = () => openChat(dateKey);
 
                 const numSpan = document.createElement('span');
@@ -291,6 +293,7 @@
                     dayDiv.appendChild(statusSpan);
 
                     if (attendanceData[dateKey].time) {
+                        // 修正這裡：確保顯示的時間是乾淨的 HH:mm
                         let displayTime = attendanceData[dateKey].time;
                         let match = String(displayTime).match(/(\d{2}:\d{2})/);
                         if (match) displayTime = match[1];
@@ -310,6 +313,7 @@
             initCalendar();
         }
 
+        // === 打卡寫入邏輯 ===
         function checkIn() {
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -344,31 +348,35 @@
         }
 
         // ==========================================
-        // 🌟 聊天室專屬邏輯 (修復寫入問題版本)
+        // 🌟 聊天室專屬邏輯 (已加入自動更新機制)
         // ==========================================
-        let chatTimer = null; 
+        let chatTimer = null; // 用來控制自動更新的計時器
 
         function openChat(dateKey) {
             currentChatDate = dateKey;
             document.getElementById('chatModal').style.display = 'flex';
             document.getElementById('chatTitle').innerText = `${dateKey} 聯絡簿`;
             
+            // 立即載入一次
             fetchChatMessages(false);
 
+            // 🌟 啟動自動輪詢：每 3 秒自動在背景重新抓取一次聊天紀錄
             if (chatTimer) clearInterval(chatTimer);
             chatTimer = setInterval(() => {
-                fetchChatMessages(true); 
+                fetchChatMessages(true); // 帶入 true 代表是背景安靜更新，不閃爍畫面
             }, 3000);
         }
 
         function closeChat() {
             document.getElementById('chatModal').style.display = 'none';
+            // 關閉聊天室時，立刻清除計時器，省效能也避免浪費流量
             if (chatTimer) {
                 clearInterval(chatTimer);
                 chatTimer = null;
             }
         }
 
+        // 抓取聊天紀錄的核心函數 (isBackground 代表是否為背景安靜更新)
         function fetchChatMessages(isBackground) {
             const msgContainer = document.getElementById('chatMessages');
             
@@ -379,6 +387,7 @@
             const callbackName = 'chatLoadCallback_' + new Date().getTime();
             window[callbackName] = function(messages) {
                 if (Array.isArray(messages)) {
+                    // 記錄目前捲軸是否在最底部，以便決定等下要不要自動滾下去
                     const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 50;
 
                     if (messages.length === 0) {
@@ -386,9 +395,13 @@
                             msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">今天還沒有人說話喔，來打個招呼吧！</div>';
                         }
                     } else {
+                        // 如果原本是提示文字，先清空
                         if (msgContainer.innerHTML.includes('還沒有人說話喔') || msgContainer.innerHTML.includes('讀取訊息中')) {
                             msgContainer.innerHTML = '';
                         }
+
+                        // 重新渲染全部訊息 (這樣對方新說的話就會自動帶進來)
+                        // 為了避免閃爍，我們比對訊息數量，有新增時才重建 DOM
                         renderMessages(messages, isAtBottom);
                     }
                 }
@@ -406,17 +419,20 @@
                     msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路</div>';
                 }
             };
+            
             document.body.appendChild(script);
         }
 
+        // 渲染訊息畫面
         let lastMessageCount = 0;
         function renderMessages(messages, shouldScroll) {
             const container = document.getElementById('chatMessages');
             
+            // 如果訊息數量沒變，且不是初次載入，就不強制重新整理畫面，保持游標流暢
             if (messages.length === lastMessageCount && container.children.length > 0) return;
             lastMessageCount = messages.length;
 
-            container.innerHTML = ''; 
+            container.innerHTML = ''; // 重建畫面
 
             messages.forEach(msg => {
                 const isMine = (msg.user === currentUser.name);
@@ -429,6 +445,7 @@
                 }
                 html += `<div>${msg.message}</div>`;
                 
+                // 處理時間格式，只要 HH:mm
                 let timeStr = msg.time;
                 let match = String(timeStr).match(/(\d{2}:\d{2})/);
                 if (match) timeStr = match[1];
@@ -438,6 +455,7 @@
                 container.appendChild(div);
             });
 
+            // 如果使用者本來就在底部，或者剛發送訊息，自動捲動到最下面
             if (shouldScroll) {
                 container.scrollTop = container.scrollHeight;
             }
@@ -459,17 +477,17 @@
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-            // 1. 🚀 瞬間把自己的訊息顯示在畫面上 (秒現體驗)
+            // 1. 🚀 瞬間把自己的訊息顯示在畫面上 (秒現)
             appendMessageUI(currentUser.name, text, timeStr);
 
-            // 2. 🌟 改用 JSONP 方式透過 GET 傳遞發送聊天訊息，確保 100% 寫入成功
+            // 2. 透過 JSONP 確保穩固寫入雲端
             const callbackName = 'chatSendCallback_' + new Date().getTime();
             window[callbackName] = function(res) {
                 delete window[callbackName];
                 const scriptTag = document.getElementById(callbackName);
                 if (scriptTag) scriptTag.remove();
                 
-                // 寫入成功後立刻背景抓取一次最新聊天紀錄同步
+                // 發送成功後立即強制抓一次最新聊天紀錄，確保同步
                 fetchChatMessages(true);
             };
 
