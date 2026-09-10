@@ -359,21 +359,34 @@
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在同步雲端資料...';
 
-            fetch(GOOGLE_SCRIPT_URL)
-                .then(response => response.json())
-                .then(data => {
-                    attendanceData = data;
-                    localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
-                    initCalendar();
-                })
-                .catch(error => {
-                    console.error('讀取雲端資料失敗:', error);
-                    attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
-                    initCalendar();
-                })
-                .finally(() => {
-                    document.getElementById('loadingView').style.display = 'none';
-                });
+            // 🌟 關鍵修改 1：加入時間戳 (t) 防止瀏覽器快取舊資料
+            const noCacheUrl = GOOGLE_SCRIPT_URL + "?t=" + new Date().getTime();
+
+            // 🌟 關鍵修改 2：加入 redirect: 'follow' 解決 Google 轉址問題
+            fetch(noCacheUrl, {
+                method: 'GET',
+                redirect: 'follow'
+            })
+            .then(response => {
+                // 檢查是否真的成功連線
+                if (!response.ok) throw new Error('網路連線狀態異常');
+                return response.json();
+            })
+            .then(data => {
+                attendanceData = data;
+                localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
+                initCalendar();
+            })
+            .catch(error => {
+                console.error('讀取雲端資料失敗:', error);
+                alert('讀取雲端資料失敗，將顯示本機紀錄。請檢查 API 網址是否正確。');
+                // 斷網或出錯時，退回使用本地端紀錄
+                attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
+                initCalendar();
+            })
+            .finally(() => {
+                document.getElementById('loadingView').style.display = 'none';
+            });
         }
 
         function initCalendar() {
