@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>程寶回家打卡系統</title>
+    <title>寶貝回家打卡系統</title>
     <style>
         :root {
             --primary-color: #2e7d32;
@@ -37,7 +37,7 @@
             display: flex;
             gap: 30px;
             justify-content: center;
-            flex-wrap: wrap; /* 手機版自動換行 */
+            flex-wrap: wrap; 
         }
         .user-card {
             cursor: pointer;
@@ -73,7 +73,7 @@
 
         /* === 打卡主系統樣式 === */
         #mainSystemView {
-            display: none; /* 預設隱藏，登入後顯示 */
+            display: none; 
             text-align: center;
         }
 
@@ -279,7 +279,8 @@
 
         <h1 class="system-title">🏡 小朋友回家打卡系統</h1>
         
-        <div class="controls">
+        <!-- 🌟 新增了 id="actionControls"，方便我們控制顯示或隱藏 -->
+        <div class="controls" id="actionControls">
             <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
             <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
         </div>
@@ -340,6 +341,14 @@
             document.getElementById('displayUserIcon').innerText = currentUser.icon;
             document.getElementById('displayUserName').innerText = currentUser.name;
 
+            // 🌟 === 新增判斷：如果是爸爸或媽咪，隱藏打卡按鈕 === 🌟
+            const actionControls = document.getElementById('actionControls');
+            if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
+                actionControls.style.display = 'none';
+            } else {
+                actionControls.style.display = 'block';
+            }
+
             // 進入系統後，載入雲端打卡資料
             loadData();
         }
@@ -351,18 +360,15 @@
             const now = new Date();
             const targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            // 設定一個計時器，如果 8 秒內沒收到回應，就放棄並使用本地紀錄
             let loadTimeout = setTimeout(() => {
                 console.warn("載入超時，請檢查網路或 API 網址");
                 document.getElementById('loadingView').style.display = 'none';
                 initCalendar();
             }, 8000);
 
-            // 建立 JSONP 回呼函數
             window.googleScriptCallback = function(result) {
-                clearTimeout(loadTimeout); // 成功收到資料，取消計時器
+                clearTimeout(loadTimeout); 
 
-                // 若後端有報錯，顯示在控制台方便除錯
                 if (result.error) console.error("後端回報錯誤:", result.error);
 
                 if (result.checked) {
@@ -497,7 +503,6 @@
                 return;
             }
 
-            // 發送資料時使用 no-cors 模式，避免跨域阻擋寫入
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
