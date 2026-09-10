@@ -357,36 +357,46 @@
         // ==========================================
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
-            document.getElementById('loadingText').innerText = '正在同步雲端資料...';
+            document.getElementById('loadingText').innerText = '正在核對今日打卡狀態...';
 
-            // 🌟 關鍵修改 1：加入時間戳 (t) 防止瀏覽器快取舊資料
-            const noCacheUrl = GOOGLE_SCRIPT_URL + "?t=" + new Date().getTime();
+            // 取得今天的日期 (格式 yyyy-MM-dd)
+            const now = new Date();
+            const targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            // 🌟 關鍵修改 2：加入 redirect: 'follow' 解決 Google 轉址問題
-            fetch(noCacheUrl, {
-                method: 'GET',
-                redirect: 'follow'
-            })
-            .then(response => {
-                // 檢查是否真的成功連線
-                if (!response.ok) throw new Error('網路連線狀態異常');
-                return response.json();
-            })
-            .then(data => {
-                attendanceData = data;
+            // 🌟 建立專屬的 Callback 接收雲端資料
+            window.googleScriptCallback = function(result) {
+                if (result.checked) {
+                    // 雲端確認今天有打卡，更新本地資料
+                    attendanceData[targetDate] = {
+                        checked: true,
+                        time: result.time,
+                        note: result.note
+                    };
+                } else {
+                    // 雲端確認今天沒打卡，刪除本地的假資料
+                    delete attendanceData[targetDate];
+                }
+                
+                // 儲存並刷新日曆畫面
                 localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
                 initCalendar();
-            })
-            .catch(error => {
-                console.error('讀取雲端資料失敗:', error);
-                alert('讀取雲端資料失敗，將顯示本機紀錄。請檢查 API 網址是否正確。');
-                // 斷網或出錯時，退回使用本地端紀錄
-                attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
-                initCalendar();
-            })
-            .finally(() => {
                 document.getElementById('loadingView').style.display = 'none';
-            });
+                delete window.googleScriptCallback; // 接收完畢，清理環境
+            };
+
+            // 🌟 改用動態載入 Script 的方式 (JSONP)，徹底解決 fetch 跨域載入失敗的問題
+            const script = document.createElement('script');
+            // 將今日日期傳給後端，並帶上時間戳(t)防止快取
+            script.src = `${GOOGLE_SCRIPT_URL}?date=${targetDate}&callback=googleScriptCallback&t=${new Date().getTime()}`;
+            
+            script.onerror = function() {
+                console.error("無法載入雲端資料");
+                alert("無法連線至雲端，請確認 Google Script 網址或權限設定是否正確。");
+                initCalendar(); // 就算失敗也把畫面顯示出來
+                document.getElementById('loadingView').style.display = 'none';
+            };
+            
+            document.body.appendChild(script);
         }
 
         function initCalendar() {
