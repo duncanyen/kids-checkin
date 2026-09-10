@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>寶貝回家打卡系統</title>
+    <title>程寶回家打卡系統</title>
     <style>
         :root {
             --primary-color: #2e7d32;
@@ -12,6 +12,7 @@
             --cancel-color: #e53935;
             --bg-color: #f4f9f4;
             --today-bg: #fffde7;
+            --chat-bg: #e5ddd5;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
@@ -22,220 +23,59 @@
         }
         
         /* === 登入畫面樣式 === */
-        #loginView {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 80vh;
-        }
-        #loginView h1 {
-            color: var(--primary-color);
-            margin-bottom: 40px;
-        }
-        .user-selection {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-            flex-wrap: wrap; 
-        }
-        .user-card {
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-align: center;
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            width: 120px;
-        }
-        .user-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-        }
-        .avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: var(--primary-light);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 45px;
-            margin: 0 auto 15px auto;
-            border: 3px solid var(--primary-color);
-        }
-        .user-name-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #444;
-        }
+        #loginView { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }
+        #loginView h1 { color: var(--primary-color); margin-bottom: 40px; }
+        .user-selection { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+        .user-card { cursor: pointer; transition: 0.2s; text-align: center; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 120px; }
+        .user-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.15); }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 45px; margin: 0 auto 15px auto; border: 3px solid var(--primary-color); }
+        .user-name-title { font-size: 20px; font-weight: bold; color: #444; }
 
         /* === 打卡主系統樣式 === */
-        #mainSystemView {
-            display: none; 
-            text-align: center;
-        }
+        #mainSystemView { display: none; text-align: center; }
+        .header-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+        .current-user-badge { background: white; padding: 8px 16px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
+        h1.system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 20px; }
+        .controls { margin-bottom: 25px; }
+        button { font-size: 18px; font-weight: bold; padding: 12px 28px; margin: 8px; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.1s; }
+        button:active { transform: scale(0.98); }
+        .btn-check { background-color: var(--accent-color); color: white; }
+        .btn-cancel { background-color: var(--cancel-color); color: white; }
+        
+        /* === 日曆樣式 === */
+        .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .calendar-header { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #444; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        .month-btn { background: none; box-shadow: none; font-size: 20px; color: var(--primary-color); padding: 5px 15px; margin: 0; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .weekday { font-weight: bold; background-color: #f5f5f5; padding: 12px 0; border-radius: 4px; color: #666; }
+        .day { border: 1px solid #e0e0e0; border-radius: 4px; min-height: 85px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; cursor: pointer; transition: background 0.2s; }
+        .day:hover { background-color: #f9f9f9; border-color: var(--primary-color); }
+        .day .date-num { font-size: 14px; font-weight: bold; color: #777; align-self: flex-start; pointer-events: none; }
+        .day .status { font-size: 26px; color: var(--accent-color); font-weight: bold; line-height: 1; margin: 0; pointer-events: none; }
+        .day .time { font-size: 12px; color: #888; font-weight: bold; margin-bottom: 2px; pointer-events: none; }
+        .today { border: 2px solid var(--primary-color); background-color: var(--today-bg); }
+        .today .date-num { color: var(--primary-color); }
+        
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(250,250,250,0.8); justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: var(--primary-color); z-index: 1000; flex-direction: column; }
 
-        /* 右上角登入身分標籤 */
-        .header-bar {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 10px;
-        }
-        .current-user-badge {
-            background: white;
-            padding: 8px 16px;
-            border-radius: 30px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--primary-color);
-            transition: background 0.2s;
-        }
-        .current-user-badge:hover {
-            background: #f0f0f0;
-        }
-        .logout-text {
-            font-size: 12px;
-            color: #888;
-            font-weight: normal;
-        }
-
-        h1.system-title {
-            color: var(--primary-color);
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-        .controls {
-            margin-bottom: 25px;
-        }
-        button {
-            font-size: 18px;
-            font-weight: bold;
-            padding: 12px 28px;
-            margin: 8px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.1s, opacity 0.2s;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        .btn-check {
-            background-color: var(--accent-color);
-            color: white;
-        }
-        .btn-cancel {
-            background-color: var(--cancel-color);
-            color: white;
-        }
-        .calendar-container {
-            max-width: 650px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .calendar-header {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #444;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 10px;
-        }
-        .month-btn {
-            background: none;
-            border: none;
-            box-shadow: none;
-            font-size: 20px;
-            color: var(--primary-color);
-            padding: 5px 15px;
-            margin: 0;
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 6px;
-        }
-        .weekday {
-            font-weight: bold;
-            background-color: #f5f5f5;
-            padding: 12px 0;
-            border-radius: 4px;
-            color: #666;
-        }
-        .day {
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            min-height: 85px;
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #fff;
-        }
-        .day .date-num {
-            font-size: 14px;
-            font-weight: bold;
-            color: #777;
-            align-self: flex-start;
-        }
-        .day .status {
-            font-size: 26px;
-            color: var(--accent-color);
-            font-weight: bold;
-            line-height: 1;
-            margin: 0;
-        }
-        .day .time {
-            font-size: 12px;
-            color: #888;
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
-        .day .note {
-            font-size: 11px;
-            color: #555;
-            background: var(--primary-light);
-            border-radius: 3px;
-            padding: 2px 4px;
-            width: 90%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-        }
-        .today {
-            border: 2px solid var(--primary-color);
-            background-color: var(--today-bg);
-        }
-        .today .date-num {
-            color: var(--primary-color);
-        }
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(250,250,250,0.8);
-            justify-content: center;
-            align-items: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: var(--primary-color);
-            z-index: 1000;
-            flex-direction: column;
-        }
+        /* === 聊天室 Modal 樣式 === */
+        .chat-modal { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
+        .chat-container { background: white; width: 95%; max-width: 450px; height: 80vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .chat-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px;}
+        .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin: 0; box-shadow: none;}
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
+        
+        /* 聊天氣泡 */
+        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
+        .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
+        .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
+        .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
+        
+        /* 輸入區 */
+        .chat-input-area { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
+        .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); font-size: 15px; border-radius: 25px; }
     </style>
 </head>
 <body>
@@ -244,7 +84,7 @@
         <span id="loadingText">連線中，請稍候...</span>
     </div>
 
-    <!-- ================= 登入選擇畫面 ================= -->
+    <!-- === 登入畫面 === -->
     <div id="loginSection">
         <div id="loginView">
             <h1>👋 請問你是哪一位呢？</h1>
@@ -265,10 +105,8 @@
         </div>
     </div>
 
-    <!-- ================= 打卡主系統畫面 ================= -->
+    <!-- === 主系統畫面 === -->
     <div id="mainSystemView">
-        
-        <!-- 右上角使用者標籤 -->
         <div class="header-bar">
             <div class="current-user-badge" onclick="logout()" title="點擊切換使用者">
                 <span id="displayUserIcon"></span>
@@ -279,7 +117,6 @@
 
         <h1 class="system-title">🏡 小朋友回家打卡系統</h1>
         
-        <!-- 🌟 新增了 id="actionControls"，方便我們控制顯示或隱藏 -->
         <div class="controls" id="actionControls">
             <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
             <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
@@ -297,17 +134,36 @@
         </div>
     </div>
 
+    <!-- === 聊天室 Modal === -->
+    <div class="chat-modal" id="chatModal">
+        <div class="chat-container">
+            <div class="chat-header">
+                <span id="chatTitle">聊天聯絡簿</span>
+                <button class="close-btn" onclick="closeChat()">✖</button>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <!-- 訊息將呈現在這裡 -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
+                <button class="btn-check" onclick="sendMessage()">傳送</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
-        // 🛠️ 請將下方雙引號內換成您自己的 Google Apps Script 網址
+        // 🛠️ 請替換為您的 Google Apps Script 網址
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgdu5IrisLwAIWcxbdE3dgDb0n0skZbkKuKRDL3ZPaTIs7OVF3UX1W_tYjBwmZlUSl/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxnRgd7TMgiua37oks_ETmAeCEBM6My5Z9TBiLTHwDFV-QbUMggBjuhlKiwAtQ5ROBx/exec"; 
         
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
         const today = new Date();  
         let currentUser = { name: '', icon: '' };
+        let currentChatDate = null; // 記錄目前打開的聊天室日期
 
+        // === 登入邏輯 ===
         function initApp() {
             const savedUser = localStorage.getItem('familyCheckInUser');
             if (savedUser) {
@@ -341,7 +197,6 @@
             document.getElementById('displayUserIcon').innerText = currentUser.icon;
             document.getElementById('displayUserName').innerText = currentUser.name;
 
-            // 🌟 === 新增判斷：如果是爸爸或媽咪，隱藏打卡按鈕 === 🌟
             const actionControls = document.getElementById('actionControls');
             if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
                 actionControls.style.display = 'none';
@@ -349,10 +204,10 @@
                 actionControls.style.display = 'block';
             }
 
-            // 進入系統後，載入雲端打卡資料
             loadData();
         }
 
+        // === 打卡資料載入與日曆渲染 ===
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在核對今日打卡狀態...';
@@ -361,49 +216,37 @@
             const targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
             let loadTimeout = setTimeout(() => {
-                console.warn("載入超時，請檢查網路或 API 網址");
                 document.getElementById('loadingView').style.display = 'none';
                 initCalendar();
             }, 8000);
 
-            window.googleScriptCallback = function(result) {
+            window.googleCheckinCallback = function(result) {
                 clearTimeout(loadTimeout); 
-
-                if (result.error) console.error("後端回報錯誤:", result.error);
-
                 if (result.checked) {
-                    attendanceData[targetDate] = {
-                        checked: true,
-                        time: result.time,
-                        note: result.note
-                    };
+                    attendanceData[targetDate] = { checked: true, time: result.time };
                 } else {
                     delete attendanceData[targetDate];
                 }
-                
                 localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
                 initCalendar();
                 document.getElementById('loadingView').style.display = 'none';
-                delete window.googleScriptCallback;
+                delete window.googleCheckinCallback;
             };
 
             const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?date=${targetDate}&callback=googleScriptCallback&t=${new Date().getTime()}`;
-            
+            // 這裡加上 type=checkin 讓後端知道是要抓打卡紀錄
+            script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
             script.onerror = function() {
                 clearTimeout(loadTimeout);
-                console.error("載入 JSONP 腳本失敗");
                 initCalendar(); 
                 document.getElementById('loadingView').style.display = 'none';
             };
-            
             document.body.appendChild(script);
         }
 
         function initCalendar() {
             const year = viewDate.getFullYear();
             const month = viewDate.getMonth();
-            
             const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
             document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
             
@@ -435,6 +278,9 @@
                     dayDiv.classList.add('today');
                 }
 
+                // 🌟 設定點擊日曆格子開啟聊天室
+                dayDiv.onclick = () => openChat(dateKey);
+
                 const numSpan = document.createElement('span');
                 numSpan.className = 'date-num';
                 numSpan.innerText = day;
@@ -447,18 +293,15 @@
                     dayDiv.appendChild(statusSpan);
 
                     if (attendanceData[dateKey].time) {
+                        // 修正這裡：確保顯示的時間是乾淨的 HH:mm
+                        let displayTime = attendanceData[dateKey].time;
+                        let match = String(displayTime).match(/(\d{2}:\d{2})/);
+                        if (match) displayTime = match[1];
+
                         const timeDiv = document.createElement('div');
                         timeDiv.className = 'time';
-                        timeDiv.innerText = attendanceData[dateKey].time;
+                        timeDiv.innerText = displayTime;
                         dayDiv.appendChild(timeDiv);
-                    }
-
-                    if (attendanceData[dateKey].note) {
-                        const noteDiv = document.createElement('div');
-                        noteDiv.className = 'note';
-                        noteDiv.innerText = attendanceData[dateKey].note;
-                        noteDiv.title = attendanceData[dateKey].note;
-                        dayDiv.appendChild(noteDiv);
                     }
                 }
                 grid.appendChild(dayDiv);
@@ -470,16 +313,14 @@
             initCalendar();
         }
 
+        // === 打卡寫入邏輯 ===
         function checkIn() {
-            const note = prompt(`🎉 歡迎！${currentUser.name}，要留什麼備註嗎？(選填):`);
-            if (note === null) return; 
-
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             
-            attendanceData[dateKey] = { checked: true, note: note, time: timeStr };
-            saveData(dateKey, 'checkin', note, timeStr, currentUser.name);
+            attendanceData[dateKey] = { checked: true, time: timeStr };
+            saveData(dateKey, 'checkin', '', timeStr, currentUser.name);
         }
 
         function cancelCheckIn() {
@@ -498,23 +339,107 @@
             localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
             initCalendar();
 
-            if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-                alert('本地更新成功！');
-                return;
-            }
-
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ date: date, action: action, note: note, time: time, operator: operator })
-            })
-            .then(() => {
-                // 不跳警告，安靜地完成
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+            }).catch(e => console.error(e));
+        }
+
+        // ==========================================
+        // 🌟 新增：聊天室專屬邏輯
+        // ==========================================
+        function openChat(dateKey) {
+            currentChatDate = dateKey;
+            document.getElementById('chatModal').style.display = 'flex';
+            document.getElementById('chatTitle').innerText = `${dateKey} 聯絡簿`;
+            
+            const msgContainer = document.getElementById('chatMessages');
+            msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">讀取訊息中...</div>';
+            
+            // 透過 JSONP 抓取當天聊天紀錄
+            window.googleChatCallback = function(messages) {
+                msgContainer.innerHTML = ''; // 清空載入中提示
+                if (messages.length === 0) {
+                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">今天還沒有人說話喔，來打個招呼吧！</div>';
+                } else {
+                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.time));
+                }
+                delete window.googleChatCallback;
+            };
+
+            const script = document.createElement('script');
+            // type=chat 告訴後端我們要抓聊天紀錄
+            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=${dateKey}&callback=googleChatCallback&t=${new Date().getTime()}`;
+            script.onerror = function() {
+                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路</div>';
+            };
+            document.body.appendChild(script);
+        }
+
+        function closeChat() {
+            document.getElementById('chatModal').style.display = 'none';
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = ''; // 清空輸入框
+            
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            // 1. 先把自己的訊息顯示在畫面上 (追求速度感)
+            appendMessageUI(currentUser.name, text, timeStr);
+
+            // 2. 背景傳送給 Google Apps Script
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ 
+                    action: 'sendChat', 
+                    date: currentChatDate, 
+                    time: timeStr, 
+                    operator: currentUser.name, 
+                    message: text 
+                })
+            }).catch(e => console.error("傳送訊息失敗:", e));
+        }
+
+        function appendMessageUI(user, text, time) {
+            const container = document.getElementById('chatMessages');
+            const isMine = (user === currentUser.name);
+            
+            // 如果原本顯示「還沒有人說話」，先把它清掉
+            if(container.innerHTML.includes('還沒有人說話喔')) {
+                container.innerHTML = '';
+            }
+
+            const div = document.createElement('div');
+            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
+            
+            let html = '';
+            if (!isMine) {
+                html += `<div class="msg-sender">${user}</div>`;
+            }
+            html += `<div>${text}</div>`;
+            html += `<div class="msg-time">${time}</div>`;
+            
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            // 自動捲動到最底下
+            container.scrollTop = container.scrollHeight;
         }
 
         window.onload = initApp;
