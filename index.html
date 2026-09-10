@@ -111,7 +111,14 @@
             color: var(--accent-color);
             font-weight: bold;
             line-height: 1;
-            margin: 4px 0;
+            margin: 0;
+        }
+        /* 新增的打卡時間樣式 */
+        .day .time {
+            font-size: 12px;
+            color: #888;
+            font-weight: bold;
+            margin-bottom: 2px;
         }
         .day .note {
             font-size: 11px;
@@ -143,12 +150,15 @@
             font-weight: bold;
             color: var(--primary-color);
             z-index: 1000;
+            flex-direction: column;
         }
     </style>
 </head>
 <body>
 
-    <div class="loading-overlay" id="loadingView">連線中，請稍候...</div>
+    <div class="loading-overlay" id="loadingView">
+        <span id="loadingText">連線中，請稍候...</span>
+    </div>
 
     <h1>🏡 小朋友回家打卡系統</h1>
     
@@ -160,7 +170,7 @@
     <div class="calendar-container">
         <div class="calendar-header">
             <button class="month-btn" onclick="changeMonth(-1)">❮</button>
-            <span id="calendarMonth">2026 年 9 月</span>
+            <span id="calendarMonth">月份載入中...</span>
             <button class="month-btn" onclick="changeMonth(1)">❯</button>
         </div>
         <div class="calendar-grid" id="calendarGrid">
@@ -172,11 +182,36 @@
         // ==========================================
         // 🛠️ 請將下方雙引號內換成您自己的 Google Apps Script 網址
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7VLYR_xr_NmHyklLxvKfEEIW-f_pNdKLcQ-ahMkJ9TY-gwNL_4oMVvWMa82RbIELL/exec"; 
+        const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
         
-        let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
+        let attendanceData = {};
         let viewDate = new Date(); 
         const today = new Date();  
+
+        // 網頁啟動時，先去 Google Sheet 抓最新資料
+        function loadData() {
+            document.getElementById('loadingView').style.display = 'flex';
+            document.getElementById('loadingText').innerText = '正在同步雲端資料...';
+
+            fetch(GOOGLE_SCRIPT_URL)
+                .then(response => response.json())
+                .then(data => {
+                    // 將雲端拿回來的資料覆蓋到本地端
+                    attendanceData = data;
+                    localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
+                    initCalendar();
+                })
+                .catch(error => {
+                    console.error('讀取雲端資料失敗:', error);
+                    // 如果斷網或出錯，退回使用本地端紀錄
+                    attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
+                    initCalendar();
+                })
+                .finally(() => {
+                    document.getElementById('loadingView').style.display = 'none';
+                    document.getElementById('loadingText').innerText = '連線中，請稍候...';
+                });
+        }
 
         function initCalendar() {
             const year = viewDate.getFullYear();
@@ -219,11 +254,21 @@
                 dayDiv.appendChild(numSpan);
 
                 if (attendanceData[dateKey]) {
+                    // 顯示打勾
                     const statusSpan = document.createElement('span');
                     statusSpan.className = 'status';
                     statusSpan.innerText = '✓';
                     dayDiv.appendChild(statusSpan);
 
+                    // 新增：顯示打卡時間
+                    if (attendanceData[dateKey].time) {
+                        const timeDiv = document.createElement('div');
+                        timeDiv.className = 'time';
+                        timeDiv.innerText = attendanceData[dateKey].time;
+                        dayDiv.appendChild(timeDiv);
+                    }
+
+                    // 顯示備註
                     if (attendanceData[dateKey].note) {
                         const noteDiv = document.createElement('div');
                         noteDiv.className = 'note';
@@ -245,10 +290,13 @@
             const note = prompt("🎉 歡迎回家！要留給爸爸媽媽什麼備註嗎？(選填):");
             if (note === null) return; 
 
-            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            // 取得現在的時間 (小時:分鐘)
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             
-            attendanceData[dateKey] = { checked: true, note: note };
-            saveData(dateKey, 'checkin', note);
+            attendanceData[dateKey] = { checked: true, note: note, time: timeStr };
+            saveData(dateKey, 'checkin', note, timeStr);
         }
 
         function cancelCheckIn() {
@@ -256,14 +304,15 @@
                 const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                 if (attendanceData[dateKey]) {
                     delete attendanceData[dateKey];
-                    saveData(dateKey, 'cancel', '');
+                    saveData(dateKey, 'cancel', '', '');
                 } else {
                     alert('今天本來就沒有打卡紀錄喔！');
                 }
             }
         }
 
-        function saveData(date, action, note) {
+        // 新增接收 time 參數
+        function saveData(date, action, note, time) {
             localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
             initCalendar();
 
@@ -273,26 +322,30 @@
             }
 
             document.getElementById('loadingView').style.display = 'flex';
+            document.getElementById('loadingText').innerText = '資料寫入雲端中...';
 
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', 
+                // 已移除 mode: 'no-cors' 以獲得更穩定的資料回傳
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ date: date, action: action, note: note })
+                body: JSON.stringify({ date: date, action: action, note: note, time: time })
             })
+            .then(response => response.json())
             .then(() => {
                 alert('發送完成！');
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('同步時發生錯誤，本地已保留紀錄。');
+                alert('雲端同步失敗，但本地已保留紀錄。');
             })
             .finally(() => {
                 document.getElementById('loadingView').style.display = 'none';
+                document.getElementById('loadingText').innerText = '連線中，請稍候...';
             });
         }
 
-        window.onload = initCalendar;
+        // 啟動時改為執行 loadData，載入完成後才會呼叫 initCalendar
+        window.onload = loadData;
     </script>
 </body>
 </html>
