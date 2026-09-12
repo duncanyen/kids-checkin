@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>程寶回家打卡系統</title>
+    <title>家庭專屬 App</title>
     <style>
         :root {
             --primary-color: #2e7d32;
@@ -24,43 +24,66 @@
         
         /* === 登入畫面樣式 === */
         #loginView { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }
-        #loginView h1 { color: var(--primary-color); margin-bottom: 40px; }
-        .user-selection { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
-        .user-card { cursor: pointer; transition: 0.2s; text-align: center; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 120px; }
-        .user-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.15); }
-        .avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 45px; margin: 0 auto 15px auto; border: 3px solid var(--primary-color); }
-        .user-name-title { font-size: 20px; font-weight: bold; color: #444; }
+        #loginView h1 { color: var(--primary-color); margin-bottom: 40px; text-align: center; font-size: 24px; }
+        .user-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; justify-content: center; max-width: 400px; width: 100%; }
+        .user-card { cursor: pointer; transition: 0.2s; text-align: center; background: white; padding: 20px 10px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .user-card:active { transform: scale(0.95); }
+        
+        /* 頭像圖片樣式 (適合換成自己的照片) */
+        .avatar-img { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); margin-bottom: 10px; background-color: var(--primary-light); }
+        .user-name-title { font-size: 18px; font-weight: bold; color: #444; }
 
-        /* === 打卡主系統樣式 === */
+        /* === 標頭與使用者狀態列 === */
+        .header-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; align-items: center; gap: 10px; }
+        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
+        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .logout-text { font-size: 12px; color: #888; font-weight: normal; }
+
+        /* === 主選單 Dashboard 樣式 === */
+        #dashboardView { display: none; text-align: center; max-width: 500px; margin: 0 auto; }
+        .system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 25px; font-size: 24px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .dash-card { background: white; border-radius: 16px; padding: 30px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
+        .dash-card:active { transform: scale(0.96); }
+        .dash-icon { font-size: 45px; margin-bottom: 12px; }
+        .dash-title { font-size: 17px; font-weight: bold; color: #444; }
+        
+        /* Coming Soon 樣式 */
+        .disabled-card { background: #e9ecef; cursor: default; }
+        .disabled-card:active { transform: none; }
+        .disabled-card .dash-icon, .disabled-card .dash-title { opacity: 0.5; }
+        .coming-soon-badge { position: absolute; top: 12px; right: 12px; background: var(--cancel-color); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
+
+        /* === 打卡主系統樣式 (日曆頁) === */
         #mainSystemView { display: none; text-align: center; }
-        .header-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-        .current-user-badge { background: white; padding: 8px 16px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
-        h1.system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 20px; }
-        .controls { margin-bottom: 25px; }
-        button { font-size: 18px; font-weight: bold; padding: 12px 28px; margin: 8px; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.1s; }
-        button:active { transform: scale(0.98); }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
+        .controls { margin-bottom: 20px; }
+        button { font-size: 16px; font-weight: bold; padding: 12px 24px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.1s; }
+        button:active { transform: scale(0.96); }
         .btn-check { background-color: var(--accent-color); color: white; }
         .btn-cancel { background-color: var(--cancel-color); color: white; }
         
         /* === 日曆樣式 === */
-        .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .calendar-header { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #444; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .calendar-header { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #444; display: flex; justify-content: space-between; align-items: center; }
         .month-btn { background: none; box-shadow: none; font-size: 20px; color: var(--primary-color); padding: 5px 15px; margin: 0; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-        .weekday { font-weight: bold; background-color: #f5f5f5; padding: 12px 0; border-radius: 4px; color: #666; }
-        .day { border: 1px solid #e0e0e0; border-radius: 4px; min-height: 85px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; cursor: pointer; transition: background 0.2s; }
-        .day:hover { background-color: #f9f9f9; border-color: var(--primary-color); }
-        .day .date-num { font-size: 14px; font-weight: bold; color: #777; align-self: flex-start; pointer-events: none; }
-        .day .status { font-size: 26px; color: var(--accent-color); font-weight: bold; line-height: 1; margin: 0; pointer-events: none; }
-        .day .time { font-size: 12px; color: #888; font-weight: bold; margin-bottom: 2px; pointer-events: none; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .weekday { font-weight: bold; background-color: #f5f5f5; padding: 10px 0; border-radius: 4px; color: #666; font-size: 14px; }
+        .day { border: 1px solid #e0e0e0; border-radius: 4px; min-height: 75px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; cursor: pointer; }
+        .day:active { background-color: #f9f9f9; }
+        .day .date-num { font-size: 13px; font-weight: bold; color: #777; align-self: flex-start; pointer-events: none; }
+        .day .status { font-size: 22px; color: var(--accent-color); font-weight: bold; line-height: 1; margin: 0; pointer-events: none; }
+        .day .time { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 2px; pointer-events: none; }
         .today { border: 2px solid var(--primary-color); background-color: var(--today-bg); }
         .today .date-num { color: var(--primary-color); }
         
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(250,250,250,0.8); justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: var(--primary-color); z-index: 1000; flex-direction: column; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(250,250,250,0.85); justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: var(--primary-color); z-index: 1000; flex-direction: column; }
 
         /* === 聊天室 Modal 樣式 === */
         .chat-modal { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-        .chat-container { background: white; width: 95%; max-width: 450px; height: 80vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .chat-container { background: white; width: 95%; max-width: 450px; height: 85vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .chat-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px;}
         .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin: 0; box-shadow: none;}
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
@@ -89,33 +112,75 @@
         <div id="loginView">
             <h1>👋 請問你是哪一位呢？</h1>
             <div class="user-selection">
-                <div class="user-card" onclick="login('程寶', '👦')">
-                    <div class="avatar">👦</div>
+                <!-- 替換 src 裡面的網址為你自己的照片路徑即可 -->
+                <div class="user-card" onclick="login('俊俊', 'https://ui-avatars.com/api/?name=俊&background=4caf50&color=fff&size=150')">
+                    <img class="avatar-img" src="https://ui-avatars.com/api/?name=俊&background=4caf50&color=fff&size=150" alt="俊俊">
+                    <div class="user-name-title">俊俊</div>
+                </div>
+                <div class="user-card" onclick="login('程寶', 'https://ui-avatars.com/api/?name=程&background=2196F3&color=fff&size=150')">
+                    <img class="avatar-img" src="https://ui-avatars.com/api/?name=程&background=2196F3&color=fff&size=150" alt="程寶">
                     <div class="user-name-title">程寶</div>
                 </div>
-                <div class="user-card" onclick="login('媽咪', '👩')">
-                    <div class="avatar">👩</div>
+                <div class="user-card" onclick="login('媽咪', 'https://ui-avatars.com/api/?name=媽&background=E91E63&color=fff&size=150')">
+                    <img class="avatar-img" src="https://ui-avatars.com/api/?name=媽&background=E91E63&color=fff&size=150" alt="媽咪">
                     <div class="user-name-title">媽咪</div>
                 </div>
-                <div class="user-card" onclick="login('爸爸', '👨')">
-                    <div class="avatar">👨</div>
+                <div class="user-card" onclick="login('爸爸', 'https://ui-avatars.com/api/?name=爸&background=FF9800&color=fff&size=150')">
+                    <img class="avatar-img" src="https://ui-avatars.com/api/?name=爸&background=FF9800&color=fff&size=150" alt="爸爸">
                     <div class="user-name-title">爸爸</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- === 主系統畫面 === -->
-    <div id="mainSystemView">
+    <!-- === 新增：主選單 Dashboard === -->
+    <div id="dashboardView">
         <div class="header-bar">
-            <div class="current-user-badge" onclick="logout()" title="點擊切換使用者">
-                <span id="displayUserIcon"></span>
-                <span id="displayUserName"></span>
+            <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+                <img id="dashUserAvatar" class="mini-avatar" src="" alt="">
+                <span id="dashUserName"></span>
                 <span class="logout-text">(登出)</span>
             </div>
         </div>
 
-        <h1 class="system-title">🏡 小朋友回家打卡系統</h1>
+        <h1 class="system-title">🏡 我們家的小天地</h1>
+
+        <div class="dashboard-grid">
+            <div class="dash-card" onclick="openCheckInView()">
+                <div class="dash-icon">📍</div>
+                <div class="dash-title">打卡專區</div>
+            </div>
+            
+            <div class="dash-card" onclick="openTodayChat()">
+                <div class="dash-icon">💬</div>
+                <div class="dash-title">家庭聊天室</div>
+            </div>
+
+            <div class="dash-card disabled-card">
+                <div class="coming-soon-badge">Coming Soon</div>
+                <div class="dash-icon">✨</div>
+                <div class="dash-title">許願牆</div>
+            </div>
+
+            <div class="dash-card disabled-card">
+                <div class="coming-soon-badge">Coming Soon</div>
+                <div class="dash-icon">🎮</div>
+                <div class="dash-title">遊戲區</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === 原：打卡主系統畫面 (日曆頁) === -->
+    <div id="mainSystemView">
+        <div class="top-nav">
+            <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
+            <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+                <img id="sysUserAvatar" class="mini-avatar" src="" alt="">
+                <span id="sysUserName"></span>
+            </div>
+        </div>
+
+        <h2 class="system-title" style="font-size: 20px;">📍 打卡專區</h2>
         
         <div class="controls" id="actionControls">
             <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
@@ -153,50 +218,63 @@
 
     <script>
         // ==========================================
-        // 🛠️ 請替換為您的 Google Apps Script 網址
+        // 🛠️ 你的 Google Apps Script 網址 (保留不變)
         // ==========================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxEx9uLyw6rpy-mK5pZIjiQ6_iWGBVPn0nnrPfN9G3BrVKapFZsME5DRw0Nz-qOkP02/exec"; 
         
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
         const today = new Date();  
-        let currentUser = { name: '', icon: '' };
-        let currentChatDate = null; // 記錄目前打開的聊天室日期
+        let currentUser = { name: '', avatar: '' }; // icon 改為 avatar (存放照片網址)
+        let currentChatDate = null; 
 
-        // === 登入邏輯 ===
+        // === 登入與導覽邏輯 ===
         function initApp() {
             const savedUser = localStorage.getItem('familyCheckInUser');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
-                showMainSystem();
+                showDashboard();
             } else {
                 showLoginScreen();
             }
         }
 
-        function login(name, icon) {
-            currentUser = { name: name, icon: icon };
+        function login(name, avatarUrl) {
+            currentUser = { name: name, avatar: avatarUrl };
             localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
-            showMainSystem();
+            showDashboard();
         }
 
         function logout() {
             localStorage.removeItem('familyCheckInUser');
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('mainSystemView').style.display = 'none';
             showLoginScreen();
         }
 
         function showLoginScreen() {
             document.getElementById('loginSection').style.display = 'block';
-            document.getElementById('mainSystemView').style.display = 'none';
         }
 
-        function showMainSystem() {
+        function showDashboard() {
             document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'block';
+            document.getElementById('mainSystemView').style.display = 'none';
+            document.getElementById('dashboardView').style.display = 'block';
             
-            document.getElementById('displayUserIcon').innerText = currentUser.icon;
-            document.getElementById('displayUserName').innerText = currentUser.name;
+            // 更新主選單右上角的大頭貼
+            document.getElementById('dashUserAvatar').src = currentUser.avatar;
+            document.getElementById('dashUserName').innerText = currentUser.name;
+        }
 
+        function openCheckInView() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('mainSystemView').style.display = 'block';
+
+            // 更新打卡頁右上角的大頭貼
+            document.getElementById('sysUserAvatar').src = currentUser.avatar;
+            document.getElementById('sysUserName').innerText = currentUser.name;
+
+            // 判斷家長不顯示打卡按鈕
             const actionControls = document.getElementById('actionControls');
             if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
                 actionControls.style.display = 'none';
@@ -204,13 +282,119 @@
                 actionControls.style.display = 'block';
             }
 
-            loadData();
+            loadData(); // 載入日曆與打卡紀錄
         }
 
+        function goBackToDashboard() {
+            document.getElementById('mainSystemView').style.display = 'none';
+            showDashboard();
+        }
+
+        // ==========================================
+        // === 聊天室相關邏輯 ===
+        // ==========================================
+        function openTodayChat() {
+            // 從主選單進入時，預設開啟「今天」的聊天室
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            openChat(dateKey);
+        }
+
+        function openChat(dateKey) {
+            currentChatDate = dateKey;
+            document.getElementById('chatModal').style.display = 'flex';
+            document.getElementById('chatTitle').innerText = `${dateKey} 家庭聊天室`;
+            
+            const msgContainer = document.getElementById('chatMessages');
+            msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">讀取訊息中...</div>';
+            
+            // 透過 JSONP 抓取當天聊天紀錄
+            window.googleChatCallback = function(messages) {
+                msgContainer.innerHTML = ''; // 清空載入中提示
+                if (messages.length === 0) {
+                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">今天還沒有人說話喔，來打個招呼吧！</div>';
+                } else {
+                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.time));
+                }
+                delete window.googleChatCallback;
+            };
+
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=${dateKey}&callback=googleChatCallback&t=${new Date().getTime()}`;
+            script.onerror = function() {
+                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路</div>';
+            };
+            document.body.appendChild(script);
+        }
+
+        function closeChat() {
+            document.getElementById('chatModal').style.display = 'none';
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = ''; // 清空輸入框
+            
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            // 1. 先把自己的訊息顯示在畫面上
+            appendMessageUI(currentUser.name, text, timeStr);
+
+            // 2. 背景傳送給 Google Apps Script
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ 
+                    action: 'sendChat', 
+                    date: currentChatDate, 
+                    time: timeStr, 
+                    operator: currentUser.name, 
+                    message: text 
+                })
+            }).catch(e => console.error("傳送訊息失敗:", e));
+        }
+
+        function appendMessageUI(user, text, time) {
+            const container = document.getElementById('chatMessages');
+            const isMine = (user === currentUser.name);
+            
+            if(container.innerHTML.includes('還沒有人說話喔')) {
+                container.innerHTML = '';
+            }
+
+            const div = document.createElement('div');
+            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
+            
+            let html = '';
+            if (!isMine) {
+                html += `<div class="msg-sender">${user}</div>`;
+            }
+            html += `<div>${text}</div>`;
+            html += `<div class="msg-time">${time}</div>`;
+            
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ==========================================
         // === 打卡資料載入與日曆渲染 ===
+        // ==========================================
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
-            document.getElementById('loadingText').innerText = '正在核對今日打卡狀態...';
+            document.getElementById('loadingText').innerText = '正在同步資料...';
 
             const now = new Date();
             const targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -218,7 +402,7 @@
             let loadTimeout = setTimeout(() => {
                 document.getElementById('loadingView').style.display = 'none';
                 initCalendar();
-            }, 8000);
+            }, 6000);
 
             window.googleCheckinCallback = function(result) {
                 clearTimeout(loadTimeout); 
@@ -234,7 +418,6 @@
             };
 
             const script = document.createElement('script');
-            // 這裡加上 type=checkin 讓後端知道是要抓打卡紀錄
             script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
             script.onerror = function() {
                 clearTimeout(loadTimeout);
@@ -278,7 +461,7 @@
                     dayDiv.classList.add('today');
                 }
 
-                // 🌟 設定點擊日曆格子開啟聊天室
+                // 日曆格子依然可以點擊看該日的舊聊天紀錄
                 dayDiv.onclick = () => openChat(dateKey);
 
                 const numSpan = document.createElement('span');
@@ -293,7 +476,6 @@
                     dayDiv.appendChild(statusSpan);
 
                     if (attendanceData[dateKey].time) {
-                        // 修正這裡：確保顯示的時間是乾淨的 HH:mm
                         let displayTime = attendanceData[dateKey].time;
                         let match = String(displayTime).match(/(\d{2}:\d{2})/);
                         if (match) displayTime = match[1];
@@ -347,101 +529,7 @@
             }).catch(e => console.error(e));
         }
 
-        // ==========================================
-        // 🌟 新增：聊天室專屬邏輯
-        // ==========================================
-        function openChat(dateKey) {
-            currentChatDate = dateKey;
-            document.getElementById('chatModal').style.display = 'flex';
-            document.getElementById('chatTitle').innerText = `${dateKey} 聯絡簿`;
-            
-            const msgContainer = document.getElementById('chatMessages');
-            msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">讀取訊息中...</div>';
-            
-            // 透過 JSONP 抓取當天聊天紀錄
-            window.googleChatCallback = function(messages) {
-                msgContainer.innerHTML = ''; // 清空載入中提示
-                if (messages.length === 0) {
-                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">今天還沒有人說話喔，來打個招呼吧！</div>';
-                } else {
-                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.time));
-                }
-                delete window.googleChatCallback;
-            };
-
-            const script = document.createElement('script');
-            // type=chat 告訴後端我們要抓聊天紀錄
-            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=${dateKey}&callback=googleChatCallback&t=${new Date().getTime()}`;
-            script.onerror = function() {
-                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路</div>';
-            };
-            document.body.appendChild(script);
-        }
-
-        function closeChat() {
-            document.getElementById('chatModal').style.display = 'none';
-        }
-
-        function handleChatKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-
-            input.value = ''; // 清空輸入框
-            
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-            // 1. 先把自己的訊息顯示在畫面上 (追求速度感)
-            appendMessageUI(currentUser.name, text, timeStr);
-
-            // 2. 背景傳送給 Google Apps Script
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ 
-                    action: 'sendChat', 
-                    date: currentChatDate, 
-                    time: timeStr, 
-                    operator: currentUser.name, 
-                    message: text 
-                })
-            }).catch(e => console.error("傳送訊息失敗:", e));
-        }
-
-        function appendMessageUI(user, text, time) {
-            const container = document.getElementById('chatMessages');
-            const isMine = (user === currentUser.name);
-            
-            // 如果原本顯示「還沒有人說話」，先把它清掉
-            if(container.innerHTML.includes('還沒有人說話喔')) {
-                container.innerHTML = '';
-            }
-
-            const div = document.createElement('div');
-            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
-            
-            let html = '';
-            if (!isMine) {
-                html += `<div class="msg-sender">${user}</div>`;
-            }
-            html += `<div>${text}</div>`;
-            html += `<div class="msg-time">${time}</div>`;
-            
-            div.innerHTML = html;
-            container.appendChild(div);
-            
-            // 自動捲動到最底下
-            container.scrollTop = container.scrollHeight;
-        }
-
+        // === 程式啟動 ===
         window.onload = initApp;
     </script>
 </body>
