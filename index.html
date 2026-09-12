@@ -2,23 +2,23 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 1. App 標題 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- App 標題 -->
     <title>HomeBase</title>
     
-    <!-- 2. 設定手機桌面圖示與網頁分頁圖示 -->
+    <!-- 設定手機桌面圖示與網頁分頁圖示 -->
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     
-    <!-- 3. 設定加到主畫面時的 App 顯示名稱 (覆蓋預設的 title) -->
+    <!-- 設定加到主畫面時的 App 顯示名稱 -->
     <meta name="apple-mobile-web-app-title" content="HomeBase">
     
-    <!-- 4. 讓網頁以全螢幕 App 模式執行 (隱藏 Safari/Chrome 網址列，看起來更像原生 App) -->
+    <!-- 讓網頁以全螢幕 App 模式執行 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    
-    <!-- 5. 設定 iOS 頂部狀態列的顏色樣式 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
     <style>
         :root {
             --primary-color: #2e7d32;
@@ -28,6 +28,7 @@
             --bg-color: #f4f9f4;
             --today-bg: #fffde7;
             --chat-bg: #e5ddd5;
+            --event-color: #ff9800;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
@@ -43,8 +44,6 @@
         .user-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; justify-content: center; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: 0.2s; text-align: center; background: white; padding: 20px 10px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .user-card:active { transform: scale(0.95); }
-        
-        /* 頭像圖片樣式 (適合換成自己的照片) */
         .avatar-img { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); margin-bottom: 10px; background-color: var(--primary-light); }
         .user-name-title { font-size: 18px; font-weight: bold; color: #444; }
 
@@ -59,18 +58,19 @@
         .system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 25px; font-size: 24px; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .dash-card { background: white; border-radius: 16px; padding: 30px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
+        .dash-card-full { grid-column: span 2; padding: 20px 15px; } /* 讓特定區塊橫跨兩格 */
         .dash-card:active { transform: scale(0.96); }
         .dash-icon { font-size: 45px; margin-bottom: 12px; }
+        .dash-card-full .dash-icon { margin-bottom: 5px; font-size: 35px; }
         .dash-title { font-size: 17px; font-weight: bold; color: #444; }
         
-        /* Coming Soon 樣式 */
         .disabled-card { background: #e9ecef; cursor: default; }
         .disabled-card:active { transform: none; }
         .disabled-card .dash-icon, .disabled-card .dash-title { opacity: 0.5; }
         .coming-soon-badge { position: absolute; top: 12px; right: 12px; background: var(--cancel-color); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
 
-        /* === 打卡主系統樣式 (日曆頁) === */
-        #mainSystemView { display: none; text-align: center; }
+        /* === 打卡主系統與公用導航樣式 === */
+        #mainSystemView, #familyCalendarView { display: none; text-align: center; }
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
@@ -102,18 +102,22 @@
         .chat-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px;}
         .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin: 0; box-shadow: none;}
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
-        
-        /* 聊天氣泡 */
         .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
         .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
         .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
         .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
         .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
-        
-        /* 輸入區 */
         .chat-input-area { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
         .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
         .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); font-size: 15px; border-radius: 25px; }
+
+        /* === 家庭行事曆事件列表樣式 === */
+        .event-list { max-width: 650px; margin: 0 auto; text-align: left; }
+        .event-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 15px; display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--event-color); }
+        .event-date { font-weight: bold; color: var(--event-color); width: 85px; flex-shrink: 0; font-size: 15px; }
+        .event-info { flex-grow: 1; padding-left: 12px; border-left: 1px solid #eee; }
+        .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
+        .event-desc { font-size: 13px; color: #777; margin:0; }
     </style>
 </head>
 <body>
@@ -127,31 +131,27 @@
         <div id="loginView">
             <h1>👋 請問你是哪一位呢？</h1>
             <div class="user-selection">
-                <!-- 俊俊的圖示 -->
                 <div class="user-card" onclick="login('俊俊', 'junjun.jpg')">
-                    <img class="avatar-img" src="junjun.jpg" alt="俊俊">
+                    <img class="avatar-img" src="junjun.jpg" alt="俊俊" onerror="this.src='https://ui-avatars.com/api/?name=俊&background=4caf50&color=fff&size=150'">
                     <div class="user-name-title">俊俊</div>
                 </div>
-                <!-- 程寶的圖示 -->
                 <div class="user-card" onclick="login('程寶', 'cheng.jpg')">
-                    <img class="avatar-img" src="cheng.jpg" alt="程寶">
+                    <img class="avatar-img" src="cheng.jpg" alt="程寶" onerror="this.src='https://ui-avatars.com/api/?name=程&background=2196F3&color=fff&size=150'">
                     <div class="user-name-title">程寶</div>
                 </div>
-                <!-- 媽咪的圖示 -->
                 <div class="user-card" onclick="login('媽咪', 'mom.jpg')">
-                    <img class="avatar-img" src="mom.jpg" alt="媽咪">
+                    <img class="avatar-img" src="mom.jpg" alt="媽咪" onerror="this.src='https://ui-avatars.com/api/?name=媽&background=E91E63&color=fff&size=150'">
                     <div class="user-name-title">媽咪</div>
                 </div>
-                <!-- 爸爸的圖示 -->
                 <div class="user-card" onclick="login('爸爸', 'dad.jpg')">
-                    <img class="avatar-img" src="dad.jpg" alt="爸爸">
+                    <img class="avatar-img" src="dad.jpg" alt="爸爸" onerror="this.src='https://ui-avatars.com/api/?name=爸&background=FF9800&color=fff&size=150'">
                     <div class="user-name-title">爸爸</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- === 新增：主選單 Dashboard === -->
+    <!-- === 主選單 Dashboard === -->
     <div id="dashboardView">
         <div class="header-bar">
             <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
@@ -163,7 +163,9 @@
 
         <h1 class="system-title">🏡 我們家的小天地</h1>
 
+        <!-- 💡 若要更改按鈕區塊順序，直接將底下的 <div class="dash-card"> 上下交換位置即可 -->
         <div class="dashboard-grid">
+            
             <div class="dash-card" onclick="openCheckInView()">
                 <div class="dash-icon">📍</div>
                 <div class="dash-title">打卡專區</div>
@@ -172,6 +174,12 @@
             <div class="dash-card" onclick="openTodayChat()">
                 <div class="dash-icon">💬</div>
                 <div class="dash-title">家庭聊天室</div>
+            </div>
+
+            <!-- 新增：家庭行事曆 (套用橫跨兩格的樣式 dash-card-full，也可拿掉變一格) -->
+            <div class="dash-card dash-card-full" onclick="openFamilyCalendar()">
+                <div class="dash-icon">📅</div>
+                <div class="dash-title">家庭行事曆 (學校行程)</div>
             </div>
 
             <div class="dash-card disabled-card">
@@ -185,10 +193,11 @@
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
             </div>
+
         </div>
     </div>
 
-    <!-- === 原：打卡主系統畫面 (日曆頁) === -->
+    <!-- === 打卡主系統畫面 === -->
     <div id="mainSystemView">
         <div class="top-nav">
             <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
@@ -211,9 +220,24 @@
                 <span id="calendarMonth">月份載入中...</span>
                 <button class="month-btn" onclick="changeMonth(1)">❯</button>
             </div>
-            <div class="calendar-grid" id="calendarGrid">
-                <!-- 由 JavaScript 動態渲染 -->
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+    </div>
+
+    <!-- === 新增：家庭行事曆畫面 === -->
+    <div id="familyCalendarView">
+        <div class="top-nav">
+            <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
+            <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+                <img id="calUserAvatar" class="mini-avatar" src="" alt="">
+                <span id="calUserName"></span>
             </div>
+        </div>
+
+        <h2 class="system-title" style="font-size: 20px;">📅 學校與家庭行事曆</h2>
+        
+        <div class="event-list" id="eventListContainer">
+            <!-- 這裡的內容會由下方的 JavaScript 動態生成 -->
         </div>
     </div>
 
@@ -224,9 +248,7 @@
                 <span id="chatTitle">聊天聯絡簿</span>
                 <button class="close-btn" onclick="closeChat()">✖</button>
             </div>
-            <div class="chat-messages" id="chatMessages">
-                <!-- 訊息將呈現在這裡 -->
-            </div>
+            <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-area">
                 <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
                 <button class="btn-check" onclick="sendMessage()">傳送</button>
@@ -235,16 +257,26 @@
     </div>
 
     <script>
-        // ==========================================
-        // 🛠️ 你的 Google Apps Script 網址 (保留不變)
-        // ==========================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxEx9uLyw6rpy-mK5pZIjiQ6_iWGBVPn0nnrPfN9G3BrVKapFZsME5DRw0Nz-qOkP02/exec"; 
         
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
         const today = new Date();  
-        let currentUser = { name: '', avatar: '' }; // icon 改為 avatar (存放照片網址)
+        let currentUser = { name: '', avatar: '' };
         let currentChatDate = null; 
+
+        // ==========================================
+        // 💡 這裡可以自行變更學校的行事曆內容與順序
+        // 只要修改 date (日期)、title (標題)、desc (說明文字) 即可
+        // 可以隨意上下移動順序，或複製一組來新增
+        // ==========================================
+        const schoolEvents = [
+            { date: "09/25", title: "上學期 班親會", desc: "了解本學期課程與老師交流" },
+            { date: "10/30", title: "期中考週", desc: "小朋友加油喔！📝" },
+            { date: "11/15", title: "學校校慶 / 運動會", desc: "邀請家長一同參與，記得準備運動服" },
+            { date: "01/12", title: "期末考週", desc: "準備放寒假囉！" },
+            { date: "03/10", title: "下學期 班親會", desc: "新的學期開始" }
+        ];
 
         // === 登入與導覽邏輯 ===
         function initApp() {
@@ -267,6 +299,7 @@
             localStorage.removeItem('familyCheckInUser');
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
+            document.getElementById('familyCalendarView').style.display = 'none';
             showLoginScreen();
         }
 
@@ -277,42 +310,69 @@
         function showDashboard() {
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
+            document.getElementById('familyCalendarView').style.display = 'none';
             document.getElementById('dashboardView').style.display = 'block';
             
-            // 更新主選單右上角的大頭貼
             document.getElementById('dashUserAvatar').src = currentUser.avatar;
             document.getElementById('dashUserName').innerText = currentUser.name;
         }
 
+        function goBackToDashboard() {
+            document.getElementById('mainSystemView').style.display = 'none';
+            document.getElementById('familyCalendarView').style.display = 'none';
+            showDashboard();
+        }
+
+        // === 開啟打卡專區 ===
         function openCheckInView() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'block';
 
-            // 更新打卡頁右上角的大頭貼
             document.getElementById('sysUserAvatar').src = currentUser.avatar;
             document.getElementById('sysUserName').innerText = currentUser.name;
 
-            // 判斷家長不顯示打卡按鈕
             const actionControls = document.getElementById('actionControls');
             if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
                 actionControls.style.display = 'none';
             } else {
                 actionControls.style.display = 'block';
             }
-
-            loadData(); // 載入日曆與打卡紀錄
+            loadData(); 
         }
 
-        function goBackToDashboard() {
-            document.getElementById('mainSystemView').style.display = 'none';
-            showDashboard();
+        // === 開啟家庭行事曆 ===
+        function openFamilyCalendar() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('familyCalendarView').style.display = 'block';
+
+            // 更新右上角頭像
+            document.getElementById('calUserAvatar').src = currentUser.avatar;
+            document.getElementById('calUserName').innerText = currentUser.name;
+
+            // 渲染行事曆事件
+            renderSchoolEvents();
         }
 
-        // ==========================================
+        function renderSchoolEvents() {
+            const container = document.getElementById('eventListContainer');
+            container.innerHTML = ''; // 清空原本內容
+
+            schoolEvents.forEach(evt => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.innerHTML = `
+                    <div class="event-date">${evt.date}</div>
+                    <div class="event-info">
+                        <p class="event-title">${evt.title}</p>
+                        <p class="event-desc">${evt.desc}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
         // === 聊天室相關邏輯 ===
-        // ==========================================
         function openTodayChat() {
-            // 從主選單進入時，預設開啟「今天」的聊天室
             const now = new Date();
             const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             openChat(dateKey);
@@ -326,9 +386,8 @@
             const msgContainer = document.getElementById('chatMessages');
             msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">讀取訊息中...</div>';
             
-            // 透過 JSONP 抓取當天聊天紀錄
             window.googleChatCallback = function(messages) {
-                msgContainer.innerHTML = ''; // 清空載入中提示
+                msgContainer.innerHTML = ''; 
                 if (messages.length === 0) {
                     msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">今天還沒有人說話喔，來打個招呼吧！</div>';
                 } else {
@@ -360,15 +419,13 @@
             const text = input.value.trim();
             if (!text) return;
 
-            input.value = ''; // 清空輸入框
+            input.value = ''; 
             
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-            // 1. 先把自己的訊息顯示在畫面上
             appendMessageUI(currentUser.name, text, timeStr);
 
-            // 2. 背景傳送給 Google Apps Script
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -407,9 +464,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // ==========================================
         // === 打卡資料載入與日曆渲染 ===
-        // ==========================================
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在同步資料...';
@@ -479,7 +534,6 @@
                     dayDiv.classList.add('today');
                 }
 
-                // 日曆格子依然可以點擊看該日的舊聊天紀錄
                 dayDiv.onclick = () => openChat(dateKey);
 
                 const numSpan = document.createElement('span');
@@ -513,7 +567,6 @@
             initCalendar();
         }
 
-        // === 打卡寫入邏輯 ===
         function checkIn() {
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -547,7 +600,6 @@
             }).catch(e => console.error(e));
         }
 
-        // === 程式啟動 ===
         window.onload = initApp;
     </script>
 </body>
