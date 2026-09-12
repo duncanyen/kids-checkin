@@ -4,17 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- App 標題 -->
     <title>HomeBase</title>
-    
-    <!-- 設定手機桌面圖示與網頁分頁圖示 -->
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
-    
-    <!-- 設定加到主畫面時的 App 顯示名稱 -->
     <meta name="apple-mobile-web-app-title" content="HomeBase">
-    
-    <!-- 讓網頁以全螢幕 App 模式執行 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -29,6 +22,7 @@
             --today-bg: #fffde7;
             --chat-bg: #e5ddd5;
             --event-color: #ff9800;
+            --game-bg: #e3f2fd;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
@@ -58,7 +52,7 @@
         .system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 25px; font-size: 24px; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .dash-card { background: white; border-radius: 16px; padding: 30px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
-        .dash-card-full { grid-column: span 2; padding: 20px 15px; } /* 讓特定區塊橫跨兩格 */
+        .dash-card-full { grid-column: span 2; padding: 20px 15px; } 
         .dash-card:active { transform: scale(0.96); }
         .dash-icon { font-size: 45px; margin-bottom: 12px; }
         .dash-card-full .dash-icon { margin-bottom: 5px; font-size: 35px; }
@@ -69,8 +63,8 @@
         .disabled-card .dash-icon, .disabled-card .dash-title { opacity: 0.5; }
         .coming-soon-badge { position: absolute; top: 12px; right: 12px; background: var(--cancel-color); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
 
-        /* === 打卡主系統與公用導航樣式 === */
-        #mainSystemView, #familyCalendarView { display: none; text-align: center; }
+        /* === 共用系統畫面樣式 === */
+        #mainSystemView, #familyCalendarView, #gameZoneView { display: none; text-align: center; }
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
@@ -80,7 +74,7 @@
         .btn-check { background-color: var(--accent-color); color: white; }
         .btn-cancel { background-color: var(--cancel-color); color: white; }
         
-        /* === 日曆樣式 === */
+        /* === 日曆與行事曆樣式 === */
         .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .calendar-header { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #444; display: flex; justify-content: space-between; align-items: center; }
         .month-btn { background: none; box-shadow: none; font-size: 20px; color: var(--primary-color); padding: 5px 15px; margin: 0; }
@@ -95,6 +89,14 @@
         .today .date-num { color: var(--primary-color); }
         
         .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(250,250,250,0.85); justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: var(--primary-color); z-index: 1000; flex-direction: column; }
+
+        /* === 家庭行事曆事件列表樣式 === */
+        .event-list { max-width: 650px; margin: 0 auto; text-align: left; }
+        .event-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 15px; display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--event-color); }
+        .event-date { font-weight: bold; color: var(--event-color); width: 85px; flex-shrink: 0; font-size: 15px; }
+        .event-info { flex-grow: 1; padding-left: 12px; border-left: 1px solid #eee; }
+        .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
+        .event-desc { font-size: 13px; color: #777; margin:0; }
 
         /* === 聊天室 Modal 樣式 === */
         .chat-modal { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
@@ -111,13 +113,25 @@
         .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
         .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); font-size: 15px; border-radius: 25px; }
 
-        /* === 家庭行事曆事件列表樣式 === */
-        .event-list { max-width: 650px; margin: 0 auto; text-align: left; }
-        .event-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 15px; display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--event-color); }
-        .event-date { font-weight: bold; color: var(--event-color); width: 85px; flex-shrink: 0; font-size: 15px; }
-        .event-info { flex-grow: 1; padding-left: 12px; border-left: 1px solid #eee; }
-        .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
-        .event-desc { font-size: 13px; color: #777; margin:0; }
+        /* === 遊戲區：剪刀石頭布 樣式 === */
+        .score-board { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .score-item { text-align: center; }
+        .score-label { font-size: 12px; color: #777; margin-bottom: 5px; }
+        .score-value { font-size: 20px; font-weight: bold; color: var(--primary-color); }
+        
+        .game-arena { background: var(--game-bg); border-radius: 16px; padding: 30px 15px; box-shadow: inset 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .game-arena h3 { margin-top: 0; color: #1565c0; font-size: 16px; }
+        .card-slot { width: 80px; height: 110px; background: white; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 45px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 0 auto; border: 2px dashed #90caf9; }
+        .card-solid { border: 2px solid #1976d2; }
+        .vs-text { font-size: 24px; font-weight: bold; color: #555; margin: 15px 0; }
+        
+        .player-cards { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .p-card { width: 70px; height: 95px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
+        .p-card:active { transform: scale(0.9); }
+        .p-card:hover { border-color: var(--accent-color); }
+        .p-card.disabled { opacity: 0.5; cursor: not-allowed; transform: none; border-color: transparent; }
+
+        .game-result { font-size: 18px; font-weight: bold; margin-top: 20px; height: 25px; color: #e53935; }
     </style>
 </head>
 <body>
@@ -163,17 +177,10 @@
 
         <h1 class="system-title">🏡 我們家的小天地</h1>
 
-        <!-- 💡 若要更改按鈕區塊順序，直接將底下的 <div class="dash-card"> 上下交換位置即可 -->
         <div class="dashboard-grid">
-            <!-- 新增：家庭行事曆 (套用橫跨兩格的樣式 dash-card-full，也可拿掉變一格) -->
-            <div class="dash-card"  onclick="openFamilyCalendar()">
-                <div class="dash-icon">📅</div>
-                <div class="dash-title">行事曆</div>
-            </div>
-            
             <div class="dash-card" onclick="openCheckInView()">
                 <div class="dash-icon">📍</div>
-                <div class="dash-title">到家打卡</div>
+                <div class="dash-title">打卡專區</div>
             </div>
             
             <div class="dash-card" onclick="openTodayChat()">
@@ -181,18 +188,21 @@
                 <div class="dash-title">家庭聊天室</div>
             </div>
 
+            <div class="dash-card dash-card-full" onclick="openFamilyCalendar()">
+                <div class="dash-icon">📅</div>
+                <div class="dash-title">家庭行事曆 (學校行程)</div>
+            </div>
+
+            <div class="dash-card" onclick="openGameZone()">
+                <div class="dash-icon">🎮</div>
+                <div class="dash-title">遊戲區</div>
+            </div>
+
             <div class="dash-card disabled-card">
                 <div class="coming-soon-badge">Coming Soon</div>
                 <div class="dash-icon">✨</div>
                 <div class="dash-title">許願牆</div>
             </div>
-
-            <div class="dash-card disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
-                <div class="dash-icon">🎮</div>
-                <div class="dash-title">遊戲區</div>
-            </div>
-
         </div>
     </div>
 
@@ -200,7 +210,7 @@
     <div id="mainSystemView">
         <div class="top-nav">
             <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
-            <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+            <div class="current-user-badge" onclick="logout()">
                 <img id="sysUserAvatar" class="mini-avatar" src="" alt="">
                 <span id="sysUserName"></span>
             </div>
@@ -223,20 +233,63 @@
         </div>
     </div>
 
-    <!-- === 新增：家庭行事曆畫面 === -->
+    <!-- === 家庭行事曆畫面 === -->
     <div id="familyCalendarView">
         <div class="top-nav">
             <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
-            <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+            <div class="current-user-badge" onclick="logout()">
                 <img id="calUserAvatar" class="mini-avatar" src="" alt="">
                 <span id="calUserName"></span>
             </div>
         </div>
 
-        <h2 class="system-title" style="font-size: 20px;">📅家庭行事曆</h2>
-        
-        <div class="event-list" id="eventListContainer">
-            <!-- 這裡的內容會由下方的 JavaScript 動態生成 -->
+        <h2 class="system-title" style="font-size: 20px;">📅 學校與家庭行事曆</h2>
+        <div class="event-list" id="eventListContainer"></div>
+    </div>
+
+    <!-- === 遊戲區畫面 (剪刀石頭布) === -->
+    <div id="gameZoneView">
+        <div class="top-nav">
+            <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
+            <div class="current-user-badge" onclick="logout()">
+                <img id="gameUserAvatar" class="mini-avatar" src="" alt="">
+                <span id="gameUserName"></span>
+            </div>
+        </div>
+
+        <h2 class="system-title" style="font-size: 20px;">🎮 剪刀石頭布</h2>
+
+        <!-- 計分板 -->
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">總積分</div>
+                <div class="score-value" id="gameTotalScore">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">今日剩餘場次</div>
+                <div class="score-value" id="gamePlaysLeft">3</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">目前連勝</div>
+                <div class="score-value" id="gameStreak" style="color: #e91e63;">0</div>
+            </div>
+        </div>
+
+        <!-- 遊戲主舞台 -->
+        <div class="game-arena">
+            <h3>電腦出牌</h3>
+            <!-- 電腦的牌 (預設蓋著) -->
+            <div class="card-slot" id="compCard">❓</div>
+            
+            <div class="vs-text">VS</div>
+            
+            <h3>請選擇你的牌</h3>
+            <div class="player-cards">
+                <div class="p-card" onclick="playGame(0)">✊</div>
+                <div class="p-card" onclick="playGame(1)">✋</div>
+                <div class="p-card" onclick="playGame(2)">✌️</div>
+            </div>
+            <div class="game-result" id="gameResultText">準備好了嗎？</div>
         </div>
     </div>
 
@@ -264,19 +317,17 @@
         let currentUser = { name: '', avatar: '' };
         let currentChatDate = null; 
 
-        // ==========================================
-        // 💡 這裡可以自行變更學校的行事曆內容與順序
-        // 只要修改 date (日期)、title (標題)、desc (說明文字) 即可
-        // 可以隨意上下移動順序，或複製一組來新增
-        // ==========================================
+        // 學校行事曆設定
         const schoolEvents = [
-            { date: "09/19(六)", title: "班親會", desc: "了解本學期課程與老師交流" },
-            { date: "11/03(二)", title: "期中評量", desc: "小朋友加油喔！📝" },
-            { date: "11/04(三)", title: "期中評量", desc: "小朋友加油喔！📝" },
-            { date: "11/21(六)", title: "學校校慶 / 運動會", desc: "邀請家長一同參與，記得準備運動服" },
-            { date: "01/13(三)", title: "期末評量", desc: "小朋友加油喔！📝" },
-            { date: "01/14(四)", title: "期末評量", desc: "小朋友加油喔！📝" },
+            { date: "09/25", title: "上學期 班親會", desc: "了解本學期課程與老師交流" },
+            { date: "10/30", title: "期中考週", desc: "小朋友加油喔！📝" },
+            { date: "11/15", title: "學校校慶 / 運動會", desc: "邀請家長一同參與，記得準備運動服" },
+            { date: "01/12", title: "期末考週", desc: "準備放寒假囉！" },
+            { date: "03/10", title: "下學期 班親會", desc: "新的學期開始" }
         ];
+
+        // 遊戲資料儲存 (依賴 LocalStorage 且獨立記錄每個玩家)
+        let gameDB = JSON.parse(localStorage.getItem('familyGameDB')) || {};
 
         // === 登入與導覽邏輯 ===
         function initApp() {
@@ -300,6 +351,7 @@
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'none';
             showLoginScreen();
         }
 
@@ -311,6 +363,7 @@
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'none';
             document.getElementById('dashboardView').style.display = 'block';
             
             document.getElementById('dashUserAvatar').src = currentUser.avatar;
@@ -320,10 +373,161 @@
         function goBackToDashboard() {
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'none';
             showDashboard();
         }
 
-        // === 開啟打卡專區 ===
+        // ==========================================
+        // 🎮 遊戲區邏輯 (剪刀石頭布)
+        // ==========================================
+        const RPS_ICONS = ["✊", "✋", "✌️"]; // 0:石頭, 1:布, 2:剪刀
+
+        function openGameZone() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'block';
+
+            document.getElementById('gameUserAvatar').src = currentUser.avatar;
+            document.getElementById('gameUserName').innerText = currentUser.name;
+
+            // 初始化玩家的遊戲資料
+            initUserData();
+            updateGameUI();
+            resetGameArena();
+        }
+
+        function initUserData() {
+            const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            
+            if (!gameDB[currentUser.name]) {
+                gameDB[currentUser.name] = { totalScore: 0, lastPlayDate: todayStr, playsToday: 0, currentStreak: 0 };
+            }
+
+            // 如果日期不同，代表是新的一天，重置當日次數與連勝
+            if (gameDB[currentUser.name].lastPlayDate !== todayStr) {
+                gameDB[currentUser.name].lastPlayDate = todayStr;
+                gameDB[currentUser.name].playsToday = 0;
+                gameDB[currentUser.name].currentStreak = 0;
+            }
+            localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+        }
+
+        function updateGameUI() {
+            const userStats = gameDB[currentUser.name];
+            const playsLeft = 3 - userStats.playsToday;
+            
+            document.getElementById('gameTotalScore').innerText = userStats.totalScore;
+            document.getElementById('gamePlaysLeft').innerText = playsLeft;
+            document.getElementById('gameStreak').innerText = userStats.currentStreak;
+
+            // 如果次數用完，鎖定按鈕
+            const cards = document.querySelectorAll('.p-card');
+            if (playsLeft <= 0) {
+                cards.forEach(card => card.classList.add('disabled'));
+                document.getElementById('gameResultText').innerText = "今日3場額度已用完，明天再來挑戰！";
+            } else {
+                cards.forEach(card => card.classList.remove('disabled'));
+            }
+        }
+
+        function resetGameArena() {
+            document.getElementById('compCard').innerText = "❓";
+            document.getElementById('compCard').classList.remove('card-solid');
+            if (gameDB[currentUser.name] && gameDB[currentUser.name].playsToday < 3) {
+                document.getElementById('gameResultText').innerText = "準備好了嗎？";
+            }
+        }
+
+        function playGame(playerChoice) {
+            const userStats = gameDB[currentUser.name];
+            if (userStats.playsToday >= 3) return; // 額度用完防呆
+
+            // 隨機產生電腦出牌 (0~2)
+            const compChoice = Math.floor(Math.random() * 3);
+            
+            // 翻開電腦的牌
+            const compCardEl = document.getElementById('compCard');
+            compCardEl.innerText = RPS_ICONS[compChoice];
+            compCardEl.classList.add('card-solid');
+
+            const resultTextEl = document.getElementById('gameResultText');
+
+            // 判斷勝負 (0:平手, 1:玩家贏, 2:電腦贏)
+            // 邏輯: (玩家 - 電腦 + 3) % 3
+            // 例: 玩家布(1) - 電腦石頭(0) = 1 (贏)
+            const result = (playerChoice - compChoice + 3) % 3;
+
+            if (result === 0) {
+                resultTextEl.innerText = "平手！不扣次數，再來一次！";
+                resultTextEl.style.color = "#ff9800";
+            } else {
+                // 只要分出勝負，就扣一場次數
+                userStats.playsToday += 1;
+
+                if (result === 1) {
+                    // 玩家獲勝
+                    userStats.totalScore += 1;
+                    userStats.currentStreak += 1;
+                    
+                    let msg = "🎉 贏了！獲得 1 分！";
+                    
+                    // 紀錄一筆 1 分到 Google Sheets
+                    saveScoreToGAS(1, "剪刀石頭布 獲勝");
+
+                    // 判斷是否達成連勝 3 場
+                    if (userStats.currentStreak === 3) {
+                        userStats.totalScore += 2; // 額外加2分
+                        msg = "🔥 連贏 3 場！額外加 2 分！總共獲得 3 分！";
+                        saveScoreToGAS(2, "連贏3場 額外加分");
+                    }
+                    
+                    resultTextEl.innerText = msg;
+                    resultTextEl.style.color = "#4caf50";
+                } else {
+                    // 玩家輸了
+                    userStats.currentStreak = 0; // 連勝中斷
+                    resultTextEl.innerText = "😢 輸了！再接再厲！";
+                    resultTextEl.style.color = "#e53935";
+                }
+
+                // 存檔並更新 UI
+                localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+                updateGameUI();
+
+                if (userStats.playsToday >= 3) {
+                    setTimeout(() => {
+                        document.getElementById('gameResultText').innerText = "今日額度已用完，明天再來挑戰！";
+                    }, 2500);
+                } else {
+                    // 如果還有次數，2.5秒後蓋回電腦的牌
+                    setTimeout(resetGameArena, 2500);
+                }
+            }
+        }
+
+        function saveScoreToGAS(scoreValue, reason) {
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ 
+                    date: dateKey, 
+                    time: timeStr, 
+                    operator: currentUser.name,
+                    action: 'gameScore', // 傳送給後端識別這是一筆分數紀錄
+                    note: reason, // 紀錄得分原因 (例如: 剪刀石頭布獲勝)
+                    score: scoreValue // 傳送獲得的分數
+                })
+            }).catch(e => console.error("傳送分數紀錄失敗", e));
+        }
+
+
+        // ==========================================
+        // 其他系統邏輯 (打卡、聊天室、行事曆)
+        // ==========================================
         function openCheckInView() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'block';
@@ -340,23 +544,17 @@
             loadData(); 
         }
 
-        // === 開啟家庭行事曆 ===
         function openFamilyCalendar() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'block';
-
-            // 更新右上角頭像
             document.getElementById('calUserAvatar').src = currentUser.avatar;
             document.getElementById('calUserName').innerText = currentUser.name;
-
-            // 渲染行事曆事件
             renderSchoolEvents();
         }
 
         function renderSchoolEvents() {
             const container = document.getElementById('eventListContainer');
-            container.innerHTML = ''; // 清空原本內容
-
+            container.innerHTML = ''; 
             schoolEvents.forEach(evt => {
                 const card = document.createElement('div');
                 card.className = 'event-card';
@@ -371,10 +569,8 @@
             });
         }
 
-        // === 聊天室相關邏輯 ===
         function openTodayChat() {
-            const now = new Date();
-            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             openChat(dateKey);
         }
 
@@ -382,7 +578,6 @@
             currentChatDate = dateKey;
             document.getElementById('chatModal').style.display = 'flex';
             document.getElementById('chatTitle').innerText = `${dateKey} 家庭聊天室`;
-            
             const msgContainer = document.getElementById('chatMessages');
             msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">讀取訊息中...</div>';
             
@@ -404,86 +599,48 @@
             document.body.appendChild(script);
         }
 
-        function closeChat() {
-            document.getElementById('chatModal').style.display = 'none';
-        }
-
-        function handleChatKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
+        function closeChat() { document.getElementById('chatModal').style.display = 'none'; }
+        function handleChatKeyPress(event) { if (event.key === 'Enter') sendMessage(); }
 
         function sendMessage() {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
             if (!text) return;
-
             input.value = ''; 
             
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
+            const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}:${String(today.getSeconds()).padStart(2, '0')}`;
             appendMessageUI(currentUser.name, text, timeStr);
 
             fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ 
-                    action: 'sendChat', 
-                    date: currentChatDate, 
-                    time: timeStr, 
-                    operator: currentUser.name, 
-                    message: text 
-                })
-            }).catch(e => console.error("傳送訊息失敗:", e));
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'sendChat', date: currentChatDate, time: timeStr, operator: currentUser.name, message: text })
+            }).catch(e => console.error(e));
         }
 
         function appendMessageUI(user, text, time) {
             const container = document.getElementById('chatMessages');
-            const isMine = (user === currentUser.name);
+            if(container.innerHTML.includes('還沒有人說話喔')) container.innerHTML = '';
             
-            if(container.innerHTML.includes('還沒有人說話喔')) {
-                container.innerHTML = '';
-            }
-
+            const isMine = (user === currentUser.name);
             const div = document.createElement('div');
             div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
+            div.innerHTML = (!isMine ? `<div class="msg-sender">${user}</div>` : '') + `<div>${text}</div><div class="msg-time">${time}</div>`;
             
-            let html = '';
-            if (!isMine) {
-                html += `<div class="msg-sender">${user}</div>`;
-            }
-            html += `<div>${text}</div>`;
-            html += `<div class="msg-time">${time}</div>`;
-            
-            div.innerHTML = html;
             container.appendChild(div);
-            
             container.scrollTop = container.scrollHeight;
         }
 
-        // === 打卡資料載入與日曆渲染 ===
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在同步資料...';
 
-            const now = new Date();
-            const targetDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-            let loadTimeout = setTimeout(() => {
-                document.getElementById('loadingView').style.display = 'none';
-                initCalendar();
-            }, 6000);
+            const targetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            let loadTimeout = setTimeout(() => { document.getElementById('loadingView').style.display = 'none'; initCalendar(); }, 6000);
 
             window.googleCheckinCallback = function(result) {
                 clearTimeout(loadTimeout); 
-                if (result.checked) {
-                    attendanceData[targetDate] = { checked: true, time: result.time };
-                } else {
-                    delete attendanceData[targetDate];
-                }
+                if (result.checked) attendanceData[targetDate] = { checked: true, time: result.time };
+                else delete attendanceData[targetDate];
                 localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
                 initCalendar();
                 document.getElementById('loadingView').style.display = 'none';
@@ -492,86 +649,50 @@
 
             const script = document.createElement('script');
             script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
-            script.onerror = function() {
-                clearTimeout(loadTimeout);
-                initCalendar(); 
-                document.getElementById('loadingView').style.display = 'none';
-            };
+            script.onerror = function() { clearTimeout(loadTimeout); initCalendar(); document.getElementById('loadingView').style.display = 'none'; };
             document.body.appendChild(script);
         }
 
         function initCalendar() {
             const year = viewDate.getFullYear();
             const month = viewDate.getMonth();
-            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-            document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
+            document.getElementById('calendarMonth').innerText = `${year} 年 ${["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"][month]}`;
             
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
-
-            const weeks = ['日', '一', '二', '三', '四', '五', '六'];
-            weeks.forEach(w => {
-                const div = document.createElement('div');
-                div.className = 'weekday';
-                div.innerText = w;
-                grid.appendChild(div);
+            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
+                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
             });
 
             const firstDayIndex = new Date(year, month, 1).getDay();
             const totalDays = new Date(year, month + 1, 0).getDate();
 
-            for (let i = 0; i < firstDayIndex; i++) {
-                grid.appendChild(document.createElement('div'));
-            }
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
 
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'day';
-                
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                    dayDiv.classList.add('today');
-                }
-
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) dayDiv.classList.add('today');
                 dayDiv.onclick = () => openChat(dateKey);
 
-                const numSpan = document.createElement('span');
-                numSpan.className = 'date-num';
-                numSpan.innerText = day;
-                dayDiv.appendChild(numSpan);
-
+                dayDiv.innerHTML = `<span class="date-num">${day}</span>`;
                 if (attendanceData[dateKey]) {
-                    const statusSpan = document.createElement('span');
-                    statusSpan.className = 'status';
-                    statusSpan.innerText = '✓';
-                    dayDiv.appendChild(statusSpan);
-
+                    dayDiv.innerHTML += `<span class="status">✓</span>`;
                     if (attendanceData[dateKey].time) {
-                        let displayTime = attendanceData[dateKey].time;
-                        let match = String(displayTime).match(/(\d{2}:\d{2})/);
-                        if (match) displayTime = match[1];
-
-                        const timeDiv = document.createElement('div');
-                        timeDiv.className = 'time';
-                        timeDiv.innerText = displayTime;
-                        dayDiv.appendChild(timeDiv);
+                        let displayTime = String(attendanceData[dateKey].time).match(/(\d{2}:\d{2})/) ? String(attendanceData[dateKey].time).match(/(\d{2}:\d{2})/)[1] : attendanceData[dateKey].time;
+                        dayDiv.innerHTML += `<div class="time">${displayTime}</div>`;
                     }
                 }
                 grid.appendChild(dayDiv);
             }
         }
 
-        function changeMonth(direction) {
-            viewDate.setMonth(viewDate.getMonth() + direction);
-            initCalendar();
-        }
+        function changeMonth(direction) { viewDate.setMonth(viewDate.getMonth() + direction); initCalendar(); }
 
         function checkIn() {
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            
+            const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             attendanceData[dateKey] = { checked: true, time: timeStr };
             saveData(dateKey, 'checkin', '', timeStr, currentUser.name);
         }
@@ -582,20 +703,15 @@
                 if (attendanceData[dateKey]) {
                     delete attendanceData[dateKey];
                     saveData(dateKey, 'cancel', '', '', currentUser.name);
-                } else {
-                    alert('今天本來就沒有打卡紀錄喔！');
-                }
+                } else alert('今天本來就沒有打卡紀錄喔！');
             }
         }
 
         function saveData(date, action, note, time, operator) {
             localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
             initCalendar();
-
             fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ date: date, action: action, note: note, time: time, operator: operator })
             }).catch(e => console.error(e));
         }
