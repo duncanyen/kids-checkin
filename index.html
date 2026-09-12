@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>家庭專屬 App</title>
+    <!-- 1. App 標題 -->
+    <title>HomeBase</title>
+    
+    <!-- 2. 設定手機桌面圖示與網頁分頁圖示 -->
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    
+    <!-- 3. 設定加到主畫面時的 App 顯示名稱 (覆蓋預設的 title) -->
+    <meta name="apple-mobile-web-app-title" content="HomeBase">
+    
+    <!-- 4. 讓網頁以全螢幕 App 模式執行 (隱藏 Safari/Chrome 網址列，看起來更像原生 App) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- 5. 設定 iOS 頂部狀態列的顏色樣式 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
         :root {
             --primary-color: #2e7d32;
