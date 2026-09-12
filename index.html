@@ -29,6 +29,7 @@
             --today-bg: #fffde7;
             --chat-bg: #e5ddd5;
             --event-color: #ff9800;
+            --game-bg: #e3f2fd;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
@@ -58,7 +59,7 @@
         .system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 25px; font-size: 24px; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .dash-card { background: white; border-radius: 16px; padding: 30px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
-        .dash-card-full { grid-column: span 2; padding: 20px 15px; } /* 讓特定區塊橫跨兩格 */
+        .dash-card-full { grid-column: span 2; padding: 20px 15px; }
         .dash-card:active { transform: scale(0.96); }
         .dash-icon { font-size: 45px; margin-bottom: 12px; }
         .dash-card-full .dash-icon { margin-bottom: 5px; font-size: 35px; }
@@ -70,7 +71,7 @@
         .coming-soon-badge { position: absolute; top: 12px; right: 12px; background: var(--cancel-color); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
 
         /* === 打卡主系統與公用導航樣式 === */
-        #mainSystemView, #familyCalendarView { display: none; text-align: center; }
+        #mainSystemView, #familyCalendarView, #gameZoneView { display: none; text-align: center; }
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
@@ -118,6 +119,26 @@
         .event-info { flex-grow: 1; padding-left: 12px; border-left: 1px solid #eee; }
         .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
         .event-desc { font-size: 13px; color: #777; margin:0; }
+
+        /* === 遊戲區：剪刀石頭布 樣式 === */
+        .score-board { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .score-item { text-align: center; }
+        .score-label { font-size: 12px; color: #777; margin-bottom: 5px; }
+        .score-value { font-size: 20px; font-weight: bold; color: var(--primary-color); }
+        
+        .game-arena { background: var(--game-bg); border-radius: 16px; padding: 30px 15px; box-shadow: inset 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .game-arena h3 { margin-top: 0; color: #1565c0; font-size: 16px; }
+        .card-slot { width: 80px; height: 110px; background: white; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 45px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 0 auto; border: 2px dashed #90caf9; }
+        .card-solid { border: 2px solid #1976d2; }
+        .vs-text { font-size: 24px; font-weight: bold; color: #555; margin: 15px 0; }
+        
+        .player-cards { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .p-card { width: 70px; height: 95px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
+        .p-card:active { transform: scale(0.9); }
+        .p-card:hover { border-color: var(--accent-color); }
+        .p-card.disabled { opacity: 0.5; cursor: not-allowed; transform: none; border-color: transparent; }
+
+        .game-result { font-size: 18px; font-weight: bold; margin-top: 20px; height: 25px; color: #e53935; }
     </style>
 </head>
 <body>
@@ -163,10 +184,8 @@
 
         <h1 class="system-title">🏡 我們家的小天地</h1>
 
-        <!-- 💡 若要更改按鈕區塊順序，直接將底下的 <div class="dash-card"> 上下交換位置即可 -->
         <div class="dashboard-grid">
-            <!-- 新增：家庭行事曆 (套用橫跨兩格的樣式 dash-card-full，也可拿掉變一格) -->
-            <div class="dash-card"  onclick="openFamilyCalendar()">
+            <div class="dash-card" onclick="openFamilyCalendar()">
                 <div class="dash-icon">📅</div>
                 <div class="dash-title">行事曆</div>
             </div>
@@ -181,18 +200,18 @@
                 <div class="dash-title">家庭聊天室</div>
             </div>
 
-            <div class="dash-card disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
-                <div class="dash-icon">✨</div>
-                <div class="dash-title">許願牆</div>
-            </div>
-
-            <div class="dash-card disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
+            <!-- 啟用遊戲區按鈕，移除 disabled 類別與 Coming Soon 標籤 -->
+            <div class="dash-card" onclick="openGameZone()">
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
             </div>
 
+            <!-- 原本的兩格被取代為上方一格，將許願牆橫跨兩格排版更美觀 -->
+            <div class="dash-card dash-card-full disabled-card">
+                <div class="coming-soon-badge">Coming Soon</div>
+                <div class="dash-icon">✨</div>
+                <div class="dash-title">許願牆</div>
+            </div>
         </div>
     </div>
 
@@ -223,7 +242,7 @@
         </div>
     </div>
 
-    <!-- === 新增：家庭行事曆畫面 === -->
+    <!-- === 家庭行事曆畫面 === -->
     <div id="familyCalendarView">
         <div class="top-nav">
             <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
@@ -237,6 +256,52 @@
         
         <div class="event-list" id="eventListContainer">
             <!-- 這裡的內容會由下方的 JavaScript 動態生成 -->
+        </div>
+    </div>
+
+    <!-- === 新增：遊戲區畫面 (剪刀石頭布) === -->
+    <div id="gameZoneView">
+        <div class="top-nav">
+            <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
+            <div class="current-user-badge" onclick="logout()">
+                <img id="gameUserAvatar" class="mini-avatar" src="" alt="">
+                <span id="gameUserName"></span>
+            </div>
+        </div>
+
+        <h2 class="system-title" style="font-size: 20px;">🎮 剪刀石頭布</h2>
+
+        <!-- 計分板 -->
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">總積分</div>
+                <div class="score-value" id="gameTotalScore">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">今日剩餘場次</div>
+                <div class="score-value" id="gamePlaysLeft">3</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">目前連勝</div>
+                <div class="score-value" id="gameStreak" style="color: #e91e63;">0</div>
+            </div>
+        </div>
+
+        <!-- 遊戲主舞台 -->
+        <div class="game-arena">
+            <h3>電腦出牌</h3>
+            <!-- 電腦的牌 (預設蓋著) -->
+            <div class="card-slot" id="compCard">❓</div>
+            
+            <div class="vs-text">VS</div>
+            
+            <h3>請選擇你的牌</h3>
+            <div class="player-cards">
+                <div class="p-card" onclick="playGame(0)">✊</div>
+                <div class="p-card" onclick="playGame(1)">✋</div>
+                <div class="p-card" onclick="playGame(2)">✌️</div>
+            </div>
+            <div class="game-result" id="gameResultText">準備好了嗎？</div>
         </div>
     </div>
 
@@ -264,11 +329,9 @@
         let currentUser = { name: '', avatar: '' };
         let currentChatDate = null; 
 
-        // ==========================================
-        // 💡 這裡可以自行變更學校的行事曆內容與順序
-        // 只要修改 date (日期)、title (標題)、desc (說明文字) 即可
-        // 可以隨意上下移動順序，或複製一組來新增
-        // ==========================================
+        // 遊戲資料儲存 (依賴 LocalStorage 且獨立記錄每個玩家)
+        let gameDB = JSON.parse(localStorage.getItem('familyGameDB')) || {};
+
         const schoolEvents = [
             { date: "09/19(六)", title: "班親會", desc: "了解本學期課程與老師交流" },
             { date: "11/03(二)", title: "期中評量", desc: "小朋友加油喔！📝" },
@@ -300,6 +363,7 @@
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'none';
             showLoginScreen();
         }
 
@@ -311,6 +375,7 @@
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'none';
             document.getElementById('dashboardView').style.display = 'block';
             
             document.getElementById('dashUserAvatar').src = currentUser.avatar;
@@ -320,7 +385,151 @@
         function goBackToDashboard() {
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'none';
             showDashboard();
+        }
+
+        // ==========================================
+        // 🎮 遊戲區邏輯 (剪刀石頭布)
+        // ==========================================
+        const RPS_ICONS = ["✊", "✋", "✌️"]; // 0:石頭, 1:布, 2:剪刀
+
+        function openGameZone() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('gameZoneView').style.display = 'block';
+
+            document.getElementById('gameUserAvatar').src = currentUser.avatar;
+            document.getElementById('gameUserName').innerText = currentUser.name;
+
+            // 初始化玩家的遊戲資料
+            initUserData();
+            updateGameUI();
+            resetGameArena();
+        }
+
+        function initUserData() {
+            const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            
+            if (!gameDB[currentUser.name]) {
+                gameDB[currentUser.name] = { totalScore: 0, lastPlayDate: todayStr, playsToday: 0, currentStreak: 0 };
+            }
+
+            // 如果日期不同，代表是新的一天，重置當日次數與連勝
+            if (gameDB[currentUser.name].lastPlayDate !== todayStr) {
+                gameDB[currentUser.name].lastPlayDate = todayStr;
+                gameDB[currentUser.name].playsToday = 0;
+                gameDB[currentUser.name].currentStreak = 0;
+            }
+            localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+        }
+
+        function updateGameUI() {
+            const userStats = gameDB[currentUser.name];
+            const playsLeft = 3 - userStats.playsToday;
+            
+            document.getElementById('gameTotalScore').innerText = userStats.totalScore;
+            document.getElementById('gamePlaysLeft').innerText = playsLeft;
+            document.getElementById('gameStreak').innerText = userStats.currentStreak;
+
+            // 如果次數用完，鎖定按鈕
+            const cards = document.querySelectorAll('.p-card');
+            if (playsLeft <= 0) {
+                cards.forEach(card => card.classList.add('disabled'));
+                document.getElementById('gameResultText').innerText = "今日3場額度已用完，明天再來挑戰！";
+            } else {
+                cards.forEach(card => card.classList.remove('disabled'));
+            }
+        }
+
+        function resetGameArena() {
+            document.getElementById('compCard').innerText = "❓";
+            document.getElementById('compCard').classList.remove('card-solid');
+            if (gameDB[currentUser.name] && gameDB[currentUser.name].playsToday < 3) {
+                document.getElementById('gameResultText').innerText = "準備好了嗎？";
+            }
+        }
+
+        function playGame(playerChoice) {
+            const userStats = gameDB[currentUser.name];
+            if (userStats.playsToday >= 3) return; // 額度用完防呆
+
+            // 隨機產生電腦出牌 (0~2)
+            const compChoice = Math.floor(Math.random() * 3);
+            
+            // 翻開電腦的牌
+            const compCardEl = document.getElementById('compCard');
+            compCardEl.innerText = RPS_ICONS[compChoice];
+            compCardEl.classList.add('card-solid');
+
+            const resultTextEl = document.getElementById('gameResultText');
+
+            // 判斷勝負 (0:平手, 1:玩家贏, 2:電腦贏)
+            const result = (playerChoice - compChoice + 3) % 3;
+
+            if (result === 0) {
+                resultTextEl.innerText = "平手！不扣次數，再來一次！";
+                resultTextEl.style.color = "#ff9800";
+            } else {
+                // 分出勝負扣一場次數
+                userStats.playsToday += 1;
+
+                if (result === 1) {
+                    // 玩家獲勝
+                    userStats.totalScore += 1;
+                    userStats.currentStreak += 1;
+                    
+                    let msg = "🎉 贏了！獲得 1 分！";
+                    saveScoreToGAS(1, "剪刀石頭布 獲勝");
+
+                    // 判斷是否達成連勝 3 場
+                    if (userStats.currentStreak === 3) {
+                        userStats.totalScore += 2; // 額外加2分
+                        msg = "🔥 連贏 3 場！額外加 2 分！總共獲得 3 分！";
+                        saveScoreToGAS(2, "連贏3場 額外加分");
+                    }
+                    
+                    resultTextEl.innerText = msg;
+                    resultTextEl.style.color = "#4caf50";
+                } else {
+                    // 玩家輸了
+                    userStats.currentStreak = 0; // 連勝中斷
+                    resultTextEl.innerText = "😢 輸了！再接再厲！";
+                    resultTextEl.style.color = "#e53935";
+                }
+
+                // 存檔並更新 UI
+                localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+                updateGameUI();
+
+                if (userStats.playsToday >= 3) {
+                    setTimeout(() => {
+                        document.getElementById('gameResultText').innerText = "今日額度已用完，明天再來挑戰！";
+                    }, 2500);
+                } else {
+                    // 還有次數，2.5秒後重置電腦的牌
+                    setTimeout(resetGameArena, 2500);
+                }
+            }
+        }
+
+        function saveScoreToGAS(scoreValue, reason) {
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ 
+                    date: dateKey, 
+                    time: timeStr, 
+                    operator: currentUser.name,
+                    action: 'gameScore', // 傳送給後端識別這是一筆分數紀錄
+                    note: reason, // 紀錄得分原因
+                    score: scoreValue // 傳送獲得的分數
+                })
+            }).catch(e => console.error("傳送分數紀錄失敗", e));
         }
 
         // === 開啟打卡專區 ===
@@ -345,17 +554,15 @@
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'block';
 
-            // 更新右上角頭像
             document.getElementById('calUserAvatar').src = currentUser.avatar;
             document.getElementById('calUserName').innerText = currentUser.name;
 
-            // 渲染行事曆事件
             renderSchoolEvents();
         }
 
         function renderSchoolEvents() {
             const container = document.getElementById('eventListContainer');
-            container.innerHTML = ''; // 清空原本內容
+            container.innerHTML = ''; 
 
             schoolEvents.forEach(evt => {
                 const card = document.createElement('div');
