@@ -305,13 +305,11 @@
             </div>
         </div>
 
-        <!-- 家長視角：管理面板 (爸爸/媽咪登入時顯示) -->
+        <!-- 家長視角：管理面板 -->
         <div id="parentAdminContainer" style="display: none;">
             <div class="admin-panel">
                 <div class="admin-title">🛡️ 小朋友遊玩額度管理</div>
-                <div id="adminKidList">
-                    <!-- 動態產生成員清單 -->
-                </div>
+                <div id="adminKidList"></div>
             </div>
         </div>
     </div>
@@ -341,6 +339,7 @@
         let currentChatDate = null; 
 
         let gameDB = JSON.parse(localStorage.getItem('familyGameDB')) || {};
+        let isGameLocked = false; // 🔒 新增：控制動畫進行中不能點擊的鎖
 
         const schoolEvents = [
             { date: "09/19(六)", title: "班親會", desc: "了解本學期課程與老師交流" },
@@ -410,7 +409,6 @@
             document.getElementById('gameUserAvatar').src = currentUser.avatar;
             document.getElementById('gameUserName').innerText = currentUser.name;
 
-            // 判斷是家長還是小朋友
             if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
                 document.getElementById('gameZoneTitle').innerText = "🛡️ 家長遊戲管理中心";
                 document.getElementById('kidGameContainer').style.display = 'none';
@@ -421,12 +419,12 @@
                 document.getElementById('parentAdminContainer').style.display = 'none';
                 document.getElementById('kidGameContainer').style.display = 'block';
                 initUserData(currentUser.name);
+                isGameLocked = false;
                 updateGameUI();
                 resetGameArena();
             }
         }
 
-        // 初始化指定玩家的遊戲資料
         function initUserData(kidName) {
             const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
             
@@ -442,15 +440,13 @@
             localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
         }
 
-        // 渲染家長管理面板中的小孩清單
         function renderAdminKidList() {
             const container = document.getElementById('adminKidList');
             container.innerHTML = '';
-            
-            const kids = ['俊俊', '程寶']; // 定義需要管理的小孩名單
+            const kids = ['俊俊', '程寶'];
             
             kids.forEach(kidName => {
-                initUserData(kidName); // 確保資料存在
+                initUserData(kidName);
                 const stats = gameDB[kidName];
                 const playsLeft = 3 - stats.playsToday;
 
@@ -470,12 +466,11 @@
             });
         }
 
-        // 家長手動調整小孩遊玩次數
         function adminSetPlays(kidName, count) {
             initUserData(kidName);
             gameDB[kidName].playsToday = count;
             if(count === 0) {
-                gameDB[kidName].currentStreak = 0; // 重置時順便歸零連勝
+                gameDB[kidName].currentStreak = 0;
             }
             localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
             renderAdminKidList();
@@ -494,22 +489,31 @@
             if (playsLeft <= 0) {
                 cards.forEach(card => card.classList.add('disabled'));
                 document.getElementById('gameResultText').innerText = "今日3場額度已用完，請找爸爸或媽咪解鎖！";
-            } else {
+            } else if (!isGameLocked) {
                 cards.forEach(card => card.classList.remove('disabled'));
             }
         }
 
         function resetGameArena() {
+            isGameLocked = false;
             document.getElementById('compCard').innerText = "❓";
             document.getElementById('compCard').classList.remove('card-solid');
-            if (gameDB[currentUser.name] && gameDB[currentUser.name].playsToday < 3) {
+            if (gameDB[currentUser.name] && (3 - gameDB[currentUser.name].playsToday) > 0) {
                 document.getElementById('gameResultText').innerText = "準備好了嗎？";
+                document.querySelectorAll('.p-card').forEach(card => card.classList.remove('disabled'));
             }
         }
 
         function playGame(playerChoice) {
+            // 🔒 如果遊戲正在結算動畫中，或是額度用完，直接擋掉，防止慢半拍
+            if (isGameLocked) return;
+            
             const userStats = gameDB[currentUser.name];
             if (userStats.playsToday >= 3) return;
+
+            // 🔒 鎖定按鈕，防止玩家連續點擊
+            isGameLocked = true;
+            document.querySelectorAll('.p-card').forEach(card => card.classList.add('disabled'));
 
             const compChoice = Math.floor(Math.random() * 3);
             
@@ -521,9 +525,16 @@
             const result = (playerChoice - compChoice + 3) % 3;
 
             if (result === 0) {
-                resultTextEl.innerText = "平手！不扣次數，再來一次！";
+                // 🤝 平手：不扣次數，但也要等 1.5 秒後把電腦的牌蓋回問號，再解鎖
+                resultTextEl.innerText = "平手！不扣次數，再試一次！";
                 resultTextEl.style.color = "#ff9800";
+                
+                setTimeout(() => {
+                    resetGameArena();
+                }, 1500);
+
             } else {
+                // 胜負分曉：扣場次
                 userStats.playsToday += 1;
 
                 if (result === 1) {
@@ -555,6 +566,7 @@
                         document.getElementById('gameResultText').innerText = "今日3場額度已用完，請找爸爸或媽咪解鎖！";
                     }, 2500);
                 } else {
+                    // 還有次數，2.5秒後重置電腦的牌與解鎖
                     setTimeout(resetGameArena, 2500);
                 }
             }
