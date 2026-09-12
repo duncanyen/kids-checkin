@@ -120,7 +120,7 @@
         .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
         .event-desc { font-size: 13px; color: #777; margin:0; }
 
-        /* === 遊戲區：剪刀石頭布 樣式 === */
+        /* === 遊戲區與家長管理面板樣式 === */
         .score-board { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         .score-item { text-align: center; }
         .score-label { font-size: 12px; color: #777; margin-bottom: 5px; }
@@ -137,8 +137,16 @@
         .p-card:active { transform: scale(0.9); }
         .p-card:hover { border-color: var(--accent-color); }
         .p-card.disabled { opacity: 0.5; cursor: not-allowed; transform: none; border-color: transparent; }
-
         .game-result { font-size: 18px; font-weight: bold; margin-top: 20px; height: 25px; color: #e53935; }
+
+        /* 家長管理面板樣式 */
+        .admin-panel { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
+        .admin-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; }
+        .kid-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .kid-info font { font-weight: bold; font-size: 16px; }
+        .kid-status { font-size: 13px; color: #666; margin-top: 3px; }
+        .admin-btns { display: flex; gap: 6px; }
+        .btn-sm { font-size: 13px; padding: 6px 12px; margin: 0; }
     </style>
 </head>
 <body>
@@ -200,13 +208,11 @@
                 <div class="dash-title">家庭聊天室</div>
             </div>
 
-            <!-- 啟用遊戲區按鈕，移除 disabled 類別與 Coming Soon 標籤 -->
             <div class="dash-card" onclick="openGameZone()">
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
             </div>
 
-            <!-- 原本的兩格被取代為上方一格，將許願牆橫跨兩格排版更美觀 -->
             <div class="dash-card dash-card-full disabled-card">
                 <div class="coming-soon-badge">Coming Soon</div>
                 <div class="dash-icon">✨</div>
@@ -253,13 +259,10 @@
         </div>
 
         <h2 class="system-title" style="font-size: 20px;">📅家庭行事曆</h2>
-        
-        <div class="event-list" id="eventListContainer">
-            <!-- 這裡的內容會由下方的 JavaScript 動態生成 -->
-        </div>
+        <div class="event-list" id="eventListContainer"></div>
     </div>
 
-    <!-- === 新增：遊戲區畫面 (剪刀石頭布) === -->
+    <!-- === 遊戲區畫面 (小朋友遊戲 / 家長管理面板) === -->
     <div id="gameZoneView">
         <div class="top-nav">
             <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
@@ -269,39 +272,47 @@
             </div>
         </div>
 
-        <h2 class="system-title" style="font-size: 20px;">🎮 剪刀石頭布</h2>
+        <h2 class="system-title" id="gameZoneTitle" style="font-size: 20px;">🎮 遊戲區</h2>
 
-        <!-- 計分板 -->
-        <div class="score-board">
-            <div class="score-item">
-                <div class="score-label">總積分</div>
-                <div class="score-value" id="gameTotalScore">0</div>
+        <!-- 小朋友視角：剪刀石頭布遊戲 -->
+        <div id="kidGameContainer">
+            <div class="score-board">
+                <div class="score-item">
+                    <div class="score-label">總積分</div>
+                    <div class="score-value" id="gameTotalScore">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">今日剩餘場次</div>
+                    <div class="score-value" id="gamePlaysLeft">3</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">目前連勝</div>
+                    <div class="score-value" id="gameStreak" style="color: #e91e63;">0</div>
+                </div>
             </div>
-            <div class="score-item">
-                <div class="score-label">今日剩餘場次</div>
-                <div class="score-value" id="gamePlaysLeft">3</div>
-            </div>
-            <div class="score-item">
-                <div class="score-label">目前連勝</div>
-                <div class="score-value" id="gameStreak" style="color: #e91e63;">0</div>
+
+            <div class="game-arena">
+                <h3>電腦出牌</h3>
+                <div class="card-slot" id="compCard">❓</div>
+                <div class="vs-text">VS</div>
+                <h3>請選擇你的牌</h3>
+                <div class="player-cards">
+                    <div class="p-card" onclick="playGame(0)">✊</div>
+                    <div class="p-card" onclick="playGame(1)">✋</div>
+                    <div class="p-card" onclick="playGame(2)">✌️</div>
+                </div>
+                <div class="game-result" id="gameResultText">準備好了嗎？</div>
             </div>
         </div>
 
-        <!-- 遊戲主舞台 -->
-        <div class="game-arena">
-            <h3>電腦出牌</h3>
-            <!-- 電腦的牌 (預設蓋著) -->
-            <div class="card-slot" id="compCard">❓</div>
-            
-            <div class="vs-text">VS</div>
-            
-            <h3>請選擇你的牌</h3>
-            <div class="player-cards">
-                <div class="p-card" onclick="playGame(0)">✊</div>
-                <div class="p-card" onclick="playGame(1)">✋</div>
-                <div class="p-card" onclick="playGame(2)">✌️</div>
+        <!-- 家長視角：管理面板 (爸爸/媽咪登入時顯示) -->
+        <div id="parentAdminContainer" style="display: none;">
+            <div class="admin-panel">
+                <div class="admin-title">🛡️ 小朋友遊玩額度管理</div>
+                <div id="adminKidList">
+                    <!-- 動態產生成員清單 -->
+                </div>
             </div>
-            <div class="game-result" id="gameResultText">準備好了嗎？</div>
         </div>
     </div>
 
@@ -329,7 +340,6 @@
         let currentUser = { name: '', avatar: '' };
         let currentChatDate = null; 
 
-        // 遊戲資料儲存 (依賴 LocalStorage 且獨立記錄每個玩家)
         let gameDB = JSON.parse(localStorage.getItem('familyGameDB')) || {};
 
         const schoolEvents = [
@@ -341,7 +351,6 @@
             { date: "01/14(四)", title: "期末評量", desc: "小朋友加油喔！📝" },
         ];
 
-        // === 登入與導覽邏輯 ===
         function initApp() {
             const savedUser = localStorage.getItem('familyCheckInUser');
             if (savedUser) {
@@ -390,9 +399,9 @@
         }
 
         // ==========================================
-        // 🎮 遊戲區邏輯 (剪刀石頭布)
+        // 🎮 遊戲區與家長管理邏輯
         // ==========================================
-        const RPS_ICONS = ["✊", "✋", "✌️"]; // 0:石頭, 1:布, 2:剪刀
+        const RPS_ICONS = ["✊", "✋", "✌️"];
 
         function openGameZone() {
             document.getElementById('dashboardView').style.display = 'none';
@@ -401,26 +410,76 @@
             document.getElementById('gameUserAvatar').src = currentUser.avatar;
             document.getElementById('gameUserName').innerText = currentUser.name;
 
-            // 初始化玩家的遊戲資料
-            initUserData();
-            updateGameUI();
-            resetGameArena();
+            // 判斷是家長還是小朋友
+            if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
+                document.getElementById('gameZoneTitle').innerText = "🛡️ 家長遊戲管理中心";
+                document.getElementById('kidGameContainer').style.display = 'none';
+                document.getElementById('parentAdminContainer').style.display = 'block';
+                renderAdminKidList();
+            } else {
+                document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布";
+                document.getElementById('parentAdminContainer').style.display = 'none';
+                document.getElementById('kidGameContainer').style.display = 'block';
+                initUserData(currentUser.name);
+                updateGameUI();
+                resetGameArena();
+            }
         }
 
-        function initUserData() {
+        // 初始化指定玩家的遊戲資料
+        function initUserData(kidName) {
             const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
             
-            if (!gameDB[currentUser.name]) {
-                gameDB[currentUser.name] = { totalScore: 0, lastPlayDate: todayStr, playsToday: 0, currentStreak: 0 };
+            if (!gameDB[kidName]) {
+                gameDB[kidName] = { totalScore: 0, lastPlayDate: todayStr, playsToday: 0, currentStreak: 0 };
             }
 
-            // 如果日期不同，代表是新的一天，重置當日次數與連勝
-            if (gameDB[currentUser.name].lastPlayDate !== todayStr) {
-                gameDB[currentUser.name].lastPlayDate = todayStr;
-                gameDB[currentUser.name].playsToday = 0;
-                gameDB[currentUser.name].currentStreak = 0;
+            if (gameDB[kidName].lastPlayDate !== todayStr) {
+                gameDB[kidName].lastPlayDate = todayStr;
+                gameDB[kidName].playsToday = 0;
+                gameDB[kidName].currentStreak = 0;
             }
             localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+        }
+
+        // 渲染家長管理面板中的小孩清單
+        function renderAdminKidList() {
+            const container = document.getElementById('adminKidList');
+            container.innerHTML = '';
+            
+            const kids = ['俊俊', '程寶']; // 定義需要管理的小孩名單
+            
+            kids.forEach(kidName => {
+                initUserData(kidName); // 確保資料存在
+                const stats = gameDB[kidName];
+                const playsLeft = 3 - stats.playsToday;
+
+                const row = document.createElement('div');
+                row.className = 'kid-row';
+                row.innerHTML = `
+                    <div class="kid-info">
+                        <font>${kidName}</font>
+                        <div class="kid-status">今日已玩: <b>${stats.playsToday}</b> 場 | 剩餘額度: <b style="color:${playsLeft > 0 ? 'green':'red'}">${playsLeft}</b> 場 | 總積分: <b>${stats.totalScore}</b></div>
+                    </div>
+                    <div class="admin-btns">
+                        <button class="btn-check btn-sm" onclick="adminSetPlays('${kidName}', 0)">重置(0場)</button>
+                        <button class="btn-cancel btn-sm" onclick="adminSetPlays('${kidName}', 3)">設為用完(3場)</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // 家長手動調整小孩遊玩次數
+        function adminSetPlays(kidName, count) {
+            initUserData(kidName);
+            gameDB[kidName].playsToday = count;
+            if(count === 0) {
+                gameDB[kidName].currentStreak = 0; // 重置時順便歸零連勝
+            }
+            localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+            renderAdminKidList();
+            alert(`已成功將 ${kidName} 的今日已遊玩次數設為 ${count} 場！`);
         }
 
         function updateGameUI() {
@@ -431,11 +490,10 @@
             document.getElementById('gamePlaysLeft').innerText = playsLeft;
             document.getElementById('gameStreak').innerText = userStats.currentStreak;
 
-            // 如果次數用完，鎖定按鈕
             const cards = document.querySelectorAll('.p-card');
             if (playsLeft <= 0) {
                 cards.forEach(card => card.classList.add('disabled'));
-                document.getElementById('gameResultText').innerText = "今日3場額度已用完，明天再來挑戰！";
+                document.getElementById('gameResultText').innerText = "今日3場額度已用完，請找爸爸或媽咪解鎖！";
             } else {
                 cards.forEach(card => card.classList.remove('disabled'));
             }
@@ -451,39 +509,32 @@
 
         function playGame(playerChoice) {
             const userStats = gameDB[currentUser.name];
-            if (userStats.playsToday >= 3) return; // 額度用完防呆
+            if (userStats.playsToday >= 3) return;
 
-            // 隨機產生電腦出牌 (0~2)
             const compChoice = Math.floor(Math.random() * 3);
             
-            // 翻開電腦的牌
             const compCardEl = document.getElementById('compCard');
             compCardEl.innerText = RPS_ICONS[compChoice];
             compCardEl.classList.add('card-solid');
 
             const resultTextEl = document.getElementById('gameResultText');
-
-            // 判斷勝負 (0:平手, 1:玩家贏, 2:電腦贏)
             const result = (playerChoice - compChoice + 3) % 3;
 
             if (result === 0) {
                 resultTextEl.innerText = "平手！不扣次數，再來一次！";
                 resultTextEl.style.color = "#ff9800";
             } else {
-                // 分出勝負扣一場次數
                 userStats.playsToday += 1;
 
                 if (result === 1) {
-                    // 玩家獲勝
                     userStats.totalScore += 1;
                     userStats.currentStreak += 1;
                     
                     let msg = "🎉 贏了！獲得 1 分！";
                     saveScoreToGAS(1, "剪刀石頭布 獲勝");
 
-                    // 判斷是否達成連勝 3 場
                     if (userStats.currentStreak === 3) {
-                        userStats.totalScore += 2; // 額外加2分
+                        userStats.totalScore += 2;
                         msg = "🔥 連贏 3 場！額外加 2 分！總共獲得 3 分！";
                         saveScoreToGAS(2, "連贏3場 額外加分");
                     }
@@ -491,22 +542,19 @@
                     resultTextEl.innerText = msg;
                     resultTextEl.style.color = "#4caf50";
                 } else {
-                    // 玩家輸了
-                    userStats.currentStreak = 0; // 連勝中斷
+                    userStats.currentStreak = 0;
                     resultTextEl.innerText = "😢 輸了！再接再厲！";
                     resultTextEl.style.color = "#e53935";
                 }
 
-                // 存檔並更新 UI
                 localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
                 updateGameUI();
 
                 if (userStats.playsToday >= 3) {
                     setTimeout(() => {
-                        document.getElementById('gameResultText').innerText = "今日額度已用完，明天再來挑戰！";
+                        document.getElementById('gameResultText').innerText = "今日3場額度已用完，請找爸爸或媽咪解鎖！";
                     }, 2500);
                 } else {
-                    // 還有次數，2.5秒後重置電腦的牌
                     setTimeout(resetGameArena, 2500);
                 }
             }
@@ -525,14 +573,16 @@
                     date: dateKey, 
                     time: timeStr, 
                     operator: currentUser.name,
-                    action: 'gameScore', // 傳送給後端識別這是一筆分數紀錄
-                    note: reason, // 紀錄得分原因
-                    score: scoreValue // 傳送獲得的分數
+                    action: 'gameScore',
+                    note: reason,
+                    score: scoreValue
                 })
             }).catch(e => console.error("傳送分數紀錄失敗", e));
         }
 
-        // === 開啟打卡專區 ===
+        // ==========================================
+        // 其他功能 (打卡、行事曆、聊天室)
+        // ==========================================
         function openCheckInView() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'block';
@@ -549,7 +599,6 @@
             loadData(); 
         }
 
-        // === 開啟家庭行事曆 ===
         function openFamilyCalendar() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('familyCalendarView').style.display = 'block';
@@ -578,7 +627,6 @@
             });
         }
 
-        // === 聊天室相關邏輯 ===
         function openTodayChat() {
             const now = new Date();
             const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -671,7 +719,6 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // === 打卡資料載入與日曆渲染 ===
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在同步資料...';
