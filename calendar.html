@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HomeBase - 家庭行事曆</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    <meta name="apple-mobile-web-app-title" content="HomeBase">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --event-color: #ff9800;
+            --bg-color: #f4f9f4;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
+            background-color: var(--bg-color);
+            margin: 0; padding: 20px; color: #333; text-align: center;
+        }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
+        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 20px; }
+        
+        .event-list { max-width: 650px; margin: 0 auto; text-align: left; }
+        .event-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 15px; display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--event-color); }
+        .event-date { font-weight: bold; color: var(--event-color); width: 85px; flex-shrink: 0; font-size: 15px; }
+        .event-info { flex-grow: 1; padding-left: 12px; border-left: 1px solid #eee; }
+        .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
+        .event-desc { font-size: 13px; color: #777; margin:0; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
+        <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+            <img id="calUserAvatar" class="mini-avatar" src="" alt="">
+            <span id="calUserName"></span>
+        </div>
+    </div>
+
+    <h2 class="system-title">📅家庭行事曆</h2>
+    <div class="event-list" id="eventListContainer"></div>
+
+    <script>
+        let currentUser = null;
+        const schoolEvents = [
+            { date: "09/19(六)", title: "班親會", desc: "了解本學期課程與老師交流" },
+            { date: "11/03(二)", title: "期中評量", desc: "小朋友加油喔！📝" },
+            { date: "11/04(三)", title: "期中評量", desc: "小朋友加油喔！📝" },
+            { date: "11/21(六)", title: "學校校慶 / 運動會", desc: "邀請家長一同參與，記得準備運動服" },
+            { date: "01/13(三)", title: "期末評量", desc: "小朋友加油喔！📝" },
+            { date: "01/14(四)", title: "期末評量", desc: "小朋友加油喔！📝" },
+        ];
+
+        window.onload = function() {
+            const savedUser = localStorage.getItem('familyCheckInUser');
+            if (!savedUser) {
+                window.location.href = 'index.html'; // 沒登入就踢回首頁
+                return;
+            }
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('calUserAvatar').src = currentUser.avatar;
+            document.getElementById('calUserName').innerText = currentUser.name;
+            renderSchoolEvents();
+        };
+
+        function renderSchoolEvents() {
+            const container = document.getElementById('eventListContainer');
+            schoolEvents.forEach(evt => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.innerHTML = `
+                    <div class="event-date">${evt.date}</div>
+                    <div class="event-info">
+                        <p class="event-title">${evt.title}</p>
+                        <p class="event-desc">${evt.desc}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('familyCheckInUser');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
