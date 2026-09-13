@@ -18,7 +18,6 @@
             --cancel-color: #e53935;
             --bg-color: #f4f9f4;
             --today-bg: #fffde7;
-            --chat-bg: #e5ddd5;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
         
@@ -66,8 +65,7 @@
         .month-btn { background: none; box-shadow: none; font-size: 20px; color: var(--primary-color); padding: 5px 15px; margin: 0; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
         .weekday { font-weight: bold; background-color: #f5f5f5; padding: 10px 0; border-radius: 4px; color: #666; font-size: 14px; }
-        .day { border: 1px solid #e0e0e0; border-radius: 4px; min-height: 75px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; cursor: pointer; }
-        .day:active { background-color: #f9f9f9; }
+        .day { border: 1px solid #e0e0e0; border-radius: 4px; min-height: 75px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; }
         .day .date-num { font-size: 13px; font-weight: bold; color: #777; align-self: flex-start; pointer-events: none; }
         .day .status { font-size: 22px; color: var(--accent-color); font-weight: bold; line-height: 1; margin: 0; pointer-events: none; }
         .day .time { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 2px; pointer-events: none; }
@@ -75,21 +73,6 @@
         .today .date-num { color: var(--primary-color); }
         
         .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(250,250,250,0.85); justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: var(--primary-color); z-index: 1000; flex-direction: column; }
-
-        /* === 聊天室 Modal 樣式 === */
-        .chat-modal { display: none; position: fixed; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-        .chat-container { background: white; width: 95%; max-width: 450px; height: 85vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .chat-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px;}
-        .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; margin: 0; box-shadow: none;}
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
-        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
-        .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
-        .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
-        .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
-        .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
-        .chat-input-area { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
-        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
-        .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); font-size: 15px; border-radius: 25px; }
     </style>
 </head>
 <body>
@@ -136,23 +119,25 @@
         <h1 class="system-title">🏡 我們家的小天地</h1>
 
         <div class="dashboard-grid">
-            <!-- 直接跳轉至行事曆頁面 -->
+            <!-- 點擊跳轉：行事曆 -->
             <div class="dash-card" onclick="window.location.href='calendar.html'">
                 <div class="dash-icon">📅</div>
                 <div class="dash-title">行事曆</div>
             </div>
             
+            <!-- 原頁面操作：打卡 -->
             <div class="dash-card" onclick="openCheckInView()">
                 <div class="dash-icon">📍</div>
                 <div class="dash-title">到家打卡</div>
             </div>
             
-            <div class="dash-card" onclick="openTodayChat()">
+            <!-- 點擊跳轉：聊天室 -->
+            <div class="dash-card" onclick="window.location.href='chat.html'">
                 <div class="dash-icon">💬</div>
                 <div class="dash-title">家庭聊天室</div>
             </div>
 
-            <!-- 直接跳轉至遊戲區頁面 -->
+            <!-- 點擊跳轉：遊戲區 -->
             <div class="dash-card" onclick="window.location.href='games.html'">
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
@@ -193,29 +178,13 @@
         </div>
     </div>
 
-    <!-- === 聊天室 Modal === -->
-    <div class="chat-modal" id="chatModal">
-        <div class="chat-container">
-            <div class="chat-header">
-                <span id="chatTitle">聊天聯絡簿</span>
-                <button class="close-btn" onclick="closeChat()">✖</button>
-            </div>
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
-                <button class="btn-check" onclick="sendMessage()">傳送</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpbFzsLNvLlkaZYCVJZetn8eAe2ps_IXwq48uJEAGi4y9OKyIwyUguuUqtRQXW9s_M/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsTvhWR4_Qj62UYGcHiXmahIKjAG4MwB2NNaCcmYMf4V8bj0wcEYjSeVGAqXyH8wfj/exec"; 
         
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
         let viewDate = new Date(); 
         const today = new Date();  
         let currentUser = { name: '', avatar: '' };
-        let currentChatDate = null; 
 
         function initApp() {
             const savedUser = localStorage.getItem('familyCheckInUser');
@@ -259,7 +228,7 @@
         }
 
         // ==========================================
-        // 打卡與聊天室功能
+        // 打卡與日曆功能
         // ==========================================
         function openCheckInView() {
             document.getElementById('dashboardView').style.display = 'none';
@@ -274,73 +243,6 @@
                 actionControls.style.display = 'block';
             }
             loadData(); 
-        }
-
-        function openTodayChat() {
-            const now = new Date();
-            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            openChat(dateKey);
-        }
-
-        function openChat(dateKey) {
-            currentChatDate = dateKey;
-            document.getElementById('chatModal').style.display = 'flex';
-            document.getElementById('chatTitle').innerText = `${dateKey} 家庭聊天室`;
-            
-            const msgContainer = document.getElementById('chatMessages');
-            msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">讀取訊息中...</div>';
-            
-            window.googleChatCallback = function(messages) {
-                msgContainer.innerHTML = ''; 
-                if (messages.length === 0) {
-                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">今天還沒有人說話喔，來打個招呼吧！</div>';
-                } else {
-                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.time));
-                }
-                delete window.googleChatCallback;
-            };
-
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=${dateKey}&callback=googleChatCallback&t=${new Date().getTime()}`;
-            script.onerror = function() {
-                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路</div>';
-            };
-            document.body.appendChild(script);
-        }
-
-        function closeChat() { document.getElementById('chatModal').style.display = 'none'; }
-        function handleChatKeyPress(event) { if (event.key === 'Enter') sendMessage(); }
-
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-            input.value = ''; 
-            
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-            appendMessageUI(currentUser.name, text, timeStr);
-
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'sendChat', date: currentChatDate, time: timeStr, operator: currentUser.name, message: text })
-            }).catch(e => console.error(e));
-        }
-
-        function appendMessageUI(user, text, time) {
-            const container = document.getElementById('chatMessages');
-            const isMine = (user === currentUser.name);
-            if(container.innerHTML.includes('還沒有人說話喔')) container.innerHTML = '';
-
-            const div = document.createElement('div');
-            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
-            let html = '';
-            if (!isMine) html += `<div class="msg-sender">${user}</div>`;
-            html += `<div>${text}</div><div class="msg-time">${time}</div>`;
-            div.innerHTML = html;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
         }
 
         function loadData() {
@@ -388,8 +290,7 @@
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
                 if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) dayDiv.classList.add('today');
-                dayDiv.onclick = () => openChat(dateKey);
-
+                
                 const numSpan = document.createElement('span'); numSpan.className = 'date-num'; numSpan.innerText = day;
                 dayDiv.appendChild(numSpan);
 
