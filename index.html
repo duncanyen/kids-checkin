@@ -99,6 +99,12 @@
                 <div class="dash-icon">📅</div>
                 <div class="dash-title">行事曆</div>
             </div>
+
+            <!-- 原頁面操作：打卡 -->
+            <div class="dash-card" onclick="openCheckInView()">
+                <div class="dash-icon">📍</div>
+                <div class="dash-title">到家打卡</div>
+            </div>
             <div class="dash-card" onclick="window.location.href='chat.html'">
                 <div class="notification-badge" id="chatBadge">0</div>
                 <div class="dash-icon">💬</div>
@@ -139,6 +145,116 @@
                 fetchUsersAndRenderLogin();
             }
         };
+
+        // ==========================================
+        // 打卡與日曆功能
+        // ==========================================
+        function openCheckInView() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('mainSystemView').style.display = 'block';
+            document.getElementById('sysUserAvatar').src = currentUser.avatar;
+            document.getElementById('sysUserName').innerText = currentUser.name;
+
+            const actionControls = document.getElementById('actionControls');
+            if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
+                actionControls.style.display = 'none';
+            } else {
+                actionControls.style.display = 'block';
+            }
+            loadData(); 
+        }
+
+        function loadData() {
+            document.getElementById('loadingView').style.display = 'flex';
+            document.getElementById('loadingText').innerText = '正在同步資料...';
+            const targetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            let loadTimeout = setTimeout(() => { document.getElementById('loadingView').style.display = 'none'; initCalendar(); }, 6000);
+
+            window.googleCheckinCallback = function(result) {
+                clearTimeout(loadTimeout); 
+                if (result.checked) { attendanceData[targetDate] = { checked: true, time: result.time }; } 
+                else { delete attendanceData[targetDate]; }
+                localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
+                initCalendar();
+                document.getElementById('loadingView').style.display = 'none';
+                delete window.googleCheckinCallback;
+            };
+
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
+            script.onerror = function() { clearTimeout(loadTimeout); initCalendar(); document.getElementById('loadingView').style.display = 'none'; };
+            document.body.appendChild(script);
+        }
+
+        function initCalendar() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
+            
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
+                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
+            });
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div'); dayDiv.className = 'day';
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) dayDiv.classList.add('today');
+                
+                const numSpan = document.createElement('span'); numSpan.className = 'date-num'; numSpan.innerText = day;
+                dayDiv.appendChild(numSpan);
+
+                if (attendanceData[dateKey]) {
+                    const statusSpan = document.createElement('span'); statusSpan.className = 'status'; statusSpan.innerText = '✓';
+                    dayDiv.appendChild(statusSpan);
+                    if (attendanceData[dateKey].time) {
+                        let displayTime = attendanceData[dateKey].time;
+                        let match = String(displayTime).match(/(\d{2}:\d{2})/);
+                        if (match) displayTime = match[1];
+                        const timeDiv = document.createElement('div'); timeDiv.className = 'time'; timeDiv.innerText = displayTime;
+                        dayDiv.appendChild(timeDiv);
+                    }
+                }
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function changeMonth(direction) { viewDate.setMonth(viewDate.getMonth() + direction); initCalendar(); }
+
+        function checkIn() {
+            const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            attendanceData[dateKey] = { checked: true, time: timeStr };
+            saveData(dateKey, 'checkin', '', timeStr, currentUser.name);
+        }
+
+        function cancelCheckIn() {
+            if (confirm(`確定要移除今天的打卡紀錄嗎？\n(操作者: ${currentUser.name})`)) {
+                const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                if (attendanceData[dateKey]) {
+                    delete attendanceData[dateKey];
+                    saveData(dateKey, 'cancel', '', '', currentUser.name);
+                } else { alert('今天本來就沒有打卡紀錄喔！'); }
+            }
+        }
+
+        function saveData(date, action, note, time, operator) {
+            localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
+            initCalendar();
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ date: date, action: action, note: note, time: time, operator: operator })
+            }).catch(e => console.error(e));
+        }
 
         function fetchUsersAndRenderLogin() {
             const script = document.createElement('script');
