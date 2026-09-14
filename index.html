@@ -6,9 +6,7 @@
     <title>HomeBase</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
-    <meta name="apple-mobile-web-app-title" content="HomeBase">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
 
     <style>
         :root {
@@ -21,16 +19,21 @@
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
         
-        /* === 登入畫面樣式 === */
         #loginView { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }
-        #loginView h1 { color: var(--primary-color); margin-bottom: 40px; text-align: center; font-size: 24px; }
+        #loginView h1 { color: var(--primary-color); margin-bottom: 30px; text-align: center; font-size: 24px; }
         .user-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; justify-content: center; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: 0.2s; text-align: center; background: white; padding: 20px 10px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .user-card:active { transform: scale(0.95); }
         .avatar-img { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); margin-bottom: 10px; background-color: var(--primary-light); }
         .user-name-title { font-size: 18px; font-weight: bold; color: #444; }
 
-        /* === 主選單 Dashboard 樣式 === */
+        /* 密碼輸入彈窗 */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; text-align: center; width: 90%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; color: var(--primary-color); }
+        .pin-input { font-size: 24px; letter-spacing: 8px; text-align: center; width: 80%; padding: 10px; margin: 15px 0; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+        .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
         .header-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; align-items: center; gap: 10px; }
         .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
         .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
@@ -39,74 +42,43 @@
         #dashboardView { display: none; text-align: center; max-width: 500px; margin: 0 auto; }
         .system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 25px; font-size: 24px; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .dash-card { background: white; border-radius: 16px; padding: 30px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
-        .dash-card-full { grid-column: span 2; padding: 20px 15px; }
+        .dash-card { background: white; border-radius: 16px; padding: 25px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
         .dash-card:active { transform: scale(0.96); }
-        .dash-icon { font-size: 45px; margin-bottom: 12px; }
-        .dash-card-full .dash-icon { margin-bottom: 5px; font-size: 35px; }
-        .dash-title { font-size: 17px; font-weight: bold; color: #444; }
-        .disabled-card { background: #e9ecef; cursor: default; }
-        .disabled-card:active { transform: none; }
-        .disabled-card .dash-icon, .disabled-card .dash-title { opacity: 0.5; }
-        .coming-soon-badge { position: absolute; top: 12px; right: 12px; background: var(--cancel-color); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
-
-        /* === 打卡主系統樣式 === */
-        #mainSystemView { display: none; text-align: center; }
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
-        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .controls { margin-bottom: 20px; }
-        button { font-size: 16px; font-weight: bold; padding: 12px 24px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.1s; }
-        button:active { transform: scale(0.96); }
+        .dash-icon { font-size: 40px; margin-bottom: 10px; }
+        .dash-title { font-size: 16px; font-weight: bold; color: #444; }
+        
+        .notification-badge { display: none; position: absolute; top: -5px; right: -5px; background-color: #e53935; color: white; font-size: 14px; font-weight: bold; height: 24px; min-width: 24px; line-height: 24px; border-radius: 12px; padding: 0 6px; border: 2px solid white; }
+        button { font-size: 15px; font-weight: bold; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; }
         .btn-check { background-color: var(--accent-color); color: white; }
         .btn-cancel { background-color: var(--cancel-color); color: white; }
-        
-        .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .calendar-header { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #444; display: flex; justify-content: space-between; align-items: center; }
-        .month-btn { background: none; box-shadow: none; font-size: 20px; color: var(--primary-color); padding: 5px 15px; margin: 0; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-        .weekday { font-weight: bold; background-color: #f5f5f5; padding: 10px 0; border-radius: 4px; color: #666; font-size: 14px; }
-        .day { border: 1px solid #e0e0e0; border-radius: 4px; min-height: 75px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; }
-        .day .date-num { font-size: 13px; font-weight: bold; color: #777; align-self: flex-start; pointer-events: none; }
-        .day .status { font-size: 22px; color: var(--accent-color); font-weight: bold; line-height: 1; margin: 0; pointer-events: none; }
-        .day .time { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 2px; pointer-events: none; }
-        .today { border: 2px solid var(--primary-color); background-color: var(--today-bg); }
-        .today .date-num { color: var(--primary-color); }
-        
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(250,250,250,0.85); justify-content: center; align-items: center; font-size: 18px; font-weight: bold; color: var(--primary-color); z-index: 1000; flex-direction: column; }
     </style>
 </head>
 <body>
 
-    <div class="loading-overlay" id="loadingView">
-        <span id="loadingText">連線中，請稍候...</span>
-    </div>
-
-    <!-- === 登入畫面 === -->
-    <div id="loginSection">
-        <div id="loginView">
-            <h1>👋 請問你是哪一位呢？</h1>
-            <div class="user-selection">
-                <div class="user-card" onclick="login('俊俊', 'junjun.jpg')">
-                    <img class="avatar-img" src="junjun.jpg" alt="俊俊" onerror="this.src='https://ui-avatars.com/api/?name=俊&background=4caf50&color=fff&size=150'">
-                    <div class="user-name-title">俊俊</div>
-                </div>
-                <div class="user-card" onclick="login('程寶', 'cheng.jpg')">
-                    <img class="avatar-img" src="cheng.jpg" alt="程寶" onerror="this.src='https://ui-avatars.com/api/?name=程&background=2196F3&color=fff&size=150'">
-                    <div class="user-name-title">程寶</div>
-                </div>
-                <div class="user-card" onclick="login('媽咪', 'mom.jpg')">
-                    <img class="avatar-img" src="mom.jpg" alt="媽咪" onerror="this.src='https://ui-avatars.com/api/?name=媽&background=E91E63&color=fff&size=150'">
-                    <div class="user-name-title">媽咪</div>
-                </div>
-                <div class="user-card" onclick="login('爸爸', 'dad.jpg')">
-                    <img class="avatar-img" src="dad.jpg" alt="爸爸" onerror="this.src='https://ui-avatars.com/api/?name=爸&background=FF9800&color=fff&size=150'">
-                    <div class="user-name-title">爸爸</div>
-                </div>
+    <!-- 密碼輸入彈窗 -->
+    <div class="modal" id="pinModal">
+        <div class="modal-content">
+            <h3 id="modalUserTitle">請輸入 4 位數密碼</h3>
+            <p style="font-size: 13px; color: #666; margin: 0;">預設密碼為 1234</p>
+            <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closePinModal()">取消</button>
+                <button class="btn-check" onclick="verifyPin()">確認</button>
             </div>
         </div>
     </div>
 
-    <!-- === 主選單 Dashboard === -->
+    <!-- 登入畫面 -->
+    <div id="loginSection">
+        <div id="loginView">
+            <h1>👋 請選擇身分</h1>
+            <div class="user-selection" id="userSelectionContainer">
+                <!-- 動態載入使用者 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 主選單 Dashboard -->
     <div id="dashboardView">
         <div class="header-bar">
             <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
@@ -119,225 +91,131 @@
         <h1 class="system-title">🏡 我們家的小天地</h1>
 
         <div class="dashboard-grid">
-            <!-- 點擊跳轉：行事曆 -->
             <div class="dash-card" onclick="window.location.href='calendar.html'">
                 <div class="dash-icon">📅</div>
                 <div class="dash-title">行事曆</div>
             </div>
-            
-            <!-- 原頁面操作：打卡 -->
-            <div class="dash-card" onclick="openCheckInView()">
-                <div class="dash-icon">📍</div>
-                <div class="dash-title">到家打卡</div>
-            </div>
-            
-            <!-- 點擊跳轉：聊天室 -->
             <div class="dash-card" onclick="window.location.href='chat.html'">
+                <div class="notification-badge" id="chatBadge">0</div>
                 <div class="dash-icon">💬</div>
                 <div class="dash-title">家庭聊天室</div>
             </div>
-
-            <!-- 點擊跳轉：遊戲區 -->
             <div class="dash-card" onclick="window.location.href='games.html'">
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
             </div>
-
-            <div class="dash-card dash-card-full disabled-card">
+            <div class="dash-card" disabled-card">
                 <div class="coming-soon-badge">Coming Soon</div>
                 <div class="dash-icon">✨</div>
                 <div class="dash-title">許願牆</div>
             </div>
-        </div>
-    </div>
-
-    <!-- === 打卡主系統畫面 === -->
-    <div id="mainSystemView">
-        <div class="top-nav">
-            <button class="btn-back" onclick="goBackToDashboard()">❮ 返回主選單</button>
-            <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
-                <img id="sysUserAvatar" class="mini-avatar" src="" alt="">
-                <span id="sysUserName"></span>
+            <!-- 個人設定 -->
+            <div class="dash-card" onclick="window.location.href='settings.html'">
+                <div class="dash-icon">⚙️</div>
+                <div class="dash-title">個人設定</div>
             </div>
-        </div>
-
-        <h2 class="system-title" style="font-size: 20px;">📍 打卡專區</h2>
-        
-        <div class="controls" id="actionControls">
-            <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
-            <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
-        </div>
-
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <button class="month-btn" onclick="changeMonth(-1)">❮</button>
-                <span id="calendarMonth">月份載入中...</span>
-                <button class="month-btn" onclick="changeMonth(1)">❯</button>
+            <!-- 管理者後台 (僅 admin 顯示) -->
+            <div class="dash-card" id="adminCard" style="display: none; background: #e3f2fd;" onclick="window.location.href='admin.html'">
+                <div class="dash-icon">🛡️</div>
+                <div class="dash-title" style="color: #1565c0;">管理者後台</div>
             </div>
-            <div class="calendar-grid" id="calendarGrid"></div>
         </div>
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsTvhWR4_Qj62UYGcHiXmahIKjAG4MwB2NNaCcmYMf4V8bj0wcEYjSeVGAqXyH8wfj/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec"; 
         
-        let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
-        let viewDate = new Date(); 
-        const today = new Date();  
-        let currentUser = { name: '', avatar: '' };
+        let selectedUserObj = null;
+        let allUsers = [];
 
-        function initApp() {
+        window.onload = function() {
             const savedUser = localStorage.getItem('familyCheckInUser');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
                 showDashboard();
             } else {
-                showLoginScreen();
+                fetchUsersAndRenderLogin();
+            }
+        };
+
+        function fetchUsersAndRenderLogin() {
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=users&callback=renderLoginUsers`;
+            window.renderLoginUsers = function(users) {
+                allUsers = users;
+                localStorage.setItem('cachedUsers', JSON.stringify(users));
+                const container = document.getElementById('userSelectionContainer');
+                container.innerHTML = '';
+                users.forEach(u => {
+                    const card = document.createElement('div');
+                    card.className = 'user-card';
+                    card.onclick = () => openPinModal(u);
+                    card.innerHTML = `
+                        <img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=4caf50&color=fff&size=150'">
+                        <div class="user-name-title">${u.name}</div>
+                    `;
+                    container.appendChild(card);
+                });
+                delete window.renderLoginUsers;
+            };
+            script.onerror = function() {
+                // 若網路失敗，讀取快取
+                const cached = localStorage.getItem('cachedUsers');
+                if(cached) renderLoginUsers(JSON.parse(cached));
+            };
+            document.body.appendChild(script);
+        }
+
+        function openPinModal(user) {
+            selectedUserObj = user;
+            document.getElementById('modalUserTitle').innerText = `${user.name}，請輸入密碼`;
+            document.getElementById('pinInput').value = '';
+            document.getElementById('pinModal').style.display = 'flex';
+            document.getElementById('pinInput').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('pinModal').style.display = 'none';
+        }
+
+        function verifyPin() {
+            const pin = document.getElementById('pinInput').value.trim();
+            if (pin === selectedUserObj.pin) {
+                closePinModal();
+                login(selectedUserObj);
+            } else {
+                alert('密碼錯誤！');
+                document.getElementById('pinInput').value = '';
             }
         }
 
-        function login(name, avatarUrl) {
-            currentUser = { name: name, avatar: avatarUrl };
-            localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+        function login(userObj) {
+            localStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
             showDashboard();
         }
 
         function logout() {
             localStorage.removeItem('familyCheckInUser');
             document.getElementById('dashboardView').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'none';
-            showLoginScreen();
-        }
-
-        function showLoginScreen() {
             document.getElementById('loginSection').style.display = 'block';
+            fetchUsersAndRenderLogin();
         }
 
         function showDashboard() {
+            const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
             document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('dashboardView').style.display = 'block';
             
-            document.getElementById('dashUserAvatar').src = currentUser.avatar;
-            document.getElementById('dashUserName').innerText = currentUser.name;
-        }
+            document.getElementById('dashUserAvatar').src = user.avatar;
+            document.getElementById('dashUserName').innerText = user.name;
 
-        function goBackToDashboard() {
-            document.getElementById('mainSystemView').style.display = 'none';
-            showDashboard();
-        }
-
-        // ==========================================
-        // 打卡與日曆功能
-        // ==========================================
-        function openCheckInView() {
-            document.getElementById('dashboardView').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'block';
-            document.getElementById('sysUserAvatar').src = currentUser.avatar;
-            document.getElementById('sysUserName').innerText = currentUser.name;
-
-            const actionControls = document.getElementById('actionControls');
-            if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
-                actionControls.style.display = 'none';
+            // 如果是管理者，顯示管理者後台卡片
+            if (user.role === 'admin') {
+                document.getElementById('adminCard').style.display = 'block';
             } else {
-                actionControls.style.display = 'block';
-            }
-            loadData(); 
-        }
-
-        function loadData() {
-            document.getElementById('loadingView').style.display = 'flex';
-            document.getElementById('loadingText').innerText = '正在同步資料...';
-            const targetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-            let loadTimeout = setTimeout(() => { document.getElementById('loadingView').style.display = 'none'; initCalendar(); }, 6000);
-
-            window.googleCheckinCallback = function(result) {
-                clearTimeout(loadTimeout); 
-                if (result.checked) { attendanceData[targetDate] = { checked: true, time: result.time }; } 
-                else { delete attendanceData[targetDate]; }
-                localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
-                initCalendar();
-                document.getElementById('loadingView').style.display = 'none';
-                delete window.googleCheckinCallback;
-            };
-
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
-            script.onerror = function() { clearTimeout(loadTimeout); initCalendar(); document.getElementById('loadingView').style.display = 'none'; };
-            document.body.appendChild(script);
-        }
-
-        function initCalendar() {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth();
-            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-            document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
-            
-            const grid = document.getElementById('calendarGrid');
-            grid.innerHTML = '';
-            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
-                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
-            });
-
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const totalDays = new Date(year, month + 1, 0).getDate();
-
-            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
-
-            for (let day = 1; day <= totalDays; day++) {
-                const dayDiv = document.createElement('div'); dayDiv.className = 'day';
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) dayDiv.classList.add('today');
-                
-                const numSpan = document.createElement('span'); numSpan.className = 'date-num'; numSpan.innerText = day;
-                dayDiv.appendChild(numSpan);
-
-                if (attendanceData[dateKey]) {
-                    const statusSpan = document.createElement('span'); statusSpan.className = 'status'; statusSpan.innerText = '✓';
-                    dayDiv.appendChild(statusSpan);
-                    if (attendanceData[dateKey].time) {
-                        let displayTime = attendanceData[dateKey].time;
-                        let match = String(displayTime).match(/(\d{2}:\d{2})/);
-                        if (match) displayTime = match[1];
-                        const timeDiv = document.createElement('div'); timeDiv.className = 'time'; timeDiv.innerText = displayTime;
-                        dayDiv.appendChild(timeDiv);
-                    }
-                }
-                grid.appendChild(dayDiv);
+                document.getElementById('adminCard').style.display = 'none';
             }
         }
-
-        function changeMonth(direction) { viewDate.setMonth(viewDate.getMonth() + direction); initCalendar(); }
-
-        function checkIn() {
-            const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
-            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            attendanceData[dateKey] = { checked: true, time: timeStr };
-            saveData(dateKey, 'checkin', '', timeStr, currentUser.name);
-        }
-
-        function cancelCheckIn() {
-            if (confirm(`確定要移除今天的打卡紀錄嗎？\n(操作者: ${currentUser.name})`)) {
-                const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                if (attendanceData[dateKey]) {
-                    delete attendanceData[dateKey];
-                    saveData(dateKey, 'cancel', '', '', currentUser.name);
-                } else { alert('今天本來就沒有打卡紀錄喔！'); }
-            }
-        }
-
-        function saveData(date, action, note, time, operator) {
-            localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
-            initCalendar();
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ date: date, action: action, note: note, time: time, operator: operator })
-            }).catch(e => console.error(e));
-        }
-
-        window.onload = initApp;
     </script>
 </body>
 </html>
