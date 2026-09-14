@@ -1,144 +1,197 @@
-function doPost(e) {
-  var sheets = SpreadsheetApp.getActiveSpreadsheet();
-  var data = JSON.parse(e.postData.contents);
-  var date = data.date;
-  var action = data.action;
-  var time = data.time || ""; 
-  var operator = data.operator || ""; 
-  var note = data.note || "";
-  
-  if (action === "gameScore") {
-    var scoreSheet = sheets.getSheetByName("遊戲積分紀錄");
-    if (!scoreSheet) {
-      scoreSheet = sheets.insertSheet("遊戲積分紀錄");
-      scoreSheet.appendRow(["日期", "時間", "玩家", "獲得分數", "得分原因"]); 
-    }
-    var score = data.score || 0;
-    scoreSheet.appendRow([date, time, operator, score, note]);
-    return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
-  }
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HomeBase - 聊天室</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    <meta name="apple-mobile-web-app-title" content="HomeBase">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
 
-  if (action === "sendChat") {
-    var chatSheet = sheets.getSheetByName("Chat");
-    if (!chatSheet) {
-      chatSheet = sheets.insertSheet("Chat");
-      chatSheet.appendRow(["日期", "時間", "角色", "訊息"]); 
-    }
-    chatSheet.appendRow([date, time, operator, data.message]);
-    return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  var sheet = sheets.getSheets()[0]; 
-  if (action === "checkin") {
-    sheet.appendRow([date, "已回家", note, time, operator]);
-  } else if (action === "cancel") {
-    var rows = sheet.getDataRange().getValues();
-    for (var i = rows.length - 1; i >= 1; i--) {
-      var cellDateStr = _formatDateSafe(rows[i][0]);
-      if (cellDateStr === date) {
-        sheet.deleteRow(i + 1); 
-      }
-    }
-  }
-  return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doGet(e) {
-  try {
-    var sheets = SpreadsheetApp.getActiveSpreadsheet();
-    var targetDate = e.parameter.date; 
-    var callback = e.parameter.callback; 
-    var reqType = e.parameter.type || "checkin"; 
-    
-    // ============================
-    // 1. 讀取所有聊天紀錄
-    // ============================
-    if (reqType === "chat") {
-      var chatSheet = sheets.getSheetByName("Chat");
-      var messages = [];
-      if (chatSheet) {
-        var rows = chatSheet.getDataRange().getValues();
-        for (var i = 1; i < rows.length; i++) { 
-          var cellDateStr = _formatDateSafe(rows[i][0]);
-          if (targetDate === "all" || cellDateStr === targetDate) {
-            messages.push({
-              date: cellDateStr,
-              time: _formatTimeSafe(rows[i][1]),
-              user: String(rows[i][2] || "").trim(),
-              message: String(rows[i][3] || "").trim()
-            });
-          }
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --accent-color: #4caf50;
+            --bg-color: #f4f9f4;
+            --chat-bg: #e5ddd5;
         }
-      }
-      return _jsonpResponse(callback, messages);
-    }
-    
-    // ============================
-    // 🔔 2. 快速算總留言數 (給首頁紅點用)
-    // ============================
-    if (reqType === "chatCount") {
-      var chatSheet = sheets.getSheetByName("Chat");
-      var count = 0;
-      if (chatSheet) {
-        // 扣除第一行的標題，剩下的就是訊息總數
-        count = Math.max(0, chatSheet.getLastRow() - 1); 
-      }
-      return _jsonpResponse(callback, { count: count });
-    }
-    
-    // ============================
-    // 3. 讀取打卡紀錄
-    // ============================
-    var sheet = sheets.getSheets()[0];
-    var rows = sheet.getDataRange().getValues();
-    var result = { checked: false, debug: "No data found" }; 
-    
-    for (var i = rows.length - 1; i >= 1; i--) {
-      var cellDateStr = _formatDateSafe(rows[i][0]);
-      if (cellDateStr === targetDate) {
-        var status = String(rows[i][1] || "").trim();
-        if (status.indexOf("已回家") !== -1) {
-          result = {
-            checked: true,
-            note: String(rows[i][2] || "").trim(),
-            time: _formatTimeSafe(rows[i][3]), 
-            operator: String(rows[i][4] || "").trim()
-          };
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+        
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--primary-color); }
+        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; margin-top: 0; }
+
+        .chat-wrapper { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; display: flex; flex-direction: column; height: 75vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
+        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
+        .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
+        .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
+        .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
+        
+        /* 聊天室圖片樣式 */
+        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; display: block; max-height: 200px; object-fit: cover; }
+
+        .chat-input-area { padding: 12px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
+        
+        /* 上傳圖片按鈕隱藏原本的 file input，改用美化過的標籤 */
+        .file-upload-btn { background: #e0e0e0; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .file-upload-btn:active { transform: scale(0.9); background: #ccc; }
+
+        .chat-input-area button.send-btn { margin: 0; padding: 10px 20px; background: var(--accent-color); color: white; border: none; font-weight: bold; font-size: 15px; border-radius: 25px; cursor: pointer; flex-shrink: 0; }
+        .chat-input-area button.send-btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
+        <div class="current-user-badge">
+            <img id="chatUserAvatar" class="mini-avatar" src="" alt="">
+            <span id="chatUserName"></span>
+        </div>
+    </div>
+
+    <h2 class="system-title">💬 家庭聊天室</h2>
+
+    <div class="chat-wrapper">
+        <div class="chat-messages" id="chatMessages">
+            <div style="text-align:center; color:#888; font-size:14px; margin-top:20px;">讀取歷史訊息中...</div>
+        </div>
+        
+        <div class="chat-input-area">
+            <!-- 隱藏的檔案上傳用 input -->
+            <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+            <!-- 觸發上傳的按鈕 -->
+            <button class="file-upload-btn" onclick="document.getElementById('imageInput').click()" title="傳送照片">📷</button>
+            
+            <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
+            <button class="send-btn" onclick="sendMessage()">傳送</button>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpbFzsLNvLlkaZYCVJZetn8eAe2ps_IXwq48uJEAGi4y9OKyIwyUguuUqtRQXW9s_M/exec"; 
+        let currentUser = null;
+        let currentMessageCount = 0; 
+
+        window.onload = function() {
+            const savedUser = localStorage.getItem('familyCheckInUser');
+            if (!savedUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('chatUserAvatar').src = currentUser.avatar;
+            document.getElementById('chatUserName').innerText = currentUser.name;
+            
+            loadAllChatHistory();
+        };
+
+        function loadAllChatHistory() {
+            const msgContainer = document.getElementById('chatMessages');
+            
+            window.googleChatCallback = function(messages) {
+                msgContainer.innerHTML = ''; 
+                if (messages.length === 0) {
+                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">還沒有人說話喔，來打個招呼吧！</div>';
+                } else {
+                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.date, msg.time));
+                }
+                
+                currentMessageCount = messages.length;
+                localStorage.setItem('lastReadChatCount', currentMessageCount.toString());
+                delete window.googleChatCallback;
+            };
+
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=all&callback=googleChatCallback&t=${new Date().getTime()}`;
+            script.onerror = function() {
+                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路連線</div>';
+            };
+            document.body.appendChild(script);
         }
-        break; 
-      }
-    }
-    return _jsonpResponse(callback, result);
 
-  } catch (error) {
-    return _jsonpResponse(callback, { error: error.toString() });
-  }
-}
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
 
-function _formatDateSafe(val) {
-  if (!val) return "";
-  var d = new Date(val);
-  if (!isNaN(d.getTime())) return Utilities.formatDate(d, "GMT+8", "yyyy-MM-dd");
-  return String(val).trim().replace(/\//g, "-");
-}
+        // 傳送一般文字訊息
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = ''; 
+            sendDataToBackend(text);
+        }
 
-function _formatTimeSafe(val) {
-  if (!val) return "";
-  if (val instanceof Date) return Utilities.formatDate(val, "GMT+8", "HH:mm:ss");
-  var strTime = String(val).trim();
-  var match = strTime.match(/(\d{2}:\d{2}:\d{2})/); 
-  if (match) return match[1];
-  match = strTime.match(/(\d{2}:\d{2})/); 
-  return match ? match[1] + ":00" : strTime;
-}
+        // 處理照片上傳與壓縮
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-function _jsonpResponse(callback, data) {
-  if (callback) {
-    return ContentService.createTextOutput(callback + '(' + JSON.stringify(data) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
+            // 限制只能上傳圖片
+            if (!file.type.match('image.*')) {
+                alert('請選擇圖片檔案！');
+                return;
+            }
 
-function doOptions(e) {
-  return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
-}
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // 使用 Canvas 進行圖片壓縮，避免檔案太大超過試算表極限
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600; // 限制最大寬度 600px
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 轉成壓縮後的 Base64 字串 (品質 0.7)
+                    const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // 發送到後端，格式前綴用 [IMG] 標記方便辨識
+                    sendDataToBackend(`[IMG]${base64String}`);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            // 清空 input 讓同張照片可以重複選取
+            event.target.value = '';
+        }
+
+        // 共用的送出資料函數
+        function sendDataToBackend(content) {
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            appendMessageUI(currentUser.name, content, dateKey, timeStr);
+            
+            currentMessageCount += 1;
+            localStorage.setItem('lastReadChatCount', currentMessageCount.toString());
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'sendChat', date: dateKey, time: timeStr, operator: currentUser.name, message: content })
+            }).catch(e => console.error(e));
+        }
+
+        // 渲染聊天訊息（支援文字與圖片判斷）
+        function appendMessageUI(user, text, date, time) {
+            const container = document.getElementById('chatMessages');
+            const isMine = (
