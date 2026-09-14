@@ -120,6 +120,8 @@
             </div>
         </div>
 
+        <h1 class="system-title">🏡 我們家的小天地</h1>
+
         <div class="dashboard-grid">
             <div class="dash-card" onclick="window.location.href='calendar.html'">
                 <div class="dash-icon">📅</div>
@@ -142,12 +144,6 @@
                 <div class="dash-title">遊戲區</div>
             </div>
 
-            <div class="dash-card" disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
-                <div class="dash-icon">✨</div>
-                <div class="dash-title">許願牆</div>
-            </div>
-
             <div class="dash-card" onclick="window.location.href='settings.html'">
                 <div class="dash-icon">⚙️</div>
                 <div class="dash-title">個人設定</div>
@@ -158,6 +154,11 @@
                 <div class="dash-title" style="color: #1565c0;">管理者後台</div>
             </div>
 
+            <div class="dash-card" disabled-card">
+                <div class="coming-soon-badge">Coming Soon</div>
+                <div class="dash-icon">✨</div>
+                <div class="dash-title">許願牆</div>
+            </div>
         </div>
     </div>
 
@@ -344,9 +345,6 @@
             loadData(); 
         }
 
-        // ==========================================
-        // 修正：載入全部歷史打卡紀錄
-        // ==========================================
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
             document.getElementById('loadingText').innerText = '正在同步歷史打卡資料...';
@@ -359,7 +357,6 @@
             window.googleCheckinCallback = function(checkinList) {
                 clearTimeout(loadTimeout); 
                 
-                // 清空舊的，重新把後端抓到的歷史資料填入
                 attendanceData = {};
                 if (Array.isArray(checkinList)) {
                     checkinList.forEach(item => {
@@ -380,7 +377,6 @@
             };
 
             const script = document.createElement('script');
-            // 注意：這裡不再限制帶入 &date=...，讓後端回傳全部
             script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&callback=googleCheckinCallback&t=${new Date().getTime()}`;
             script.onerror = function() { 
                 clearTimeout(loadTimeout); 
@@ -425,12 +421,35 @@
 
         function changeMonth(direction) { viewDate.setMonth(viewDate.getMonth() + direction); initCalendar(); }
 
+        // ==========================================
+        // 🔔 打卡成功時：同時發送一則聊天訊息到後端
+        // ==========================================
         function checkIn() {
             const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
             const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
             const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
             attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name };
+            
+            // 1. 儲存打卡資料並更新畫面
             saveData(dateKey, 'checkin', '', timeStr, user.name);
+
+            // 2. 自動在聊天室增加一筆「XX點到家完成打卡」的通知訊息
+            const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
+            const timeFullStr = `${timeStr}:00`;
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ 
+                    action: 'sendChat', 
+                    date: dateKey, 
+                    time: timeFullStr, 
+                    operator: user.name, 
+                    message: chatMessageText 
+                })
+            }).catch(e => console.error(e));
+
+            alert('打卡成功！已同步通知到家庭聊天室。');
         }
 
         function cancelCheckIn() {
