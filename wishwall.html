@@ -20,7 +20,6 @@
         .panel { background: white; max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .system-title { color: var(--primary-color); font-size: 22px; margin-top: 0; text-align: center; }
 
-        /* 積分總覽看板 */
         .points-banner { background: #fff8e1; border: 2px solid #ffe0b2; padding: 15px; border-radius: 12px; text-align: center; font-size: 22px; font-weight: bold; color: #f57c00; margin-bottom: 20px; }
         .points-rule-tip { font-size: 13px; color: #888; font-weight: normal; margin-top: 5px; }
 
@@ -32,7 +31,6 @@
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555; }
         .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
         .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 5px; }
-        .btn-submit:active { transform: scale(0.98); }
 
         /* 禮物卡片區 */
         .gift-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -54,9 +52,10 @@
         .status-pending { background: #ff9800; }
         .status-processing { background: #2196F3; }
         .status-done { background: #4caf50; }
+        .status-cancelled { background: #9e9e9e; }
 
-        .admin-actions { display: flex; gap: 5px; margin-top: 8px; }
-        .btn-action { font-size: 11px; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
+        .admin-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; width: 100%; }
+        .btn-action { font-size: 12px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; }
     </style>
 </head>
 <body>
@@ -65,15 +64,14 @@
         <span id="userNameDisplay" style="font-weight: bold; color: var(--primary-color);"></span>
     </div>
 
-    <!-- 1. 積分總覽看板 -->
-    <div class="panel">
+    <!-- 1. 積分總覽與成績登記 (僅小孩可見) -->
+    <div class="panel" id="scoreFormPanel">
         <h2 class="system-title">✨ 許願牆與成績積分</h2>
         <div class="points-banner">
             <div id="userPointsDisplay">目前可用積分：載入中...</div>
             <div class="points-rule-tip">💡 規則：小考 100分 = 1點 / 大考 100分 = 3點</div>
         </div>
 
-        <!-- 2. 成績登記表單 -->
         <h3 class="section-title">📝 登記考試成績</h3>
         <div class="form-grid">
             <div class="form-group">
@@ -105,26 +103,30 @@
         <button class="btn-submit" onclick="submitScore()">送出成績並計算積分</button>
     </div>
 
-    <!-- 3. 我的成績紀錄 (允許刪除) -->
-    <div class="panel">
-        <h3 class="section-title">📊 我的分數紀錄 (填錯可刪除)</h3>
-        <div class="list-container" id="scoreListContainer">
-            <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>
+    <!-- 2. 我的成績紀錄 (僅小孩可見，可收合) -->
+    <div class="panel" id="scoreListPanel">
+        <h3 class="section-title" onclick="toggleScoreList()" style="cursor: pointer; user-select: none;">
+            <span>📊 我的分數紀錄 (填錯可刪除)</span>
+            <span id="scoreToggleIcon" style="color:var(--primary-color);">▼ 點此展開</span>
+        </h3>
+        <!-- 預設收合 -->
+        <div id="scoreListWrapper" style="display: none;">
+            <div class="list-container" id="scoreListContainer">
+                <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>
+            </div>
         </div>
     </div>
 
-    <!-- 4. 禮物兌換區 -->
-    <div class="panel">
+    <!-- 3. 禮物兌換區 (僅小孩可見) -->
+    <div class="panel" id="giftShopPanel">
         <h3 class="section-title">🎁 禮物兌換專區</h3>
         <div class="gift-grid">
-            <!-- 課外讀物 -->
             <div class="gift-card">
                 <div class="gift-icon">📚</div>
                 <div class="gift-title">課外讀物乙本</div>
                 <div class="gift-cost">需要 3 積分</div>
                 <button class="btn-exchange" id="btnBook" onclick="redeemWish('課外讀物乙本', 3)">兌換獎品</button>
             </div>
-            <!-- 手搖飲 -->
             <div class="gift-card">
                 <div class="gift-icon">🧋</div>
                 <div class="gift-title">手搖飲料乙杯</div>
@@ -134,10 +136,10 @@
         </div>
     </div>
 
-    <!-- 5. 兌換進度追蹤清單 -->
-    <div class="panel">
+    <!-- 4. 兌換進度追蹤清單 (爸媽與小孩共用) -->
+    <div class="panel" id="redeemListPanel">
         <h3 class="section-title">
-            🛒 禮物兌換進度
+            🛒 禮物兌換清單與進度
             <span style="font-size: 13px; font-weight: normal; color: #888;" id="adminNotice"></span>
         </h3>
         <div class="list-container" id="redeemListContainer">
@@ -146,7 +148,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDU7Wsq2qkcDk37x-R7CvybUuiNyaa22P0WSAPXe6QGT1L6QeoEah_rhPXbISC8ww0/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQcMOKqqzyYwgykHhqdTR4cKS326iL0OxebjwqgR21lpQvwORRcm5eCUze9IdYvoaN/exec"; 
         let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
         let currentPoints = 0;
         let globalData = { scores: [], redeems: [] };
@@ -156,17 +158,35 @@
             document.getElementById('userNameDisplay').innerText = currentUser.name;
             
             const todayStr = new Date().toISOString().split('T')[0];
-            document.getElementById('examDate').value = todayStr;
+            const examInput = document.getElementById('examDate');
+            if (examInput) examInput.value = todayStr;
 
-            if(currentUser.role === 'admin') {
-                document.getElementById('adminNotice').innerText = "(管理者模式：顯示所有紀錄)";
+            // 👑 爸媽管理員視角：隱藏成績區與購物區，只留進度清單
+            if (currentUser.role === 'admin') {
+                document.getElementById('scoreFormPanel').style.display = 'none';
+                document.getElementById('scoreListPanel').style.display = 'none';
+                document.getElementById('giftShopPanel').style.display = 'none';
+                document.getElementById('adminNotice').innerText = "(管理者模式：顯示全家紀錄)";
             }
 
             fetchWishData();
         };
 
+        // 收合/展開成績清單
+        function toggleScoreList() {
+            const wrapper = document.getElementById('scoreListWrapper');
+            const icon = document.getElementById('scoreToggleIcon');
+            if (wrapper.style.display === 'none') {
+                wrapper.style.display = 'block';
+                icon.innerText = '▲ 收合';
+            } else {
+                wrapper.style.display = 'none';
+                icon.innerText = '▼ 點此展開';
+            }
+        }
+
         // ============================
-        // 1. 抓取所有成績與兌換資料
+        // 抓取與計算資料
         // ============================
         function fetchWishData() {
             const script = document.createElement('script');
@@ -179,37 +199,35 @@
             document.body.appendChild(script);
         }
 
-        // ============================
-        // 2. 計算積分與畫面渲染
-        // ============================
         function calculatePointsAndRender() {
             let earned = 0;
             let spent = 0;
 
-            // 計算個人的分數
             const myScores = globalData.scores.filter(item => item.operator === currentUser.name);
             myScores.forEach(item => earned += item.points);
 
-            // 計算個人的花費
             const myRedeems = globalData.redeems.filter(item => item.operator === currentUser.name);
-            myRedeems.forEach(item => spent += item.cost);
+            myRedeems.forEach(item => {
+                // 💡 若狀態為「已取消」，不扣除積分 (自動退還)
+                if (item.status !== '已取消') {
+                    spent += item.cost;
+                }
+            });
 
             currentPoints = earned - spent;
-            document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${currentPoints} 點`;
             
-            document.getElementById('btnBook').disabled = currentPoints < 3;
-            document.getElementById('btnDrink').disabled = currentPoints < 3;
-
-            renderScoreList(myScores);
+            if (currentUser.role !== 'admin') {
+                document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${currentPoints} 點`;
+                document.getElementById('btnBook').disabled = currentPoints < 3;
+                document.getElementById('btnDrink').disabled = currentPoints < 3;
+                renderScoreList(myScores);
+            }
             
-            // 如果是爸媽(admin)，可以看到所有人的兌換；如果是小孩，只能看自己的
             const displayRedeems = (currentUser.role === 'admin') ? globalData.redeems : myRedeems;
             renderRedeemList(displayRedeems);
         }
 
-        // ============================
-        // 3. 渲染成績清單 (含刪除按鈕)
-        // ============================
+        // 渲染成績清單
         function renderScoreList(myScores) {
             const container = document.getElementById('scoreListContainer');
             container.innerHTML = '';
@@ -219,7 +237,6 @@
                 return;
             }
 
-            // 反轉陣列，讓最新的在上面
             [...myScores].reverse().forEach(score => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
@@ -229,15 +246,13 @@
                         <span style="color:var(--primary-color);">(${score.score}分 / 獲得 ${score.points} 點)</span>
                         <div class="list-item-meta">${score.date}</div>
                     </div>
-                    <button class="btn-delete" onclick="deleteScore('${score.id}')">刪除</button>
+                    <button class="btn-delete" onclick="deleteScore('${score.id}')">刪除紀錄</button>
                 `;
                 container.appendChild(div);
             });
         }
 
-        // ============================
-        // 4. 渲染兌換清單 (含狀態與管理按鈕)
-        // ============================
+        // 渲染兌換清單
         function renderRedeemList(redeems) {
             const container = document.getElementById('redeemListContainer');
             container.innerHTML = '';
@@ -251,6 +266,7 @@
                 let statusClass = 'status-pending';
                 if (req.status === '執行中') statusClass = 'status-processing';
                 if (req.status === '已完成') statusClass = 'status-done';
+                if (req.status === '已取消') statusClass = 'status-cancelled';
 
                 const div = document.createElement('div');
                 div.className = 'list-item';
@@ -263,18 +279,27 @@
                         <span class="status-badge ${statusClass}">${req.status}</span>
                     </div>
                     <div style="font-size:13px; color:#555;">細節：${req.detail}</div>
+                    ${req.status === '已取消' ? `<div style="font-size:13px; color:var(--cancel-color); font-weight:bold; margin-top:4px;">取消理由：${req.reason || '無'} (積分已退還)</div>` : ''}
                     <div class="list-item-meta">申請人: ${req.operator} | 日期: ${req.date} | 消耗: ${req.cost}點</div>
                 `;
 
-                // 只有 admin(爸媽) 且狀態還沒完成時，才顯示「更新狀態」按鈕
-                if (currentUser.role === 'admin' && req.status !== '已完成') {
-                    html += `<div class="admin-actions">`;
-                    if (req.status === '申請中') {
-                        html += `<button class="btn-action" style="background:#2196F3;" onclick="updateRedeemStatus('${req.id}', '執行中')">標記：已購買/執行中</button>`;
-                    }
-                    html += `<button class="btn-action" style="background:#4caf50;" onclick="updateRedeemStatus('${req.id}', '已完成')">標記：已發放完成</button>`;
-                    html += `</div>`;
+                html += `<div class="admin-actions">`;
+                
+                // 【取消申請】按鈕：不論爸媽或小孩，只要是「申請中」都可以取消
+                if (req.status === '申請中') {
+                    html += `<button class="btn-action" style="background:var(--cancel-color);" onclick="updateRedeemStatus('${req.id}', '已取消', '${req.operator}')">取消申請 (退回積分)</button>`;
                 }
+
+                // 【狀態推進】按鈕：只有爸媽可以操作
+                if (currentUser.role === 'admin' && req.status !== '已取消') {
+                    if (req.status === '申請中') {
+                        html += `<button class="btn-action" style="background:#2196F3;" onclick="updateRedeemStatus('${req.id}', '執行中', '${req.operator}')">標記：已購買</button>`;
+                    }
+                    if (req.status !== '已完成') {
+                        html += `<button class="btn-action" style="background:#4caf50;" onclick="updateRedeemStatus('${req.id}', '已完成', '${req.operator}')">標記：已發放</button>`;
+                    }
+                }
+                html += `</div>`;
 
                 div.innerHTML = html;
                 container.appendChild(div);
@@ -282,7 +307,7 @@
         }
 
         // ============================
-        // 5. 登記成績 (嚴格規則)
+        // 動作函式
         // ============================
         function submitScore() {
             const date = document.getElementById('examDate').value;
@@ -295,13 +320,12 @@
                 return;
             }
 
-            // 💡 規則：小考100分=1點，大考100分=3點
             let points = 0;
             if (score === 100) {
                 points = (examType === '大考') ? 3 : 1;
             }
 
-            const recordId = "SCORE_" + new Date().getTime(); // 產生唯一ID以便日後刪除
+            const recordId = "SCORE_" + new Date().getTime(); 
 
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -314,38 +338,29 @@
                 else alert(`成績已登記 (${score}分)。差一點點就 100 分了，下次繼續加油！`);
                 
                 document.getElementById('examScore').value = '';
-                setTimeout(fetchWishData, 1000); // 重整資料
+                setTimeout(fetchWishData, 1000); 
             });
         }
 
-        // ============================
-        // 6. 刪除成績
-        // ============================
         function deleteScore(id) {
-            if (confirm("確定要刪除這筆成績紀錄嗎？(如果包含積分將會被扣除)")) {
+            if (confirm("確定要刪除這筆成績紀錄嗎？(如包含積分將會被扣回)")) {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'deleteScore', id: id, operator: currentUser.name })
+                    body: JSON.stringify({ action: 'deleteScore', id: id })
                 }).then(() => {
-                    alert("刪除成功！");
                     setTimeout(fetchWishData, 1000);
                 });
             }
         }
 
-        // ============================
-        // 7. 兌換獎品 (要求填寫細節)
-        // ============================
         function redeemWish(itemName, cost) {
             if (currentPoints < cost) {
                 alert('積分不足喔！繼續加油考 100 分累積積分！');
                 return;
             }
 
-            // 彈出對話框要求填寫細節
             const detail = prompt(`你選擇了兌換【${itemName}】\n請輸入詳細內容 (例如：書名、手搖飲口味與冰塊甜度)：`);
-            
-            if (detail === null) return; // 按取消
+            if (detail === null) return; 
             if (detail.trim() === "") {
                 alert("必須填寫詳細內容，爸媽才知道要幫你買什麼喔！");
                 return;
@@ -357,7 +372,6 @@
                 const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
                 const recordId = "REDEEM_" + new Date().getTime();
 
-                // 1. 登記兌換紀錄
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
@@ -366,7 +380,6 @@
                     })
                 });
 
-                // 2. 自動在家庭聊天室發送訊息通知爸媽
                 const chatMsg = `🎉 ${currentUser.name} 許願兌換了【${itemName}】！\n想要的是：${detail.trim()}`;
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -380,15 +393,39 @@
             }
         }
 
-        // ============================
-        // 8. 爸媽專用：更新兌換狀態
-        // ============================
-        function updateRedeemStatus(id, newStatus) {
-            if (confirm(`確定要將狀態更改為「${newStatus}」嗎？`)) {
+        function updateRedeemStatus(id, newStatus, targetOperator) {
+            let reason = "";
+            
+            if (newStatus === '已取消') {
+                reason = prompt("請輸入取消的理由：");
+                if (reason === null) return; 
+                if (reason.trim() === "") {
+                    alert("取消必須填寫理由喔！");
+                    return;
+                }
+            }
+
+            const confirmMsg = newStatus === '已取消' 
+                ? `確定要取消申請並退還積分給 ${targetOperator} 嗎？` 
+                : `確定要將狀態更改為「${newStatus}」嗎？`;
+
+            if (confirm(confirmMsg)) {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'updateRedeemStatus', id: id, status: newStatus })
+                    body: JSON.stringify({ action: 'updateRedeemStatus', id: id, status: newStatus, reason: reason })
                 }).then(() => {
+                    // 如果是取消，順便廣播聊天室
+                    if (newStatus === '已取消') {
+                        const now = new Date();
+                        const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                        const chatMsg = `⚠️ 【${targetOperator}】的兌換申請已被取消！\n理由：${reason}\n(積分已自動退還)`;
+                        
+                        fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'sendChat', date: dateKey, time: timeStr, operator: '系統通知', message: chatMsg })
+                        });
+                    }
                     setTimeout(fetchWishData, 1000);
                 });
             }
