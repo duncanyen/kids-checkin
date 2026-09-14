@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase - 許願牆</title>
+    <title>HomeBase - 許願牆與成績積分</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <style>
         :root {
             --primary-color: #2e7d32;
             --accent-color: #ff9800;
             --bg-color: #f4f9f4;
+            --cancel-color: #e53935;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
         
@@ -23,11 +24,11 @@
         .points-banner { background: #fff8e1; border: 2px solid #ffe0b2; padding: 15px; border-radius: 12px; text-align: center; font-size: 22px; font-weight: bold; color: #f57c00; margin-bottom: 20px; }
         .points-rule-tip { font-size: 13px; color: #888; font-weight: normal; margin-top: 5px; }
 
+        .section-title { font-size: 16px; font-weight: bold; color: #444; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+        
         /* 表單樣式 */
-        .section-title { font-size: 16px; font-weight: bold; color: #444; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 6px; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-group { margin-bottom: 12px; }
-        .form-group.full-width { grid-column: span 2; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555; }
         .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
         .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 5px; }
@@ -41,7 +42,21 @@
         .gift-cost { font-size: 14px; color: #e65100; font-weight: bold; margin-bottom: 12px; }
         .btn-exchange { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
         .btn-exchange:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-exchange:not(:disabled):active { transform: scale(0.95); }
+
+        /* 紀錄清單 */
+        .list-container { max-height: 250px; overflow-y: auto; background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
+        .list-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .list-item-details { flex: 1; }
+        .list-item-meta { font-size: 12px; color: #888; margin-top: 4px; }
+        .btn-delete { background: var(--cancel-color); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; }
+        .status-pending { background: #ff9800; }
+        .status-processing { background: #2196F3; }
+        .status-done { background: #4caf50; }
+
+        .admin-actions { display: flex; gap: 5px; margin-top: 8px; }
+        .btn-action { font-size: 11px; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; }
     </style>
 </head>
 <body>
@@ -55,7 +70,7 @@
         <h2 class="system-title">✨ 許願牆與成績積分</h2>
         <div class="points-banner">
             <div id="userPointsDisplay">目前可用積分：載入中...</div>
-            <div class="points-rule-tip">💡 獎勵規則：單科考 100 分才可以獲得 1 積分喔！</div>
+            <div class="points-rule-tip">💡 規則：小考 100分 = 1點 / 大考 100分 = 3點</div>
         </div>
 
         <!-- 2. 成績登記表單 -->
@@ -90,7 +105,15 @@
         <button class="btn-submit" onclick="submitScore()">送出成績並計算積分</button>
     </div>
 
-    <!-- 3. 禮物兌換區 -->
+    <!-- 3. 我的成績紀錄 (允許刪除) -->
+    <div class="panel">
+        <h3 class="section-title">📊 我的分數紀錄 (填錯可刪除)</h3>
+        <div class="list-container" id="scoreListContainer">
+            <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>
+        </div>
+    </div>
+
+    <!-- 4. 禮物兌換區 -->
     <div class="panel">
         <h3 class="section-title">🎁 禮物兌換專區</h3>
         <div class="gift-grid">
@@ -99,152 +122,275 @@
                 <div class="gift-icon">📚</div>
                 <div class="gift-title">課外讀物乙本</div>
                 <div class="gift-cost">需要 3 積分</div>
-                <button class="btn-exchange" id="btnBook" onclick="redeem('課外讀物乙本', 3)">兌換獎品</button>
+                <button class="btn-exchange" id="btnBook" onclick="redeemWish('課外讀物乙本', 3)">兌換獎品</button>
             </div>
             <!-- 手搖飲 -->
             <div class="gift-card">
                 <div class="gift-icon">🧋</div>
                 <div class="gift-title">手搖飲料乙杯</div>
                 <div class="gift-cost">需要 3 積分</div>
-                <button class="btn-exchange" id="btnDrink" onclick="redeem('手搖飲料乙杯', 3)">兌換獎品</button>
+                <button class="btn-exchange" id="btnDrink" onclick="redeemWish('手搖飲料乙杯', 3)">兌換獎品</button>
             </div>
         </div>
     </div>
 
+    <!-- 5. 兌換進度追蹤清單 -->
+    <div class="panel">
+        <h3 class="section-title">
+            🛒 禮物兌換進度
+            <span style="font-size: 13px; font-weight: normal; color: #888;" id="adminNotice"></span>
+        </h3>
+        <div class="list-container" id="redeemListContainer">
+            <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>
+        </div>
+    </div>
+
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyM152Twz6wUotCnyr0XFEMowadVzcmXHyEZBYs3GIkNkJc6TpleDOrtw2I0_vtv_XY/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDU7Wsq2qkcDk37x-R7CvybUuiNyaa22P0WSAPXe6QGT1L6QeoEah_rhPXbISC8ww0/exec"; 
         let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
         let currentPoints = 0;
+        let globalData = { scores: [], redeems: [] };
 
         window.onload = function() {
             if (!currentUser) { window.location.href='index.html'; return; }
             document.getElementById('userNameDisplay').innerText = currentUser.name;
             
-            // 預設日期為今天
             const todayStr = new Date().toISOString().split('T')[0];
             document.getElementById('examDate').value = todayStr;
 
-            fetchUserPoints();
+            if(currentUser.role === 'admin') {
+                document.getElementById('adminNotice').innerText = "(管理者模式：顯示所有紀錄)";
+            }
+
+            fetchWishData();
         };
 
-        // 讀取該使用者的總積分數
-        function fetchUserPoints() {
+        // ============================
+        // 1. 抓取所有成績與兌換資料
+        // ============================
+        function fetchWishData() {
             const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=scores&callback=wishPointsCallback&t=${new Date().getTime()}`;
-            window.wishPointsCallback = function(list) {
-                let total = 0;
-                if (Array.isArray(list)) {
-                    list.filter(item => item.operator === currentUser.name).forEach(item => {
-                        total += (item.points || 0);
-                    });
-                }
-                currentPoints = total;
-                document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${currentPoints} 分`;
-                
-                // 控制按鈕是否可按 (小於 3 積分停用)
-                document.getElementById('btnBook').disabled = currentPoints < 3;
-                document.getElementById('btnDrink').disabled = currentPoints < 3;
-                
-                delete window.wishPointsCallback;
+            script.src = `${GOOGLE_SCRIPT_URL}?type=wishData&callback=wishDataCallback&t=${new Date().getTime()}`;
+            window.wishDataCallback = function(data) {
+                globalData = data;
+                calculatePointsAndRender();
+                delete window.wishDataCallback;
             };
             document.body.appendChild(script);
         }
 
-        // 送出成績登記
+        // ============================
+        // 2. 計算積分與畫面渲染
+        // ============================
+        function calculatePointsAndRender() {
+            let earned = 0;
+            let spent = 0;
+
+            // 計算個人的分數
+            const myScores = globalData.scores.filter(item => item.operator === currentUser.name);
+            myScores.forEach(item => earned += item.points);
+
+            // 計算個人的花費
+            const myRedeems = globalData.redeems.filter(item => item.operator === currentUser.name);
+            myRedeems.forEach(item => spent += item.cost);
+
+            currentPoints = earned - spent;
+            document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${currentPoints} 點`;
+            
+            document.getElementById('btnBook').disabled = currentPoints < 3;
+            document.getElementById('btnDrink').disabled = currentPoints < 3;
+
+            renderScoreList(myScores);
+            
+            // 如果是爸媽(admin)，可以看到所有人的兌換；如果是小孩，只能看自己的
+            const displayRedeems = (currentUser.role === 'admin') ? globalData.redeems : myRedeems;
+            renderRedeemList(displayRedeems);
+        }
+
+        // ============================
+        // 3. 渲染成績清單 (含刪除按鈕)
+        // ============================
+        function renderScoreList(myScores) {
+            const container = document.getElementById('scoreListContainer');
+            container.innerHTML = '';
+            
+            if (myScores.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">還沒有登記過成績喔！</div>';
+                return;
+            }
+
+            // 反轉陣列，讓最新的在上面
+            [...myScores].reverse().forEach(score => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div class="list-item-details">
+                        <b>${score.examType} - ${score.subject}</b> 
+                        <span style="color:var(--primary-color);">(${score.score}分 / 獲得 ${score.points} 點)</span>
+                        <div class="list-item-meta">${score.date}</div>
+                    </div>
+                    <button class="btn-delete" onclick="deleteScore('${score.id}')">刪除</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ============================
+        // 4. 渲染兌換清單 (含狀態與管理按鈕)
+        // ============================
+        function renderRedeemList(redeems) {
+            const container = document.getElementById('redeemListContainer');
+            container.innerHTML = '';
+            
+            if (redeems.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">目前沒有兌換紀錄。</div>';
+                return;
+            }
+
+            [...redeems].reverse().forEach(req => {
+                let statusClass = 'status-pending';
+                if (req.status === '執行中') statusClass = 'status-processing';
+                if (req.status === '已完成') statusClass = 'status-done';
+
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.style.flexDirection = 'column';
+                div.style.alignItems = 'flex-start';
+
+                let html = `
+                    <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:5px;">
+                        <b>${req.item}</b>
+                        <span class="status-badge ${statusClass}">${req.status}</span>
+                    </div>
+                    <div style="font-size:13px; color:#555;">細節：${req.detail}</div>
+                    <div class="list-item-meta">申請人: ${req.operator} | 日期: ${req.date} | 消耗: ${req.cost}點</div>
+                `;
+
+                // 只有 admin(爸媽) 且狀態還沒完成時，才顯示「更新狀態」按鈕
+                if (currentUser.role === 'admin' && req.status !== '已完成') {
+                    html += `<div class="admin-actions">`;
+                    if (req.status === '申請中') {
+                        html += `<button class="btn-action" style="background:#2196F3;" onclick="updateRedeemStatus('${req.id}', '執行中')">標記：已購買/執行中</button>`;
+                    }
+                    html += `<button class="btn-action" style="background:#4caf50;" onclick="updateRedeemStatus('${req.id}', '已完成')">標記：已發放完成</button>`;
+                    html += `</div>`;
+                }
+
+                div.innerHTML = html;
+                container.appendChild(div);
+            });
+        }
+
+        // ============================
+        // 5. 登記成績 (嚴格規則)
+        // ============================
         function submitScore() {
             const date = document.getElementById('examDate').value;
             const examType = document.getElementById('examType').value;
             const subject = document.getElementById('examSubject').value;
-            const scoreInput = document.getElementById('examScore').value;
-            const score = parseInt(scoreInput);
+            const score = parseInt(document.getElementById('examScore').value);
 
             if (!date || isNaN(score) || score < 0 || score > 100) {
                 alert('請完整輸入正確的日期與 0-100 之間的分數！');
                 return;
             }
 
-            // 🔔 嚴格積分規則：滿 100 分獲得 1 積分，其餘 0 分
-            const points = (score === 100) ? 1 : 0;
+            // 💡 規則：小考100分=1點，大考100分=3點
+            let points = 0;
+            if (score === 100) {
+                points = (examType === '大考') ? 3 : 1;
+            }
+
+            const recordId = "SCORE_" + new Date().getTime(); // 產生唯一ID以便日後刪除
 
             fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', 
-                mode: 'no-cors', 
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
-                    action: 'saveScore',
-                    date: date,
-                    operator: currentUser.name,
-                    examType: examType,
-                    subject: subject,
-                    score: score,
-                    points: points
+                    action: 'saveScore', id: recordId, date: date, operator: currentUser.name,
+                    examType: examType, subject: subject, score: score, points: points
                 })
             }).then(() => {
-                if (points === 1) {
-                    alert(`🎉 太棒了！考了 100 分，成功獲得 1 積分！`);
-                } else {
-                    alert(`成績已登記 (${score}分)。差一點點就 100 分了，下次繼續加油獲得積分！`);
-                }
+                if (points > 0) alert(`🎉 太棒了！考了 100 分，成功獲得 ${points} 點積分！`);
+                else alert(`成績已登記 (${score}分)。差一點點就 100 分了，下次繼續加油！`);
+                
                 document.getElementById('examScore').value = '';
-                fetchUserPoints(); // 重新整理分數
-            }).catch(e => {
-                alert('登記失敗，請檢查網路連線。');
+                setTimeout(fetchWishData, 1000); // 重整資料
             });
         }
 
-        // 兌換獎品
-        function redeem(itemName, cost) {
+        // ============================
+        // 6. 刪除成績
+        // ============================
+        function deleteScore(id) {
+            if (confirm("確定要刪除這筆成績紀錄嗎？(如果包含積分將會被扣除)")) {
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'deleteScore', id: id, operator: currentUser.name })
+                }).then(() => {
+                    alert("刪除成功！");
+                    setTimeout(fetchWishData, 1000);
+                });
+            }
+        }
+
+        // ============================
+        // 7. 兌換獎品 (要求填寫細節)
+        // ============================
+        function redeemWish(itemName, cost) {
             if (currentPoints < cost) {
                 alert('積分不足喔！繼續加油考 100 分累積積分！');
                 return;
             }
 
-            if (confirm(`確定要消耗 ${cost} 積分兌換【${itemName}】嗎？`)) {
+            // 彈出對話框要求填寫細節
+            const detail = prompt(`你選擇了兌換【${itemName}】\n請輸入詳細內容 (例如：書名、手搖飲口味與冰塊甜度)：`);
+            
+            if (detail === null) return; // 按取消
+            if (detail.trim() === "") {
+                alert("必須填寫詳細內容，爸媽才知道要幫你買什麼喔！");
+                return;
+            }
+
+            if (confirm(`確定要消耗 ${cost} 積分兌換嗎？`)) {
                 const now = new Date();
                 const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                 const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                const recordId = "REDEEM_" + new Date().getTime();
 
                 // 1. 登記兌換紀錄
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        action: 'redeemWish',
-                        date: dateKey,
-                        operator: currentUser.name,
-                        item: itemName,
-                        cost: cost
+                        action: 'redeemWish', id: recordId, date: dateKey, operator: currentUser.name,
+                        item: itemName, detail: detail.trim(), cost: cost
                     })
                 });
 
-                // 2. 以扣除積分 (負數) 寫入成績紀錄中抵扣
+                // 2. 自動在家庭聊天室發送訊息通知爸媽
+                const chatMsg = `🎉 ${currentUser.name} 許願兌換了【${itemName}】！\n想要的是：${detail.trim()}`;
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        action: 'saveScore',
-                        date: dateKey,
-                        operator: currentUser.name,
-                        examType: '積分兌換',
-                        subject: itemName,
-                        score: 0,
-                        points: -cost
+                        action: 'sendChat', date: dateKey, time: timeStr, operator: '許願小幫手', message: chatMsg
                     })
                 });
 
-                // 3. 自動在家庭聊天室發送訊息通知爸媽
-                const chatMsg = `🎉 恭喜 ${currentUser.name} 憑著滿分努力，成功兌換了【${itemName}】！消耗了 ${cost} 積分！`;
+                alert(`申請成功！已經送出清單，請等待爸媽幫你準備禮物喔！`);
+                setTimeout(fetchWishData, 1000);
+            }
+        }
+
+        // ============================
+        // 8. 爸媽專用：更新兌換狀態
+        // ============================
+        function updateRedeemStatus(id, newStatus) {
+            if (confirm(`確定要將狀態更改為「${newStatus}」嗎？`)) {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'sendChat',
-                        date: dateKey,
-                        time: timeStr,
-                        operator: '許願小幫手',
-                        message: chatMsg
-                    })
+                    body: JSON.stringify({ action: 'updateRedeemStatus', id: id, status: newStatus })
+                }).then(() => {
+                    setTimeout(fetchWishData, 1000);
                 });
-
-                alert(`兌換成功！已自動發送通知到家庭聊天室，請找爸媽領取獎品！`);
-                fetchUserPoints(); // 重新整理分數
             }
         }
     </script>
