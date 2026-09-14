@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeBase - 個人設定</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <style>
+        :root { --primary-color: #2e7d32; --bg-color: #f4f9f4; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+        .top-nav { display: flex; justify-content: space-between; max-width: 450px; margin: 0 auto 20px auto; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .panel { background: white; max-width: 450px; margin: 0 auto; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .btn-save { width: 100%; background: var(--primary-color); color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+    </div>
+
+    <div class="panel">
+        <h2 style="color: var(--primary-color); margin-top:0;">⚙️ 個人帳號設定</h2>
+        <div class="form-group">
+            <label>我的名字</label>
+            <input type="text" id="inputName">
+        </div>
+        <div class="form-group">
+            <label>新 4 位數密碼</label>
+            <input type="password" id="inputPin" maxlength="4" placeholder="不修改請保持空白">
+        </div>
+        <button class="btn-save" onclick="saveSettings()">儲存修改</button>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec";
+        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+
+        window.onload = function() {
+            if(!currentUser) { window.location.href='index.html'; return; }
+            document.getElementById('inputName').value = currentUser.name;
+        };
+
+        function saveSettings() {
+            const newName = document.getElementById('inputName').value.trim();
+            const newPin = document.getElementById('inputPin').value.trim();
+            if(!newName) { alert('名字不能為空！'); return; }
+
+            const oldName = currentUser.name;
+            currentUser.name = newName;
+            if(newPin) {
+                if(newPin.length !== 4) { alert('密碼必須是 4 位數！'); return; }
+                currentUser.pin = newPin;
+            }
+
+            localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'updateUser', oldName: oldName, name: currentUser.name, pin: currentUser.pin, avatar: currentUser.avatar, role: currentUser.role })
+            });
+
+            alert('設定儲存成功！');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
