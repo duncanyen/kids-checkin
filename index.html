@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase</title>
+    <title>HomeBase - 登入</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,12 +15,15 @@
             --accent-color: #4caf50;
             --cancel-color: #e53935;
             --bg-color: #f4f9f4;
-            --today-bg: #fffde7;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
         
-        #loginView { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }
-        #loginView h1 { color: var(--primary-color); margin-bottom: 30px; text-align: center; font-size: 24px; }
+        /* === 專屬登入畫面樣式 === */
+        #loginSection { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center; }
+        .login-logo { font-size: 55px; margin-bottom: 10px; }
+        .login-title { color: var(--primary-color); font-size: 26px; font-weight: bold; margin-bottom: 8px; }
+        .login-subtitle { color: #666; font-size: 15px; margin-bottom: 35px; }
+        
         .user-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; justify-content: center; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: 0.2s; text-align: center; background: white; padding: 20px 10px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .user-card:active { transform: scale(0.95); }
@@ -34,12 +37,13 @@
         .pin-input { font-size: 24px; letter-spacing: 8px; text-align: center; width: 80%; padding: 10px; margin: 15px 0; border: 2px solid #ddd; border-radius: 8px; outline: none; }
         .modal-btns { display: flex; gap: 10px; justify-content: center; }
 
+        /* === 主選單 Dashboard 樣式 === */
+        #dashboardView { display: none; text-align: center; max-width: 500px; margin: 0 auto; }
         .header-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; align-items: center; gap: 10px; }
         .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
         .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
         .logout-text { font-size: 12px; color: #888; font-weight: normal; }
 
-        #dashboardView { display: none; text-align: center; max-width: 500px; margin: 0 auto; }
         .system-title { color: var(--primary-color); margin-top: 0; margin-bottom: 25px; font-size: 24px; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .dash-card { background: white; border-radius: 16px; padding: 25px 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; position: relative; }
@@ -60,25 +64,25 @@
         <div class="modal-content">
             <h3 id="modalUserTitle">請輸入 4 位數密碼</h3>
             <p style="font-size: 13px; color: #666; margin: 0;">預設密碼為 1234</p>
-            <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+            <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" onkeypress="handlePinKeyPress(event)">
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="closePinModal()">取消</button>
-                <button class="btn-check" onclick="verifyPin()">確認</button>
+                <button class="btn-check" onclick="verifyPin()">確認登入</button>
             </div>
         </div>
     </div>
 
-    <!-- 登入畫面 -->
+    <!-- 登入畫面 (預設直接顯示) -->
     <div id="loginSection">
-        <div id="loginView">
-            <h1>👋 請選擇身分</h1>
-            <div class="user-selection" id="userSelectionContainer">
-                <!-- 動態載入使用者 -->
-            </div>
+        <div class="login-logo">🏡</div>
+        <div class="login-title">登入 HomeBase</div>
+        <div class="login-subtitle">請點擊您的頭像並輸入密碼</div>
+        <div class="user-selection" id="userSelectionContainer">
+            <!-- 動態載入成員頭像 -->
         </div>
     </div>
 
-    <!-- 主選單 Dashboard -->
+    <!-- 主選單 Dashboard (登入後才會顯示) -->
     <div id="dashboardView">
         <div class="header-bar">
             <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
@@ -95,6 +99,10 @@
                 <div class="dash-icon">📅</div>
                 <div class="dash-title">行事曆</div>
             </div>
+            <div class="dash-card" onclick="window.location.href='pet.html'">
+                <div class="dash-icon">🐕</div>
+                <div class="dash-title">小柴犬</div>
+            </div>
             <div class="dash-card" onclick="window.location.href='chat.html'">
                 <div class="notification-badge" id="chatBadge">0</div>
                 <div class="dash-icon">💬</div>
@@ -104,17 +112,10 @@
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
             </div>
-            <div class="dash-card" disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
-                <div class="dash-icon">✨</div>
-                <div class="dash-title">許願牆</div>
-            </div>
-            <!-- 個人設定 -->
             <div class="dash-card" onclick="window.location.href='settings.html'">
                 <div class="dash-icon">⚙️</div>
                 <div class="dash-title">個人設定</div>
             </div>
-            <!-- 管理者後台 (僅 admin 顯示) -->
             <div class="dash-card" id="adminCard" style="display: none; background: #e3f2fd;" onclick="window.location.href='admin.html'">
                 <div class="dash-icon">🛡️</div>
                 <div class="dash-title" style="color: #1565c0;">管理者後台</div>
@@ -126,14 +127,14 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec"; 
         
         let selectedUserObj = null;
-        let allUsers = [];
 
         window.onload = function() {
             const savedUser = localStorage.getItem('familyCheckInUser');
             if (savedUser) {
-                currentUser = JSON.parse(savedUser);
+                // 如果先前已經登入過，直接進入主選單
                 showDashboard();
             } else {
+                // 否則直接在畫面上渲染登入介面與頭像
                 fetchUsersAndRenderLogin();
             }
         };
@@ -142,28 +143,41 @@
             const script = document.createElement('script');
             script.src = `${GOOGLE_SCRIPT_URL}?type=users&callback=renderLoginUsers`;
             window.renderLoginUsers = function(users) {
-                allUsers = users;
                 localStorage.setItem('cachedUsers', JSON.stringify(users));
-                const container = document.getElementById('userSelectionContainer');
-                container.innerHTML = '';
-                users.forEach(u => {
-                    const card = document.createElement('div');
-                    card.className = 'user-card';
-                    card.onclick = () => openPinModal(u);
-                    card.innerHTML = `
-                        <img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=4caf50&color=fff&size=150'">
-                        <div class="user-name-title">${u.name}</div>
-                    `;
-                    container.appendChild(card);
-                });
+                buildUserCards(users);
                 delete window.renderLoginUsers;
             };
             script.onerror = function() {
-                // 若網路失敗，讀取快取
+                // 若網路異常，改讀取快取資料
                 const cached = localStorage.getItem('cachedUsers');
-                if(cached) renderLoginUsers(JSON.parse(cached));
+                if (cached) {
+                    buildUserCards(JSON.parse(cached));
+                } else {
+                    // 若無快取則提供預設預防畫面空白
+                    buildUserCards([
+                        {name: "俊俊", pin: "1234", avatar: "junjun.jpg", role: "kid"},
+                        {name: "程寶", pin: "1234", avatar: "cheng.jpg", role: "kid"},
+                        {name: "媽咪", pin: "1234", avatar: "mom.jpg", role: "admin"},
+                        {name: "爸爸", pin: "1234", avatar: "dad.jpg", role: "admin"}
+                    ]);
+                }
             };
             document.body.appendChild(script);
+        }
+
+        function buildUserCards(users) {
+            const container = document.getElementById('userSelectionContainer');
+            container.innerHTML = '';
+            users.forEach(u => {
+                const card = document.createElement('div');
+                card.className = 'user-card';
+                card.onclick = () => openPinModal(u);
+                card.innerHTML = `
+                    <img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=4caf50&color=fff&size=150'">
+                    <div class="user-name-title">${u.name}</div>
+                `;
+                container.appendChild(card);
+            });
         }
 
         function openPinModal(user) {
@@ -178,6 +192,10 @@
             document.getElementById('pinModal').style.display = 'none';
         }
 
+        function handlePinKeyPress(event) {
+            if (event.key === 'Enter') verifyPin();
+        }
+
         function verifyPin() {
             const pin = document.getElementById('pinInput').value.trim();
             if (pin === selectedUserObj.pin) {
@@ -186,6 +204,7 @@
             } else {
                 alert('密碼錯誤！');
                 document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
             }
         }
 
@@ -197,7 +216,7 @@
         function logout() {
             localStorage.removeItem('familyCheckInUser');
             document.getElementById('dashboardView').style.display = 'none';
-            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('loginSection').style.display = 'flex';
             fetchUsersAndRenderLogin();
         }
 
@@ -209,12 +228,35 @@
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
 
-            // 如果是管理者，顯示管理者後台卡片
+            // 管理者專用卡片顯示控制
             if (user.role === 'admin') {
                 document.getElementById('adminCard').style.display = 'block';
             } else {
                 document.getElementById('adminCard').style.display = 'none';
             }
+
+            // 檢查聊天室未讀紅點
+            checkUnreadMessages();
+        }
+
+        function checkUnreadMessages() {
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=chatCount&callback=chatCountCallback&t=${new Date().getTime()}`;
+            window.chatCountCallback = function(res) {
+                const totalMsg = res.count || 0;
+                const lastRead = parseInt(localStorage.getItem('lastReadChatCount') || '0');
+                const unread = totalMsg - lastRead;
+                const badge = document.getElementById('chatBadge');
+                
+                if (unread > 0) {
+                    badge.style.display = 'block';
+                    badge.innerText = unread > 99 ? '99+' : unread;
+                } else {
+                    badge.style.display = 'none';
+                }
+                delete window.chatCountCallback;
+            };
+            document.body.appendChild(script);
         }
     </script>
 </body>
