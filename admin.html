@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeBase - 管理者後台</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <style>
+        :root { --primary-color: #2e7d32; --bg-color: #f4f9f4; --cancel-color: #e53935; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+        .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 20px auto; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .panel { background: white; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
+        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-reset { background: #ff9800; color: white; }
+        .btn-del { background: var(--cancel-color); color: white; }
+        .add-box { margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; display: flex; gap: 10px; flex-wrap: wrap; }
+        .add-box input, .add-box select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; flex: 1; }
+        .btn-add { background: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+    </div>
+
+    <div class="panel">
+        <h2 style="color: #1565c0; margin-top:0;">🛡️ 成員與權限管理</h2>
+        <div id="userListContainer">讀取中...</div>
+
+        <div class="add-box">
+            <input type="text" id="newName" placeholder="新成員名字">
+            <select id="newRole">
+                <option value="kid">一般成員 (小孩)</option>
+                <option value="admin">管理者 (爸媽)</option>
+            </select>
+            <button class="btn-add" onclick="addUser()">新增成員</button>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec";
+        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+
+        window.onload = function() {
+            if(!currentUser || currentUser.role !== 'admin') {
+                alert('權限不足！');
+                window.location.href = 'index.html';
+                return;
+            }
+            loadUsers();
+        };
+
+        function loadUsers() {
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=users&callback=adminRenderUsers`;
+            window.adminRenderUsers = function(users) {
+                const container = document.getElementById('userListContainer');
+                container.innerHTML = '';
+                users.forEach(u => {
+                    const row = document.createElement('div');
+                    row.className = 'user-row';
+                    row.innerHTML = `
+                        <div><b>${u.name}</b> <span style="font-size:12px; color:#888;">(${u.role === 'admin' ? '管理者' : '成員'})</span></div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn-sm btn-reset" onclick="resetPin('${u.name}')">還原密碼(1234)</button>
+                            <button class="btn-sm btn-del" onclick="deleteUser('${u.name}')">刪除</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+                delete window.adminRenderUsers;
+            };
+            script.onerror = () => { document.getElementById('userListContainer').innerText = '載入失敗'; };
+            document.body.appendChild(script);
+        }
+
+        function resetPin(name) {
+            if(confirm(`確定要將 ${name} 的密碼還原為預設值 1234 嗎？`)) {
+                sendAdminAction({ action: 'updateUser', name: name, pin: '1234' });
+            }
+        }
+
+        function deleteUser(name) {
+            if(confirm(`確定要刪除成員 ${name} 嗎？`)) {
+                sendAdminAction({ action: 'updateUser', name: name, subAction: 'delete' });
+            }
+        }
+
+        function addUser() {
+            const name = document.getElementById('newName').value.trim();
+            const role = document.getElementById('newRole').value;
+            if(!name) { alert('請輸入名字'); return; }
+            
+            sendAdminAction({ action: 'updateUser', subAction: 'add', name: name, pin: '1234', avatar: 'default.jpg', role: role });
+            document.getElementById('newName').value = '';
+        }
+
+        function sendAdminAction(payload) {
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                alert('操作成功！');
+                setTimeout(loadUsers, 1500); // 延遲刷新
+            });
+        }
+    </script>
+</body>
+</html>
