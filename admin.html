@@ -6,104 +6,112 @@
     <title>HomeBase - 管理者後台</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <style>
-        :root { --primary-color: #2e7d32; --bg-color: #f4f9f4; --cancel-color: #e53935; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
-        .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 20px auto; }
-        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        .panel { background: white; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
-        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-        .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
-        .btn-reset { background: #ff9800; color: white; }
-        .btn-del { background: var(--cancel-color); color: white; }
-        .add-box { margin-top: 20px; padding-top: 20px; border-top: 2px dashed #ddd; display: flex; gap: 10px; flex-wrap: wrap; }
-        .add-box input, .add-box select { padding: 8px; border: 1px solid #ddd; border-radius: 6px; flex: 1; }
-        .btn-add { background: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        :root { --primary-color: #1565c0; --bg-color: #f0f4f8; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 15px auto; align-items: center; }
+        .btn-back { background: #e0e0e0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .panel { background: white; max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .system-title { color: var(--primary-color); font-size: 22px; margin-top: 0; text-align: center; }
+        
+        .filter-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: #e3f2fd; padding: 10px; border-radius: 8px; }
+        .filter-group select { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
+        
+        .log-container { max-height: 400px; overflow-y: auto; background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
+        .log-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; font-size: 14px; }
+        .log-time { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .log-user { font-weight: bold; color: var(--primary-color); }
+        .log-action { background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px; color: #1565c0; }
     </style>
 </head>
 <body>
     <div class="top-nav">
         <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+        <span style="font-weight: bold; color: var(--primary-color);">🛡️ 管理者專區</span>
     </div>
 
     <div class="panel">
-        <h2 style="color: #1565c0; margin-top:0;">🛡️ 成員與權限管理</h2>
-        <div id="userListContainer">讀取中...</div>
-
-        <div class="add-box">
-            <input type="text" id="newName" placeholder="新成員名字">
-            <select id="newRole">
-                <option value="kid">一般成員 (小孩)</option>
-                <option value="admin">管理者 (爸媽)</option>
+        <h2 class="system-title">📜 系統操作紀錄 (Logs)</h2>
+        
+        <div class="filter-group">
+            <label style="font-weight: bold;">篩選人員：</label>
+            <select id="userFilter" onchange="renderLogs()">
+                <option value="all">全部人員</option>
+                <!-- 人員選單會由 JS 自動載入 -->
             </select>
-            <button class="btn-add" onclick="addUser()">新增成員</button>
+        </div>
+
+        <div class="log-container" id="logContainer">
+            <div style="text-align:center; color:#888;">紀錄載入中...</div>
         </div>
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec";
-        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQtrRkeYAWOcj2Yvwb4O97FeqGXuA5C2HRHK88xyBnawCeIjXhzpWyIpnAmkaDtH9v/exec"; 
+        let allLogs = [];
 
         window.onload = function() {
-            if(!currentUser || currentUser.role !== 'admin') {
-                alert('權限不足！');
+            const currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("您沒有權限訪問此頁面！");
                 window.location.href = 'index.html';
                 return;
             }
-            loadUsers();
+            
+            loadUsersForFilter();
+            fetchLogs();
         };
 
-        function loadUsers() {
+        // 載入下拉選單的人員名單
+        function loadUsersForFilter() {
+            const cachedUsers = JSON.parse(localStorage.getItem('cachedUsers')) || [];
+            const filterSelect = document.getElementById('userFilter');
+            cachedUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.name;
+                opt.innerText = u.name;
+                filterSelect.appendChild(opt);
+            });
+        }
+
+        // 取得操作紀錄
+        function fetchLogs() {
             const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=users&callback=adminRenderUsers`;
-            window.adminRenderUsers = function(users) {
-                const container = document.getElementById('userListContainer');
-                container.innerHTML = '';
-                users.forEach(u => {
-                    const row = document.createElement('div');
-                    row.className = 'user-row';
-                    row.innerHTML = `
-                        <div><b>${u.name}</b> <span style="font-size:12px; color:#888;">(${u.role === 'admin' ? '管理者' : '成員'})</span></div>
-                        <div style="display:flex; gap:6px;">
-                            <button class="btn-sm btn-reset" onclick="resetPin('${u.name}')">還原密碼(1234)</button>
-                            <button class="btn-sm btn-del" onclick="deleteUser('${u.name}')">刪除</button>
-                        </div>
-                    `;
-                    container.appendChild(row);
-                });
-                delete window.adminRenderUsers;
+            script.src = `${GOOGLE_SCRIPT_URL}?type=logs&callback=logsCallback&t=${new Date().getTime()}`;
+            window.logsCallback = function(data) {
+                allLogs = Array.isArray(data) ? data : [];
+                renderLogs();
+                delete window.logsCallback;
             };
-            script.onerror = () => { document.getElementById('userListContainer').innerText = '載入失敗'; };
             document.body.appendChild(script);
         }
 
-        function resetPin(name) {
-            if(confirm(`確定要將 ${name} 的密碼還原為預設值 1234 嗎？`)) {
-                sendAdminAction({ action: 'updateUser', name: name, pin: '1234' });
+        // 渲染畫面與篩選邏輯
+        function renderLogs() {
+            const container = document.getElementById('logContainer');
+            const filterName = document.getElementById('userFilter').value;
+            container.innerHTML = '';
+
+            // 根據選單篩選人員
+            const filteredLogs = allLogs.filter(log => filterName === 'all' || log.operator === filterName);
+
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">目前沒有任何操作紀錄。</div>';
+                return;
             }
-        }
 
-        function deleteUser(name) {
-            if(confirm(`確定要刪除成員 ${name} 嗎？`)) {
-                sendAdminAction({ action: 'updateUser', name: name, subAction: 'delete' });
-            }
-        }
-
-        function addUser() {
-            const name = document.getElementById('newName').value.trim();
-            const role = document.getElementById('newRole').value;
-            if(!name) { alert('請輸入名字'); return; }
-            
-            sendAdminAction({ action: 'updateUser', subAction: 'add', name: name, pin: '1234', avatar: 'default.jpg', role: role });
-            document.getElementById('newName').value = '';
-        }
-
-        function sendAdminAction(payload) {
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                alert('操作成功！');
-                setTimeout(loadUsers, 1500); // 延遲刷新
+            // 反轉陣列，讓最新時間的紀錄在最上面
+            [...filteredLogs].reverse().forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'log-item';
+                div.innerHTML = `
+                    <div class="log-time">${log.datetime}</div>
+                    <div>
+                        <span class="log-user">${log.operator}</span> 
+                        <span class="log-action">${log.actionType}</span>
+                    </div>
+                    <div style="color: #555; margin-top: 4px; font-size: 13px;">${log.details}</div>
+                `;
+                container.appendChild(div);
             });
         }
     </script>
