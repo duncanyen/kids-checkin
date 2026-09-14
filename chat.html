@@ -1,162 +1,156 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>HomeBase - 聊天室</title>
-<link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
-<link rel="apple-touch-icon" href="homebase_icon.jpg">
-<meta name="apple-mobile-web-app-title" content="HomeBase">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HomeBase - 聊天室</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    <meta name="apple-mobile-web-app-title" content="HomeBase">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
 
-```
-<style>
-    :root {
-        --primary-color: #2e7d32;
-        --accent-color: #4caf50;
-        --bg-color: #f4f9f4;
-        --chat-bg: #e5ddd5;
-    }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --accent-color: #4caf50;
+            --bg-color: #f4f9f4;
+            --chat-bg: #e5ddd5;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+        
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--primary-color); }
+        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; margin-top: 0; }
 
-    .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
-    .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-    .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--primary-color); }
-    .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
-    .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; margin-top: 0; }
-
-    /* 聊天室主體設計改為全版面 */
-    .chat-wrapper { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; display: flex; flex-direction: column; height: 75vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
-    .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
-    .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
-    .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
-    .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
-    .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
-
-    .chat-input-area { padding: 12px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
-    .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
-    .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); color: white; border: none; font-weight: bold; font-size: 15px; border-radius: 25px; cursor: pointer; }
-    .chat-input-area button:active { transform: scale(0.95); }
-</style>
-```
-
+        /* 聊天室主體設計改為全版面 */
+        .chat-wrapper { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; display: flex; flex-direction: column; height: 75vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
+        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
+        .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
+        .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
+        .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
+        
+        .chat-input-area { padding: 12px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
+        .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); color: white; border: none; font-weight: bold; font-size: 15px; border-radius: 25px; cursor: pointer; }
+        .chat-input-area button:active { transform: scale(0.95); }
+    </style>
 </head>
 <body>
-<div class="top-nav">
-<button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
-<div class="current-user-badge">
-<img id="chatUserAvatar" class="mini-avatar" src="" alt="">
-<span id="chatUserName"></span>
-</div>
-</div>
-
-```
-<h2 class="system-title">💬 家庭聊天室</h2>
-
-<div class="chat-wrapper">
-    <div class="chat-messages" id="chatMessages">
-        <div style="text-align:center; color:#888; font-size:14px; margin-top:20px;">讀取歷史訊息中...</div>
+    <div class="top-nav">
+        <button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
+        <div class="current-user-badge">
+            <img id="chatUserAvatar" class="mini-avatar" src="" alt="">
+            <span id="chatUserName"></span>
+        </div>
     </div>
-    <div class="chat-input-area">
-        <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
-        <button onclick="sendMessage()">傳送</button>
+
+    <h2 class="system-title">💬 家庭聊天室</h2>
+
+    <div class="chat-wrapper">
+        <div class="chat-messages" id="chatMessages">
+            <div style="text-align:center; color:#888; font-size:14px; margin-top:20px;">讀取歷史訊息中...</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
+            <button onclick="sendMessage()">傳送</button>
+        </div>
     </div>
-</div>
 
-<script>
-    const GOOGLE_SCRIPT_URL = "<https://script.google.com/macros/s/AKfycbwsTvhWR4_Qj62UYGcHiXmahIKjAG4MwB2NNaCcmYMf4V8bj0wcEYjSeVGAqXyH8wfj/exec>";
-    let currentUser = null;
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsTvhWR4_Qj62UYGcHiXmahIKjAG4MwB2NNaCcmYMf4V8bj0wcEYjSeVGAqXyH8wfj/exec"; 
+        let currentUser = null;
 
-    window.onload = function() {
-        const savedUser = localStorage.getItem('familyCheckInUser');
-        if (!savedUser) {
-            window.location.href = 'index.html';
-            return;
-        }
-        currentUser = JSON.parse(savedUser);
-        document.getElementById('chatUserAvatar').src = currentUser.avatar;
-        document.getElementById('chatUserName').innerText = currentUser.name;
-
-        // 載入所有歷史訊息
-        loadAllChatHistory();
-    };
-
-    function loadAllChatHistory() {
-        const msgContainer = document.getElementById('chatMessages');
-
-        window.googleChatCallback = function(messages) {
-            msgContainer.innerHTML = '';
-            if (messages.length === 0) {
-                msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">還沒有人說話喔，來打個招呼吧！</div>';
-            } else {
-                messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.date, msg.time));
+        window.onload = function() {
+            const savedUser = localStorage.getItem('familyCheckInUser');
+            if (!savedUser) {
+                window.location.href = 'index.html';
+                return;
             }
-            delete window.googleChatCallback;
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('chatUserAvatar').src = currentUser.avatar;
+            document.getElementById('chatUserName').innerText = currentUser.name;
+            
+            // 載入所有歷史訊息
+            loadAllChatHistory();
         };
 
-        // 注意這裡：date=all，通知後端把所有紀錄都抓出來
-        const script = document.createElement('script');
-        script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=all&callback=googleChatCallback&t=${new Date().getTime()}`;
-        script.onerror = function() {
-            msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路連線</div>';
-        };
-        document.body.appendChild(script);
-    }
+        function loadAllChatHistory() {
+            const msgContainer = document.getElementById('chatMessages');
+            
+            window.googleChatCallback = function(messages) {
+                msgContainer.innerHTML = ''; 
+                if (messages.length === 0) {
+                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">還沒有人說話喔，來打個招呼吧！</div>';
+                } else {
+                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.date, msg.time));
+                }
+                delete window.googleChatCallback;
+            };
 
-    function handleChatKeyPress(event) {
-        if (event.key === 'Enter') sendMessage();
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('chatInput');
-        const text = input.value.trim();
-        if (!text) return;
-        input.value = '';
-
-        const now = new Date();
-        const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-        appendMessageUI(currentUser.name, text, dateKey, timeStr);
-
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'sendChat', date: dateKey, time: timeStr, operator: currentUser.name, message: text })
-        }).catch(e => console.error(e));
-    }
-
-    function appendMessageUI(user, text, date, time) {
-        const container = document.getElementById('chatMessages');
-        const isMine = (user === currentUser.name);
-        if(container.innerHTML.includes('還沒有人說話喔')) container.innerHTML = '';
-
-        const div = document.createElement('div');
-        div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
-        let html = '';
-        if (!isMine) html += `<div class="msg-sender">${user}</div>`;
-
-        // 由於是顯示歷史紀錄，所以在時間前面加上日期 (格式: MM/DD)
-        let shortDate = date;
-        if(date && date.includes('-')) {
-            let parts = date.split('-');
-            shortDate = `${parts[1]}/${parts[2]}`;
+            // 注意這裡：date=all，通知後端把所有紀錄都抓出來
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=all&callback=googleChatCallback&t=${new Date().getTime()}`;
+            script.onerror = function() {
+                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路連線</div>';
+            };
+            document.body.appendChild(script);
         }
 
-        html += `<div>${text}</div><div class="msg-time">${shortDate} ${time}</div>`;
-        div.innerHTML = html;
-        container.appendChild(div);
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
 
-        // 自動捲動到最底部
-        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
-    }
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = ''; 
+            
+            const now = new Date();
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-    function goBack() {
-        window.location.href = 'index.html';
-    }
-</script>
-```
+            appendMessageUI(currentUser.name, text, dateKey, timeStr);
 
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'sendChat', date: dateKey, time: timeStr, operator: currentUser.name, message: text })
+            }).catch(e => console.error(e));
+        }
+
+        function appendMessageUI(user, text, date, time) {
+            const container = document.getElementById('chatMessages');
+            const isMine = (user === currentUser.name);
+            if(container.innerHTML.includes('還沒有人說話喔')) container.innerHTML = '';
+
+            const div = document.createElement('div');
+            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
+            let html = '';
+            if (!isMine) html += `<div class="msg-sender">${user}</div>`;
+            
+            // 由於是顯示歷史紀錄，所以在時間前面加上日期 (格式: MM/DD)
+            let shortDate = date;
+            if(date && date.includes('-')) {
+                let parts = date.split('-');
+                shortDate = `${parts[1]}/${parts[2]}`;
+            }
+
+            html += `<div>${text}</div><div class="msg-time">${shortDate} ${time}</div>`;
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            // 自動捲動到最底部
+            setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+    </script>
 </body>
 </html>
