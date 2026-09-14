@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HomeBase - 許願牆</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --accent-color: #ff9800;
+            --bg-color: #f4f9f4;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        
+        .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 15px auto; align-items: center; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; }
+        
+        .panel { background: white; max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .system-title { color: var(--primary-color); font-size: 22px; margin-top: 0; text-align: center; }
+
+        /* 積分總覽看板 */
+        .points-banner { background: #fff8e1; border: 2px solid #ffe0b2; padding: 15px; border-radius: 12px; text-align: center; font-size: 22px; font-weight: bold; color: #f57c00; margin-bottom: 20px; }
+        .points-rule-tip { font-size: 13px; color: #888; font-weight: normal; margin-top: 5px; }
+
+        /* 表單樣式 */
+        .section-title { font-size: 16px; font-weight: bold; color: #444; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 6px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group.full-width { grid-column: span 2; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555; }
+        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 5px; }
+        .btn-submit:active { transform: scale(0.98); }
+
+        /* 禮物卡片區 */
+        .gift-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .gift-card { background: #fafafa; border: 2px solid #eee; border-radius: 12px; padding: 15px; text-align: center; }
+        .gift-icon { font-size: 42px; margin-bottom: 8px; }
+        .gift-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        .gift-cost { font-size: 14px; color: #e65100; font-weight: bold; margin-bottom: 12px; }
+        .btn-exchange { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
+        .btn-exchange:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-exchange:not(:disabled):active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+        <span id="userNameDisplay" style="font-weight: bold; color: var(--primary-color);"></span>
+    </div>
+
+    <!-- 1. 積分總覽看板 -->
+    <div class="panel">
+        <h2 class="system-title">✨ 許願牆與成績積分</h2>
+        <div class="points-banner">
+            <div id="userPointsDisplay">目前可用積分：載入中...</div>
+            <div class="points-rule-tip">💡 獎勵規則：單科考 100 分才可以獲得 1 積分喔！</div>
+        </div>
+
+        <!-- 2. 成績登記表單 -->
+        <h3 class="section-title">📝 登記考試成績</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>考試日期</label>
+                <input type="date" id="examDate">
+            </div>
+            <div class="form-group">
+                <label>考試類型</label>
+                <select id="examType">
+                    <option value="小考">小考</option>
+                    <option value="大考">大考</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>科目</label>
+                <select id="examSubject">
+                    <option value="國文">國文</option>
+                    <option value="英文">英文</option>
+                    <option value="數學">數學</option>
+                    <option value="自然">自然</option>
+                    <option value="社會">社會</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>考試分數</label>
+                <input type="number" id="examScore" min="0" max="100" placeholder="0 - 100">
+            </div>
+        </div>
+        <button class="btn-submit" onclick="submitScore()">送出成績並計算積分</button>
+    </div>
+
+    <!-- 3. 禮物兌換區 -->
+    <div class="panel">
+        <h3 class="section-title">🎁 禮物兌換專區</h3>
+        <div class="gift-grid">
+            <!-- 課外讀物 -->
+            <div class="gift-card">
+                <div class="gift-icon">📚</div>
+                <div class="gift-title">課外讀物乙本</div>
+                <div class="gift-cost">需要 3 積分</div>
+                <button class="btn-exchange" id="btnBook" onclick="redeem('課外讀物乙本', 3)">兌換獎品</button>
+            </div>
+            <!-- 手搖飲 -->
+            <div class="gift-card">
+                <div class="gift-icon">🧋</div>
+                <div class="gift-title">手搖飲料乙杯</div>
+                <div class="gift-cost">需要 3 積分</div>
+                <button class="btn-exchange" id="btnDrink" onclick="redeem('手搖飲料乙杯', 3)">兌換獎品</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyM152Twz6wUotCnyr0XFEMowadVzcmXHyEZBYs3GIkNkJc6TpleDOrtw2I0_vtv_XY/exec"; 
+        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+        let currentPoints = 0;
+
+        window.onload = function() {
+            if (!currentUser) { window.location.href='index.html'; return; }
+            document.getElementById('userNameDisplay').innerText = currentUser.name;
+            
+            // 預設日期為今天
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('examDate').value = todayStr;
+
+            fetchUserPoints();
+        };
+
+        // 讀取該使用者的總積分數
+        function fetchUserPoints() {
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?type=scores&callback=wishPointsCallback&t=${new Date().getTime()}`;
+            window.wishPointsCallback = function(list) {
+                let total = 0;
+                if (Array.isArray(list)) {
+                    list.filter(item => item.operator === currentUser.name).forEach(item => {
+                        total += (item.points || 0);
+                    });
+                }
+                currentPoints = total;
+                document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${currentPoints} 分`;
+                
+                // 控制按鈕是否可按 (小於 3 積分停用)
+                document.getElementById('btnBook').disabled = currentPoints < 3;
+                document.getElementById('btnDrink').disabled = currentPoints < 3;
+                
+                delete window.wishPointsCallback;
+            };
+            document.body.appendChild(script);
+        }
+
+        // 送出成績登記
+        function submitScore() {
+            const date = document.getElementById('examDate').value;
+            const examType = document.getElementById('examType').value;
+            const subject = document.getElementById('examSubject').value;
+            const scoreInput = document.getElementById('examScore').value;
+            const score = parseInt(scoreInput);
+
+            if (!date || isNaN(score) || score < 0 || score > 100) {
+                alert('請完整輸入正確的日期與 0-100 之間的分數！');
+                return;
+            }
+
+            // 🔔 嚴格積分規則：滿 100 分獲得 1 積分，其餘 0 分
+            const points = (score === 100) ? 1 : 0;
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', 
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'saveScore',
+                    date: date,
+                    operator: currentUser.name,
+                    examType: examType,
+                    subject: subject,
+                    score: score,
+                    points: points
+                })
+            }).then(() => {
+                if (points === 1) {
+                    alert(`🎉 太棒了！考了 100 分，成功獲得 1 積分！`);
+                } else {
+                    alert(`成績已登記 (${score}分)。差一點點就 100 分了，下次繼續加油獲得積分！`);
+                }
+                document.getElementById('examScore').value = '';
+                fetchUserPoints(); // 重新整理分數
+            }).catch(e => {
+                alert('登記失敗，請檢查網路連線。');
+            });
+        }
+
+        // 兌換獎品
+        function redeem(itemName, cost) {
+            if (currentPoints < cost) {
+                alert('積分不足喔！繼續加油考 100 分累積積分！');
+                return;
+            }
+
+            if (confirm(`確定要消耗 ${cost} 積分兌換【${itemName}】嗎？`)) {
+                const now = new Date();
+                const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+                // 1. 登記兌換紀錄
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'redeemWish',
+                        date: dateKey,
+                        operator: currentUser.name,
+                        item: itemName,
+                        cost: cost
+                    })
+                });
+
+                // 2. 以扣除積分 (負數) 寫入成績紀錄中抵扣
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'saveScore',
+                        date: dateKey,
+                        operator: currentUser.name,
+                        examType: '積分兌換',
+                        subject: itemName,
+                        score: 0,
+                        points: -cost
+                    })
+                });
+
+                // 3. 自動在家庭聊天室發送訊息通知爸媽
+                const chatMsg = `🎉 恭喜 ${currentUser.name} 憑著滿分努力，成功兌換了【${itemName}】！消耗了 ${cost} 積分！`;
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'sendChat',
+                        date: dateKey,
+                        time: timeStr,
+                        operator: '許願小幫手',
+                        message: chatMsg
+                    })
+                });
+
+                alert(`兌換成功！已自動發送通知到家庭聊天室，請找爸媽領取獎品！`);
+                fetchUserPoints(); // 重新整理分數
+            }
+        }
+    </script>
+</body>
+</html>
