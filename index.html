@@ -120,8 +120,6 @@
             </div>
         </div>
 
-        <h1 class="system-title">🏡 我們家的小天地</h1>
-
         <div class="dashboard-grid">
             <div class="dash-card" onclick="window.location.href='calendar.html'">
                 <div class="dash-icon">📅</div>
@@ -144,6 +142,12 @@
                 <div class="dash-title">遊戲區</div>
             </div>
 
+            <div class="dash-card" disabled-card">
+                <div class="coming-soon-badge">Coming Soon</div>
+                <div class="dash-icon">✨</div>
+                <div class="dash-title">許願牆</div>
+            </div>
+
             <div class="dash-card" onclick="window.location.href='settings.html'">
                 <div class="dash-icon">⚙️</div>
                 <div class="dash-title">個人設定</div>
@@ -154,11 +158,6 @@
                 <div class="dash-title" style="color: #1565c0;">管理者後台</div>
             </div>
 
-            <div class="dash-card dash-card-full disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
-                <div class="dash-icon">✨</div>
-                <div class="dash-title">許願牆</div>
-            </div>
         </div>
     </div>
 
@@ -190,7 +189,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEjm7SOr2Wwi8aZKjGuNBoIaGSGBdkOgWtOMKtvAlt4qtCu3iK9T-DPXdas8gwHiiN/exec"; 
         
         let selectedUserObj = null;
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
@@ -345,25 +344,49 @@
             loadData(); 
         }
 
+        // ==========================================
+        // 修正：載入全部歷史打卡紀錄
+        // ==========================================
         function loadData() {
             document.getElementById('loadingView').style.display = 'flex';
-            document.getElementById('loadingText').innerText = '正在同步資料...';
-            const targetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            document.getElementById('loadingText').innerText = '正在同步歷史打卡資料...';
 
-            let loadTimeout = setTimeout(() => { document.getElementById('loadingView').style.display = 'none'; initCalendar(); }, 6000);
+            let loadTimeout = setTimeout(() => { 
+                document.getElementById('loadingView').style.display = 'none'; 
+                initCalendar(); 
+            }, 6000);
 
-            window.googleCheckinCallback = function(result) {
+            window.googleCheckinCallback = function(checkinList) {
                 clearTimeout(loadTimeout); 
-                if (result.checked) { attendanceData[targetDate] = { checked: true, time: result.time }; } 
-                else { delete attendanceData[targetDate]; }
+                
+                // 清空舊的，重新把後端抓到的歷史資料填入
+                attendanceData = {};
+                if (Array.isArray(checkinList)) {
+                    checkinList.forEach(item => {
+                        if (item.date) {
+                            attendanceData[item.date] = { 
+                                checked: true, 
+                                time: item.time, 
+                                operator: item.operator 
+                            };
+                        }
+                    });
+                }
+                
                 localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
                 initCalendar();
                 document.getElementById('loadingView').style.display = 'none';
                 delete window.googleCheckinCallback;
             };
+
             const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&date=${targetDate}&callback=googleCheckinCallback&t=${new Date().getTime()}`;
-            script.onerror = function() { clearTimeout(loadTimeout); initCalendar(); document.getElementById('loadingView').style.display = 'none'; };
+            // 注意：這裡不再限制帶入 &date=...，讓後端回傳全部
+            script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&callback=googleCheckinCallback&t=${new Date().getTime()}`;
+            script.onerror = function() { 
+                clearTimeout(loadTimeout); 
+                initCalendar(); 
+                document.getElementById('loadingView').style.display = 'none'; 
+            };
             document.body.appendChild(script);
         }
 
@@ -406,7 +429,7 @@
             const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
             const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
             const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            attendanceData[dateKey] = { checked: true, time: timeStr };
+            attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name };
             saveData(dateKey, 'checkin', '', timeStr, user.name);
         }
 
