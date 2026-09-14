@@ -187,7 +187,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDU7Wsq2qkcDk37x-R7CvybUuiNyaa22P0WSAPXe6QGT1L6QeoEah_rhPXbISC8ww0/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQtrRkeYAWOcj2Yvwb4O97FeqGXuA5C2HRHK88xyBnawCeIjXhzpWyIpnAmkaDtH9v/exec"; 
         
         let selectedUserObj = null;
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
@@ -270,8 +270,25 @@
             }
         }
 
-        function login(userObj) {
+         function login(userObj) {
             localStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
+            
+            // --- 新增：發送登入紀錄到系統日誌 ---
+            const now = new Date();
+            const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ 
+                    action: 'logAction', 
+                    operator: userObj.name,
+                    datetime: datetimeStr,
+                    actionType: '登入',
+                    details: '使用者登入系統' 
+                })
+            }).catch(e => console.error(e));
+            // ------------------------------------
+
             showDashboard();
         }
 
