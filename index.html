@@ -136,7 +136,10 @@
                 <div class="dash-icon">💬</div>
                 <div class="dash-title">家庭聊天室</div>
             </div>
-
+            <div class="dash-card dash-card-full" onclick="window.location.href='wishwall.html'" style="background: #fff8e1; border: 2px solid #ffe0b2;">
+             <div class="dash-icon">✨</div>
+            <div class="dash-title" style="color: #f57c00;">許願牆與積分</div>
+            </div>
             <div class="dash-card" onclick="window.location.href='games.html'">
                 <div class="dash-icon">🎮</div>
                 <div class="dash-title">遊戲區</div>
@@ -152,11 +155,7 @@
                 <div class="dash-title" style="color: #1565c0;">管理者後台</div>
             </div>
 
-            <div class="dash-card" disabled-card">
-                <div class="coming-soon-badge">Coming Soon</div>
-                <div class="dash-icon">✨</div>
-                <div class="dash-title">許願牆</div>
-            </div>
+
         </div>
     </div>
 
@@ -188,7 +187,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEjm7SOr2Wwi8aZKjGuNBoIaGSGBdkOgWtOMKtvAlt4qtCu3iK9T-DPXdas8gwHiiN/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyM152Twz6wUotCnyr0XFEMowadVzcmXHyEZBYs3GIkNkJc6TpleDOrtw2I0_vtv_XY/exec"; 
         
         let selectedUserObj = null;
         let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
