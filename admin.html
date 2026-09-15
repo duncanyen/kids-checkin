@@ -5,38 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HomeBase - 管理者後台</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <meta name="mobile-web-app-capable" content="yes">
     <style>
-        :root { --primary-color: #1565c0; --bg-color: #f0f4f8; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        :root { 
+            --primary-color: #1565c0; 
+            --primary-light: #e3f2fd;
+            --accent-color: #4caf50;
+            --bg-color: #f0f4f8; 
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
         .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 15px auto; align-items: center; }
-        .btn-back { background: #e0e0e0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .btn-back { background: #e0e0e0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; color: #555; }
         .panel { background: white; max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .system-title { color: var(--primary-color); font-size: 22px; margin-top: 0; text-align: center; }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-top: 0; margin-bottom: 15px; text-align: center; }
         
-        .filter-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: #e3f2fd; padding: 10px; border-radius: 8px; }
+        .filter-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: var(--primary-light); padding: 10px; border-radius: 8px; }
         .filter-group select { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
         
-        .log-container { max-height: 400px; overflow-y: auto; background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
+        .log-container { max-height: 350px; overflow-y: auto; background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
         .log-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; font-size: 14px; }
         .log-time { font-size: 12px; color: #888; margin-bottom: 4px; }
         .log-user { font-weight: bold; color: var(--primary-color); }
-        .log-action { background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px; color: #1565c0; }
+        .log-action { background: var(--primary-light); padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px; color: var(--primary-color); font-weight: bold; }
+        
+        /* 人員密碼重置樣式 */
+        .user-reset-list { display: flex; flex-direction: column; gap: 10px; }
+        .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .user-name { font-weight: bold; font-size: 16px; }
+        .btn-reset { background: var(--primary-color); color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-reset:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
         <span style="font-weight: bold; color: var(--primary-color);">🛡️ 管理者專區</span>
     </div>
 
+    <!-- 1. 人員密碼重置專區 -->
+    <div class="panel">
+        <h2 class="system-title">🔑 人員密碼重置與管理</h2>
+        <div class="user-reset-list" id="userResetContainer">
+            <div style="text-align:center; color:#888;">載入成員名單中...</div>
+        </div>
+    </div>
+
+    <!-- 2. 系統操作紀錄 (Logs) -->
     <div class="panel">
         <h2 class="system-title">📜 系統操作紀錄 (Logs)</h2>
         
         <div class="filter-group">
             <label style="font-weight: bold;">篩選人員：</label>
-            <select id="userFilter" onchange="renderLogs()">
+            <select id="userFilter">
                 <option value="all">全部人員</option>
-                <!-- 人員選單會由 JS 自動載入 -->
             </select>
         </div>
 
@@ -45,53 +68,175 @@
         </div>
     </div>
 
-    <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQtrRkeYAWOcj2Yvwb4O97FeqGXuA5C2HRHK88xyBnawCeIjXhzpWyIpnAmkaDtH9v/exec"; 
-        let allLogs = [];
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            doc, 
+            updateDoc, 
+            addDoc, 
+            query, 
+            orderBy, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        window.onload = function() {
-            const currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
-            if (!currentUser || currentUser.role !== 'admin') {
-                alert("您沒有權限訪問此頁面！");
-                window.location.href = 'index.html';
-                return;
-            }
-            
-            loadUsersForFilter();
-            fetchLogs();
+        // 1. Firebase 初始化 (homebasedb)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
+            measurementId: "G-K7FSPG5B9R"
         };
 
-        // 載入下拉選單的人員名單
-        function loadUsersForFilter() {
-            const cachedUsers = JSON.parse(localStorage.getItem('cachedUsers')) || [];
-            const filterSelect = document.getElementById('userFilter');
-            cachedUsers.forEach(u => {
-                const opt = document.createElement('option');
-                opt.value = u.name;
-                opt.innerText = u.name;
-                filterSelect.appendChild(opt);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let allLogs = [];
+        let allUsers = [];
+
+        // 2. 驗證訪問權限
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
+        const isParentOrAdmin = currentUser && (
+            currentUser.role === 'admin' || 
+            currentUser.role === 'parent' || 
+            currentUser.name === '爸爸' || 
+            currentUser.name === '媽咪'
+        );
+
+        if (!isParentOrAdmin) {
+            alert("您沒有權限訪問管理者頁面！");
+            window.location.href = 'index.html';
+        } else {
+            initAdminPage();
+        }
+
+        async function initAdminPage() {
+            await loadUsersFromFirebase();
+            listenToLogs();
+        }
+
+        // 3. 從 Firebase 載入成員資料 (供密碼重置與下拉選單使用)
+        async function loadUsersFromFirebase() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "users"));
+                allUsers = [];
+                const filterSelect = document.getElementById('userFilter');
+                filterSelect.innerHTML = '<option value="all">全部人員</option>';
+
+                querySnapshot.forEach(docSnap => {
+                    const uData = docSnap.data();
+                    allUsers.push({ docId: docSnap.id, ...uData });
+
+                    // 填入下拉選單
+                    const opt = document.createElement('option');
+                    opt.value = uData.name;
+                    opt.innerText = uData.name;
+                    filterSelect.appendChild(opt);
+                });
+
+                renderUserResetList();
+            } catch (error) {
+                console.error("載入成員失敗：", error);
+                document.getElementById('userResetContainer').innerHTML = '<div style="text-align:center; color:#e53935;">載入成員失敗</div>';
+            }
+        }
+
+        // 4. 渲染成員重置清單
+        function renderUserResetList() {
+            const container = document.getElementById('userResetContainer');
+            container.innerHTML = '';
+
+            if (allUsers.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">無成員資料</div>';
+                return;
+            }
+
+            allUsers.forEach(user => {
+                const div = document.createElement('div');
+                div.className = 'user-reset-item';
+                div.innerHTML = `
+                    <div class="user-info">
+                        <img class="user-avatar" src="${user.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${user.name}'">
+                        <div>
+                            <div class="user-name">${user.name}</div>
+                            <div style="font-size:12px; color:#777;">角色: ${user.role === 'admin' ? '管理者' : '一般成員'}</div>
+                        </div>
+                    </div>
+                    <button class="btn-reset" data-id="${user.docId}" data-name="${user.name}">重置密碼</button>
+                `;
+                container.appendChild(div);
+            });
+
+            // 綁定重置按鈕事件
+            container.querySelectorAll('.btn-reset').forEach(btn => {
+                btn.addEventListener('click', () => resetUserPin(btn.getAttribute('data-id'), btn.getAttribute('data-name')));
             });
         }
 
-        // 取得操作紀錄
-        function fetchLogs() {
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=logs&callback=logsCallback&t=${new Date().getTime()}`;
-            window.logsCallback = function(data) {
-                allLogs = Array.isArray(data) ? data : [];
-                renderLogs();
-                delete window.logsCallback;
-            };
-            document.body.appendChild(script);
+        // 5. 重置密碼動作
+        async function resetUserPin(docId, targetName) {
+            const newPin = prompt(`請輸入 ${targetName} 的新 4 位數密碼：`, "1234");
+            
+            if (newPin === null) return; 
+            if (!/^\d{4}$/.test(newPin.trim())) {
+                alert("密碼格式錯誤，必須剛好為 4 位數字！");
+                return;
+            }
+
+            const confirmMsg = `確定要將【${targetName}】的密碼重置為 [ ${newPin.trim()} ] 嗎？`;
+            if (confirm(confirmMsg)) {
+                try {
+                    const userRef = doc(db, "users", docId);
+                    await updateDoc(userRef, { pin: newPin.trim() });
+
+                    // 記錄寫入 Logs
+                    const now = new Date();
+                    const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                    
+                    await addDoc(collection(db, "logs"), {
+                        datetime: datetimeStr,
+                        operator: currentUser.name,
+                        actionType: '重置密碼',
+                        details: `重置了 ${targetName} 的密碼`,
+                        timestamp: serverTimestamp()
+                    });
+
+                    alert(`已成功將 ${targetName} 的密碼重置為 ${newPin.trim()}！`);
+                } catch (error) {
+                    console.error("重置密碼失敗：", error);
+                    alert("重置密碼失敗，請檢視網路。");
+                }
+            }
         }
 
-        // 渲染畫面與篩選邏輯
+        // 6. 即時監聽系統操作紀錄 (Logs)
+        function listenToLogs() {
+            const logsRef = collection(db, "logs");
+            const q = query(logsRef, orderBy("timestamp", "desc"));
+
+            onSnapshot(q, (snapshot) => {
+                allLogs = snapshot.docs.map(docSnap => docSnap.data());
+                renderLogs();
+            }, (error) => {
+                console.error("監聽 Logs 失敗：", error);
+                document.getElementById('logContainer').innerHTML = '<div style="text-align:center; color:#e53935;">載入紀錄失敗</div>';
+            });
+        }
+
+        // 7. 渲染畫面與篩選邏輯
         function renderLogs() {
             const container = document.getElementById('logContainer');
             const filterName = document.getElementById('userFilter').value;
             container.innerHTML = '';
 
-            // 根據選單篩選人員
             const filteredLogs = allLogs.filter(log => filterName === 'all' || log.operator === filterName);
 
             if (filteredLogs.length === 0) {
@@ -99,21 +244,26 @@
                 return;
             }
 
-            // 反轉陣列，讓最新時間的紀錄在最上面
-            [...filteredLogs].reverse().forEach(log => {
+            filteredLogs.forEach(log => {
                 const div = document.createElement('div');
                 div.className = 'log-item';
                 div.innerHTML = `
-                    <div class="log-time">${log.datetime}</div>
+                    <div class="log-time">${log.datetime || ''}</div>
                     <div>
-                        <span class="log-user">${log.operator}</span> 
-                        <span class="log-action">${log.actionType}</span>
+                        <span class="log-user">${log.operator || '未知'}</span> 
+                        <span class="log-action">${log.actionType || '動作'}</span>
                     </div>
-                    <div style="color: #555; margin-top: 4px; font-size: 13px;">${log.details}</div>
+                    <div style="color: #555; margin-top: 4px; font-size: 13px;">${log.details || ''}</div>
                 `;
                 container.appendChild(div);
             });
         }
+
+        // 事件綁定
+        document.getElementById('userFilter').addEventListener('change', renderLogs);
+        document.getElementById('btnBack').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
     </script>
 </body>
 </html>
