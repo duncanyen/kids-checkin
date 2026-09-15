@@ -7,7 +7,6 @@
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="apple-mobile-web-app-title" content="HomeBase">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
@@ -25,7 +24,7 @@
         .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
         .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; margin-top: 0; }
 
-        /* 聊天室主體設計改為全版面 */
+        /* 聊天室主體設計 */
         .chat-wrapper { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; display: flex; flex-direction: column; height: 75vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
         .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
@@ -38,14 +37,15 @@
         .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
         .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); color: white; border: none; font-weight: bold; font-size: 15px; border-radius: 25px; cursor: pointer; }
         .chat-input-area button:active { transform: scale(0.95); }
+        .chat-input-area button:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
+        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
         <div class="current-user-badge">
             <img id="chatUserAvatar" class="mini-avatar" src="" alt="">
-            <span id="chatUserName"></span>
+            <span id="chatUserName">載入中...</span>
         </div>
     </div>
 
@@ -56,101 +56,138 @@
             <div style="text-align:center; color:#888; font-size:14px; margin-top:20px;">讀取歷史訊息中...</div>
         </div>
         <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="輸入訊息..." onkeypress="handleChatKeyPress(event)">
-            <button onclick="sendMessage()">傳送</button>
+            <input type="text" id="chatInput" placeholder="輸入訊息...">
+            <button id="btnSend">傳送</button>
         </div>
     </div>
 
-    <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsTvhWR4_Qj62UYGcHiXmahIKjAG4MwB2NNaCcmYMf4V8bj0wcEYjSeVGAqXyH8wfj/exec"; 
-        let currentUser = null;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            query, 
+            orderBy, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        window.onload = function() {
-            const savedUser = localStorage.getItem('familyCheckInUser');
-            if (!savedUser) {
-                window.location.href = 'index.html';
-                return;
-            }
-            currentUser = JSON.parse(savedUser);
-            document.getElementById('chatUserAvatar').src = currentUser.avatar;
-            document.getElementById('chatUserName').innerText = currentUser.name;
-            
-            // 載入所有歷史訊息
-            loadAllChatHistory();
+        // 1. Firebase 初始化 (homebasedb)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
+            measurementId: "G-K7FSPG5B9R"
         };
 
-        function loadAllChatHistory() {
-            const msgContainer = document.getElementById('chatMessages');
-            
-            window.googleChatCallback = function(messages) {
-                msgContainer.innerHTML = ''; 
-                if (messages.length === 0) {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 2. 取得登入者資訊 (優先讀取 sessionStorage，確保切換帳號正確)
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
+        if (!currentUser) {
+            alert('請先選擇使用者登入！');
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('chatUserAvatar').src = currentUser.avatar || 'homebase_icon.jpg';
+            document.getElementById('chatUserName').innerText = currentUser.name || '成員';
+        }
+
+        const msgContainer = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const btnSend = document.getElementById('btnSend');
+
+        // 3. 監聽 Firestore 即時訊息變化
+        function listenToChatMessages() {
+            const messagesRef = collection(db, "messages");
+            const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+            onSnapshot(q, (snapshot) => {
+                msgContainer.innerHTML = '';
+
+                if (snapshot.empty) {
                     msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">還沒有人說話喔，來打個招呼吧！</div>';
-                } else {
-                    messages.forEach(msg => appendMessageUI(msg.user, msg.message, msg.date, msg.time));
+                    return;
                 }
-                delete window.googleChatCallback;
-            };
 
-            // 注意這裡：date=all，通知後端把所有紀錄都抓出來
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=chat&date=all&callback=googleChatCallback&t=${new Date().getTime()}`;
-            script.onerror = function() {
-                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入失敗，請檢查網路連線</div>';
-            };
-            document.body.appendChild(script);
+                snapshot.forEach((doc) => {
+                    const msg = doc.data();
+                    appendMessageUI(msg.sender, msg.text, msg.timestamp);
+                });
+
+                // 自動捲動至最新訊息
+                msgContainer.scrollTop = msgContainer.scrollHeight;
+            }, (error) => {
+                console.error("即時監聽訊息失敗：", error);
+                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入訊息失敗，請檢查權限設定</div>';
+            });
         }
 
-        function handleChatKeyPress(event) {
-            if (event.key === 'Enter') sendMessage();
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
+        // 4. 發送訊息至 Firebase
+        async function sendMessage() {
+            const text = chatInput.value.trim();
             if (!text) return;
-            input.value = ''; 
-            
-            const now = new Date();
-            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
-            appendMessageUI(currentUser.name, text, dateKey, timeStr);
+            chatInput.value = '';
+            btnSend.disabled = true;
 
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'sendChat', date: dateKey, time: timeStr, operator: currentUser.name, message: text })
-            }).catch(e => console.error(e));
+            try {
+                await addDoc(collection(db, "messages"), {
+                    sender: currentUser.name,
+                    text: text,
+                    timestamp: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("發送訊息失敗：", error);
+                alert("訊息發送失敗，請再試一次。");
+            } finally {
+                btnSend.disabled = false;
+                chatInput.focus();
+            }
         }
 
-        function appendMessageUI(user, text, date, time) {
-            const container = document.getElementById('chatMessages');
-            const isMine = (user === currentUser.name);
-            if(container.innerHTML.includes('還沒有人說話喔')) container.innerHTML = '';
+        // 5. 渲染訊息 UI 函式
+        function appendMessageUI(sender, text, timestamp) {
+            const isMine = (sender === currentUser.name);
 
             const div = document.createElement('div');
             div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
-            let html = '';
-            if (!isMine) html += `<div class="msg-sender">${user}</div>`;
-            
-            // 由於是顯示歷史紀錄，所以在時間前面加上日期 (格式: MM/DD)
-            let shortDate = date;
-            if(date && date.includes('-')) {
-                let parts = date.split('-');
-                shortDate = `${parts[1]}/${parts[2]}`;
+
+            let timeStr = "剛才";
+            if (timestamp && timestamp.toDate) {
+                const dateObj = timestamp.toDate();
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const date = String(dateObj.getDate()).padStart(2, '0');
+                const hours = String(dateObj.getHours()).padStart(2, '0');
+                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                timeStr = `${month}/${date} ${hours}:${minutes}`;
             }
 
-            html += `<div>${text}</div><div class="msg-time">${shortDate} ${time}</div>`;
-            div.innerHTML = html;
-            container.appendChild(div);
+            let html = '';
+            if (!isMine) html += `<div class="msg-sender">${sender}</div>`;
+            html += `<div>${text}</div><div class="msg-time">${timeStr}</div>`;
             
-            // 自動捲動到最底部
-            setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+            div.innerHTML = html;
+            msgContainer.appendChild(div);
         }
 
-        function goBack() {
+        // 事件綁定
+        btnSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        document.getElementById('btnBack').addEventListener('click', () => {
             window.location.href = 'index.html';
-        }
+        });
+
+        // 啟動即時聽訊
+        listenToChatMessages();
     </script>
 </body>
 </html>
