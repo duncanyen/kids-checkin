@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HomeBase - 個人設定</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
@@ -15,6 +16,7 @@
         .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .btn-save { width: 100%; background: var(--primary-color); color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .btn-save:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -32,40 +34,100 @@
             <label>新 4 位數密碼</label>
             <input type="password" id="inputPin" maxlength="4" placeholder="不修改請保持空白">
         </div>
-        <button class="btn-save" onclick="saveSettings()">儲存修改</button>
+        <button class="btn-save" id="btnSave">儲存修改</button>
     </div>
 
-    <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywb6eYxayRjUVc4vH1MsP2RI7U0vfSBM_CmxEb5mp7iFpsb2u_pj7sTjJ3bGVI2Nq4/exec";
-        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, doc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        window.onload = function() {
-            if(!currentUser) { window.location.href='index.html'; return; }
-            document.getElementById('inputName').value = currentUser.name;
+        // 1. Firebase 初始化
+        const firebaseConfig = {
+            apiKey: "AIzaSyDB4m11c5lCVWrXhKs4IHhyvjMtegXbKGw",
+            authDomain: "homebase-3d790.firebaseapp.com",
+            projectId: "homebase-3d790",
+            storageBucket: "homebase-3d790.firebasestorage.app",
+            messagingSenderId: "932827125734",
+            appId: "1:932827125734:web:d04c804ab49a6a6587a827",
+            measurementId: "G-HKH8VQ1FCH"
         };
 
-        function saveSettings() {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 2. 取得快取的目前登入使用者
+        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+
+        // 頁面初始化檢查
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('inputName').value = currentUser.name || '';
+        }
+
+        // 3. 儲存設定至 Firebase Firestore
+        async function saveSettings() {
             const newName = document.getElementById('inputName').value.trim();
             const newPin = document.getElementById('inputPin').value.trim();
-            if(!newName) { alert('名字不能為空！'); return; }
+            const btnSave = document.getElementById('btnSave');
 
-            const oldName = currentUser.name;
-            currentUser.name = newName;
-            if(newPin) {
-                if(newPin.length !== 4) { alert('密碼必須是 4 位數！'); return; }
-                currentUser.pin = newPin;
+            if (!newName) {
+                alert('名字不能為空！');
+                return;
             }
 
-            localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+            let updatePayload = { name: newName };
 
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'updateUser', oldName: oldName, name: currentUser.name, pin: currentUser.pin, avatar: currentUser.avatar, role: currentUser.role })
-            });
+            if (newPin) {
+                if (newPin.length !== 4) {
+                    alert('密碼必須是 4 位數！');
+                    return;
+                }
+                updatePayload.pin = newPin;
+            }
 
-            alert('設定儲存成功！');
-            window.location.href = 'index.html';
+            try {
+                btnSave.disabled = true;
+                btnSave.innerText = '儲存中...';
+
+                let userDocId = currentUser.id;
+
+                // 若 localStorage 內未存 document ID，以舊名稱做 query 搜尋對應文件 ID
+                if (!userDocId) {
+                    const q = query(collection(db, "users"), where("name", "==", currentUser.name));
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
+                        userDocId = querySnapshot.docs[0].id;
+                    }
+                }
+
+                if (!userDocId) {
+                    throw new Error("無法定位使用者資料庫文件！");
+                }
+
+                // 更新 Firestore 資料庫
+                const userRef = doc(db, "users", userDocId);
+                await updateDoc(userRef, updatePayload);
+
+                // 更新本地端快取 (localStorage)
+                currentUser.name = newName;
+                if (newPin) currentUser.pin = newPin;
+                currentUser.id = userDocId;
+                localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+
+                alert('設定儲存成功！');
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("更新失敗：", error);
+                alert('設定儲存失敗，請重試。');
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerText = '儲存修改';
+            }
         }
+
+        // 綁定點擊事件
+        document.getElementById('btnSave').addEventListener('click', saveSettings);
     </script>
 </body>
 </html>
