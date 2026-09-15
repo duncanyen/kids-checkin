@@ -7,7 +7,6 @@
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="apple-mobile-web-app-title" content="HomeBase">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
@@ -24,8 +23,13 @@
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
         .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
-        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 20px; }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 10px; }
         
+        /* 管理者模式切換 Tab */
+        .mode-switch-container { display: none; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .btn-switch { background: white; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 6px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .btn-switch.active { background: var(--primary-color); color: white; }
+
         /* 遊戲與管理樣式 */
         .score-board { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         .score-item { text-align: center; }
@@ -54,16 +58,22 @@
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
-        <div class="current-user-badge" onclick="logout()">
+        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
+        <div class="current-user-badge" id="btnLogout">
             <img id="gameUserAvatar" class="mini-avatar" src="" alt="">
-            <span id="gameUserName"></span>
+            <span id="gameUserName">載入中...</span>
         </div>
     </div>
 
     <h2 class="system-title" id="gameZoneTitle">🎮 遊戲區</h2>
 
-    <!-- 小朋友視角：剪刀石頭布遊戲 -->
+    <!-- 家長專屬模式切換選單 -->
+    <div class="mode-switch-container" id="modeSwitchContainer">
+        <button class="btn-switch active" id="btnModeAdmin">🛡️ 額度管理</button>
+        <button class="btn-switch" id="btnModePlay">🎮 親自玩遊戲</button>
+    </div>
+
+    <!-- 剪刀石頭布遊戲區域 -->
     <div id="kidGameContainer" style="display: none;">
         <div class="score-board">
             <div class="score-item">
@@ -86,9 +96,9 @@
             <div class="vs-text">VS</div>
             <h3>請選擇你的牌</h3>
             <div class="player-cards">
-                <div class="p-card" onclick="playGame(0)">✊</div>
-                <div class="p-card" onclick="playGame(1)">✋</div>
-                <div class="p-card" onclick="playGame(2)">✌️</div>
+                <div class="p-card" data-choice="0">✊</div>
+                <div class="p-card" data-choice="1">✋</div>
+                <div class="p-card" data-choice="2">✌️</div>
             </div>
             <div class="game-result" id="gameResultText">準備好了嗎？</div>
         </div>
@@ -98,68 +108,135 @@
     <div id="parentAdminContainer" style="display: none;">
         <div class="admin-panel">
             <div class="admin-title">🛡️ 小朋友遊玩額度管理</div>
-            <div id="adminKidList"></div>
+            <div id="adminKidList">資料載入中...</div>
         </div>
     </div>
 
-    <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpbFzsLNvLlkaZYCVJZetn8eAe2ps_IXwq48uJEAGi4y9OKyIwyUguuUqtRQXW9s_M/exec"; 
-        const RPS_ICONS = ["✊", "✋", "✌️"];
-        
-        let currentUser = null;
-        let gameDB = JSON.parse(localStorage.getItem('familyGameDB')) || {};
-        let isGameLocked = false;
-        const today = new Date();
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            addDoc, 
+            collection, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        window.onload = function() {
-            const savedUser = localStorage.getItem('familyCheckInUser');
-            if (!savedUser) {
-                window.location.href = 'index.html';
-                return;
-            }
-            currentUser = JSON.parse(savedUser);
-            document.getElementById('gameUserAvatar').src = currentUser.avatar;
-            document.getElementById('gameUserName').innerText = currentUser.name;
-            setupView();
+        // 1. Firebase 初始化 (homebasedb)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
+            measurementId: "G-K7FSPG5B9R"
         };
 
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const RPS_ICONS = ["✊", "✋", "✌️"];
+        let isGameLocked = false;
+        let isParent = false;
+        
+        // 2. 登入身分檢查 (優先讀取 sessionStorage)
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
+        if (!currentUser) {
+            alert('請先選擇使用者登入！');
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('gameUserAvatar').src = currentUser.avatar || 'homebase_icon.jpg';
+            document.getElementById('gameUserName').innerText = currentUser.name || '';
+            
+            isParent = (currentUser.role === 'admin' || currentUser.role === 'parent' || currentUser.name === '爸爸' || currentUser.name === '媽咪');
+            setupView();
+        }
+
+        // 3. 視角切換控制
         function setupView() {
-            if (currentUser.name === '爸爸' || currentUser.name === '媽咪') {
-                document.getElementById('gameZoneTitle').innerText = "🛡️ 家長遊戲管理中心";
-                document.getElementById('parentAdminContainer').style.display = 'block';
-                renderAdminKidList();
+            if (isParent) {
+                document.getElementById('modeSwitchContainer').style.display = 'flex';
+                switchParentView('admin');
+                listenParentAdminData();
             } else {
+                document.getElementById('modeSwitchContainer').style.display = 'none';
                 document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布";
                 document.getElementById('kidGameContainer').style.display = 'block';
-                initUserData(currentUser.name);
-                isGameLocked = false;
-                updateGameUI();
-                resetGameArena();
+                document.getElementById('parentAdminContainer').style.display = 'none';
+                listenKidGameData(currentUser.name);
             }
         }
 
-        function initUserData(kidName) {
-            const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-            if (!gameDB[kidName]) {
-                gameDB[kidName] = { totalScore: 0, lastPlayDate: todayStr, playsToday: 0, currentStreak: 0 };
+        function switchParentView(mode) {
+            const btnAdmin = document.getElementById('btnModeAdmin');
+            const btnPlay = document.getElementById('btnModePlay');
+
+            if (mode === 'admin') {
+                btnAdmin.classList.add('active');
+                btnPlay.classList.remove('active');
+                document.getElementById('gameZoneTitle').innerText = "🛡️ 家長遊戲管理中心";
+                document.getElementById('parentAdminContainer').style.display = 'block';
+                document.getElementById('kidGameContainer').style.display = 'none';
+            } else {
+                btnPlay.classList.add('active');
+                btnAdmin.classList.remove('active');
+                document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布 (無限制試玩)";
+                document.getElementById('kidGameContainer').style.display = 'block';
+                document.getElementById('parentAdminContainer').style.display = 'none';
+                listenKidGameData(currentUser.name);
             }
-            if (gameDB[kidName].lastPlayDate !== todayStr) {
-                gameDB[kidName].lastPlayDate = todayStr;
-                gameDB[kidName].playsToday = 0;
-                gameDB[kidName].currentStreak = 0;
-            }
-            localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
         }
 
-        // ================= 家長管理 =================
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function getInitialStats() {
+            return {
+                totalScore: 0,
+                lastPlayDate: getTodayStr(),
+                playsToday: 0,
+                currentStreak: 0
+            };
+        }
+
+        // ================= 家長管理邏輯 =================
+        let kidsData = {};
+        function listenParentAdminData() {
+            const kids = ['俊俊', '程寶'];
+            kids.forEach(kidName => {
+                const docRef = doc(db, "game_records", kidName);
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        let data = docSnap.data();
+                        if (data.lastPlayDate !== getTodayStr()) {
+                            data.lastPlayDate = getTodayStr();
+                            data.playsToday = 0;
+                            data.currentStreak = 0;
+                        }
+                        kidsData[kidName] = data;
+                    } else {
+                        kidsData[kidName] = getInitialStats();
+                    }
+                    renderAdminKidList();
+                });
+            });
+        }
+
         function renderAdminKidList() {
             const container = document.getElementById('adminKidList');
             container.innerHTML = '';
             const kids = ['俊俊', '程寶'];
+
             kids.forEach(kidName => {
-                initUserData(kidName);
-                const stats = gameDB[kidName];
-                const playsLeft = 3 - stats.playsToday;
+                const stats = kidsData[kidName] || getInitialStats();
+                const playsLeft = Math.max(0, 3 - stats.playsToday);
                 const row = document.createElement('div');
                 row.className = 'kid-row';
                 row.innerHTML = `
@@ -168,33 +245,72 @@
                         <div class="kid-status">今日已玩: <b>${stats.playsToday}</b> 場 | 剩餘額度: <b style="color:${playsLeft > 0 ? 'green':'red'}">${playsLeft}</b> 場 | 總積分: <b>${stats.totalScore}</b></div>
                     </div>
                     <div class="admin-btns">
-                        <button class="btn-check btn-sm" onclick="adminSetPlays('${kidName}', 0)">重置(0場)</button>
-                        <button class="btn-cancel btn-sm" onclick="adminSetPlays('${kidName}', 3)">鎖定(3場)</button>
+                        <button class="btn-check btn-sm btn-reset" data-kid="${kidName}">重置(0場)</button>
+                        <button class="btn-cancel btn-sm btn-lock" data-kid="${kidName}">鎖定(3場)</button>
                     </div>
                 `;
                 container.appendChild(row);
             });
+
+            container.querySelectorAll('.btn-reset').forEach(btn => {
+                btn.addEventListener('click', () => adminSetPlays(btn.getAttribute('data-kid'), 0));
+            });
+            container.querySelectorAll('.btn-lock').forEach(btn => {
+                btn.addEventListener('click', () => adminSetPlays(btn.getAttribute('data-kid'), 3));
+            });
         }
 
-        function adminSetPlays(kidName, count) {
-            initUserData(kidName);
-            gameDB[kidName].playsToday = count;
-            if(count === 0) gameDB[kidName].currentStreak = 0;
-            localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
-            renderAdminKidList();
-            alert(`已將 ${kidName} 今日遊玩次數設為 ${count} 場！`);
+        async function adminSetPlays(kidName, count) {
+            try {
+                const docRef = doc(db, "game_records", kidName);
+                let current = kidsData[kidName] || getInitialStats();
+                
+                await setDoc(docRef, {
+                    totalScore: current.totalScore || 0,
+                    lastPlayDate: getTodayStr(),
+                    playsToday: count,
+                    currentStreak: (count === 0) ? 0 : (current.currentStreak || 0)
+                }, { merge: true });
+
+                alert(`已將 ${kidName} 今日遊玩次數設為 ${count} 場！`);
+            } catch (error) {
+                console.error("更新額度失敗：", error);
+                alert("更新額度失敗，請檢視網路設定。");
+            }
         }
 
-        // ================= 遊戲核心 =================
+        // ================= 遊戲核心邏輯 =================
+        let currentKidStats = getInitialStats();
+
+        function listenKidGameData(user) {
+            const docRef = doc(db, "game_records", user);
+            onSnapshot(docRef, async (docSnap) => {
+                if (docSnap.exists()) {
+                    currentKidStats = docSnap.data();
+                    if (currentKidStats.lastPlayDate !== getTodayStr()) {
+                        currentKidStats.lastPlayDate = getTodayStr();
+                        currentKidStats.playsToday = 0;
+                        currentKidStats.currentStreak = 0;
+                        await setDoc(docRef, currentKidStats, { merge: true });
+                    }
+                } else {
+                    currentKidStats = getInitialStats();
+                    await setDoc(docRef, currentKidStats);
+                }
+                updateGameUI();
+            });
+        }
+
         function updateGameUI() {
-            const userStats = gameDB[currentUser.name];
-            const playsLeft = 3 - userStats.playsToday;
-            document.getElementById('gameTotalScore').innerText = userStats.totalScore;
+            const playsLeft = isParent ? "∞" : Math.max(0, 3 - currentKidStats.playsToday);
+            document.getElementById('gameTotalScore').innerText = currentKidStats.totalScore || 0;
             document.getElementById('gamePlaysLeft').innerText = playsLeft;
-            document.getElementById('gameStreak').innerText = userStats.currentStreak;
+            document.getElementById('gameStreak').innerText = currentKidStats.currentStreak || 0;
             
             const cards = document.querySelectorAll('.p-card');
-            if (playsLeft <= 0) {
+            
+            // 家長完全不受場次限制；小朋友若額度用完則鎖定
+            if (!isParent && currentKidStats.playsToday >= 3) {
                 cards.forEach(card => card.classList.add('disabled'));
                 document.getElementById('gameResultText').innerText = "今日額度已用完，請找爸爸或媽咪解鎖！";
             } else if (!isGameLocked) {
@@ -206,16 +322,18 @@
             isGameLocked = false;
             document.getElementById('compCard').innerText = "❓";
             document.getElementById('compCard').classList.remove('card-solid');
-            if (gameDB[currentUser.name] && (3 - gameDB[currentUser.name].playsToday) > 0) {
+            const playsLeft = isParent ? 99 : Math.max(0, 3 - currentKidStats.playsToday);
+            
+            if (playsLeft > 0) {
                 document.getElementById('gameResultText').innerText = "準備好了嗎？";
                 document.querySelectorAll('.p-card').forEach(card => card.classList.remove('disabled'));
             }
         }
 
-        function playGame(playerChoice) {
+        async function playGame(playerChoice) {
             if (isGameLocked) return;
-            const userStats = gameDB[currentUser.name];
-            if (userStats.playsToday >= 3) return;
+            // 家長可無限次玩，小朋友到達3次鎖定
+            if (!isParent && currentKidStats.playsToday >= 3) return;
 
             isGameLocked = true;
             document.querySelectorAll('.p-card').forEach(card => card.classList.add('disabled'));
@@ -233,29 +351,59 @@
                 resultTextEl.style.color = "#ff9800";
                 setTimeout(resetGameArena, 1500);
             } else {
-                userStats.playsToday += 1;
+                if (!isParent) {
+                    currentKidStats.playsToday += 1;
+                }
+                
+                let addedPoints = 0;
+                let reason = "";
+
                 if (result === 1) {
-                    userStats.totalScore += 1;
-                    userStats.currentStreak += 1;
+                    currentKidStats.totalScore += 1;
+                    currentKidStats.currentStreak += 1;
+                    addedPoints = 1;
+                    reason = "剪刀石頭布 獲勝";
                     let msg = "🎉 贏了！獲得 1 分！";
-                    saveScoreToGAS(1, "剪刀石頭布 獲勝");
-                    if (userStats.currentStreak === 3) {
-                        userStats.totalScore += 2;
+
+                    if (currentKidStats.currentStreak === 3) {
+                        currentKidStats.totalScore += 2;
+                        addedPoints = 3;
+                        reason = "剪刀石頭布 連勝3場額外加分";
                         msg = "🔥 連贏 3 場！總共獲得 3 分！";
-                        saveScoreToGAS(2, "連贏3場 額外加分");
                     }
                     resultTextEl.innerText = msg;
                     resultTextEl.style.color = "#4caf50";
                 } else {
-                    userStats.currentStreak = 0;
-                    resultTextEl.innerText = "😢 輸了！再接再厲！";
+                    currentKidStats.currentStreak = 0;
+                    resultTextEl.innerText = "😢 輸了！再接再勵！";
                     resultTextEl.style.color = "#e53935";
                 }
 
-                localStorage.setItem('familyGameDB', JSON.stringify(gameDB));
+                // 1. 同步更動至 Firebase game_records
+                const docRef = doc(db, "game_records", currentUser.name);
+                await setDoc(docRef, {
+                    totalScore: currentKidStats.totalScore,
+                    lastPlayDate: getTodayStr(),
+                    playsToday: currentKidStats.playsToday,
+                    currentStreak: currentKidStats.currentStreak
+                }, { merge: true });
+
+                // 2. 若獲勝加分，自動同步寫入 scores 集合供許願牆採計點數
+                if (addedPoints > 0) {
+                    await addDoc(collection(db, "scores"), {
+                        date: getTodayStr(),
+                        operator: currentUser.name,
+                        examType: "遊戲獎勵",
+                        subject: reason,
+                        score: 100,
+                        points: addedPoints,
+                        timestamp: serverTimestamp()
+                    });
+                }
+
                 updateGameUI();
 
-                if (userStats.playsToday >= 3) {
+                if (!isParent && currentKidStats.playsToday >= 3) {
                     setTimeout(() => {
                         document.getElementById('gameResultText').innerText = "今日額度已用完，請找爸爸或媽咪解鎖！";
                     }, 2500);
@@ -265,18 +413,26 @@
             }
         }
 
-        function saveScoreToGAS(scoreValue, reason) {
-            const now = new Date();
-            const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ date: dateKey, time: timeStr, operator: currentUser.name, action: 'gameScore', note: reason, score: scoreValue })
-            }).catch(e => console.error(e));
-        }
+        // 事件綁定
+        document.querySelectorAll('.p-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const choice = parseInt(card.getAttribute('data-choice'));
+                playGame(choice);
+            });
+        });
 
-        function goBack() { window.location.href = 'index.html'; }
-        function logout() { localStorage.removeItem('familyCheckInUser'); window.location.href = 'index.html'; }
+        document.getElementById('btnModeAdmin').addEventListener('click', () => switchParentView('admin'));
+        document.getElementById('btnModePlay').addEventListener('click', () => switchParentView('play'));
+
+        document.getElementById('btnBack').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            sessionStorage.removeItem('familyCheckInUser');
+            localStorage.removeItem('familyCheckInUser');
+            window.location.href = 'index.html';
+        });
     </script>
 </body>
 </html>
