@@ -53,10 +53,6 @@
         .dash-icon { font-size: 40px; margin-bottom: 10px; }
         .dash-title { font-size: 16px; font-weight: bold; color: #444; }
         
-        .disabled-card { background: #e9ecef; cursor: default; }
-        .disabled-card:active { transform: none; }
-        .coming-soon-badge { position: absolute; top: 12px; right: 12px; background: var(--cancel-color); color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; opacity: 0.8;}
-
         .notification-badge { display: none; position: absolute; top: -5px; right: -5px; background-color: #e53935; color: white; font-size: 14px; font-weight: bold; height: 24px; min-width: 24px; line-height: 24px; border-radius: 12px; padding: 0 6px; border: 2px solid white; }
 
         /* === 打卡主系統畫面 === */
@@ -137,8 +133,8 @@
                 <div class="dash-title">家庭聊天室</div>
             </div>
             <div class="dash-card" onclick="window.location.href='wishwall.html'" style="background: #fff8e1; border: 2px solid #ffe0b2;">
-             <div class="dash-icon">✨</div>
-            <div class="dash-title" style="color: #f57c00;">許願牆</div>
+                <div class="dash-icon">✨</div>
+                <div class="dash-title" style="color: #f57c00;">許願牆</div>
             </div>
             <div class="dash-card" onclick="window.location.href='games.html'">
                 <div class="dash-icon">🎮</div>
@@ -154,8 +150,6 @@
                 <div class="dash-icon">🛡️</div>
                 <div class="dash-title" style="color: #1565c0;">管理者後台</div>
             </div>
-
-
         </div>
     </div>
 
@@ -186,122 +180,147 @@
         </div>
     </div>
 
-    <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQtrRkeYAWOcj2Yvwb4O97FeqGXuA5C2HRHK88xyBnawCeIjXhzpWyIpnAmkaDtH9v/exec"; 
-        
-        let selectedUserObj = null;
-        let attendanceData = JSON.parse(localStorage.getItem('checkInDB')) || {};
-        let viewDate = new Date(); 
-        const today = new Date();  
+    <!-- Firebase 模組與核心邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDB4m11c5lCVWrXhKs4IHhyvjMtegXbKGw",
+            authDomain: "homebase-3d790.firebaseapp.com",
+            projectId: "homebase-3d790",
+            storageBucket: "homebase-3d790.firebasestorage.app",
+            messagingSenderId: "932827125734",
+            appId: "1:932827125734:web:d04c804ab49a6a6587a827",
+            measurementId: "G-HKH8VQ1FCH"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // 將變數與方法掛載至 window 供 HTML 內嵌的 onclick 事件呼叫
+        window.selectedUserObj = null;
+        window.attendanceData = {};
+        window.viewDate = new Date(); 
+        window.today = new Date();  
 
         window.onload = function() {
-            const savedUser = localStorage.getItem('familyCheckInUser');
+            const savedUser = sessionStorage.getItem('familyCheckInUser');
             if (savedUser) {
-                showDashboard();
+                window.showDashboard();
             } else {
-                fetchUsersAndRenderLogin();
+                window.fetchUsersAndRenderLogin();
             }
         };
 
-        function fetchUsersAndRenderLogin() {
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=users&callback=renderLoginUsers`;
-            window.renderLoginUsers = function(users) {
-                localStorage.setItem('cachedUsers', JSON.stringify(users));
-                buildUserCards(users);
-                delete window.renderLoginUsers;
-            };
-            script.onerror = function() {
-                const cached = localStorage.getItem('cachedUsers');
-                if (cached) {
-                    buildUserCards(JSON.parse(cached));
-                } else {
-                    buildUserCards([
+        window.fetchUsersAndRenderLogin = async function() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "users"));
+                let users = [];
+                
+                if (querySnapshot.empty) {
+                    // 若資料庫無使用者，自動初始化預設成員
+                    const defaultUsers = [
                         {name: "俊俊", pin: "1234", avatar: "junjun.jpg", role: "kid"},
                         {name: "程寶", pin: "1234", avatar: "cheng.jpg", role: "kid"},
                         {name: "媽咪", pin: "1234", avatar: "mom.jpg", role: "admin"},
                         {name: "爸爸", pin: "1234", avatar: "dad.jpg", role: "admin"}
-                    ]);
+                    ];
+                    for (const u of defaultUsers) {
+                        await addDoc(collection(db, "users"), u);
+                        users.push(u);
+                    }
+                } else {
+                    querySnapshot.forEach(doc => users.push(doc.data()));
                 }
-            };
-            document.body.appendChild(script);
-        }
+                
+                localStorage.setItem('cachedUsers', JSON.stringify(users));
+                window.buildUserCards(users);
+            } catch (e) {
+                console.error("載入使用者失敗:", e);
+                const cached = localStorage.getItem('cachedUsers');
+                if (cached) {
+                    window.buildUserCards(JSON.parse(cached));
+                }
+            }
+        };
 
-        function buildUserCards(users) {
+        window.buildUserCards = function(users) {
             const container = document.getElementById('userSelectionContainer');
             container.innerHTML = '';
             users.forEach(u => {
                 const card = document.createElement('div');
                 card.className = 'user-card';
-                card.onclick = () => openPinModal(u);
+                card.onclick = () => window.openPinModal(u);
                 card.innerHTML = `
                     <img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=4caf50&color=fff&size=150'">
                     <div class="user-name-title">${u.name}</div>
                 `;
                 container.appendChild(card);
             });
-        }
+        };
 
-        function openPinModal(user) {
-            selectedUserObj = user;
+        window.openPinModal = function(user) {
+            window.selectedUserObj = user;
             document.getElementById('modalUserTitle').innerText = `${user.name}，請輸入密碼`;
             document.getElementById('pinInput').value = '';
             document.getElementById('pinModal').style.display = 'flex';
             document.getElementById('pinInput').focus();
-        }
+        };
 
-        function closePinModal() {
+        window.closePinModal = function() {
             document.getElementById('pinModal').style.display = 'none';
-        }
+        };
 
-        function handlePinKeyPress(event) {
-            if (event.key === 'Enter') verifyPin();
-        }
+        window.handlePinKeyPress = function(event) {
+            if (event.key === 'Enter') window.verifyPin();
+        };
 
-        function verifyPin() {
+        window.verifyPin = function() {
             const pin = document.getElementById('pinInput').value.trim();
-            if (pin === selectedUserObj.pin) {
-                closePinModal();
-                login(selectedUserObj);
+            if (pin === window.selectedUserObj.pin) {
+                window.closePinModal();
+                window.login(window.selectedUserObj);
             } else {
                 alert('密碼錯誤！');
                 document.getElementById('pinInput').value = '';
                 document.getElementById('pinInput').focus();
             }
-        }
+        };
 
-         function login(userObj) {
-            localStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
+        window.login = async function(userObj) {
+            sessionStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
             
-            // --- 新增：發送登入紀錄到系統日誌 ---
+            // 發送登入紀錄到 Firebase logs
             const now = new Date();
             const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
             
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ 
-                    action: 'logAction', 
-                    operator: userObj.name,
+            try {
+                await addDoc(collection(db, "logs"), {
                     datetime: datetimeStr,
+                    operator: userObj.name,
                     actionType: '登入',
-                    details: '使用者登入系統' 
-                })
-            }).catch(e => console.error(e));
-            // ------------------------------------
+                    details: '使用者登入系統'
+                });
+            } catch (e) {
+                console.error("寫入登入 Log 失敗:", e);
+            }
 
-            showDashboard();
-        }
+            window.showDashboard();
+        };
 
-        function logout() {
-            localStorage.removeItem('familyCheckInUser');
+        window.logout = function() {
+            sessionStorage.removeItem('familyCheckInUser');
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('loginSection').style.display = 'flex';
-            fetchUsersAndRenderLogin();
-        }
+            window.fetchUsersAndRenderLogin();
+        };
 
-        function showDashboard() {
-            const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
+        window.showDashboard = function() {
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('dashboardView').style.display = 'block';
@@ -315,14 +334,13 @@
                 document.getElementById('adminCard').style.display = 'none';
             }
 
-            checkUnreadMessages();
-        }
+            window.checkUnreadMessages();
+        };
 
-        function checkUnreadMessages() {
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=chatCount&callback=chatCountCallback&t=${new Date().getTime()}`;
-            window.chatCountCallback = function(res) {
-                const totalMsg = res.count || 0;
+        window.checkUnreadMessages = async function() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "chats"));
+                const totalMsg = querySnapshot.size;
                 const lastRead = parseInt(localStorage.getItem('lastReadChatCount') || '0');
                 const unread = totalMsg - lastRead;
                 const badge = document.getElementById('chatBadge');
@@ -333,18 +351,18 @@
                 } else {
                     badge.style.display = 'none';
                 }
-                delete window.chatCountCallback;
-            };
-            document.body.appendChild(script);
-        }
+            } catch (e) {
+                console.error("檢查未讀訊息失敗:", e);
+            }
+        };
 
-        function goBackToDashboard() {
+        window.goBackToDashboard = function() {
             document.getElementById('mainSystemView').style.display = 'none';
-            showDashboard();
-        }
+            window.showDashboard();
+        };
 
-        function openCheckInView() {
-            const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
+        window.openCheckInView = function() {
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'block';
             document.getElementById('sysUserAvatar').src = user.avatar;
@@ -356,53 +374,39 @@
             } else {
                 actionControls.style.display = 'block';
             }
-            loadData(); 
-        }
+            window.loadData(); 
+        };
 
-        function loadData() {
+        window.loadData = async function() {
             document.getElementById('loadingView').style.display = 'flex';
-            document.getElementById('loadingText').innerText = '正在同步歷史打卡資料...';
+            document.getElementById('loadingText').innerText = '正在同步 Firebase 歷史打卡資料...';
 
-            let loadTimeout = setTimeout(() => { 
-                document.getElementById('loadingView').style.display = 'none'; 
-                initCalendar(); 
-            }, 6000);
-
-            window.googleCheckinCallback = function(checkinList) {
-                clearTimeout(loadTimeout); 
-                
-                attendanceData = {};
-                if (Array.isArray(checkinList)) {
-                    checkinList.forEach(item => {
-                        if (item.date) {
-                            attendanceData[item.date] = { 
-                                checked: true, 
-                                time: item.time, 
-                                operator: item.operator 
-                            };
-                        }
-                    });
-                }
-                
-                localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
-                initCalendar();
+            try {
+                const querySnapshot = await getDocs(collection(db, "checkins"));
+                window.attendanceData = {};
+                querySnapshot.forEach(docSnap => {
+                    const item = docSnap.data();
+                    if (item.date) {
+                        window.attendanceData[item.date] = { 
+                            checked: true, 
+                            time: item.time, 
+                            operator: item.operator,
+                            docId: docSnap.id 
+                        };
+                    }
+                });
+                window.initCalendar();
+            } catch (e) {
+                console.error("讀取打卡紀錄失敗:", e);
+                window.initCalendar();
+            } finally {
                 document.getElementById('loadingView').style.display = 'none';
-                delete window.googleCheckinCallback;
-            };
+            }
+        };
 
-            const script = document.createElement('script');
-            script.src = `${GOOGLE_SCRIPT_URL}?type=checkin&callback=googleCheckinCallback&t=${new Date().getTime()}`;
-            script.onerror = function() { 
-                clearTimeout(loadTimeout); 
-                initCalendar(); 
-                document.getElementById('loadingView').style.display = 'none'; 
-            };
-            document.body.appendChild(script);
-        }
-
-        function initCalendar() {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth();
+        window.initCalendar = function() {
+            const year = window.viewDate.getFullYear();
+            const month = window.viewDate.getMonth();
             const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
             document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
             const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
@@ -415,14 +419,14 @@
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement('div'); dayDiv.className = 'day';
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) dayDiv.classList.add('today');
+                if (day === window.today.getDate() && month === window.today.getMonth() && year === window.today.getFullYear()) dayDiv.classList.add('today');
                 const numSpan = document.createElement('span'); numSpan.className = 'date-num'; numSpan.innerText = day;
                 dayDiv.appendChild(numSpan);
-                if (attendanceData[dateKey]) {
+                if (window.attendanceData[dateKey]) {
                     const statusSpan = document.createElement('span'); statusSpan.className = 'status'; statusSpan.innerText = '✓';
                     dayDiv.appendChild(statusSpan);
-                    if (attendanceData[dateKey].time) {
-                        let displayTime = attendanceData[dateKey].time;
+                    if (window.attendanceData[dateKey].time) {
+                        let displayTime = window.attendanceData[dateKey].time;
                         let match = String(displayTime).match(/(\d{2}:\d{2})/);
                         if (match) displayTime = match[1];
                         const timeDiv = document.createElement('div'); timeDiv.className = 'time'; timeDiv.innerText = displayTime;
@@ -431,60 +435,72 @@
                 }
                 grid.appendChild(dayDiv);
             }
-        }
+        };
 
-        function changeMonth(direction) { viewDate.setMonth(viewDate.getMonth() + direction); initCalendar(); }
+        window.changeMonth = function(direction) { 
+            window.viewDate.setMonth(window.viewDate.getMonth() + direction); 
+            window.initCalendar(); 
+        };
 
-        // ==========================================
-        // 🔔 打卡成功時：同時發送一則聊天訊息到後端
-        // ==========================================
-        function checkIn() {
-            const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
-            const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
-            const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        window.checkIn = async function() {
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+            const timeStr = `${String(window.today.getHours()).padStart(2, '0')}:${String(window.today.getMinutes()).padStart(2, '0')}`;
+            const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
             
-            attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name };
-            
-            // 1. 儲存打卡資料並更新畫面
-            saveData(dateKey, 'checkin', '', timeStr, user.name);
+            try {
+                // 1. 寫入打卡紀錄到 Firestore
+                const docRef = await addDoc(collection(db, "checkins"), {
+                    date: dateKey,
+                    time: timeStr,
+                    operator: user.name,
+                    timestamp: serverTimestamp()
+                });
 
-            // 2. 自動在聊天室增加一筆「XX點到家完成打卡」的通知訊息
-            const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
-            const timeFullStr = `${timeStr}:00`;
-            
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ 
-                    action: 'sendChat', 
-                    date: dateKey, 
-                    time: timeFullStr, 
-                    operator: user.name, 
-                    message: chatMessageText 
-                })
-            }).catch(e => console.error(e));
+                window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name, docId: docRef.id };
+                window.initCalendar();
 
-            alert('打卡成功！已同步通知到家庭聊天室。');
-        }
+                // 2. 自動在聊天室增加一筆通知訊息
+                const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
+                const timeFullStr = `${timeStr}:00`;
+                
+                await addDoc(collection(db, "chats"), {
+                    date: dateKey,
+                    time: timeFullStr,
+                    operator: user.name,
+                    message: chatMessageText,
+                    timestamp: serverTimestamp()
+                });
 
-        function cancelCheckIn() {
-            const user = JSON.parse(localStorage.getItem('familyCheckInUser'));
-            if (confirm(`確定要移除今天的打卡紀錄嗎？\n(操作者: ${user.name})`)) {
-                const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                if (attendanceData[dateKey]) {
-                    delete attendanceData[dateKey];
-                    saveData(dateKey, 'cancel', '', '', user.name);
-                } else { alert('今天本來就沒有打卡紀錄喔！'); }
+                alert('打卡成功！已同步通知到家庭聊天室。');
+            } catch (e) {
+                console.error("打卡寫入失敗:", e);
+                alert('打卡發生錯誤，請檢查網路。');
             }
-        }
+        };
 
-        function saveData(date, action, note, time, operator) {
-            localStorage.setItem('checkInDB', JSON.stringify(attendanceData));
-            initCalendar();
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ date: date, action: action, note: note, time: time, operator: operator })
-            }).catch(e => console.error(e));
-        }
+        window.cancelCheckIn = async function() {
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+            if (confirm(`確定要移除今天的打卡紀錄嗎？\n(操作者: ${user.name})`)) {
+                const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
+                
+                if (window.attendanceData[dateKey]) {
+                    const docId = window.attendanceData[dateKey].docId;
+                    if (docId) {
+                        try {
+                            await deleteDoc(doc(db, "checkins", docId));
+                            delete window.attendanceData[dateKey];
+                            window.initCalendar();
+                            alert('已成功移除打卡紀錄。');
+                        } catch (e) {
+                            console.error("刪除打卡失敗:", e);
+                            alert('刪除失敗，請檢查網路。');
+                        }
+                    }
+                } else { 
+                    alert('今天本來就沒有打卡紀錄喔！'); 
+                }
+            }
+        };
     </script>
 </body>
 </html>
