@@ -334,17 +334,33 @@
             window.checkUnreadMessages();
         };
 
+        // 計算上一次離開後的新增訊息數量
         window.checkUnreadMessages = async function() {
+            const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+            if (!userStr) return;
+            const user = JSON.parse(userStr);
+
             try {
                 const querySnapshot = await getDocs(collection(db, "messages"));
-                const totalMsg = querySnapshot.size;
-                const lastRead = parseInt(localStorage.getItem('lastReadChatCount') || '0');
-                const unread = totalMsg - lastRead;
+                const lastReadTimeStr = localStorage.getItem(`lastChatReadTime_${user.name}`) || '0';
+                const lastReadTime = parseInt(lastReadTimeStr);
+
+                let unreadCount = 0;
+                querySnapshot.forEach(docSnap => {
+                    const msg = docSnap.data();
+                    // 若訊息 timestamp 晚於上次閱讀時間，且發送者不是自己，計入未讀
+                    if (msg.timestamp && msg.timestamp.toDate) {
+                        const msgTime = msg.timestamp.toDate().getTime();
+                        if (msgTime > lastReadTime && msg.sender !== user.name) {
+                            unreadCount++;
+                        }
+                    }
+                });
+
                 const badge = document.getElementById('chatBadge');
-                
-                if (unread > 0) {
+                if (unreadCount > 0) {
                     badge.style.display = 'block';
-                    badge.innerText = unread > 99 ? '99+' : unread;
+                    badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
                 } else {
                     badge.style.display = 'none';
                 }
@@ -439,14 +455,12 @@
             window.initCalendar(); 
         };
 
-        // 核心修正重點：同步將訊息寫入 messages 集合
         window.checkIn = async function() {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             const timeStr = `${String(window.today.getHours()).padStart(2, '0')}:${String(window.today.getMinutes()).padStart(2, '0')}`;
             const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
             
             try {
-                // 1. 寫入打卡紀錄到 checkins 集合
                 const docRef = await addDoc(collection(db, "checkins"), {
                     date: dateKey,
                     time: timeStr,
@@ -457,7 +471,6 @@
                 window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name, docId: docRef.id };
                 window.initCalendar();
 
-                // 2. 正確發送通知至 messages 集合（對應聊天室）
                 const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
                 
                 await addDoc(collection(db, "messages"), {
