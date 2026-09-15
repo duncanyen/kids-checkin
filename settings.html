@@ -8,32 +8,51 @@
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <style>
         :root { --primary-color: #2e7d32; --bg-color: #f4f9f4; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
         .top-nav { display: flex; justify-content: space-between; max-width: 450px; margin: 0 auto 20px auto; }
-        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        .panel { background: white; max-width: 450px; margin: 0 auto; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; color: #555; }
+        .panel { background: white; max-width: 450px; margin: 0 auto; padding: 30px 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
+        
+        /* 大頭貼編輯樣式 */
+        .avatar-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; }
+        .avatar-preview-container { position: relative; width: 110px; height: 110px; margin-bottom: 12px; }
+        .avatar-preview { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.1); background-color: #f0f0f0; }
+        .btn-change-avatar { background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        .btn-save { width: 100%; background: var(--primary-color); color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .btn-save { width: 100%; background: var(--primary-color); color: white; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 10px; }
         .btn-save:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
     </div>
 
     <div class="panel">
-        <h2 style="color: var(--primary-color); margin-top:0;">⚙️ 個人帳號設定</h2>
+        <h2 style="color: var(--primary-color); margin-top:0; text-align: center; font-size: 22px;">⚙️ 個人帳號設定</h2>
+        
+        <!-- 大頭貼更換區塊 -->
+        <div class="avatar-section">
+            <div class="avatar-preview-container">
+                <img id="avatarPreview" class="avatar-preview" src="homebase_icon.jpg" alt="使用者頭像">
+            </div>
+            <button class="btn-change-avatar" id="btnSelectFile">📷 更換大頭貼照片</button>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        </div>
+
         <div class="form-group">
             <label>我的名字</label>
             <input type="text" id="inputName">
         </div>
+        
         <div class="form-group">
             <label>新 4 位數密碼</label>
             <input type="password" id="inputPin" maxlength="4" placeholder="不修改請保持空白">
         </div>
+
         <button class="btn-save" id="btnSave">儲存修改</button>
     </div>
 
@@ -41,7 +60,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getFirestore, doc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化 (最新 homebasedb 設定)
+        // 1. Firebase 初始化 (homebasedb)
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
@@ -55,19 +74,72 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. 優先從 sessionStorage 讀取登入者，若沒有再找 localStorage (相容性備案)
+        // 2. 登入檢查與載入當前資料
         let currentUserData = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = currentUserData ? JSON.parse(currentUserData) : null;
+        let newAvatarDataUrl = null; // 儲存照片 Base64 資料
 
-        // 頁面初始化檢查
         if (!currentUser) {
             alert('請先選擇使用者登入！');
             window.location.href = 'index.html';
         } else {
             document.getElementById('inputName').value = currentUser.name || '';
+            document.getElementById('avatarPreview').src = currentUser.avatar || `https://ui-avatars.com/api/?name=${currentUser.name}&background=4caf50&color=fff&size=150`;
         }
 
-        // 3. 儲存設定至 Firebase Firestore
+        // 3. 處理選擇與壓縮照片
+        const btnSelectFile = document.getElementById('btnSelectFile');
+        const fileInput = document.getElementById('fileInput');
+        const avatarPreview = document.getElementById('avatarPreview');
+
+        btnSelectFile.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('請選擇圖片檔案！');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                // 利用 Canvas 進行圖片壓縮以優化資料庫儲存體積
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxSize = 250; // 壓縮解析度至 250x250
+
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    newAvatarDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    avatarPreview.src = newAvatarDataUrl;
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 4. 儲存設定至 Firebase Firestore
         async function saveSettings() {
             const newName = document.getElementById('inputName').value.trim();
             const newPin = document.getElementById('inputPin').value.trim();
@@ -79,6 +151,10 @@
             }
 
             let updatePayload = { name: newName };
+
+            if (newAvatarDataUrl) {
+                updatePayload.avatar = newAvatarDataUrl;
+            }
 
             if (newPin) {
                 if (newPin.length !== 4) {
@@ -94,7 +170,7 @@
 
                 let userDocId = currentUser.id;
 
-                // 若傳入資料沒有 document ID，以當前登入者名字到 Firestore 搜尋該筆 Document
+                // 若傳入資料沒有 Document ID，以目前名字搜尋
                 if (!userDocId) {
                     const q = query(collection(db, "users"), where("name", "==", currentUser.name));
                     const querySnapshot = await getDocs(q);
@@ -107,19 +183,20 @@
                     throw new Error("無法找到該使用者的資料庫紀錄！");
                 }
 
-                // 更新 Firestore 中的使用者資料
+                // 更新 Firestore
                 const userRef = doc(db, "users", userDocId);
                 await updateDoc(userRef, updatePayload);
 
-                // 同步更新當前登入狀態 (sessionStorage 與 localStorage)
+                // 同步更新本地端紀錄 (sessionStorage 與 localStorage)
                 currentUser.name = newName;
                 if (newPin) currentUser.pin = newPin;
+                if (newAvatarDataUrl) currentUser.avatar = newAvatarDataUrl;
                 currentUser.id = userDocId;
 
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
                 localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
 
-                alert('設定儲存成功！');
+                alert('個人設定與大頭貼更新成功！');
                 window.location.href = 'index.html';
             } catch (error) {
                 console.error("更新失敗：", error);
@@ -130,8 +207,11 @@
             }
         }
 
-        // 綁定儲存按鈕點擊事件
+        // 事件綁定
         document.getElementById('btnSave').addEventListener('click', saveSettings);
+        document.getElementById('btnBack').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
     </script>
 </body>
 </html>
