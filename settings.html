@@ -41,25 +41,27 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getFirestore, doc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化
-          const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
-    measurementId: "G-K7FSPG5B9R"
-  };
+        // 1. Firebase 初始化 (最新 homebasedb 設定)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
+            measurementId: "G-K7FSPG5B9R"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. 取得快取的目前登入使用者
-        let currentUser = JSON.parse(localStorage.getItem('familyCheckInUser'));
+        // 2. 優先從 sessionStorage 讀取登入者，若沒有再找 localStorage (相容性備案)
+        let currentUserData = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        let currentUser = currentUserData ? JSON.parse(currentUserData) : null;
 
         // 頁面初始化檢查
         if (!currentUser) {
+            alert('請先選擇使用者登入！');
             window.location.href = 'index.html';
         } else {
             document.getElementById('inputName').value = currentUser.name || '';
@@ -92,7 +94,7 @@
 
                 let userDocId = currentUser.id;
 
-                // 若 localStorage 內未存 document ID，以舊名稱做 query 搜尋對應文件 ID
+                // 若傳入資料沒有 document ID，以當前登入者名字到 Firestore 搜尋該筆 Document
                 if (!userDocId) {
                     const q = query(collection(db, "users"), where("name", "==", currentUser.name));
                     const querySnapshot = await getDocs(q);
@@ -102,31 +104,33 @@
                 }
 
                 if (!userDocId) {
-                    throw new Error("無法定位使用者資料庫文件！");
+                    throw new Error("無法找到該使用者的資料庫紀錄！");
                 }
 
-                // 更新 Firestore 資料庫
+                // 更新 Firestore 中的使用者資料
                 const userRef = doc(db, "users", userDocId);
                 await updateDoc(userRef, updatePayload);
 
-                // 更新本地端快取 (localStorage)
+                // 同步更新當前登入狀態 (sessionStorage 與 localStorage)
                 currentUser.name = newName;
                 if (newPin) currentUser.pin = newPin;
                 currentUser.id = userDocId;
+
+                sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
                 localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
 
                 alert('設定儲存成功！');
                 window.location.href = 'index.html';
             } catch (error) {
                 console.error("更新失敗：", error);
-                alert('設定儲存失敗，請重試。');
+                alert('設定儲存失敗：' + error.message);
             } finally {
                 btnSave.disabled = false;
                 btnSave.innerText = '儲存修改';
             }
         }
 
-        // 綁定點擊事件
+        // 綁定儲存按鈕點擊事件
         document.getElementById('btnSave').addEventListener('click', saveSettings);
     </script>
 </body>
