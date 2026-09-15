@@ -185,22 +185,21 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
         import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-
-          const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
-    measurementId: "G-K7FSPG5B9R"
-  };
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
+            measurementId: "G-K7FSPG5B9R"
+        };
 
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // 將變數與方法掛載至 window 供 HTML 內嵌的 onclick 事件呼叫
+        // 掛載全域變數與方法
         window.selectedUserObj = null;
         window.attendanceData = {};
         window.viewDate = new Date(); 
@@ -221,7 +220,6 @@
                 let users = [];
                 
                 if (querySnapshot.empty) {
-                    // 若資料庫無使用者，自動初始化預設成員
                     const defaultUsers = [
                         {name: "俊俊", pin: "1234", avatar: "junjun.jpg", role: "kid"},
                         {name: "程寶", pin: "1234", avatar: "cheng.jpg", role: "kid"},
@@ -293,7 +291,6 @@
         window.login = async function(userObj) {
             sessionStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
             
-            // 發送登入紀錄到 Firebase logs
             const now = new Date();
             const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
             
@@ -328,7 +325,7 @@
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
 
-            if (user.role === 'admin') {
+            if (user.role === 'admin' || user.role === 'parent') {
                 document.getElementById('adminCard').style.display = 'block';
             } else {
                 document.getElementById('adminCard').style.display = 'none';
@@ -339,7 +336,7 @@
 
         window.checkUnreadMessages = async function() {
             try {
-                const querySnapshot = await getDocs(collection(db, "chats"));
+                const querySnapshot = await getDocs(collection(db, "messages"));
                 const totalMsg = querySnapshot.size;
                 const lastRead = parseInt(localStorage.getItem('lastReadChatCount') || '0');
                 const unread = totalMsg - lastRead;
@@ -369,7 +366,7 @@
             document.getElementById('sysUserName').innerText = user.name;
 
             const actionControls = document.getElementById('actionControls');
-            if (user.role === 'admin') {
+            if (user.role === 'admin' || user.role === 'parent') {
                 actionControls.style.display = 'none';
             } else {
                 actionControls.style.display = 'block';
@@ -442,13 +439,14 @@
             window.initCalendar(); 
         };
 
+        // 核心修正重點：同步將訊息寫入 messages 集合
         window.checkIn = async function() {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             const timeStr = `${String(window.today.getHours()).padStart(2, '0')}:${String(window.today.getMinutes()).padStart(2, '0')}`;
             const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
             
             try {
-                // 1. 寫入打卡紀錄到 Firestore
+                // 1. 寫入打卡紀錄到 checkins 集合
                 const docRef = await addDoc(collection(db, "checkins"), {
                     date: dateKey,
                     time: timeStr,
@@ -459,15 +457,12 @@
                 window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name, docId: docRef.id };
                 window.initCalendar();
 
-                // 2. 自動在聊天室增加一筆通知訊息
+                // 2. 正確發送通知至 messages 集合（對應聊天室）
                 const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
-                const timeFullStr = `${timeStr}:00`;
                 
-                await addDoc(collection(db, "chats"), {
-                    date: dateKey,
-                    time: timeFullStr,
-                    operator: user.name,
-                    message: chatMessageText,
+                await addDoc(collection(db, "messages"), {
+                    sender: user.name,
+                    text: chatMessageText,
                     timestamp: serverTimestamp()
                 });
 
