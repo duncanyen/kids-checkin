@@ -13,8 +13,13 @@
     <style>
         :root {
             --primary-color: #2e7d32;
-            --event-color: #ff9800;
+            --primary-light: #e8f5e9;
+            --accent-color: #4caf50;
+            --cancel-color: #e53935;
             --bg-color: #f4f9f4;
+            --today-bg: #fffde7;
+            --public-event: #1976d2;
+            --private-event: #7b1fa2;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
@@ -25,75 +30,362 @@
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
         .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
-        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 20px; }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; }
+
+        /* 月曆容器 */
+        .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: #444; margin-bottom: 15px; }
+        .month-btn { background: var(--primary-light); color: var(--primary-color); border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
         
-        .event-list { max-width: 650px; margin: 0 auto; text-align: left; }
-        .event-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 15px; display: flex; align-items: center; box-shadow: 0 4px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--event-color); }
-        .event-date { font-weight: bold; color: var(--event-color); width: 85px; flex-shrink: 0; font-size: 15px; }
-        .event-info { flex-grow: 1; padding-left: 12px; border-left: 1px solid #eee; }
-        .event-title { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 4px; margin-top:0; }
-        .event-desc { font-size: 13px; color: #777; margin:0; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .weekday { font-weight: bold; background-color: #f5f5f5; padding: 8px 0; border-radius: 6px; color: #666; font-size: 13px; }
+        .day-cell { border: 1px solid #e0e0e0; border-radius: 8px; min-height: 85px; padding: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; }
+        .day-cell:hover { background-color: #f9f9f9; border-color: var(--primary-color); }
+        .day-cell .date-num { font-size: 12px; font-weight: bold; color: #777; align-self: flex-start; margin-bottom: 3px; }
+        .day-cell.today { border: 2px solid var(--primary-color); background-color: var(--today-bg); }
+        .day-cell.today .date-num { color: var(--primary-color); }
+
+        /* 行程標籤條 */
+        .event-badge { font-size: 10px; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; line-height: 1.2; }
+        .event-badge.public { background-color: var(--public-event); }
+        .event-badge.private { background-color: var(--private-event); }
+
+        /* 彈窗 Modal */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; text-align: left; width: 90%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 4px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        
+        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px; }
+        .btn-save { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-close { background: #888; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* 當日待辦清單 (彈窗內) */
+        .day-event-list { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }
+        .event-item { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--public-event); display: flex; justify-content: space-between; align-items: center; }
+        .event-item.private { border-left-color: var(--private-event); }
+        .event-item-title { font-weight: bold; font-size: 14px; color: #333; }
+        .event-item-meta { font-size: 11px; color: #888; margin-top: 2px; }
+        .btn-del { background: var(--cancel-color); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" onclick="goBack()">❮ 返回主選單</button>
-        <div class="current-user-badge" onclick="logout()" title="點擊登出切換使用者">
+        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
+        <div class="current-user-badge" id="btnLogout">
             <img id="calUserAvatar" class="mini-avatar" src="" alt="">
-            <span id="calUserName"></span>
+            <span id="calUserName">載入中...</span>
         </div>
     </div>
 
-    <h2 class="system-title">📅家庭行事曆</h2>
-    <div class="event-list" id="eventListContainer"></div>
+    <h2 class="system-title">📅 家庭行事曆</h2>
 
-    <script>
-        let currentUser = null;
-        const schoolEvents = [
-            { date: "09/19(六)", title: "班親會", desc: "了解本學期課程與老師交流" },
-            { date: "11/03(二)", title: "期中評量", desc: "小朋友加油喔！📝" },
-            { date: "11/04(三)", title: "期中評量", desc: "小朋友加油喔！📝" },
-            { date: "11/21(六)", title: "學校校慶 / 運動會", desc: "邀請家長一同參與，記得準備運動服" },
-            { date: "01/13(三)", title: "期末評量", desc: "小朋友加油喔！📝" },
-            { date: "01/14(四)", title: "期末評量", desc: "小朋友加油喔！📝" },
-        ];
+    <!-- 月曆主體 -->
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button class="month-btn" id="btnPrevMonth">❮ 上一個月</button>
+            <span id="calendarTitle">載入中...</span>
+            <button class="month-btn" id="btnNextMonth">下一個月 ❯</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
 
-        window.onload = function() {
-            const savedUser = localStorage.getItem('familyCheckInUser');
-            if (!savedUser) {
-                window.location.href = 'index.html'; // 沒登入就踢回首頁
-                return;
-            }
-            currentUser = JSON.parse(savedUser);
-            document.getElementById('calUserAvatar').src = currentUser.avatar;
-            document.getElementById('calUserName').innerText = currentUser.name;
-            renderSchoolEvents();
+    <!-- 點擊日期彈窗 (新增/檢視待辦) -->
+    <div class="modal" id="eventModal">
+        <div class="modal-content">
+            <h3 class="modal-title" id="modalDateTitle">2026-09-16 待辦事項</h3>
+            
+            <!-- 新增待辦表單 -->
+            <div class="form-group">
+                <label>行程標題：</label>
+                <input type="text" id="eventTitleInput" placeholder="例如: 班親會、繳電話費">
+            </div>
+            <div class="form-group">
+                <label>詳細說明 (選填)：</label>
+                <textarea id="eventDescInput" rows="2" placeholder="詳細內容說明..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>發佈對象 (可視範圍)：</label>
+                <select id="eventVisibilitySelect">
+                    <option value="public">🌐 全體成員 (大家都能看見)</option>
+                    <option value="private">🔒 僅個人 (只有自己能看見)</option>
+                </select>
+            </div>
+
+            <div class="modal-btns">
+                <button class="btn-close" id="btnCloseModal">取消</button>
+                <button class="btn-save" id="btnSaveEvent">新增待辦</button>
+            </div>
+
+            <!-- 當天已有的待辦列表 -->
+            <div class="day-event-list">
+                <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #555;">📋 當日行程清單：</div>
+                <div id="dayEventsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot, 
+            query, 
+            where, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        // 1. Firebase 初始化 (homebasedb)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
+            measurementId: "G-K7FSPG5B9R"
         };
 
-        function renderSchoolEvents() {
-            const container = document.getElementById('eventListContainer');
-            schoolEvents.forEach(evt => {
-                const card = document.createElement('div');
-                card.className = 'event-card';
-                card.innerHTML = `
-                    <div class="event-date">${evt.date}</div>
-                    <div class="event-info">
-                        <p class="event-title">${evt.title}</p>
-                        <p class="event-desc">${evt.desc}</p>
-                    </div>
-                `;
-                container.appendChild(card);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let viewDate = new Date();
+        let selectedDateKey = '';
+        let allFetchedEvents = [];
+
+        // 2. 登入檢查
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        if (!savedUserStr) {
+            alert('請先登入！');
+            window.location.href = 'index.html';
+        } else {
+            currentUser = JSON.parse(savedUserStr);
+            document.getElementById('calUserAvatar').src = currentUser.avatar || 'homebase_icon.jpg';
+            document.getElementById('calUserName').innerText = currentUser.name || '';
+            
+            initCalendar();
+            listenToEvents();
+        }
+
+        // 3. 監聽 Firebase events 集合
+        function listenToEvents() {
+            const eventsRef = collection(db, "events");
+            
+            onSnapshot(eventsRef, (snapshot) => {
+                allFetchedEvents = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // 權限過濾：如果是 public 全體，或是自己的 private 個人行程才加入
+                    if (data.visibility === 'public' || data.operator === currentUser.name) {
+                        allFetchedEvents.push({ id: docSnap.id, ...data });
+                    }
+                });
+                renderCalendar();
+                if (selectedDateKey) {
+                    renderDayEvents(selectedDateKey);
+                }
+            }, (error) => {
+                console.error("監聽行程失敗:", error);
             });
         }
 
-        function goBack() {
-            window.location.href = 'index.html';
+        // 4. 渲染月曆結構
+        function initCalendar() {
+            document.getElementById('btnPrevMonth').addEventListener('click', () => {
+                viewDate.setMonth(viewDate.getMonth() - 1);
+                renderCalendar();
+            });
+            document.getElementById('btnNextMonth').addEventListener('click', () => {
+                viewDate.setMonth(viewDate.getMonth() + 1);
+                renderCalendar();
+            });
+            renderCalendar();
         }
 
-        function logout() {
+        function renderCalendar() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            document.getElementById('calendarTitle').innerText = `${year} 年 ${monthNames[month]}`;
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            // 星期頭
+            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
+                const div = document.createElement('div');
+                div.className = 'weekday';
+                div.innerText = w;
+                grid.appendChild(div);
+            });
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+
+            // 填補上個月空白
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            // 填補日期格子
+            for (let day = 1; day <= totalDays; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day-cell';
+
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                // 是否為今天
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    dayCell.classList.add('today');
+                }
+
+                const numSpan = document.createElement('span');
+                numSpan.className = 'date-num';
+                numSpan.innerText = day;
+                dayCell.appendChild(numSpan);
+
+                // 找尋當日行程標籤
+                const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
+                dayEvts.slice(0, 3).forEach(evt => {
+                    const badge = document.createElement('div');
+                    badge.className = `event-badge ${evt.visibility}`;
+                    badge.innerText = `${evt.visibility === 'private' ? '🔒' : ''}${evt.title}`;
+                    dayCell.appendChild(badge);
+                });
+
+                if (dayEvts.length > 3) {
+                    const moreBadge = document.createElement('div');
+                    moreBadge.style.fontSize = '9px';
+                    moreBadge.style.color = '#888';
+                    moreBadge.innerText = `+${dayEvts.length - 3} 更多`;
+                    dayCell.appendChild(moreBadge);
+                }
+
+                // 點擊事件開啟彈窗
+                dayCell.addEventListener('click', () => openEventModal(dateKey));
+
+                grid.appendChild(dayCell);
+            }
+        }
+
+        // 5. 彈窗與新增/刪除待辦
+        function openEventModal(dateKey) {
+            selectedDateKey = dateKey;
+            document.getElementById('modalDateTitle').innerText = `${dateKey} 待辦事項`;
+            document.getElementById('eventTitleInput').value = '';
+            document.getElementById('eventDescInput').value = '';
+            document.getElementById('eventVisibilitySelect').value = 'public';
+            
+            renderDayEvents(dateKey);
+            document.getElementById('eventModal').style.display = 'flex';
+        }
+
+        function renderDayEvents(dateKey) {
+            const container = document.getElementById('dayEventsContainer');
+            container.innerHTML = '';
+
+            const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
+
+            if (dayEvts.length === 0) {
+                container.innerHTML = '<div style="color:#888; font-size:13px;">當日無待辦事項</div>';
+                return;
+            }
+
+            dayEvts.forEach(evt => {
+                const item = document.createElement('div');
+                item.className = `event-item ${evt.visibility}`;
+                
+                const isOwnerOrAdmin = (evt.operator === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+
+                item.innerHTML = `
+                    <div>
+                        <div class="event-item-title">
+                            ${evt.visibility === 'private' ? '🔒 [個人] ' : '🌐 [全體] '} ${evt.title}
+                        </div>
+                        ${evt.desc ? `<div style="font-size:12px; color:#555; margin-top:2px;">${evt.desc}</div>` : ''}
+                        <div class="event-item-meta">建立者: ${evt.operator || '未知'}</div>
+                    </div>
+                    ${isOwnerOrAdmin ? `<button class="btn-del" data-id="${evt.id}">刪除</button>` : ''}
+                `;
+
+                container.appendChild(item);
+            });
+
+            // 綁定刪除事件
+            container.querySelectorAll('.btn-del').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    deleteEvent(id);
+                });
+            });
+        }
+
+        // 新增行程
+        async function saveEvent() {
+            const title = document.getElementById('eventTitleInput').value.trim();
+            const desc = document.getElementById('eventDescInput').value.trim();
+            const visibility = document.getElementById('eventVisibilitySelect').value;
+
+            if (!title) {
+                alert('請輸入行程標題！');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "events"), {
+                    date: selectedDateKey,
+                    title: title,
+                    desc: desc,
+                    visibility: visibility,
+                    operator: currentUser.name,
+                    timestamp: serverTimestamp()
+                });
+
+                document.getElementById('eventTitleInput').value = '';
+                document.getElementById('eventDescInput').value = '';
+                alert('已新增待辦事項！');
+            } catch (error) {
+                console.error("新增失敗:", error);
+                alert("新增失敗，請檢查網路。");
+            }
+        }
+
+        // 刪除行程
+        async function deleteEvent(id) {
+            if (confirm('確定要刪除這筆待辦事項嗎？')) {
+                try {
+                    await deleteDoc(doc(db, "events", id));
+                } catch (error) {
+                    console.error("刪除失敗:", error);
+                    alert("刪除失敗，請檢查網路。");
+                }
+            }
+        }
+
+        // 事件綁定
+        document.getElementById('btnSaveEvent').addEventListener('click', saveEvent);
+        document.getElementById('btnCloseModal').addEventListener('click', () => {
+            document.getElementById('eventModal').style.display = 'none';
+        });
+
+        document.getElementById('btnBack').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            sessionStorage.removeItem('familyCheckInUser');
             localStorage.removeItem('familyCheckInUser');
             window.location.href = 'index.html';
-        }
+        });
     </script>
 </body>
 </html>
