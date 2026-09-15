@@ -73,7 +73,7 @@
             serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化 (homebasedb)
+        // 1. Firebase 初始化
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
@@ -87,7 +87,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. 取得登入者資訊 (優先讀取 sessionStorage，確保切換帳號正確)
+        // 2. 取得登入者資訊
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
@@ -103,7 +103,14 @@
         const chatInput = document.getElementById('chatInput');
         const btnSend = document.getElementById('btnSend');
 
-        // 3. 監聽 Firestore 即時訊息變化
+        // 更新此使用者的「最後閱讀時間戳記」
+        function updateLastReadTime() {
+            if (currentUser && currentUser.name) {
+                localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
+            }
+        }
+
+        // 3. 監聽 Firestore 即時訊息
         function listenToChatMessages() {
             const messagesRef = collection(db, "messages");
             const q = query(messagesRef, orderBy("timestamp", "asc"));
@@ -113,13 +120,15 @@
 
                 if (snapshot.empty) {
                     msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">還沒有人說話喔，來打個招呼吧！</div>';
-                    return;
+                } else {
+                    snapshot.forEach((doc) => {
+                        const msg = doc.data();
+                        appendMessageUI(msg.sender, msg.text, msg.timestamp);
+                    });
                 }
 
-                snapshot.forEach((doc) => {
-                    const msg = doc.data();
-                    appendMessageUI(msg.sender, msg.text, msg.timestamp);
-                });
+                // 只要開著聊天室並接收訊息，就持續更新已讀時間
+                updateLastReadTime();
 
                 // 自動捲動至最新訊息
                 msgContainer.scrollTop = msgContainer.scrollHeight;
@@ -129,7 +138,7 @@
             });
         }
 
-        // 4. 發送訊息至 Firebase
+        // 4. 發送訊息
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text) return;
@@ -143,6 +152,7 @@
                     text: text,
                     timestamp: serverTimestamp()
                 });
+                updateLastReadTime();
             } catch (error) {
                 console.error("發送訊息失敗：", error);
                 alert("訊息發送失敗，請再試一次。");
@@ -182,8 +192,15 @@
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
+
+        // 離開頁面時紀錄最後已讀時間
         document.getElementById('btnBack').addEventListener('click', () => {
+            updateLastReadTime();
             window.location.href = 'index.html';
+        });
+
+        window.addEventListener('beforeunload', () => {
+            updateLastReadTime();
         });
 
         // 啟動即時聽訊
