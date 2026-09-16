@@ -18,7 +18,7 @@
             --chat-bg: #e5ddd5;
             --border-color: #e0e0e0;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
         
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
@@ -53,6 +53,7 @@
         .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
         .msg-sender { font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
         .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
+        
         .chat-photo { max-width: 100%; max-height: 220px; border-radius: 10px; cursor: pointer; display: block; border: 1px solid #ddd; margin-top: 4px; }
         
         .chat-input-area { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; border-top: 1px solid #ddd; }
@@ -79,6 +80,11 @@
         .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
         .btn-modal-cancel { background: #888; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-modal-confirm { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* --- 照片放大全螢幕檢視器 --- */
+        .photo-viewer { display: none; position: fixed; z-index: 4000; padding-top: 50px; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); text-align: center; }
+        .viewer-content { margin: auto; display: block; max-width: 95%; max-height: 85vh; object-fit: contain; }
+        .close-viewer { position: absolute; top: 15px; right: 25px; color: #f1f1f1; font-size: 35px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -144,6 +150,12 @@
                 <button class="btn-modal-confirm" id="btnConfirmModal">儲存並進入</button>
             </div>
         </div>
+    </div>
+
+    <!-- 照片放大檢視器 -->
+    <div id="photoViewerModal" class="photo-viewer" onclick="closePhotoViewer()">
+        <span class="close-viewer">&times;</span>
+        <img class="viewer-content" id="viewerImage">
     </div>
 
     <script type="module">
@@ -297,7 +309,17 @@
             });
         }
 
-        // 8. 渲染單筆訊息 (支援文字與圖片)
+        // --- 全域開啟照片檢視器函式 ---
+        window.openPhotoViewer = function(src) {
+            document.getElementById('viewerImage').src = src;
+            document.getElementById('photoViewerModal').style.display = 'block';
+        };
+        window.closePhotoViewer = function() {
+            document.getElementById('photoViewerModal').style.display = 'none';
+            document.getElementById('viewerImage').src = '';
+        };
+
+        // 8. 渲染單筆訊息 (判斷文字或圖片)
         function appendMessageUI(msg) {
             const isMine = (msg.sender === currentUser.name);
             const div = document.createElement('div');
@@ -309,10 +331,10 @@
                 timeStr = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
             }
 
-            // 判斷是文字還是圖片
+            // 核心修正：判斷 imageUrl 存在則渲染圖片，否則顯示純文字
             let contentHtml = '';
             if (msg.imageUrl) {
-                contentHtml = `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.open(this.src)" title="點擊放大">`;
+                contentHtml = `<img src="${msg.imageUrl}" class="chat-photo" onclick="openPhotoViewer(this.src)" title="點擊放大觀看">`;
             } else {
                 contentHtml = `<div>${msg.text}</div>`;
             }
@@ -378,15 +400,16 @@
                 img.onload = async function() {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    const maxSize = 800; // 適度壓縮以符合 Firestore 單一文件限制
-
+                    
+                    // 將照片縮放至最大 600px 寬度，確保不會超過 Firestore 1MB 上限，速度也更快
+                    const maxSize = 600; 
                     let width = img.width, height = img.height;
                     if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } 
                     else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
                     
                     canvas.width = width; canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-                    const base64Img = canvas.toDataURL('image/jpeg', 0.8);
+                    const base64Img = canvas.toDataURL('image/jpeg', 0.7); // 70% 畫質壓縮
 
                     try {
                         // 寫入包含 imageUrl 的訊息
@@ -398,14 +421,14 @@
                             timestamp: serverTimestamp()
                         });
 
-                        // 更新房間最新動態
+                        // 更新房間最新動態，清單會顯示「相機圖示」
                         await updateDoc(doc(db, "rooms", activeRoomId), {
                             lastMessage: `${currentUser.name}: 傳送了圖片 📷`,
                             lastMessageTime: serverTimestamp()
                         });
                     } catch (error) {
                         console.error("傳送圖片失敗：", error);
-                        alert("傳送圖片失敗，請檢查網路。");
+                        alert("傳送圖片失敗，可能照片過大，請檢查網路。");
                     } finally {
                         document.getElementById('btnSend').disabled = false;
                         btnTriggerPhoto.disabled = false;
