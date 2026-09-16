@@ -16,83 +16,126 @@
             --accent-color: #4caf50;
             --bg-color: #f4f9f4;
             --chat-bg: #e5ddd5;
+            --border-color: #e0e0e0;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
         
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--primary-color); }
-        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
         
-        /* 聊天頻道切換列 */
-        .channel-bar { max-width: 650px; margin: 0 auto 12px auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-        .btn-channel { flex: 1; min-width: 90px; background: white; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 8px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-        .btn-channel.active { background: var(--primary-color); color: white; }
+        /* 介面容器切換 */
+        .view-container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; height: 80vh; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+        
+        /* --- 第一層：群組清單 (Room List) --- */
+        .list-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; }
+        .btn-new-chat { background: white; color: var(--primary-color); border: none; padding: 6px 12px; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .room-list-content { flex: 1; overflow-y: auto; background: white; }
+        
+        .room-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; }
+        .room-item:active { background-color: #f5f5f5; }
+        .room-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0; margin-right: 15px; background: var(--primary-light); }
+        .room-info { flex: 1; overflow: hidden; }
+        .room-title-row { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center; }
+        .room-name { font-weight: bold; font-size: 16px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .room-time { font-size: 11px; color: #999; flex-shrink: 0; }
+        .room-last-msg { font-size: 13px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 聊天室主體 */
-        .chat-wrapper { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; display: flex; flex-direction: column; height: 72vh; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .chat-header-info { background: var(--primary-light); padding: 10px; font-weight: bold; color: var(--primary-color); font-size: 14px; border-bottom: 1px solid #c8e6c9; display: flex; justify-content: space-between; align-items: center; }
-        
+        /* --- 第二層：聊天室內 (Chat Room) --- */
+        .chat-header { background: var(--primary-color); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-header-left { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid white; }
+        .chat-header-name { font-weight: bold; font-size: 16px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-room-settings { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
-        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; text-align: left; }
+        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; }
         .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
         .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
-        .msg-sender { font-size: 12px; color: #555; margin-bottom: 4px; font-weight: bold; }
+        .msg-sender { font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
         .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
         
-        .chat-input-area { padding: 12px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; }
-        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 15px; }
-        .chat-input-area button { margin: 0; padding: 10px 20px; background: var(--accent-color); color: white; border: none; font-weight: bold; font-size: 15px; border-radius: 25px; cursor: pointer; }
-        
-        /* 成員選擇 Modal */
+        .chat-input-area { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; border-top: 1px solid #ddd; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 15px; }
+        .chat-input-area button { padding: 10px 18px; background: var(--accent-color); color: white; border: none; font-weight: bold; border-radius: 20px; cursor: pointer; }
+
+        /* --- 建立/編輯群組 Modal --- */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 85%; max-width: 360px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 90%; max-width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; text-align: center; }
-        .member-checkbox-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 200px; overflow-y: auto; }
-        .member-item { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: bold; cursor: pointer; }
-        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #555; }
+        .form-group input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        
+        .avatar-upload-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
+        .preview-group-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); margin-bottom: 8px; background: #eee; }
+        .btn-upload { font-size: 12px; background: #f0f0f0; border: 1px solid #ccc; padding: 5px 10px; border-radius: 12px; cursor: pointer; }
+
+        .member-checkbox-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .member-item { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        
+        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
         .btn-modal-cancel { background: #888; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-modal-confirm { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
-        <div class="current-user-badge">
-            <img id="chatUserAvatar" class="mini-avatar" src="" alt="">
-            <span id="chatUserName">載入中...</span>
+        <button class="btn-back" id="btnBackToDashboard">❮ 返回主選單</button>
+    </div>
+
+    <!-- 視圖 1：群組清單 -->
+    <div class="view-container" id="viewRoomList">
+        <div class="list-header">
+            <span>💬 聊天群組</span>
+            <button class="btn-new-chat" id="btnOpenCreateModal">➕ 建立群組</button>
+        </div>
+        <div class="room-list-content" id="roomListContainer">
+            <div style="text-align:center; padding:30px; color:#888;">讀取群組中...</div>
         </div>
     </div>
 
-    <!-- 頻道切換選擇區 -->
-    <div class="channel-bar">
-        <button class="btn-channel active" id="btnChannelAll">🌐 所有人(大群組)</button>
-        <button class="btn-channel" id="btnChannelDirect">👤 私訊/指定對象</button>
-    </div>
-
-    <!-- 聊天主介面 -->
-    <div class="chat-wrapper">
-        <div class="chat-header-info">
-            <span id="chatTargetTitle">💬 聊天室：所有人 (全體)</span>
-            <button id="btnChangeTarget" style="display:none; font-size:12px; padding:4px 10px; background:var(--primary-color); color:white; border:none; border-radius:12px; cursor:pointer;">更換對象</button>
+    <!-- 視圖 2：聊天室內部 -->
+    <div class="view-container" id="viewChatRoom" style="display: none;">
+        <div class="chat-header">
+            <div class="chat-header-left" id="btnBackToList">
+                <span style="font-size: 20px; margin-right: 5px;">❮</span>
+                <img id="activeRoomAvatar" class="chat-header-avatar" src="" alt="">
+                <span id="activeRoomName" class="chat-header-name">載入中...</span>
+            </div>
+            <button class="btn-room-settings" id="btnOpenEditModal">⚙️</button>
         </div>
-        <div class="chat-messages" id="chatMessages">
-            <div style="text-align:center; color:#888; font-size:14px; margin-top:20px;">載入訊息中...</div>
-        </div>
+        <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
             <input type="text" id="chatInput" placeholder="輸入訊息...">
             <button id="btnSend">傳送</button>
         </div>
     </div>
 
-    <!-- 選擇成員彈窗 -->
-    <div class="modal" id="memberModal">
+    <!-- 共用 Modal：建立/編輯群組 -->
+    <div class="modal" id="groupModal">
         <div class="modal-content">
-            <div class="modal-title" id="modalTitle">選擇對談家人</div>
-            <div class="member-checkbox-list" id="memberListContainer"></div>
+            <div class="modal-title" id="modalTitle">建立新群組</div>
+            
+            <div class="avatar-upload-area">
+                <img id="modalAvatarPreview" class="preview-group-avatar" src="https://ui-avatars.com/api/?name=G&background=4caf50&color=fff" alt="">
+                <button class="btn-upload" onclick="document.getElementById('groupAvatarInput').click()">📷 上傳群組頭像</button>
+                <input type="file" id="groupAvatarInput" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="form-group">
+                <label>群組名稱</label>
+                <input type="text" id="modalGroupName" placeholder="例如：爸爸與俊俊的秘密基地">
+            </div>
+
+            <div class="form-group">
+                <label>選擇參與家人 (自己已預設加入)</label>
+                <div class="member-checkbox-list" id="memberListContainer"></div>
+            </div>
+
             <div class="modal-btns">
                 <button class="btn-modal-cancel" id="btnCancelModal">取消</button>
-                <button class="btn-modal-confirm" id="btnConfirmModal">確定進入聊天</button>
+                <button class="btn-modal-confirm" id="btnConfirmModal">儲存並進入</button>
             </div>
         </div>
     </div>
@@ -100,15 +143,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
-            getFirestore, 
-            collection, 
-            addDoc, 
-            getDocs, 
-            query, 
-            where, 
-            orderBy, 
-            onSnapshot, 
-            serverTimestamp 
+            getFirestore, collection, addDoc, getDocs, query, where, orderBy, 
+            onSnapshot, serverTimestamp, doc, updateDoc 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         // 1. Firebase 初始化
@@ -118,241 +154,304 @@
             projectId: "homebasedb",
             storageBucket: "homebasedb.firebasestorage.app",
             messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
-            measurementId: "G-K7FSPG5B9R"
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         // 2. 登入檢查
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+        if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-        if (!currentUser) {
-            alert('請先選擇使用者登入！');
-            window.location.href = 'index.html';
-        } else {
-            document.getElementById('chatUserAvatar').src = currentUser.avatar || 'homebase_icon.jpg';
-            document.getElementById('chatUserName').innerText = currentUser.name || '成員';
-        }
-
-        // 當前對話狀態變數
-        let currentMode = 'all'; // 'all' 或 'target'
-        let selectedTargets = []; // 被選中的成員名稱陣列 (不含自己)
-        let activeUnsubscribe = null; // 取消即時監聽函式
+        // 全域狀態變數
         let allUsers = [];
+        let activeRoomId = null;
+        let activeRoomData = null;
+        let roomsUnsubscribe = null;
+        let messagesUnsubscribe = null;
+        let uploadedAvatarBase64 = null; // 暫存上傳的群組頭像
+        let modalMode = 'create'; // 'create' 或 'edit'
 
-        const msgContainer = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const btnSend = document.getElementById('btnSend');
+        // 初始化
+        fetchFamilyUsers();
+        listenToRooms();
 
-        // 更新此聊天情境的閱讀時間紀錄
-        function updateLastReadTime() {
-            if (currentUser && currentUser.name) {
-                localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
-            }
-        }
-
-        // 3. 載入家庭所有成員名單
+        // 3. 取得所有家庭成員名單 (供勾選使用)
         async function fetchFamilyUsers() {
             try {
                 const querySnapshot = await getDocs(collection(db, "users"));
                 allUsers = [];
                 querySnapshot.forEach(docSnap => {
                     const uData = docSnap.data();
-                    if (uData.name !== currentUser.name) {
-                        allUsers.push(uData);
-                    }
+                    if (uData.name !== currentUser.name) allUsers.push(uData);
                 });
-            } catch (error) {
-                console.error("載入成員名單失敗：", error);
-            }
+            } catch (error) { console.error("載入成員名單失敗：", error); }
         }
 
-        // 4. 監聽聊天訊息 (依模式切換查詢條件)
-        function listenToMessages() {
-            if (activeUnsubscribe) activeUnsubscribe(); // 清除舊的監聽
+        // 4. 監聽我有參與的群組清單 (第一層)
+        function listenToRooms() {
+            const roomsRef = collection(db, "rooms");
+            // 查詢條件：參與者包含我，並依照最後訊息時間排序 (⚠️需要建立 Firebase 複合索引)
+            const q = query(
+                roomsRef, 
+                where("participants", "array-contains", currentUser.name),
+                orderBy("lastMessageTime", "desc")
+            );
 
-            const messagesRef = collection(db, "messages");
-            let q;
-
-            if (currentMode === 'all') {
-                // 大群組模式
-                q = query(messagesRef, where("type", "==", "all"), orderBy("timestamp", "asc"));
-                document.getElementById('chatTargetTitle').innerText = "💬 聊天室：所有人 (全體)";
-                document.getElementById('btnChangeTarget').style.display = "none";
-            } else {
-                // 指定對象模式 (含自己與對方的對話組合)
-                const fullParticipants = [currentUser.name, ...selectedTargets].sort();
-                const conversationId = fullParticipants.join('_');
-
-                q = query(
-                    messagesRef, 
-                    where("conversationId", "==", conversationId), 
-                    orderBy("timestamp", "asc")
-                );
-
-                const targetTitleStr = selectedTargets.join('、');
-                document.getElementById('chatTargetTitle').innerText = `💬 聊天室：${targetTitleStr}`;
-                document.getElementById('btnChangeTarget').style.display = "inline-block";
-            }
-
-            activeUnsubscribe = onSnapshot(q, (snapshot) => {
-                msgContainer.innerHTML = '';
-
+            roomsUnsubscribe = onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('roomListContainer');
+                container.innerHTML = '';
+                
                 if (snapshot.empty) {
-                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">尚無對話內容，發個訊息打個招呼吧！</div>';
-                } else {
-                    snapshot.forEach((doc) => {
-                        const msg = doc.data();
-                        appendMessageUI(msg.sender, msg.text, msg.timestamp);
-                    });
+                    container.innerHTML = '<div style="text-align:center; padding:40px; color:#888;">還沒有任何群組，點擊上方按鈕建立一個吧！</div>';
+                    return;
                 }
-                updateLastReadTime();
-                msgContainer.scrollTop = msgContainer.scrollHeight;
+
+                snapshot.forEach(docSnap => {
+                    const room = docSnap.data();
+                    const roomId = docSnap.id;
+                    
+                    let timeStr = "";
+                    if (room.lastMessageTime && room.lastMessageTime.toDate) {
+                        const dateObj = room.lastMessageTime.toDate();
+                        timeStr = `${String(dateObj.getMonth()+1).padStart(2,'0')}/${String(dateObj.getDate()).padStart(2,'0')} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
+                    }
+
+                    // 預設頭像
+                    const displayAvatar = room.avatar || `https://ui-avatars.com/api/?name=${room.name}&background=e3f2fd&color=1565c0`;
+                    const displayLastMsg = room.lastMessage || "尚未有訊息";
+
+                    const div = document.createElement('div');
+                    div.className = 'room-item';
+                    div.onclick = () => enterRoom(roomId, room);
+                    div.innerHTML = `
+                        <img src="${displayAvatar}" class="room-avatar">
+                        <div class="room-info">
+                            <div class="room-title-row">
+                                <span class="room-name">${room.name}</span>
+                                <span class="room-time">${timeStr}</span>
+                            </div>
+                            <div class="room-last-msg">${displayLastMsg}</div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
             }, (error) => {
-                console.error("即時監聽訊息失敗：", error);
-                msgContainer.innerHTML = '<div style="text-align:center; color:#e53935; font-size:13px; margin-top:20px;">載入訊息失敗</div>';
+                console.error("載入群組失敗，可能是缺少索引：", error);
+                document.getElementById('roomListContainer').innerHTML = '<div style="text-align:center; padding:30px; color:red; font-size:13px;">載入失敗 (若剛建立，請等待索引設定完成，約2分鐘)</div>';
             });
         }
 
-        // 5. 發送訊息至 Firebase
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
+        // 5. 進入特定聊天室 (第二層)
+        function enterRoom(roomId, roomData) {
+            activeRoomId = roomId;
+            activeRoomData = roomData;
+            
+            document.getElementById('viewRoomList').style.display = 'none';
+            document.getElementById('viewChatRoom').style.display = 'flex';
+            
+            document.getElementById('activeRoomName').innerText = roomData.name;
+            document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=e3f2fd&color=1565c0`;
+            
+            listenToMessages(roomId);
+        }
 
-            chatInput.value = '';
-            btnSend.disabled = true;
+        // 6. 離開聊天室回到清單
+        document.getElementById('btnBackToList').addEventListener('click', () => {
+            if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
+            activeRoomId = null;
+            activeRoomData = null;
+            document.getElementById('viewChatRoom').style.display = 'none';
+            document.getElementById('viewRoomList').style.display = 'flex';
+            
+            // 紀錄最後離開時間 (給首頁未讀使用)
+            localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
+        });
+
+        // 7. 監聽特定聊天室的訊息 (⚠️需要建立 Firebase 複合索引)
+        function listenToMessages(roomId) {
+            const msgContainer = document.getElementById('chatMessages');
+            msgContainer.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;">載入中...</div>';
+            
+            const q = query(
+                collection(db, "messages"), 
+                where("roomId", "==", roomId), 
+                orderBy("timestamp", "asc")
+            );
+
+            messagesUnsubscribe = onSnapshot(q, (snapshot) => {
+                msgContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">發個訊息打招呼吧！</div>';
+                } else {
+                    snapshot.forEach((docSnap) => {
+                        const msg = docSnap.data();
+                        const isMine = (msg.sender === currentUser.name);
+                        
+                        let timeStr = "剛才";
+                        if (msg.timestamp && msg.timestamp.toDate) {
+                            const d = msg.timestamp.toDate();
+                            timeStr = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                        }
+
+                        const div = document.createElement('div');
+                        div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
+                        div.innerHTML = `
+                            ${!isMine ? `<div class="msg-sender">${msg.sender}</div>` : ''}
+                            <div>${msg.text}</div>
+                            <div class="msg-time">${timeStr}</div>
+                        `;
+                        msgContainer.appendChild(div);
+                    });
+                }
+                msgContainer.scrollTop = msgContainer.scrollHeight;
+                // 更新已讀標記
+                localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
+            });
+        }
+
+        // 8. 傳送訊息
+        document.getElementById('btnSend').addEventListener('click', async () => {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text || !activeRoomId) return;
+
+            input.value = '';
+            document.getElementById('btnSend').disabled = true;
 
             try {
-                let msgData = {
+                // 1. 寫入訊息
+                await addDoc(collection(db, "messages"), {
+                    roomId: activeRoomId,
                     sender: currentUser.name,
                     text: text,
                     timestamp: serverTimestamp()
-                };
+                });
 
-                if (currentMode === 'all') {
-                    msgData.type = 'all';
-                    msgData.participants = ['all'];
-                } else {
-                    const fullParticipants = [currentUser.name, ...selectedTargets].sort();
-                    msgData.type = selectedTargets.length === 1 ? 'direct' : 'group';
-                    msgData.participants = fullParticipants;
-                    msgData.conversationId = fullParticipants.join('_');
-                }
-
-                await addDoc(collection(db, "messages"), msgData);
-                updateLastReadTime();
-            } catch (error) {
-                console.error("發送訊息失敗：", error);
-                alert("訊息發送失敗，請再試一次。");
+                // 2. 更新房間的最後訊息與時間 (讓清單能跳到最前面)
+                await updateDoc(doc(db, "rooms", activeRoomId), {
+                    lastMessage: `${currentUser.name}: ${text}`,
+                    lastMessageTime: serverTimestamp()
+                });
+            } catch (e) {
+                console.error("發送失敗：", e);
             } finally {
-                btnSend.disabled = false;
-                chatInput.focus();
+                document.getElementById('btnSend').disabled = false;
+                input.focus();
             }
-        }
+        });
+        document.getElementById('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnSend').click(); });
 
-        // 6. 渲染單筆訊息 UI
-        function appendMessageUI(sender, text, timestamp) {
-            const isMine = (sender === currentUser.name);
+        // ================= Modal 群組設定邏輯 (建立/編輯) =================
 
-            const div = document.createElement('div');
-            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
+        // 處理照片上傳與壓縮 (Base64)
+        document.getElementById('groupAvatarInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxSize = 200;
+                    let width = img.width, height = img.height;
+                    if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } 
+                    else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    uploadedAvatarBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('modalAvatarPreview').src = uploadedAvatarBase64;
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
 
-            let timeStr = "剛才";
-            if (timestamp && timestamp.toDate) {
-                const dateObj = timestamp.toDate();
-                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const date = String(dateObj.getDate()).padStart(2, '0');
-                const hours = String(dateObj.getHours()).padStart(2, '0');
-                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                timeStr = `${month}/${date} ${hours}:${minutes}`;
-            }
-
-            let html = '';
-            if (!isMine) html += `<div class="msg-sender">${sender}</div>`;
-            html += `<div>${text}</div><div class="msg-time">${timeStr}</div>`;
-            
-            div.innerHTML = html;
-            msgContainer.appendChild(div);
-        }
-
-        // 7. 開啟成員選擇 Modal
-        function openMemberModal() {
+        function populateMemberCheckboxes(selectedNames = []) {
             const container = document.getElementById('memberListContainer');
             container.innerHTML = '';
-
-            if (allUsers.length === 0) {
-                container.innerHTML = '<div style="color:#888;">無其他成員</div>';
-            } else {
-                allUsers.forEach(u => {
-                    const isChecked = selectedTargets.includes(u.name);
-                    const label = document.createElement('label');
-                    label.className = 'member-item';
-                    label.innerHTML = `
-                        <input type="checkbox" value="${u.name}" ${isChecked ? 'checked' : ''}>
-                        <span>${u.name}</span>
-                    `;
-                    container.appendChild(label);
-                });
-            }
-
-            document.getElementById('memberModal').style.display = 'flex';
+            allUsers.forEach(u => {
+                const isChecked = selectedNames.includes(u.name);
+                const label = document.createElement('label');
+                label.className = 'member-item';
+                label.innerHTML = `<input type="checkbox" value="${u.name}" ${isChecked ? 'checked' : ''}> <span>${u.name}</span>`;
+                container.appendChild(label);
+            });
         }
 
-        // 事件控制與切換邏輯
-        document.getElementById('btnChannelAll').addEventListener('click', () => {
-            currentMode = 'all';
-            document.getElementById('btnChannelAll').classList.add('active');
-            document.getElementById('btnChannelDirect').classList.remove('active');
-            listenToMessages();
+        // 開啟「建立」Modal
+        document.getElementById('btnOpenCreateModal').addEventListener('click', () => {
+            modalMode = 'create';
+            document.getElementById('modalTitle').innerText = '建立新群組';
+            document.getElementById('modalGroupName').value = '';
+            uploadedAvatarBase64 = null;
+            document.getElementById('modalAvatarPreview').src = 'https://ui-avatars.com/api/?name=G&background=4caf50&color=fff';
+            populateMemberCheckboxes([]);
+            document.getElementById('groupModal').style.display = 'flex';
         });
 
-        document.getElementById('btnChannelDirect').addEventListener('click', () => {
-            openMemberModal();
-        });
-
-        document.getElementById('btnChangeTarget').addEventListener('click', () => {
-            openMemberModal();
+        // 開啟「編輯」Modal (在聊天室內點齒輪)
+        document.getElementById('btnOpenEditModal').addEventListener('click', () => {
+            modalMode = 'edit';
+            document.getElementById('modalTitle').innerText = '編輯群組設定';
+            document.getElementById('modalGroupName').value = activeRoomData.name;
+            uploadedAvatarBase64 = activeRoomData.avatar || null;
+            document.getElementById('modalAvatarPreview').src = activeRoomData.avatar || `https://ui-avatars.com/api/?name=${activeRoomData.name}&background=e3f2fd&color=1565c0`;
+            populateMemberCheckboxes(activeRoomData.participants || []);
+            document.getElementById('groupModal').style.display = 'flex';
         });
 
         document.getElementById('btnCancelModal').addEventListener('click', () => {
-            document.getElementById('memberModal').style.display = 'none';
+            document.getElementById('groupModal').style.display = 'none';
         });
 
-        document.getElementById('btnConfirmModal').addEventListener('click', () => {
+        // 儲存 Modal 設定
+        document.getElementById('btnConfirmModal').addEventListener('click', async () => {
+            const nameInput = document.getElementById('modalGroupName').value.trim();
+            if (!nameInput) { alert('請輸入群組名稱！'); return; }
+
             const checkboxes = document.querySelectorAll('#memberListContainer input[type="checkbox"]:checked');
-            const selected = Array.from(checkboxes).map(cb => cb.value);
+            // 參與者必須包含當前建立/編輯者自己
+            const participants = [currentUser.name, ...Array.from(checkboxes).map(cb => cb.value)];
 
-            if (selected.length === 0) {
-                alert('請至少選擇一位家人進行對話！');
-                return;
+            try {
+                if (modalMode === 'create') {
+                    // 新增群組
+                    await addDoc(collection(db, "rooms"), {
+                        name: nameInput,
+                        avatar: uploadedAvatarBase64 || '',
+                        participants: participants,
+                        creator: currentUser.name,
+                        lastMessage: '群組已建立',
+                        lastMessageTime: serverTimestamp()
+                    });
+                } else if (modalMode === 'edit' && activeRoomId) {
+                    // 編輯現有群組
+                    await updateDoc(doc(db, "rooms", activeRoomId), {
+                        name: nameInput,
+                        avatar: uploadedAvatarBase64 || '',
+                        participants: participants
+                    });
+                    
+                    // 即時更新畫面上方的資訊
+                    activeRoomData.name = nameInput;
+                    if(uploadedAvatarBase64) activeRoomData.avatar = uploadedAvatarBase64;
+                    document.getElementById('activeRoomName').innerText = nameInput;
+                    document.getElementById('activeRoomAvatar').src = uploadedAvatarBase64 || `https://ui-avatars.com/api/?name=${nameInput}&background=e3f2fd&color=1565c0`;
+                }
+                document.getElementById('groupModal').style.display = 'none';
+            } catch (e) {
+                console.error("儲存群組失敗：", e);
+                alert("儲存失敗，請檢查網路！");
             }
-
-            selectedTargets = selected;
-            currentMode = 'target';
-
-            document.getElementById('btnChannelDirect').classList.add('active');
-            document.getElementById('btnChannelAll').classList.remove('active');
-            document.getElementById('memberModal').style.display = 'none';
-
-            listenToMessages();
         });
 
-        btnSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        document.getElementById('btnBack').addEventListener('click', () => {
-            updateLastReadTime();
+        // 回主選單
+        document.getElementById('btnBackToDashboard').addEventListener('click', () => {
             window.location.href = 'index.html';
         });
-
-        // 初始化
-        fetchFamilyUsers();
-        listenToMessages();
     </script>
 </body>
 </html>
