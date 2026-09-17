@@ -26,7 +26,7 @@
         /* 介面容器切換 */
         .view-container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; height: 80vh; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; position: relative; }
         
-        /* --- 第一層：群組清單 (Room List) --- */
+        /* --- 第一層：群組清單 --- */
         .list-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; }
         .btn-new-chat { background: white; color: var(--primary-color); border: none; padding: 6px 12px; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .room-list-content { flex: 1; overflow-y: auto; background: white; }
@@ -40,7 +40,7 @@
         .room-time { font-size: 11px; color: #999; flex-shrink: 0; }
         .room-last-msg { font-size: 13px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* --- 第二層：聊天室內 (Chat Room) --- */
+        /* --- 第二層：聊天室內 --- */
         .chat-header { background: var(--primary-color); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         .chat-header-left { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid white; }
@@ -49,7 +49,6 @@
 
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
         
-        /* 訊息氣泡外層包裹 (為了已讀狀態排版) */
         .chat-msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; }
         .msg-mine-wrapper { align-self: flex-end; align-items: flex-end; }
         .msg-other-wrapper { align-self: flex-start; align-items: flex-start; }
@@ -59,10 +58,10 @@
         .msg-other { background: white; border-bottom-left-radius: 2px; }
         .msg-sender { font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
         
-        /* 狀態列 (時間與已讀) */
+        /* 狀態列 (已讀顏色改為 #888，與時間一致) */
         .msg-status-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
         .msg-time { font-size: 10px; color: #888; }
-        .msg-read { font-size: 10px; color: #0277bd; font-weight: bold; }
+        .msg-read { font-size: 10px; color: #888; font-weight: normal; } /* 修改這裡 */
 
         /* 回覆與標記樣式 */
         .reply-quote { background: rgba(0,0,0,0.05); border-left: 4px solid var(--primary-color); padding: 5px 8px; border-radius: 4px; font-size: 13px; color: #555; margin-bottom: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -72,18 +71,19 @@
         .chat-photo { max-width: 100%; max-height: 220px; border-radius: 10px; cursor: pointer; display: block; border: 1px solid #ddd; margin-top: 4px; }
         
         /* --- 輸入區與功能擴充 --- */
-        .input-container-wrapper { background: #f0f0f0; border-top: 1px solid #ddd; display: flex; flex-direction: column; }
+        .input-container-wrapper { background: #f0f0f0; border-top: 1px solid #ddd; display: flex; flex-direction: column; position: relative; }
         
         .reply-preview-area { display: none; padding: 8px 15px; background: #e0e0e0; border-left: 4px solid var(--primary-color); font-size: 13px; color: #555; justify-content: space-between; align-items: center; }
         .btn-cancel-reply { background: none; border: none; font-size: 18px; color: #888; cursor: pointer; }
 
-        .mention-menu { display: none; position: absolute; bottom: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; background: white; border-top: 1px solid #ddd; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 20; }
-        .mention-item { padding: 10px 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; font-weight: bold; }
+        /* 標記選單強化 */
+        .mention-menu { display: none; position: absolute; bottom: 100%; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: white; border-top: 1px solid #ddd; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 100; border-radius: 8px 8px 0 0; }
+        .mention-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 15px; font-weight: bold; color: var(--primary-color); }
         .mention-item:active { background: #f5f5f5; }
 
-        .chat-input-area { padding: 10px; display: flex; gap: 8px; align-items: center; position: relative; }
+        .chat-input-area { padding: 10px; display: flex; gap: 8px; align-items: center; position: relative; background: #f0f0f0;}
         .btn-upload-photo { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 5px; color: #555; }
-        .chat-input-area input[type="text"] { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 15px; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 15px; background: white; }
         .chat-input-area button.btn-send { padding: 10px 18px; background: var(--accent-color); color: white; border: none; font-weight: bold; border-radius: 20px; cursor: pointer; }
 
         /* --- 訊息選項選單 (BottomSheet) --- */
@@ -165,7 +165,7 @@
                 <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">📷</button>
                 <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
                 
-                <input type="text" id="chatInput" placeholder="輸入訊息... (輸入 @ 可標記成員)">
+                <input type="text" id="chatInput" placeholder="輸入訊息... (輸入 @ 可標記成員)" autocomplete="off">
                 <button class="btn-send" id="btnSend">傳送</button>
             </div>
         </div>
@@ -241,12 +241,17 @@
         let activeRoomData = null;
         let roomsUnsubscribe = null;
         let messagesUnsubscribe = null;
+        let singleRoomUnsubscribe = null; // 新增：專門監聽目前聊天室狀態的變數 (為了解決即時已讀)
+
         let uploadedAvatarBase64 = null; 
         let modalMode = 'create'; 
 
         let pendingReplyMsgId = null;
         let pendingReplyData = null;
         let selectedMsgForAction = null; 
+
+        // 為了不讓畫面一直重繪，暫存一份目前抓到的 messages 陣列
+        let currentMessagesList = [];
 
         fetchFamilyUsers();
         listenToRooms();
@@ -262,6 +267,7 @@
             } catch (error) { console.error("載入成員名單失敗：", error); }
         }
 
+        // 這是清單頁面的監聽 (負責顯示所有群組)
         function listenToRooms() {
             const roomsRef = collection(db, "rooms");
             const q = query(
@@ -283,8 +289,6 @@
                     const room = docSnap.data();
                     const roomId = docSnap.id;
                     
-                    if (roomId === activeRoomId) activeRoomData = room;
-
                     let timeStr = "";
                     if (room.lastMessageTime && room.lastMessageTime.toDate) {
                         const dateObj = room.lastMessageTime.toDate();
@@ -309,14 +313,13 @@
                     `;
                     container.appendChild(div);
                 });
-            }, (error) => {
-                console.error("載入群組失敗：", error);
-            });
+            }, (error) => { console.error("載入群組失敗：", error); });
         }
 
         async function enterRoom(roomId, roomData) {
             activeRoomId = roomId;
             activeRoomData = roomData;
+            currentMessagesList = [];
             
             document.getElementById('viewRoomList').style.display = 'none';
             document.getElementById('viewChatRoom').style.display = 'flex';
@@ -326,6 +329,19 @@
             
             updateMyReadTimestamp(roomId);
             listenToMessages(roomId);
+            listenToActiveRoom(roomId); // 新增這行：開啟單一房間的即時監聽
+        }
+
+        // 【新增功能】即時監聽當前房間的變動 (為了別人更新已讀時，畫面能立刻刷新)
+        function listenToActiveRoom(roomId) {
+            if (singleRoomUnsubscribe) singleRoomUnsubscribe(); // 清除舊的監聽
+            
+            singleRoomUnsubscribe = onSnapshot(doc(db, "rooms", roomId), (docSnap) => {
+                if (docSnap.exists()) {
+                    activeRoomData = docSnap.data(); // 更新本地的房間資料 (包含最新的已讀時間)
+                    renderAllMessages();             // 重新把目前的訊息陣列畫一次，這樣已讀狀態就會變了！
+                }
+            });
         }
 
         async function updateMyReadTimestamp(roomId) {
@@ -341,8 +357,12 @@
         document.getElementById('btnBackToList').addEventListener('click', () => {
             updateMyReadTimestamp(activeRoomId);
             if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
+            if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } // 離開時關閉監聽
+            
             activeRoomId = null;
             activeRoomData = null;
+            currentMessagesList = [];
+
             document.getElementById('viewChatRoom').style.display = 'none';
             document.getElementById('viewRoomList').style.display = 'flex';
             localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
@@ -352,29 +372,37 @@
             const msgContainer = document.getElementById('chatMessages');
             msgContainer.innerHTML = '<div style="text-align:center; color:#888; margin-top:20px;">載入中...</div>';
             
-            const q = query(
-                collection(db, "messages"), 
-                where("roomId", "==", roomId), 
-                orderBy("timestamp", "asc")
-            );
+            const q = query(collection(db, "messages"), where("roomId", "==", roomId), orderBy("timestamp", "asc"));
 
             messagesUnsubscribe = onSnapshot(q, (snapshot) => {
-                const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 100;
-                msgContainer.innerHTML = '';
+                currentMessagesList = []; // 每次 snapshot 更新時，重新組裝陣列
                 
                 if (snapshot.empty) {
                     msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">發個訊息打招呼吧！</div>';
                 } else {
                     snapshot.forEach((docSnap) => {
-                        const msg = docSnap.data();
-                        appendMessageUI(docSnap.id, msg);
+                        currentMessagesList.push({ id: docSnap.id, ...docSnap.data() });
                     });
+                    renderAllMessages(); // 呼叫統一的渲染函式
                 }
                 
-                if (isAtBottom) msgContainer.scrollTop = msgContainer.scrollHeight;
                 updateMyReadTimestamp(roomId);
                 localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
             });
+        }
+
+        // 把原本渲染的部分抽出來，因為我們現在有兩個地方(收到新訊息、或是有人已讀)都需要重繪畫面
+        function renderAllMessages() {
+            const msgContainer = document.getElementById('chatMessages');
+            const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 100;
+            
+            msgContainer.innerHTML = '';
+            
+            currentMessagesList.forEach(msg => {
+                appendMessageUI(msg.id, msg);
+            });
+
+            if (isAtBottom) msgContainer.scrollTop = msgContainer.scrollHeight;
         }
 
         // ================= 新版訊息渲染 (含已讀、收回、標記、回覆) =================
@@ -391,7 +419,7 @@
                 timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
             }
 
-            // 判斷已讀
+            // 判斷已讀 (比對時間戳)
             let readCount = 0;
             if (isMine && activeRoomData && activeRoomData.readTimestamps) {
                 Object.keys(activeRoomData.readTimestamps).forEach(pName => {
@@ -400,6 +428,7 @@
                     }
                 });
             }
+            // 已讀顏色已透過 CSS 改為與時間相同的灰色 (#888)
             let readHtml = readCount > 0 ? `<span class="msg-read">已讀${readCount > 1 ? ' '+readCount : ''}</span>` : '';
 
             // 判斷是否收回
@@ -434,7 +463,6 @@
                 replyHtml = `<div class="reply-quote"><strong>${msg.replyTo.sender}</strong>: ${replyText}</div>`;
             }
 
-            // 將純文字轉義避免引號錯誤
             const safeText = (msg.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
             wrapper.innerHTML = `
@@ -461,26 +489,36 @@
             document.getElementById('viewerImage').src = '';
         };
 
-        // ================= 輸入區功能 (@標記 與 傳送) =================
+        // ================= 輸入區功能 (@標記優化 與 傳送) =================
         const chatInput = document.getElementById('chatInput');
         const mentionMenu = document.getElementById('mentionMenu');
 
         chatInput.addEventListener('input', (e) => {
             const val = e.target.value;
-            const lastAt = val.lastIndexOf('@');
-            if (lastAt !== -1 && (lastAt === 0 || val.charAt(lastAt - 1) === ' ')) {
-                const participants = activeRoomData.participants.filter(p => p !== currentUser.name);
-                if (participants.length > 0) {
-                    mentionMenu.innerHTML = '';
-                    participants.forEach(p => {
-                        const item = document.createElement('div');
-                        item.className = 'mention-item';
-                        item.innerText = p;
-                        item.onclick = () => insertMention(p, lastAt);
-                        mentionMenu.appendChild(item);
-                    });
-                    mentionMenu.style.display = 'block';
-                    return;
+            // 尋找最後一個出現的 @
+            const lastAtIndex = val.lastIndexOf('@');
+            
+            // 如果輸入框內存在 @，且該 @ 後面還沒有輸入完畢（或正在輸入）
+            if (lastAtIndex !== -1) {
+                const searchStr = val.substring(lastAtIndex + 1).toLowerCase(); // @ 後面的字
+                
+                // 排除如果 @ 後面已經有空格，代表已經輸入完了，就不觸發選單
+                if (!searchStr.includes(' ')) {
+                    const participants = activeRoomData.participants.filter(p => p !== currentUser.name);
+                    
+                    // 可選：如果有輸入部分名字，可以做過濾。這裡為了簡單直觀，只要打了 @ 就把所有人列出來給他選
+                    if (participants.length > 0) {
+                        mentionMenu.innerHTML = '';
+                        participants.forEach(p => {
+                            const item = document.createElement('div');
+                            item.className = 'mention-item';
+                            item.innerHTML = `👤 ${p}`;
+                            item.onclick = () => insertMention(p, lastAtIndex);
+                            mentionMenu.appendChild(item);
+                        });
+                        mentionMenu.style.display = 'block';
+                        return;
+                    }
                 }
             }
             mentionMenu.style.display = 'none';
@@ -488,7 +526,8 @@
 
         function insertMention(name, atIndex) {
             const currentVal = chatInput.value;
-            chatInput.value = currentVal.substring(0, atIndex) + `@${name} ` + currentVal.substring(atIndex + 1);
+            // 將 @ 到結尾的部分，替換成選中的名字 + 一個空白
+            chatInput.value = currentVal.substring(0, atIndex) + `@${name} `;
             mentionMenu.style.display = 'none';
             chatInput.focus();
         }
