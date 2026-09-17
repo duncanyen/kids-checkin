@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📸 Photo Dump</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    <meta name="apple-mobile-web-app-title" content="OurBase">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <style>
+        :root {
+            --primary-color: #f57c00; /* 使用溫暖的橘色系代表相簿 */
+            --primary-light: #fff3e0;
+            --accent-color: #ff9800;
+            --bg-color: #f9fbe7;
+            --border-color: #e0e0e0;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
+       
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .page-title { color: var(--primary-color); font-size: 20px; font-weight: bold; margin: 0; }
+
+        .btn-upload-fab { position: fixed; bottom: 25px; right: 25px; background-color: var(--primary-color); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; border: none; box-shadow: 0 4px 15px rgba(245, 124, 0, 0.4); cursor: pointer; z-index: 100; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .btn-upload-fab:active { transform: scale(0.9); }
+
+        /* 相簿動態牆容器 */
+        .feed-container { max-width: 650px; margin: 0 auto 80px auto; display: flex; flex-direction: column; gap: 20px; }
+       
+        /* 每一篇照片卡片 */
+        .photo-card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); overflow: hidden; }
+       
+        /* 卡片頭部 (發佈者) */
+        .card-header { padding: 12px 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; }
+        .uploader-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .uploader-info { flex: 1; }
+        .uploader-name { font-weight: bold; font-size: 15px; color: #333; }
+        .upload-time { font-size: 11px; color: #999; margin-top: 2px; }
+        .btn-delete { background: none; border: none; color: #e53935; cursor: pointer; font-size: 16px; padding: 5px; }
+
+        /* 圖片與敘述 */
+        .card-image { width: 100%; max-height: 400px; object-fit: cover; display: block; cursor: pointer; background: #f5f5f5; }
+        .card-caption { padding: 12px 15px; font-size: 14.5px; line-height: 1.5; color: #222; }
+
+        /* 留言區塊 */
+        .comments-section { background: #fafafa; border-top: 1px solid #eee; padding: 12px 15px; }
+        .comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 250px; overflow-y: auto; }
+        .comment-item { font-size: 13.5px; line-height: 1.4; background: white; padding: 8px 12px; border-radius: 12px; border: 1px solid #eee; }
+        .comment-sender { font-weight: bold; color: var(--primary-color); margin-right: 5px; }
+        .comment-time { font-size: 10px; color: #aaa; margin-left: 6px; }
+
+        .comment-input-area { display: flex; gap: 8px; }
+        .comment-input { flex: 1; padding: 10px 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 14px; }
+        .btn-comment { background: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+       
+        /* 上傳 Modal */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; }
+        .preview-upload-img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; background: #eee; margin-bottom: 15px; border: 1px solid #ddd; }
+        .upload-caption-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 20px; resize: none; }
+        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-cancel { background: #888; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-confirm { background: var(--primary-color); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        /* 照片全螢幕預覽 */
+        .photo-viewer { display: none; position: fixed; z-index: 4000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; }
+        .viewer-content { max-width: 95%; max-height: 85vh; object-fit: contain; }
+        .close-viewer { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; font-weight: bold; cursor: pointer; width: 40px; height: 40px; text-align: center; line-height: 38px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+        <div class="page-title">📸 Photo Dump</div>
+        <div style="width: 80px;"></div> <!-- 排版佔位 -->
+    </div>
+
+    <!-- 浮動的上傳按鈕 -->
+    <button class="btn-upload-fab" id="btnTriggerFile">➕</button>
+    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+
+    <!-- 相簿動態牆 -->
+    <div class="feed-container" id="feedContainer">
+        <div style="text-align:center; padding:50px; color:#888;">載入照片中...</div>
+    </div>
+
+    <!-- 上傳預覽與編輯 Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <h3 class="modal-title">發佈新照片</h3>
+            <img id="uploadPreviewImg" class="preview-upload-img" src="" alt="預覽圖片">
+            <textarea id="uploadCaption" class="upload-caption-input" rows="3" placeholder="寫些什麼來記錄這一刻吧..."></textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" id="btnCancelUpload">取消</button>
+                <button class="btn-confirm" id="btnConfirmUpload">發佈</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 照片放大檢視器 -->
+    <div id="photoViewerModal" class="photo-viewer" onclick="closePhotoViewer()">
+        <span class="close-viewer">&times;</span>
+        <img class="viewer-content" id="viewerImage">
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import {
+            getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+            serverTimestamp, doc, updateDoc, arrayUnion, deleteDoc, getDoc
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        // 1. Firebase 初始化
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 2. 取得登入者資訊
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+        if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
+
+        let pendingUploadBase64 = null;
+        const feedContainer = document.getElementById('feedContainer');
+
+        // ================= 照片讀取與渲染 =================
+        function listenToGallery() {
+            // 查詢 photos 集合，依時間遞減排序 (不需要額外設定複合索引)
+            const q = query(collection(db, "photos"), orderBy("timestamp", "desc"));
+
+            onSnapshot(q, (snapshot) => {
+                feedContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    feedContainer.innerHTML = '<div style="text-align:center; padding:50px; color:#888;">相簿空空的，趕快點擊右下角上傳第一張照片吧！</div>';
+                    return;
+                }
+
+                snapshot.forEach((docSnap) => {
+                    const photoData = docSnap.data();
+                    renderPhotoCard(docSnap.id, photoData);
+                });
+            }, (error) => {
+                console.error("載入相簿失敗：", error);
+                feedContainer.innerHTML = '<div style="text-align:center; padding:30px; color:red;">載入失敗，請檢查網路連線。</div>';
+            });
+        }
+
+        function renderPhotoCard(photoId, data) {
+            let timeStr = "剛才";
+            if (data.timestamp && data.timestamp.toDate) {
+                const d = data.timestamp.toDate();
+                timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            }
+
+            // 判斷是否為自己發佈的 (允許刪除)
+            const isMine = (data.uploader === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+            const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')">🗑️</button>` : '';
+
+            // 生成留言列表 HTML
+            let commentsHtml = '';
+            if (data.comments && data.comments.length > 0) {
+                data.comments.forEach(c => {
+                    const cTime = new Date(c.timestamp);
+                    const cTimeStr = `${String(cTime.getMonth()+1).padStart(2,'0')}/${String(cTime.getDate()).padStart(2,'0')} ${String(cTime.getHours()).padStart(2,'0')}:${String(cTime.getMinutes()).padStart(2,'0')}`;
+                    commentsHtml += `
+                        <div class="comment-item">
+                            <span class="comment-sender">${c.sender}</span>
+                            <span>${c.text}</span>
+                            <span class="comment-time">${cTimeStr}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                commentsHtml = '<div style="color:#aaa; font-size:13px; text-align:center;">成為第一個留言的人吧！</div>';
+            }
+
+            // 使用者大頭貼預設
+            const uploaderAvatar = data.uploaderAvatar || `https://ui-avatars.com/api/?name=${data.uploader}&background=ff9800&color=fff`;
+
+            const card = document.createElement('div');
+            card.className = 'photo-card';
+            card.innerHTML = `
+                <div class="card-header">
+                    <img src="${uploaderAvatar}" class="uploader-avatar">
+                    <div class="uploader-info">
+                        <div class="uploader-name">${data.uploader}</div>
+                        <div class="upload-time">${timeStr}</div>
+                    </div>
+                    ${delBtnHtml}
+                </div>
+                <img src="${data.imageUrl}" class="card-image" onclick="window.openPhotoViewer(this.src)">
+                ${data.caption ? `<div class="card-caption">${data.caption}</div>` : ''}
+               
+                <div class="comments-section">
+                    <div class="comments-list" id="comments-${photoId}">
+                        ${commentsHtml}
+                    </div>
+                    <div class="comment-input-area">
+                        <input type="text" id="input-${photoId}" class="comment-input" placeholder="留個言吧...">
+                        <button class="btn-comment" onclick="window.submitComment('${photoId}')">留言</button>
+                    </div>
+                </div>
+            `;
+            feedContainer.appendChild(card);
+
+            // 綁定 Enter 鍵留言
+            document.getElementById(`input-${photoId}`).addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') window.submitComment(photoId);
+            });
+        }
+
+        // ================= 留言功能 (ArrayUnion) =================
+        window.submitComment = async function(photoId) {
+            const inputField = document.getElementById(`input-${photoId}`);
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            inputField.value = ''; // 先清空畫面
+           
+            try {
+                const photoRef = doc(db, "photos", photoId);
+                // 使用 arrayUnion 將留言物件推入陣列中
+                await updateDoc(photoRef, {
+                    comments: arrayUnion({
+                        sender: currentUser.name,
+                        text: text,
+                        timestamp: Date.now() // 用本地時間戳，避免 nested serverTimestamp 錯誤
+                    })
+                });
+            } catch (e) {
+                console.error("留言失敗：", e);
+                alert("留言失敗，請檢查網路！");
+                inputField.value = text; // 失敗則還原文字
+            }
+        };
+
+        // ================= 刪除照片 =================
+        window.deletePhoto = async function(photoId) {
+            if (confirm("確定要刪除這張照片嗎？(留言也會一併刪除喔)")) {
+                try {
+                    await deleteDoc(doc(db, "photos", photoId));
+                } catch (e) {
+                    console.error("刪除失敗：", e);
+                    alert("刪除失敗，請再試一次。");
+                }
+            }
+        };
+
+        // ================= 上傳照片處理 (壓縮 + Modal) =================
+        const btnTriggerFile = document.getElementById('btnTriggerFile');
+        const fileInput = document.getElementById('fileInput');
+
+        btnTriggerFile.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                   
+                    // 壓縮照片：最大 800px，確保 Firestore 文件不會超過 1MB 限制
+                    const maxSize = 800;
+                    let width = img.width, height = img.height;
+                    if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+                    else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                   
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                   
+                    pendingUploadBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                   
+                    document.getElementById('uploadPreviewImg').src = pendingUploadBase64;
+                    document.getElementById('uploadCaption').value = '';
+                    document.getElementById('uploadModal').style.display = 'flex';
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 關閉/取消上傳
+        document.getElementById('btnCancelUpload').addEventListener('click', () => {
+            document.getElementById('uploadModal').style.display = 'none';
+            fileInput.value = '';
+            pendingUploadBase64 = null;
+        });
+
+        // 確認上傳至 Firestore
+        document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
+            if (!pendingUploadBase64) return;
+            const caption = document.getElementById('uploadCaption').value.trim();
+            const btnConfirm = document.getElementById('btnConfirmUpload');
+
+            btnConfirm.disabled = true;
+            btnConfirm.innerText = '發佈中...';
+
+            try {
+                await addDoc(collection(db, "photos"), {
+                    imageUrl: pendingUploadBase64,
+                    caption: caption,
+                    uploader: currentUser.name,
+                    uploaderAvatar: currentUser.avatar || null,
+                    timestamp: serverTimestamp(),
+                    comments: [] // 初始化空留言陣列
+                });
+
+                document.getElementById('uploadModal').style.display = 'none';
+                fileInput.value = '';
+                pendingUploadBase64 = null;
+            } catch (e) {
+                console.error("發佈失敗：", e);
+                alert("照片過大或網路不穩，發佈失敗！");
+            } finally {
+                btnConfirm.disabled = false;
+                btnConfirm.innerText = '發佈';
+            }
+        });
+
+        // ================= 全螢幕檢視器 =================
+        window.openPhotoViewer = function(src) {
+            document.getElementById('viewerImage').src = src;
+            document.getElementById('photoViewerModal').style.display = 'flex';
+        };
+        window.closePhotoViewer = function() {
+            document.getElementById('photoViewerModal').style.display = 'none';
+            document.getElementById('viewerImage').src = '';
+        };
+
+        // 啟動監聽
+        listenToGallery();
+    </script>
+</body>
+</html>
