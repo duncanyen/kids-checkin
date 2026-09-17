@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OurBase - 家庭記帳本</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- 引入 Chart.js 繪製圖表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #0277bd; /* 記帳本使用理性的藍色系 */
+            --primary-light: #e1f5fe;
+            --accent-color: #039be5;
+            --expense-color: #e53935; /* 支出的紅色 */
+            --bg-color: #f4f7f6;
+            --border-color: #e0e0e0;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
+        
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .page-title { color: var(--primary-color); font-size: 20px; font-weight: bold; margin: 0; }
+
+        .main-container { max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px; }
+
+        /* === 月曆區塊 === */
+        .calendar-card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 15px; }
+        .month-selector { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .month-btn { background: none; border: none; font-size: 20px; color: var(--primary-color); cursor: pointer; padding: 5px 15px; font-weight: bold; }
+        .current-month { font-size: 18px; font-weight: bold; color: #333; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .weekday { font-size: 13px; font-weight: bold; color: #888; padding-bottom: 8px; }
+        .day-cell { background: #fafafa; border-radius: 8px; min-height: 60px; padding: 5px; display: flex; flex-direction: column; align-items: center; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .day-cell:active { background: var(--primary-light); }
+        .day-cell.today { border: 1px solid var(--primary-color); background: #fff; }
+        .date-num { font-size: 14px; font-weight: bold; color: #555; margin-bottom: 2px; }
+        .day-expense { font-size: 11px; color: var(--expense-color); font-weight: bold; word-break: break-all; }
+
+        /* === 統計圖表區塊 === */
+        .chart-card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; text-align: center; }
+        .total-expense-title { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .total-expense-amount { font-size: 28px; font-weight: bold; color: var(--expense-color); margin-bottom: 20px; }
+        .chart-container { position: relative; height: 250px; width: 100%; display: flex; justify-content: center; }
+
+        /* === 新增/編輯 彈窗 (BottomSheet 風格) === */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: flex-end; }
+        .modal-content { background: white; width: 100%; max-width: 650px; border-radius: 20px 20px 0 0; padding: 25px 20px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-date { font-size: 18px; font-weight: bold; color: var(--primary-color); }
+        .btn-close { background: #f0f0f0; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; }
+
+        /* 分類按鈕網格 */
+        .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+        .cat-btn { background: #f5f5f5; border: 2px solid transparent; border-radius: 12px; padding: 12px 5px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .cat-btn.selected { background: var(--primary-light); border-color: var(--primary-color); }
+        .cat-icon { font-size: 24px; margin-bottom: 4px; display: block; }
+        .cat-name { font-size: 12px; font-weight: bold; color: #555; }
+
+        /* 輸入表單 */
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; font-weight: bold; color: #666; margin-bottom: 5px; }
+        .amount-input-wrapper { display: flex; align-items: center; font-size: 24px; font-weight: bold; color: var(--expense-color); border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+        .amount-input-wrapper input { border: none; font-size: 24px; font-weight: bold; color: var(--expense-color); outline: none; flex: 1; margin-left: 5px; background: transparent; }
+        .note-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 15px; box-sizing: border-box; outline: none; }
+        
+        .btn-save { width: 100%; background: var(--primary-color); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(2, 119, 189, 0.3); }
+
+        /* 當日明細清單 */
+        .day-list-title { font-size: 14px; font-weight: bold; color: #888; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+        .exp-cat-info { display: flex; align-items: center; gap: 10px; }
+        .exp-icon-box { width: 40px; height: 40px; background: var(--primary-light); border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .exp-details { display: flex; flex-direction: column; }
+        .exp-cat-name { font-weight: bold; font-size: 15px; color: #333; }
+        .exp-note { font-size: 12px; color: #888; }
+        .exp-amount { font-weight: bold; font-size: 16px; color: var(--expense-color); margin-right: 15px; }
+        .btn-del-exp { background: none; border: none; color: #e53935; font-size: 18px; cursor: pointer; padding: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+        <div class="page-title">💰 記帳本</div>
+        <div style="width: 80px;"></div> <!-- 佔位符保持置中 -->
+    </div>
+
+    <div class="main-container">
+        <!-- 月曆區塊 -->
+        <div class="calendar-card">
+            <div class="month-selector">
+                <button class="month-btn" onclick="changeMonth(-1)">❮</button>
+                <div class="current-month" id="calendarMonthTitle">載入中...</div>
+                <button class="month-btn" onclick="changeMonth(1)">❯</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- 標題列 -->
+                <div class="weekday">日</div><div class="weekday">一</div><div class="weekday">二</div>
+                <div class="weekday">三</div><div class="weekday">四</div><div class="weekday">五</div><div class="weekday">六</div>
+                <!-- 網格內容由 JS 動態產生 -->
+            </div>
+        </div>
+
+        <!-- 圖表分析區塊 -->
+        <div class="chart-card">
+            <div class="total-expense-title">本月總支出</div>
+            <div class="total-expense-amount" id="monthTotalAmount">$0</div>
+            <div class="chart-container">
+                <canvas id="expensePieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 記帳與明細 Modal -->
+    <div class="modal" id="expenseModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-date" id="modalDateTitle">2026年9月17日</div>
+                <button class="btn-close" onclick="closeModal()">✕</button>
+            </div>
+
+            <!-- 分類選擇 -->
+            <div class="category-grid" id="categoryGrid">
+                <!-- 由 JS 生成分類按鈕 -->
+            </div>
+
+            <!-- 金額與備註 -->
+            <div class="input-group">
+                <label>花費金額</label>
+                <div class="amount-input-wrapper">
+                    $ <input type="number" id="expenseAmount" placeholder="0" inputmode="numeric">
+                </div>
+            </div>
+            <div class="input-group">
+                <input type="text" id="expenseNote" class="note-input" placeholder="新增備註 (選填，例如：大潤發採買)">
+            </div>
+            
+            <button class="btn-save" id="btnSaveExpense">儲存紀錄</button>
+
+            <!-- 當日明細 -->
+            <div class="day-list-title">當日明細</div>
+            <div id="dayExpenseList">
+                <div style="text-align:center; padding:20px; color:#aaa; font-size:13px;">當日尚無紀錄</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { 
+            getFirestore, collection, addDoc, getDocs, query, where, 
+            deleteDoc, doc, serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        // 1. Firebase 初始化
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 2. 登入檢查
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+        if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
+
+        // --- 全域變數 ---
+        let currentDate = new Date(); // 當前檢視的月份
+        let selectedDateStr = "";     // YYYY-MM-DD
+        let monthData = [];           // 當月所有的記帳資料
+        let chartInstance = null;     // Chart.js 實例
+        let selectedCategory = "早餐";
+
+        // 分類設定 (可擴充)
+        const categories = [
+            { id: '早餐', icon: '🥪', color: '#FFB74D' },
+            { id: '午餐', icon: '🍱', color: '#FF8A65' },
+            { id: '晚餐', icon: '🍲', color: '#E57373' },
+            { id: '日用品', icon: '🛒', color: '#4DB6AC' },
+            { id: '加油', icon: '⛽', color: '#90A4AE' },
+            { id: '水電瓦斯', icon: '⚡', color: '#4FC3F7' },
+            { id: '補習費', icon: '📚', color: '#9575CD' },
+            { id: '其他', icon: '📦', color: '#A1887F' }
+        ];
+
+        // 啟動初始化
+        initCategoryUI();
+        loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+
+        // ================= 月曆與資料讀取 =================
+
+        // 抓取整個月份的資料
+        async function loadMonthData(year, month) {
+            const startStr = `${year}-${String(month).padStart(2,'0')}-01`;
+            const endStr = `${year}-${String(month).padStart(2,'0')}-31`; // 字串比對，31不影響
+            
+            document.getElementById('calendarMonthTitle').innerText = '讀取中...';
+            
+            try {
+                // 為了避免要求建立複合索引，我們只篩選日期區間，拉回來前端處理
+                const q = query(
+                    collection(db, "expenses"),
+                    where("date", ">=", startStr),
+                    where("date", "<=", endStr)
+                );
+                
+                const snapshot = await getDocs(q);
+                monthData = [];
+                snapshot.forEach(docSnap => {
+                    monthData.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                // 更新畫面
+                document.getElementById('calendarMonthTitle').innerText = `${year}年 ${month}月`;
+                renderCalendar(year, month);
+                renderChart();
+
+            } catch (error) {
+                console.error("讀取資料失敗：", error);
+                alert("讀取資料失敗，請檢查網路。");
+            }
+        }
+
+        // 繪製月曆網格
+        function renderCalendar(year, month) {
+            const grid = document.getElementById('calendarGrid');
+            // 保留前 7 個標題列元素，刪除後面的天數格
+            while (grid.children.length > 7) { grid.removeChild(grid.lastChild); }
+
+            const firstDayIndex = new Date(year, month - 1, 1).getDay();
+            const totalDays = new Date(year, month, 0).getDate();
+            const today = new Date();
+
+            // 統計每天的總花費
+            const dailyTotals = {};
+            monthData.forEach(exp => {
+                dailyTotals[exp.date] = (dailyTotals[exp.date] || 0) + Number(exp.amount);
+            });
+
+            // 填補月初空白格
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyDiv = document.createElement('div');
+                grid.appendChild(emptyDiv);
+            }
+
+            // 填寫天數
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const isToday = (day === today.getDate() && month - 1 === today.getMonth() && year === today.getFullYear());
+                const totalExp = dailyTotals[dateStr] || 0;
+
+                const dayDiv = document.createElement('div');
+                dayDiv.className = `day-cell ${isToday ? 'today' : ''}`;
+                dayDiv.onclick = () => openModal(dateStr);
+
+                dayDiv.innerHTML = `
+                    <div class="date-num">${day}</div>
+                    ${totalExp > 0 ? `<div class="day-expense">$${totalExp}</div>` : ''}
+                `;
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        // 切換月份按鈕
+        window.changeMonth = function(offset) {
+            currentDate.setMonth(currentDate.getMonth() + offset);
+            loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        };
+
+        // ================= 圓餅圖繪製 =================
+        function renderChart() {
+            let total = 0;
+            const categorySums = {};
+            
+            // 歸類統計
+            monthData.forEach(exp => {
+                total += Number(exp.amount);
+                categorySums[exp.category] = (categorySums[exp.category] || 0) + Number(exp.amount);
+            });
+
+            document.getElementById('monthTotalAmount').innerText = `$${total.toLocaleString()}`;
+
+            // 準備 Chart.js 資料
+            const labels = [];
+            const data = [];
+            const bgColors = [];
+
+            categories.forEach(cat => {
+                if (categorySums[cat.id]) {
+                    labels.push(cat.id);
+                    data.push(categorySums[cat.id]);
+                    bgColors.push(cat.color);
+                }
+            });
+
+            const ctx = document.getElementById('expensePieChart').getContext('2d');
+            
+            // 如果已有圖表，先銷毀重繪
+            if (chartInstance) { chartInstance.destroy(); }
+
+            if (data.length === 0) {
+                // 如果這個月沒資料，畫個灰色的空圖
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: ['無紀錄'], datasets: [{ data: [1], backgroundColor: ['#eeeeee'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { enabled: false } } }
+                });
+                return;
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%', // 中間空心比例
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 } } }
+                    }
+                }
+            });
+        }
+
+
+        // ================= 新增/編輯 Modal 邏輯 =================
+        
+        function initCategoryUI() {
+            const grid = document.getElementById('categoryGrid');
+            categories.forEach(cat => {
+                const btn = document.createElement('div');
+                btn.className = 'cat-btn';
+                btn.id = `cat-${cat.id}`;
+                btn.onclick = () => selectCategory(cat.id);
+                btn.innerHTML = `
+                    <span class="cat-icon">${cat.icon}</span>
+                    <span class="cat-name">${cat.id}</span>
+                `;
+                grid.appendChild(btn);
+            });
+            selectCategory('早餐'); // 預設
+        }
+
+        function selectCategory(catId) {
+            selectedCategory = catId;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById(`cat-${catId}`).classList.add('selected');
+        }
+
+        window.openModal = function(dateStr) {
+            selectedDateStr = dateStr;
+            const [y, m, d] = dateStr.split('-');
+            document.getElementById('modalDateTitle').innerText = `${y}年${parseInt(m)}月${parseInt(d)}日`;
+            
+            // 清空輸入
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseNote').value = '';
+            selectCategory('早餐');
+
+            // 渲染當日明細
+            renderDayList();
+
+            document.getElementById('expenseModal').style.display = 'flex';
+        };
+
+        window.closeModal = function() {
+            document.getElementById('expenseModal').style.display = 'none';
+        };
+
+        // 儲存記帳
+        document.getElementById('btnSaveExpense').addEventListener('click', async () => {
+            const amountStr = document.getElementById('expenseAmount').value;
+            const note = document.getElementById('expenseNote').value.trim();
+            const amount = parseInt(amountStr);
+
+            if (!amount || amount <= 0) { alert('請輸入有效金額！'); return; }
+
+            const btn = document.getElementById('btnSaveExpense');
+            btn.disabled = true;
+            btn.innerText = '儲存中...';
+
+            try {
+                const newExp = {
+                    date: selectedDateStr,
+                    amount: amount,
+                    category: selectedCategory,
+                    note: note,
+                    operator: currentUser.name,
+                    timestamp: serverTimestamp()
+                };
+
+                const docRef = await addDoc(collection(db, "expenses"), newExp);
+                
+                // 本地更新資料，不用重新拉 DB
+                monthData.push({ id: docRef.id, ...newExp, timestamp: new Date() });
+                
+                // 清空輸入匡
+                document.getElementById('expenseAmount').value = '';
+                document.getElementById('expenseNote').value = '';
+                
+                // 更新畫面
+                renderDayList();
+                renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
+                renderChart();
+
+            } catch (e) {
+                console.error("儲存失敗：", e);
+                alert("儲存失敗，請檢查網路！");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '儲存紀錄';
+            }
+        });
+
+        // 渲染當天明細清單
+        function renderDayList() {
+            const container = document.getElementById('dayExpenseList');
+            container.innerHTML = '';
+            
+            // 抓出當天所有資料
+            const dayRecords = monthData.filter(e => e.date === selectedDateStr);
+
+            if (dayRecords.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa; font-size:13px;">當日尚無紀錄</div>';
+                return;
+            }
+
+            dayRecords.forEach(exp => {
+                const catObj = categories.find(c => c.id === exp.category) || categories[7]; // 找不到預設其他
+                
+                const div = document.createElement('div');
+                div.className = 'expense-item';
+                div.innerHTML = `
+                    <div class="exp-cat-info">
+                        <div class="exp-icon-box">${catObj.icon}</div>
+                        <div class="exp-details">
+                            <span class="exp-cat-name">${exp.category}</span>
+                            <span class="exp-note">${exp.note ? exp.note : `<span style="opacity:0.5">${exp.operator}記帳</span>`}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <span class="exp-amount">$${exp.amount.toLocaleString()}</span>
+                        <button class="btn-del-exp" onclick="deleteExpense('${exp.id}')">✕</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 刪除記帳
+        window.deleteExpense = async function(docId) {
+            if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+
+            try {
+                await deleteDoc(doc(db, "expenses", docId));
+                
+                // 本地移除
+                monthData = monthData.filter(e => e.id !== docId);
+                
+                // 更新畫面
+                renderDayList();
+                renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
+                renderChart();
+
+            } catch (e) {
+                console.error("刪除失敗：", e);
+                alert("刪除失敗，請檢查網路。");
+            }
+        };
+
+        // 點擊 Modal 黑色背景區塊關閉
+        window.onclick = function(event) {
+            const modal = document.getElementById('expenseModal');
+            if (event.target == modal) { modal.style.display = "none"; }
+        };
+
+    </script>
+</body>
+</html>
