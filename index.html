@@ -63,6 +63,10 @@
         .btn-check { background-color: var(--accent-color); color: white; }
         .btn-cancel { background-color: var(--cancel-color); color: white; }
         
+        /* 打卡聊天室設定區塊 */
+        .checkin-config-box { background: white; padding: 12px 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .checkin-config-box select { padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold; outline: none; }
+
         .calendar-container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .calendar-header { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #444; display: flex; justify-content: space-between; align-items: center; }
         .month-btn { background: none; box-shadow: none; font-size: 20px; color: var(--primary-color); padding: 5px 15px; margin: 0; cursor: pointer; }
@@ -100,7 +104,7 @@
     <!-- 登入畫面 -->
     <div id="loginSection">
         <div class="login-logo">🏡</div>
-        <div class="login-title">Welcome to HomeBase</div>
+        <div class="login-title">Welcome to HomeBase HomeBase</div>
         <div class="user-selection" id="userSelectionContainer"></div>
     </div>
 
@@ -173,6 +177,14 @@
 
         <h2 class="system-title" style="font-size: 20px;">📍 打卡專區</h2>
         
+        <!-- 管理員專屬：設定打卡推播聊天室 -->
+        <div class="checkin-config-box" id="adminCheckinConfig" style="display: none;">
+            <span>📢 設定打卡通知聊天室：</span>
+            <select id="targetChatRoomSelect" onchange="saveTargetChatRoom(this.value)">
+                <option value="">-- 請選擇目標群組 --</option>
+            </select>
+        </div>
+
         <div class="controls" id="actionControls">
             <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
             <button class="btn-cancel" onclick="cancelCheckIn()">取消今日打卡</button>
@@ -192,8 +204,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-        // ★ 注意：這裡補上了 onSnapshot 的匯入
-        import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp, onSnapshot, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -209,10 +220,8 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // ★ 宣告用來存儲即時監聽的變數
         let unreadUnsubscribe = null;
 
-        // 掛載全域變數與方法
         window.selectedUserObj = null;
         window.attendanceData = {};
         window.viewDate = new Date(); 
@@ -321,7 +330,6 @@
             window.showDashboard();
         };
 
-        // ★ 登出時，關閉監聽器避免記憶體洩漏與錯誤提示
         window.logout = function() {
             sessionStorage.removeItem('familyCheckInUser');
             if (unreadUnsubscribe) {
@@ -349,17 +357,14 @@
                 document.getElementById('adminCard').style.display = 'none';
             }
 
-            // ★ 顯示主選單時，啟動未讀訊息的即時監聽
             window.checkUnreadMessages();
         };
 
-        // ★ 全新優化版：檢查未讀訊息 (只監聽自己有參與的群組狀態，效能極高)
         window.checkUnreadMessages = function() {
             const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
             if (!userStr) return;
             const user = JSON.parse(userStr);
 
-            // 如果已經有監聽，先取消，避免重複綁定
             if (unreadUnsubscribe) {
                 unreadUnsubscribe();
             }
@@ -386,18 +391,14 @@
                             myReadTime = room.readTimestamps[user.name];
                         }
 
-                        // 如果群組剛建好，沒有 lastMessage，就不算未讀
                         const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
-                        // 檢查最後一句話是不是自己發的，自己發的不算未讀
                         const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
 
-                        // 判斷邏輯：有訊息、不是我發的、且發送時間大於我的已讀時間
                         if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) {
                             unreadRoomsCount++;
                         }
                     });
 
-                    // 更新 UI 紅點
                     const badge = document.getElementById('chatBadge');
                     if (unreadRoomsCount > 0) {
                         badge.style.display = 'block';
@@ -416,7 +417,7 @@
             window.showDashboard();
         };
 
-        window.openCheckInView = function() {
+        window.openCheckInView = async function() {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'block';
@@ -424,12 +425,57 @@
             document.getElementById('sysUserName').innerText = user.name;
 
             const actionControls = document.getElementById('actionControls');
+            const adminConfig = document.getElementById('adminCheckinConfig');
+
             if (user.role === 'admin' || user.role === 'parent') {
-                actionControls.style.display = 'none';
+                actionControls.style.display = 'block'; // 管理員也可以打卡
+                adminConfig.style.display = 'flex';     // 顯示打卡聊天室設定
+                await loadChatRoomsForSelect();
             } else {
                 actionControls.style.display = 'block';
+                adminConfig.style.display = 'none';     // 一般成員不顯示設定選單
             }
             window.loadData(); 
+        };
+
+        // 載入所有聊天室供管理員選擇作為打卡推播目標
+        async function loadChatRoomsForSelect() {
+            try {
+                const select = document.getElementById('targetChatRoomSelect');
+                select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
+                
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                querySnapshot.forEach(docSnap => {
+                    const room = docSnap.data();
+                    const opt = document.createElement('option');
+                    opt.value = docSnap.id;
+                    opt.innerText = room.name;
+                    select.appendChild(opt);
+                });
+
+                // 讀取目前設定的目標聊天室
+                const configDoc = await getDoc(doc(db, "settings", "checkinConfig"));
+                if (configDoc.exists()) {
+                    const targetRoomId = configDoc.data().targetRoomId;
+                    if (targetRoomId) select.value = targetRoomId;
+                }
+            } catch (e) {
+                console.error("載入聊天室清單失敗", e);
+            }
+        }
+
+        // 管理員變更打卡聊天室設定時觸發
+        window.saveTargetChatRoom = async function(roomId) {
+            try {
+                await setDoc(doc(db, "settings", "checkinConfig"), {
+                    targetRoomId: roomId,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+                alert('已成功設定打卡通知發送的聊天室！');
+            } catch (e) {
+                console.error("儲存設定失敗", e);
+                alert('設定儲存失敗，請檢查網路。');
+            }
         };
 
         window.loadData = async function() {
@@ -513,20 +559,28 @@
                 window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name, docId: docRef.id };
                 window.initCalendar();
 
-                // 打卡成功後，發送訊息到家庭聊天室
-                // 這裡我們不再自己創建特定的「打卡通知群組」，而是假設他們有主要的家庭群組可以發送，或者您可以在這裡指定特定的 roomId。
-                // 由於目前系統設計為「自己建群組」，這裡暫時保留發送一般訊息的結構，若沒有指定 roomId，這條訊息目前會存在 messages 集合裡，但不一定會顯示在特定的群組對話框內，這部分如果需要修改請告訴我。
-                // 為了不干擾您的測試，我先將這裡註解，如果您希望打卡時自動發到某個特定群組，我們再把 roomId 加進去。
-                /*
-                const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
-                await addDoc(collection(db, "messages"), {
-                    sender: user.name,
-                    text: chatMessageText,
-                    timestamp: serverTimestamp()
-                });
-                */
+                // 檢查是否有設定打卡推播的目標群組
+                const configDoc = await getDoc(doc(db, "settings", "checkinConfig"));
+                if (configDoc.exists() && configDoc.data().targetRoomId) {
+                    const targetRoomId = configDoc.data().targetRoomId;
+                    const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
 
-                alert('打卡成功！');
+                    // 1. 寫入訊息到 messages 集合，並帶上 roomId
+                    await addDoc(collection(db, "messages"), {
+                        roomId: targetRoomId,
+                        sender: user.name,
+                        text: chatMessageText,
+                        timestamp: serverTimestamp()
+                    });
+
+                    // 2. 更新該群組的 lastMessage 與 lastMessageTime，觸發紅點通知
+                    await updateDoc(doc(db, "rooms", targetRoomId), {
+                        lastMessage: `${user.name}: ${chatMessageText}`,
+                        lastMessageTime: serverTimestamp()
+                    });
+                }
+
+                alert('打卡成功！已同步通知到指定的家庭聊天室。');
             } catch (e) {
                 console.error("打卡寫入失敗:", e);
                 alert('打卡發生錯誤，請檢查網路。');
