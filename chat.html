@@ -24,7 +24,7 @@
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         
         /* 介面容器切換 */
-        .view-container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; height: 80vh; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+        .view-container { max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; height: 80vh; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; position: relative; }
         
         /* --- 第一層：群組清單 (Room List) --- */
         .list-header { background: var(--primary-color); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px; }
@@ -41,28 +41,60 @@
         .room-last-msg { font-size: 13px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* --- 第二層：聊天室內 (Chat Room) --- */
-        .chat-header { background: var(--primary-color); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-header { background: var(--primary-color); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         .chat-header-left { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid white; }
         .chat-header-name { font-weight: bold; font-size: 16px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-room-settings { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
 
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
-        .chat-msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; }
-        .msg-mine { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 2px; }
-        .msg-other { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        
+        /* 訊息氣泡外層包裹 (為了已讀狀態排版) */
+        .chat-msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; }
+        .msg-mine-wrapper { align-self: flex-end; align-items: flex-end; }
+        .msg-other-wrapper { align-self: flex-start; align-items: flex-start; }
+
+        .chat-msg { padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; cursor: pointer; }
+        .msg-mine { background: #dcf8c6; border-bottom-right-radius: 2px; }
+        .msg-other { background: white; border-bottom-left-radius: 2px; }
         .msg-sender { font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
-        .msg-time { font-size: 11px; color: #999; text-align: right; margin-top: 5px; }
+        
+        /* 狀態列 (時間與已讀) */
+        .msg-status-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+        .msg-time { font-size: 10px; color: #888; }
+        .msg-read { font-size: 10px; color: #0277bd; font-weight: bold; }
+
+        /* 回覆與標記樣式 */
+        .reply-quote { background: rgba(0,0,0,0.05); border-left: 4px solid var(--primary-color); padding: 5px 8px; border-radius: 4px; font-size: 13px; color: #555; margin-bottom: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .mention-text { color: #1565c0; font-weight: bold; }
+        .msg-retracted { background: transparent; border: 1px solid #ccc; color: #888; font-style: italic; padding: 6px 12px; cursor: default; }
         
         .chat-photo { max-width: 100%; max-height: 220px; border-radius: 10px; cursor: pointer; display: block; border: 1px solid #ddd; margin-top: 4px; }
         
-        .chat-input-area { padding: 10px; background: #f0f0f0; display: flex; gap: 8px; align-items: center; border-top: 1px solid #ddd; }
+        /* --- 輸入區與功能擴充 --- */
+        .input-container-wrapper { background: #f0f0f0; border-top: 1px solid #ddd; display: flex; flex-direction: column; }
+        
+        .reply-preview-area { display: none; padding: 8px 15px; background: #e0e0e0; border-left: 4px solid var(--primary-color); font-size: 13px; color: #555; justify-content: space-between; align-items: center; }
+        .btn-cancel-reply { background: none; border: none; font-size: 18px; color: #888; cursor: pointer; }
+
+        .mention-menu { display: none; position: absolute; bottom: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; background: white; border-top: 1px solid #ddd; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 20; }
+        .mention-item { padding: 10px 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .mention-item:active { background: #f5f5f5; }
+
+        .chat-input-area { padding: 10px; display: flex; gap: 8px; align-items: center; position: relative; }
         .btn-upload-photo { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 5px; color: #555; }
         .chat-input-area input[type="text"] { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 15px; }
         .chat-input-area button.btn-send { padding: 10px 18px; background: var(--accent-color); color: white; border: none; font-weight: bold; border-radius: 20px; cursor: pointer; }
 
-        /* --- 照片放大全螢幕檢視器 (新增修改區) --- */
-        .photo-viewer { display: none; position: fixed; z-index: 4000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); flex-direction: column; justify-content: center; align-items: center; }
+        /* --- 訊息選項選單 (BottomSheet) --- */
+        .msg-action-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 5000; justify-content: center; align-items: flex-end; }
+        .msg-action-content { background: white; width: 100%; max-width: 650px; border-radius: 16px 16px 0 0; padding: 20px; box-sizing: border-box; animation: slideUp 0.2s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .action-btn { width: 100%; padding: 15px; background: none; border: none; font-size: 16px; border-bottom: 1px solid #eee; cursor: pointer; text-align: left; }
+        .action-btn.danger { color: #e53935; font-weight: bold; border-bottom: none; }
+
+        /* --- 照片放大全螢幕檢視器 --- */
+        .photo-viewer { display: none; position: fixed; z-index: 6000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); flex-direction: column; justify-content: center; align-items: center; }
         .viewer-content { max-width: 95%; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .close-viewer { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; font-weight: bold; cursor: pointer; background: rgba(0,0,0,0.5); width: 40px; height: 40px; text-align: center; line-height: 38px; border-radius: 50%; }
 
@@ -114,12 +146,37 @@
             <button class="btn-room-settings" id="btnOpenEditModal">⚙️</button>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-            <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">📷</button>
-            <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
+        
+        <!-- 輸入區與擴充功能區 -->
+        <div class="input-container-wrapper">
+            <!-- 回覆預覽區 -->
+            <div class="reply-preview-area" id="replyPreviewArea">
+                <div style="overflow:hidden;">
+                    <strong id="replyPreviewSender" style="color:var(--primary-color);"></strong><br>
+                    <span id="replyPreviewText" style="white-space:nowrap;"></span>
+                </div>
+                <button class="btn-cancel-reply" onclick="cancelReply()">✕</button>
+            </div>
             
-            <input type="text" id="chatInput" placeholder="輸入訊息...">
-            <button class="btn-send" id="btnSend">傳送</button>
+            <!-- @ 標記名單選單 -->
+            <div class="mention-menu" id="mentionMenu"></div>
+
+            <div class="chat-input-area">
+                <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">📷</button>
+                <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
+                
+                <input type="text" id="chatInput" placeholder="輸入訊息... (輸入 @ 可標記成員)">
+                <button class="btn-send" id="btnSend">傳送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 點擊訊息的操作選單 -->
+    <div class="msg-action-modal" id="msgActionModal" onclick="closeMsgActionModal(event)">
+        <div class="msg-action-content">
+            <button class="action-btn" id="btnActionReply" onclick="triggerReply()">回覆此訊息</button>
+            <button class="action-btn danger" id="btnActionRetract" onclick="triggerRetract()" style="display:none;">收回訊息 (24小時內)</button>
+            <button class="action-btn" style="text-align:center; color:#888;">取消</button>
         </div>
     </div>
 
@@ -151,7 +208,7 @@
         </div>
     </div>
 
-    <!-- 照片放大檢視器 (新增修改區) -->
+    <!-- 照片放大檢視器 -->
     <div id="photoViewerModal" class="photo-viewer" onclick="window.closePhotoViewer()">
         <span class="close-viewer">&times;</span>
         <img class="viewer-content" id="viewerImage">
@@ -186,6 +243,10 @@
         let messagesUnsubscribe = null;
         let uploadedAvatarBase64 = null; 
         let modalMode = 'create'; 
+
+        let pendingReplyMsgId = null;
+        let pendingReplyData = null;
+        let selectedMsgForAction = null; 
 
         fetchFamilyUsers();
         listenToRooms();
@@ -222,6 +283,8 @@
                     const room = docSnap.data();
                     const roomId = docSnap.id;
                     
+                    if (roomId === activeRoomId) activeRoomData = room;
+
                     let timeStr = "";
                     if (room.lastMessageTime && room.lastMessageTime.toDate) {
                         const dateObj = room.lastMessageTime.toDate();
@@ -251,7 +314,7 @@
             });
         }
 
-        function enterRoom(roomId, roomData) {
+        async function enterRoom(roomId, roomData) {
             activeRoomId = roomId;
             activeRoomData = roomData;
             
@@ -261,10 +324,22 @@
             document.getElementById('activeRoomName').innerText = roomData.name;
             document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=e3f2fd&color=1565c0`;
             
+            updateMyReadTimestamp(roomId);
             listenToMessages(roomId);
         }
 
+        async function updateMyReadTimestamp(roomId) {
+            if (!roomId) return;
+            try {
+                const roomRef = doc(db, "rooms", roomId);
+                const updateData = {};
+                updateData[`readTimestamps.${currentUser.name}`] = Date.now();
+                await updateDoc(roomRef, updateData);
+            } catch (e) { console.error("更新已讀時間失敗", e); }
+        }
+
         document.getElementById('btnBackToList').addEventListener('click', () => {
+            updateMyReadTimestamp(activeRoomId);
             if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
             activeRoomId = null;
             activeRoomData = null;
@@ -284,18 +359,96 @@
             );
 
             messagesUnsubscribe = onSnapshot(q, (snapshot) => {
+                const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 100;
                 msgContainer.innerHTML = '';
+                
                 if (snapshot.empty) {
                     msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">發個訊息打招呼吧！</div>';
                 } else {
                     snapshot.forEach((docSnap) => {
                         const msg = docSnap.data();
-                        appendMessageUI(msg);
+                        appendMessageUI(docSnap.id, msg);
                     });
                 }
-                msgContainer.scrollTop = msgContainer.scrollHeight;
+                
+                if (isAtBottom) msgContainer.scrollTop = msgContainer.scrollHeight;
+                updateMyReadTimestamp(roomId);
                 localStorage.setItem(`lastChatReadTime_${currentUser.name}`, String(Date.now()));
             });
+        }
+
+        // ================= 新版訊息渲染 (含已讀、收回、標記、回覆) =================
+        function appendMessageUI(msgId, msg) {
+            const isMine = (msg.sender === currentUser.name);
+            const wrapper = document.createElement('div');
+            wrapper.className = `chat-msg-wrapper ${isMine ? 'msg-mine-wrapper' : 'msg-other-wrapper'}`;
+            
+            let timeStr = "剛才";
+            let msgTimestampMs = Date.now();
+            if (msg.timestamp && msg.timestamp.toDate) {
+                msgTimestampMs = msg.timestamp.toDate().getTime();
+                const d = msg.timestamp.toDate();
+                timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            }
+
+            // 判斷已讀
+            let readCount = 0;
+            if (isMine && activeRoomData && activeRoomData.readTimestamps) {
+                Object.keys(activeRoomData.readTimestamps).forEach(pName => {
+                    if (pName !== currentUser.name && activeRoomData.readTimestamps[pName] >= msgTimestampMs) {
+                        readCount++;
+                    }
+                });
+            }
+            let readHtml = readCount > 0 ? `<span class="msg-read">已讀${readCount > 1 ? ' '+readCount : ''}</span>` : '';
+
+            // 判斷是否收回
+            if (msg.isRetracted) {
+                wrapper.innerHTML = `<div class="chat-msg msg-retracted">您收回了一則訊息</div>`;
+                document.getElementById('chatMessages').appendChild(wrapper);
+                return;
+            }
+
+            // @ 標記藍字處理
+            let displayText = msg.text || '';
+            if (activeRoomData && activeRoomData.participants) {
+                activeRoomData.participants.forEach(p => {
+                    if (p !== currentUser.name) {
+                        const regex = new RegExp(`@${p}`, 'g');
+                        displayText = displayText.replace(regex, `<span class="mention-text">@${p}</span>`);
+                    }
+                });
+            }
+
+            let contentHtml = '';
+            if (msg.imageUrl) {
+                contentHtml = `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)" title="點擊放大觀看">`;
+            } else {
+                contentHtml = `<div>${displayText}</div>`;
+            }
+
+            // 回覆引用
+            let replyHtml = '';
+            if (msg.replyTo) {
+                const replyText = msg.replyTo.text ? msg.replyTo.text : (msg.replyTo.imageUrl ? '傳送了圖片' : '訊息');
+                replyHtml = `<div class="reply-quote"><strong>${msg.replyTo.sender}</strong>: ${replyText}</div>`;
+            }
+
+            // 將純文字轉義避免引號錯誤
+            const safeText = (msg.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            wrapper.innerHTML = `
+                ${!isMine ? `<div class="msg-sender">${msg.sender}</div>` : ''}
+                <div class="chat-msg ${isMine ? 'msg-mine' : 'msg-other'}" onclick="openMsgAction('${msgId}', ${isMine}, ${msgTimestampMs}, '${msg.sender}', '${msg.imageUrl ? '[圖片]' : safeText}')">
+                    ${replyHtml}
+                    ${contentHtml}
+                </div>
+                <div class="msg-status-row">
+                    ${isMine ? readHtml : ''}
+                    <span class="msg-time">${timeStr}</span>
+                </div>
+            `;
+            document.getElementById('chatMessages').appendChild(wrapper);
         }
 
         // --- 照片全螢幕預覽控制 ---
@@ -308,50 +461,61 @@
             document.getElementById('viewerImage').src = '';
         };
 
-        // 渲染單筆訊息 (修正使用 window.openPhotoViewer)
-        function appendMessageUI(msg) {
-            const isMine = (msg.sender === currentUser.name);
-            const div = document.createElement('div');
-            div.className = `chat-msg ${isMine ? 'msg-mine' : 'msg-other'}`;
-            
-            let timeStr = "剛才";
-            if (msg.timestamp && msg.timestamp.toDate) {
-                const d = msg.timestamp.toDate();
-                timeStr = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-            }
+        // ================= 輸入區功能 (@標記 與 傳送) =================
+        const chatInput = document.getElementById('chatInput');
+        const mentionMenu = document.getElementById('mentionMenu');
 
-            let contentHtml = '';
-            if (msg.imageUrl) {
-                // 已修正：點擊呼叫自訂放大函式，不使用新分頁
-                contentHtml = `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)" title="點擊放大觀看">`;
-            } else {
-                contentHtml = `<div>${msg.text}</div>`;
+        chatInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const lastAt = val.lastIndexOf('@');
+            if (lastAt !== -1 && (lastAt === 0 || val.charAt(lastAt - 1) === ' ')) {
+                const participants = activeRoomData.participants.filter(p => p !== currentUser.name);
+                if (participants.length > 0) {
+                    mentionMenu.innerHTML = '';
+                    participants.forEach(p => {
+                        const item = document.createElement('div');
+                        item.className = 'mention-item';
+                        item.innerText = p;
+                        item.onclick = () => insertMention(p, lastAt);
+                        mentionMenu.appendChild(item);
+                    });
+                    mentionMenu.style.display = 'block';
+                    return;
+                }
             }
+            mentionMenu.style.display = 'none';
+        });
 
-            div.innerHTML = `
-                ${!isMine ? `<div class="msg-sender">${msg.sender}</div>` : ''}
-                ${contentHtml}
-                <div class="msg-time">${timeStr}</div>
-            `;
-            document.getElementById('chatMessages').appendChild(div);
+        function insertMention(name, atIndex) {
+            const currentVal = chatInput.value;
+            chatInput.value = currentVal.substring(0, atIndex) + `@${name} ` + currentVal.substring(atIndex + 1);
+            mentionMenu.style.display = 'none';
+            chatInput.focus();
         }
 
         // 傳送文字訊息
         document.getElementById('btnSend').addEventListener('click', async () => {
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text || !activeRoomId) return;
+            const text = chatInput.value.trim();
+            if (!text && !document.getElementById('chatPhotoInput').files[0]) return;
 
-            input.value = '';
+            chatInput.value = '';
             document.getElementById('btnSend').disabled = true;
+            mentionMenu.style.display = 'none';
 
             try {
-                await addDoc(collection(db, "messages"), {
+                const msgData = {
                     roomId: activeRoomId,
                     sender: currentUser.name,
                     text: text,
                     timestamp: serverTimestamp()
-                });
+                };
+
+                if (pendingReplyMsgId) {
+                    msgData.replyTo = pendingReplyData;
+                    cancelReply(); 
+                }
+
+                await addDoc(collection(db, "messages"), msgData);
 
                 await updateDoc(doc(db, "rooms", activeRoomId), {
                     lastMessage: `${currentUser.name}: ${text}`,
@@ -361,12 +525,12 @@
                 console.error("發送文字失敗：", e);
             } finally {
                 document.getElementById('btnSend').disabled = false;
-                input.focus();
+                chatInput.focus();
             }
         });
-        document.getElementById('chatInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnSend').click(); });
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnSend').click(); });
 
-        // 照片上傳處理 (壓縮並上傳)
+        // 照片上傳處理
         const btnTriggerPhoto = document.getElementById('btnTriggerPhoto');
         const chatPhotoInput = document.getElementById('chatPhotoInput');
 
@@ -399,13 +563,20 @@
                     const base64Img = canvas.toDataURL('image/jpeg', 0.7); 
 
                     try {
-                        await addDoc(collection(db, "messages"), {
+                        const msgData = {
                             roomId: activeRoomId,
                             sender: currentUser.name,
                             text: "傳送了圖片",
                             imageUrl: base64Img,
                             timestamp: serverTimestamp()
-                        });
+                        };
+
+                        if (pendingReplyMsgId) {
+                            msgData.replyTo = pendingReplyData;
+                            cancelReply(); 
+                        }
+
+                        await addDoc(collection(db, "messages"), msgData);
 
                         await updateDoc(doc(db, "rooms", activeRoomId), {
                             lastMessage: `${currentUser.name}: 傳送了圖片 📷`,
@@ -425,6 +596,58 @@
             };
             reader.readAsDataURL(file);
         });
+
+        // ================= 訊息點擊操作 (回覆/收回) =================
+        window.openMsgAction = function(msgId, isMine, timestampMs, sender, text) {
+            selectedMsgForAction = { id: msgId, sender, text, isMine, timestampMs };
+            
+            const btnRetract = document.getElementById('btnActionRetract');
+            const hoursPassed = (Date.now() - timestampMs) / (1000 * 60 * 60);
+            if (isMine && hoursPassed < 24) {
+                btnRetract.style.display = 'block';
+            } else {
+                btnRetract.style.display = 'none';
+            }
+
+            document.getElementById('msgActionModal').style.display = 'flex';
+        };
+
+        window.closeMsgActionModal = function(e) {
+            if (e.target.id === 'msgActionModal' || e.target.tagName === 'BUTTON') {
+                document.getElementById('msgActionModal').style.display = 'none';
+            }
+        };
+
+        window.triggerReply = function() {
+            pendingReplyMsgId = selectedMsgForAction.id;
+            pendingReplyData = { sender: selectedMsgForAction.sender, text: selectedMsgForAction.text };
+            
+            document.getElementById('replyPreviewSender').innerText = selectedMsgForAction.sender;
+            document.getElementById('replyPreviewText').innerText = selectedMsgForAction.text;
+            document.getElementById('replyPreviewArea').style.display = 'flex';
+            
+            document.getElementById('msgActionModal').style.display = 'none';
+            chatInput.focus();
+        };
+
+        window.cancelReply = function() {
+            pendingReplyMsgId = null;
+            pendingReplyData = null;
+            document.getElementById('replyPreviewArea').style.display = 'none';
+        };
+
+        window.triggerRetract = async function() {
+            if (!confirm("確定要收回此訊息嗎？")) return;
+            try {
+                await updateDoc(doc(db, "messages", selectedMsgForAction.id), {
+                    isRetracted: true,
+                    text: "", 
+                    imageUrl: null
+                });
+            } catch(e) { alert("收回失敗，請檢查網路"); }
+            document.getElementById('msgActionModal').style.display = 'none';
+        };
+
 
         // ================= Modal 群組設定邏輯 =================
         document.getElementById('groupAvatarInput').addEventListener('change', (e) => {
