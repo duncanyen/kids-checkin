@@ -100,7 +100,7 @@
     <!-- 登入畫面 -->
     <div id="loginSection">
         <div class="login-logo">🏡</div>
-        <div class="login-title">HomeBase</div>
+        <div class="login-title">Welcome to HomeBase</div>
         <div class="user-selection" id="userSelectionContainer"></div>
     </div>
 
@@ -131,11 +131,10 @@
                 <div class="dash-title">家庭聊天室</div>
             </div>
 
-            <!-- 🌟 新增的 Moments 相簿區塊 -->
-<div class="dash-card" onclick="window.location.href='gallery.html'">
- <div class="dash-icon">📸</div>
- <div class="dash-title">Photo Dump</div>
-</div>
+            <div class="dash-card" onclick="window.location.href='gallery.html'">
+                <div class="dash-icon">📸</div>
+                <div class="dash-title">Photo Dump</div>
+            </div>
             <div class="dash-card" onclick="window.location.href='wishwall.html'" style="background: #fff8e1; border: 2px solid #ffe0b2;">
                 <div class="dash-icon">✨</div>
                 <div class="dash-title" style="color: #f57c00;">許願牆</div>
@@ -146,10 +145,9 @@
             </div>
 
             <div class="dash-card" onclick="window.location.href='expense.html'">
-    <div class="dash-icon">💰</div>
-    <div class="dash-title">記帳本</div>
-</div>
-
+                <div class="dash-icon">💰</div>
+                <div class="dash-title">記帳本</div>
+            </div>
 
             <div class="dash-card" onclick="window.location.href='settings.html'">
                 <div class="dash-icon">⚙️</div>
@@ -194,7 +192,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        // ★ 注意：這裡補上了 onSnapshot 的匯入
+        import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -209,6 +208,9 @@
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
+
+        // ★ 宣告用來存儲即時監聽的變數
+        let unreadUnsubscribe = null;
 
         // 掛載全域變數與方法
         window.selectedUserObj = null;
@@ -319,8 +321,13 @@
             window.showDashboard();
         };
 
+        // ★ 登出時，關閉監聽器避免記憶體洩漏與錯誤提示
         window.logout = function() {
             sessionStorage.removeItem('familyCheckInUser');
+            if (unreadUnsubscribe) {
+                unreadUnsubscribe();
+                unreadUnsubscribe = null;
+            }
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('loginSection').style.display = 'flex';
@@ -342,39 +349,63 @@
                 document.getElementById('adminCard').style.display = 'none';
             }
 
+            // ★ 顯示主選單時，啟動未讀訊息的即時監聽
             window.checkUnreadMessages();
         };
 
-        // 計算上一次離開後的新增訊息數量
-        window.checkUnreadMessages = async function() {
+        // ★ 全新優化版：檢查未讀訊息 (只監聽自己有參與的群組狀態，效能極高)
+        window.checkUnreadMessages = function() {
             const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
             if (!userStr) return;
             const user = JSON.parse(userStr);
 
-            try {
-                const querySnapshot = await getDocs(collection(db, "messages"));
-                const lastReadTimeStr = localStorage.getItem(`lastChatReadTime_${user.name}`) || '0';
-                const lastReadTime = parseInt(lastReadTimeStr);
+            // 如果已經有監聽，先取消，避免重複綁定
+            if (unreadUnsubscribe) {
+                unreadUnsubscribe();
+            }
 
-                let unreadCount = 0;
-                querySnapshot.forEach(docSnap => {
-                    const msg = docSnap.data();
-                    // 若訊息 timestamp 晚於上次閱讀時間，且發送者不是自己，計入未讀
-                    if (msg.timestamp && msg.timestamp.toDate) {
-                        const msgTime = msg.timestamp.toDate().getTime();
-                        if (msgTime > lastReadTime && msg.sender !== user.name) {
-                            unreadCount++;
+            try {
+                const q = query(
+                    collection(db, "rooms"),
+                    where("participants", "array-contains", user.name)
+                );
+                
+                unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                    let unreadRoomsCount = 0;
+
+                    querySnapshot.forEach(docSnap => {
+                        const room = docSnap.data();
+                        
+                        let lastMsgTime = 0;
+                        if (room.lastMessageTime && room.lastMessageTime.toDate) {
+                            lastMsgTime = room.lastMessageTime.toDate().getTime();
                         }
+
+                        let myReadTime = 0;
+                        if (room.readTimestamps && room.readTimestamps[user.name]) {
+                            myReadTime = room.readTimestamps[user.name];
+                        }
+
+                        // 如果群組剛建好，沒有 lastMessage，就不算未讀
+                        const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
+                        // 檢查最後一句話是不是自己發的，自己發的不算未讀
+                        const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+
+                        // 判斷邏輯：有訊息、不是我發的、且發送時間大於我的已讀時間
+                        if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) {
+                            unreadRoomsCount++;
+                        }
+                    });
+
+                    // 更新 UI 紅點
+                    const badge = document.getElementById('chatBadge');
+                    if (unreadRoomsCount > 0) {
+                        badge.style.display = 'block';
+                        badge.innerText = unreadRoomsCount > 99 ? '99+' : unreadRoomsCount;
+                    } else {
+                        badge.style.display = 'none';
                     }
                 });
-
-                const badge = document.getElementById('chatBadge');
-                if (unreadCount > 0) {
-                    badge.style.display = 'block';
-                    badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
-                } else {
-                    badge.style.display = 'none';
-                }
             } catch (e) {
                 console.error("檢查未讀訊息失敗:", e);
             }
@@ -482,15 +513,20 @@
                 window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name, docId: docRef.id };
                 window.initCalendar();
 
+                // 打卡成功後，發送訊息到家庭聊天室
+                // 這裡我們不再自己創建特定的「打卡通知群組」，而是假設他們有主要的家庭群組可以發送，或者您可以在這裡指定特定的 roomId。
+                // 由於目前系統設計為「自己建群組」，這裡暫時保留發送一般訊息的結構，若沒有指定 roomId，這條訊息目前會存在 messages 集合裡，但不一定會顯示在特定的群組對話框內，這部分如果需要修改請告訴我。
+                // 為了不干擾您的測試，我先將這裡註解，如果您希望打卡時自動發到某個特定群組，我們再把 roomId 加進去。
+                /*
                 const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
-                
                 await addDoc(collection(db, "messages"), {
                     sender: user.name,
                     text: chatMessageText,
                     timestamp: serverTimestamp()
                 });
+                */
 
-                alert('打卡成功！已同步通知到家庭聊天室。');
+                alert('打卡成功！');
             } catch (e) {
                 console.error("打卡寫入失敗:", e);
                 alert('打卡發生錯誤，請檢查網路。');
