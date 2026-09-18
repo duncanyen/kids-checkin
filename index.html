@@ -351,37 +351,48 @@
         }
 
         window.checkUnreadMessages = function() {
-            const userStr = sessionStorage.getItem('familyCheckInUser');
-            if (!userStr) return;
-            const user = JSON.parse(userStr);
+    const userStr = sessionStorage.getItem('familyCheckInUser');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
 
-            try {
-                const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
-                unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
-                    let unreadRoomsCount = 0;
-                    querySnapshot.forEach(docSnap => {
-                        const room = docSnap.data();
-                        let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
-                        let myReadTime = room.readTimestamps?.[user.name] || 0;
-                        const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
-                        const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+    try {
+        const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
+        unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
+            let totalUnreadMessages = 0; // 改為計算所有的「未讀訊息數」總和
 
-                        if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) {
-                            unreadRoomsCount++;
-                        }
-                    });
-                    const badge = document.getElementById('chatBadge');
-                    if (badge) {
-                        if (unreadRoomsCount > 0) {
-                            badge.style.display = 'block';
-                            badge.innerText = unreadRoomsCount > 99 ? '99+' : unreadRoomsCount;
-                        } else {
-                            badge.style.display = 'none';
-                        }
+            querySnapshot.forEach(docSnap => {
+                const room = docSnap.data();
+                
+                // ★ 新版邏輯：直接讀取該房間針對此使用者的未讀計數器
+                if (room.unreadCount && room.unreadCount[user.name]) {
+                    totalUnreadMessages += room.unreadCount[user.name];
+                } 
+                else {
+                    // 相容舊版資料：若尚無 unreadCount 欄位，仍提供基本的未讀提示
+                    let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
+                    let myReadTime = room.readTimestamps?.[user.name] || 0;
+                    const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
+                    const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+
+                    if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) {
+                        totalUnreadMessages++;
                     }
-                });
-            } catch (e) { console.error("檢查未讀訊息失敗:", e); }
-        };
+                }
+            });
+
+            const badge = document.getElementById('chatBadge');
+            if (badge) {
+                if (totalUnreadMessages > 0) {
+                    badge.style.display = 'block';
+                    // 顯示真實的總計數字（超過99顯示99+）
+                    badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        });
+    } catch (e) { console.error("檢查未讀訊息失敗:", e); }
+};
     </script>
 </body>
 </html>
