@@ -10,7 +10,6 @@
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
-        /* ★ 統一使用與首頁完全相同的 CSS 變數與字體 */
         :root {
             --primary: #10b981;
             --primary-dark: #059669;
@@ -23,12 +22,13 @@
             --bg-color: #f8fafc;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* ★ 將 height: 100vh 改為 100dvh，完美解決手機瀏覽器底部工具列遮擋問題 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: var(--text-main); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 500px; width: 100%; margin-left: auto; margin-right: auto; flex-shrink: 0; }
         .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
         
-        /* 介面容器切換 (配合現代化卡片設計) */
         .view-container { max-width: 500px; width: 100%; margin: 0 auto; background: white; border-radius: 22px; flex: 1; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; position: relative; }
         
         /* --- 第一層：群組清單 --- */
@@ -62,17 +62,14 @@
         .msg-other-wrapper { align-self: flex-start; align-items: flex-start; }
 
         .chat-msg { padding: 12px 16px; border-radius: 18px; font-size: 15px; position: relative; line-height: 1.5; word-wrap: break-word; cursor: pointer; max-width: 100%; box-sizing: border-box; box-shadow: var(--shadow-sm); }
-        /* 統一對話框顏色 */
         .msg-mine { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
         .msg-other { background: white; color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid rgba(0,0,0,0.03); }
         .msg-sender { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 700; padding-left: 4px; }
         
-        /* 狀態列 */
         .msg-status-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding: 0 4px; }
         .msg-time { font-size: 10px; color: var(--text-sub); font-weight: 600; }
         .msg-read { font-size: 10px; color: var(--text-sub); font-weight: 600; }
 
-        /* 回覆引言區塊的防跑版限制 */
         .reply-quote { 
             background: rgba(0,0,0,0.05); border-left: 4px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 8px; 
             max-width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: break-word;
@@ -140,7 +137,8 @@
     </style>
 </head>
 <body>
-    <div class="top-nav">
+    <!-- ★ 加入 ID 以便在進入聊天室時隱藏 -->
+    <div class="top-nav" id="mainTopNav">
         <button class="btn-back" id="btnBackToDashboard">❮ 返回主選單</button>
         <div style="width: 80px;"></div> <!-- Spacer 保持按鈕置左 -->
     </div>
@@ -235,7 +233,6 @@
     </div>
 
     <script type="module">
-        // ★ 注意：這裡匯入了 increment 來進行精準的未讀計數
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, getDocs, query, where, orderBy, 
@@ -273,7 +270,6 @@
         let currentMessagesList = [];
         let isFirstLoad = true; 
 
-        // ★ 通用紀錄 Log 函式
         async function recordLog(actionType, detailsText) {
             try {
                 const now = new Date();
@@ -285,7 +281,6 @@
         fetchFamilyUsers();
         listenToRooms();
 
-        // 載入頁面時紀錄
         window.onload = async function() {
             await recordLog('功能瀏覽', '進入「家庭聊天室」清單頁面');
         };
@@ -327,7 +322,6 @@
                     const displayAvatar = room.avatar || `https://ui-avatars.com/api/?name=${room.name}&background=ecfdf5&color=059669`;
                     const displayLastMsg = room.lastMessage || "尚未有訊息";
                     
-                    // 顯示這個群組專屬的未讀計數
                     let myUnreadCount = (room.unreadCount && room.unreadCount[currentUser.name]) || 0;
                     let unreadBadgeHtml = myUnreadCount > 0 ? `<span class="unread-badge">${myUnreadCount > 99 ? '99+' : myUnreadCount}</span>` : '';
 
@@ -355,8 +349,11 @@
             currentMessagesList = [];
             isFirstLoad = true; 
             
+            // ★ 切換畫面時，隱藏最上方的「返回主選單」按鈕，釋放畫面高度
+            document.getElementById('mainTopNav').style.display = 'none';
             document.getElementById('viewRoomList').style.display = 'none';
             document.getElementById('viewChatRoom').style.display = 'flex';
+            
             document.getElementById('activeRoomName').innerText = roomData.name;
             document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=ecfdf5&color=059669`;
             
@@ -377,14 +374,13 @@
             });
         }
 
-        // ★ 修復 Bug 核心：將該房間的使用者 unreadCount 歸零
         async function updateMyReadTimestamp(roomId) {
             if (!roomId) return;
             try {
                 const roomRef = doc(db, "rooms", roomId);
                 const updateData = {};
                 updateData[`readTimestamps.${currentUser.name}`] = Date.now();
-                updateData[`unreadCount.${currentUser.name}`] = 0; // 進入房間已讀，計數歸零
+                updateData[`unreadCount.${currentUser.name}`] = 0; 
                 await updateDoc(roomRef, updateData);
             } catch (e) { console.error("更新已讀時間失敗", e); }
         }
@@ -395,6 +391,9 @@
             if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } 
             
             activeRoomId = null; activeRoomData = null; currentMessagesList = [];
+            
+            // ★ 退回群組列表時，恢復顯示「返回主選單」按鈕
+            document.getElementById('mainTopNav').style.display = 'flex';
             document.getElementById('viewChatRoom').style.display = 'none';
             document.getElementById('viewRoomList').style.display = 'flex';
         });
@@ -423,7 +422,6 @@
             msgContainer.innerHTML = '';
             currentMessagesList.forEach(msg => { appendMessageUI(msg.id, msg); });
 
-            // 確保捲動到最新訊息
             if (isFirstLoad || isAtBottom) {
                 setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 50);
                 setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 250);
@@ -532,7 +530,6 @@
                 if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
                 await addDoc(collection(db, "messages"), msgData);
 
-                // ★ 修復 Bug 核心：為其他群組成員「未讀數量 + 1」
                 const roomRef = doc(db, "rooms", activeRoomId);
                 let updatePayload = {
                     lastMessage: `${currentUser.name}: ${text}`,
@@ -573,7 +570,6 @@
                         if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
                         await addDoc(collection(db, "messages"), msgData);
 
-                        // ★ 同步更新其他成員的未讀圖片數
                         const roomRef = doc(db, "rooms", activeRoomId);
                         let updatePayload = { lastMessage: `${currentUser.name}: 傳送了圖片 📷`, lastMessageTime: serverTimestamp() };
                         activeRoomData.participants.forEach(p => {
@@ -613,7 +609,6 @@
             document.getElementById('msgActionModal').style.display = 'none';
         };
 
-        // Modal 群組設定
         document.getElementById('groupAvatarInput').addEventListener('change', (e) => {
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = function(evt) {
