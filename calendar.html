@@ -7,123 +7,201 @@
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="apple-mobile-web-app-title" content="HomeBase">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
         :root {
-            --primary-color: #2e7d32;
-            --primary-light: #e8f5e9;
-            --accent-color: #4caf50;
-            --cancel-color: #e53935;
-            --bg-color: #f4f9f4;
-            --today-bg: #fffde7;
-            --public-event: #1976d2;
-            --private-event: #7b1fa2;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #ecfdf5;
+            --danger: #ef4444;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            --bg-color: #f8fafc;
+            --today-bg: #fffbeb;
+            --public-event: #3b82f6;
+            --private-event: #8b5cf6;
         }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
-            background-color: var(--bg-color);
-            margin: 0; padding: 20px; color: #333; text-align: center;
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg-color); margin: 0; padding: 15px; color: var(--text-main); 
+            height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
         }
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
-        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
-        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
-        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; }
+        
+        /* 導覽列 */
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 600px; width: 100%; margin-left: auto; margin-right: auto; flex-shrink: 0; }
+        .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
+        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: var(--shadow-sm); border: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; color: var(--primary-dark); }
+        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
 
-        /* 月曆容器 */
-        .calendar-container { max-width: 650px; margin: 0 auto; background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: #444; margin-bottom: 15px; }
-        .month-btn { background: var(--primary-light); color: var(--primary-color); border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        /* 主要容器 */
+        .view-container { max-width: 600px; width: 100%; margin: 0 auto; background: white; border-radius: 22px; flex: 1; overflow-y: auto; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 16px; }
+        
+        .system-title { color: var(--text-main); font-size: 20px; margin-top: 0; margin-bottom: 16px; font-weight: 800; text-align: center; }
+
+        /* 月曆區塊 */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 16px; }
+        .month-btn { background: var(--primary-light); color: var(--primary-dark); border: none; padding: 8px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .month-btn:active { background: #d1fae5; transform: scale(0.95); }
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-        .weekday { font-weight: bold; background-color: #f5f5f5; padding: 8px 0; border-radius: 6px; color: #666; font-size: 13px; }
-        .day-cell { border: 1px solid #e0e0e0; border-radius: 8px; min-height: 85px; padding: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; }
-        .day-cell:hover { background-color: #f9f9f9; border-color: var(--primary-color); }
-        .day-cell .date-num { font-size: 12px; font-weight: bold; color: #777; align-self: flex-start; margin-bottom: 3px; }
-        .day-cell.today { border: 2px solid var(--primary-color); background-color: var(--today-bg); }
-        .day-cell.today .date-num { color: var(--primary-color); }
+        .weekday { font-weight: 700; background-color: #f8fafc; padding: 10px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
+        .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; min-height: 90px; padding: 6px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .day-cell:active { background-color: #f8fafc; border-color: var(--primary); }
+        .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); align-self: flex-start; margin-bottom: 4px; }
+        
+        .day-cell.today { border: 2px solid var(--primary); background-color: var(--today-bg); }
+        .day-cell.today .date-num { color: var(--primary-dark); }
+        .day-cell.past-day { opacity: 0.6; background-color: #fafafa; }
 
         /* 行程標籤條 */
-        .event-badge { font-size: 10px; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; line-height: 1.2; }
+        .event-badge { font-size: 11px; border-radius: 6px; padding: 3px 5px; margin-bottom: 3px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; line-height: 1.2; font-weight: 600; display: flex; align-items: center; gap: 3px; }
         .event-badge.public { background-color: var(--public-event); }
         .event-badge.private { background-color: var(--private-event); }
+        .event-badge.expired { opacity: 0.5; filter: grayscale(100%); }
 
         /* 彈窗 Modal */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 16px; text-align: left; width: 90%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto; }
-        .modal-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 24px; border-radius: 24px; text-align: left; width: 90%; max-width: 420px; box-shadow: var(--shadow-lg); max-height: 85vh; display: flex; flex-direction: column; }
+        .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
         
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 4px; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        
-        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px; }
-        .btn-save { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-close { background: #888; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .modal-body { overflow-y: auto; flex: 1; padding-right: 5px; }
 
-        /* 當日待辦清單 (彈窗內) */
-        .day-event-list { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }
-        .event-item { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--public-event); display: flex; justify-content: space-between; align-items: center; }
+        /* 列表模式 */
+        .day-event-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .event-item { background: #f8fafc; padding: 14px; border-radius: 12px; border-left: 4px solid var(--public-event); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .event-item.private { border-left-color: var(--private-event); }
-        .event-item-title { font-weight: bold; font-size: 14px; color: #333; }
-        .event-item-meta { font-size: 11px; color: #888; margin-top: 2px; }
-        .btn-del { background: var(--cancel-color); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+        .event-item-main { flex: 1; }
+        .event-item-title { font-weight: 800; font-size: 15px; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+        .event-item-meta { font-size: 12px; color: var(--text-sub); margin-top: 4px; font-weight: 600; display: flex; gap: 10px; flex-wrap: wrap; }
+        .event-actions { display: flex; gap: 8px; margin-left: 10px; }
+        .btn-icon { background: white; border: 1px solid #e5e7eb; color: var(--text-main); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; font-weight: bold; }
+        .btn-icon.del { color: var(--danger); border-color: #fecaca; background: #fef2f2; }
+
+        .btn-add-new { background: var(--primary-light); color: var(--primary-dark); border: none; padding: 12px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; }
+
+        /* 表單模式 */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
+        .form-group input[type="text"], .form-group textarea, .form-group select, .form-group input[type="time"], .form-group input[type="number"] { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 14px; background: #f8fafc; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); background: white; }
+        
+        .row-group { display: flex; gap: 10px; align-items: center; }
+        .row-group .form-group { flex: 1; margin-bottom: 0; }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--text-main); cursor: pointer; }
+        .checkbox-label input { width: 18px; height: 18px; accent-color: var(--primary); }
+
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; flex-shrink: 0; }
+        .btn-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px; }
+        .btn-save { flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
+        <button class="btn-back" id="btnBack">❮ 返回</button>
         <div class="current-user-badge" id="btnLogout">
             <img id="calUserAvatar" class="mini-avatar" src="" alt="">
             <span id="calUserName">載入中...</span>
         </div>
     </div>
 
-    <h2 class="system-title">📅 家庭行事曆</h2>
-
-    <!-- 月曆主體 -->
-    <div class="calendar-container">
+    <div class="view-container">
+        <h2 class="system-title">📅 家庭行事曆</h2>
         <div class="calendar-header">
-            <button class="month-btn" id="btnPrevMonth">❮ 上一個月</button>
+            <button class="month-btn" id="btnPrevMonth">❮ 上個月</button>
             <span id="calendarTitle">載入中...</span>
-            <button class="month-btn" id="btnNextMonth">下一個月 ❯</button>
+            <button class="month-btn" id="btnNextMonth">下個月 ❯</button>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
-    <!-- 點擊日期彈窗 (新增/檢視待辦) -->
+    <!-- 共用 Modal (列表與表單) -->
     <div class="modal" id="eventModal">
         <div class="modal-content">
-            <h3 class="modal-title" id="modalDateTitle">2026-09-16 待辦事項</h3>
+            <h3 class="modal-title" id="modalDateTitle">2026-09-16</h3>
             
-            <!-- 新增待辦表單 -->
-            <div class="form-group">
-                <label>行程標題：</label>
-                <input type="text" id="eventTitleInput" placeholder="例如: 班親會、繳電話費">
-            </div>
-            <div class="form-group">
-                <label>詳細說明 (選填)：</label>
-                <textarea id="eventDescInput" rows="2" placeholder="詳細內容說明..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>發佈對象 (可視範圍)：</label>
-                <select id="eventVisibilitySelect">
-                    <option value="public">🌐 全體成員 (大家都能看見)</option>
-                    <option value="private">🔒 僅個人 (只有自己能看見)</option>
-                </select>
+            <div class="modal-body">
+                <!-- 視圖 1：當日待辦清單 -->
+                <div id="listView">
+                    <div class="day-event-list" id="dayEventsContainer"></div>
+                    <button class="btn-add-new" id="btnShowAddForm">➕ 新增待辦事項</button>
+                </div>
+
+                <!-- 視圖 2：新增/編輯表單 -->
+                <div id="formView" style="display: none;">
+                    <div class="form-group">
+                        <label>行程標題</label>
+                        <input type="text" id="evTitle" placeholder="例如: 班親會、繳電話費">
+                    </div>
+                    
+                    <div class="row-group" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>分類圖示</label>
+                            <select id="evCategory">
+                                <option value="school">🏫 學校</option>
+                                <option value="company">💼 公司</option>
+                                <option value="restaurant">🍽️ 餐廳</option>
+                                <option value="birthday">🎂 生日</option>
+                                <option value="personal">👤 個人</option>
+                                <option value="other">📌 其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>權限</label>
+                            <select id="evVisibility">
+                                <option value="public">🌐 全體</option>
+                                <option value="private">🔒 僅自己</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="evIsAllDay" checked> 這是全天活動
+                        </label>
+                    </div>
+
+                    <div class="row-group" id="timeInputsGroup" style="display: none; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>開始時間</label>
+                            <input type="time" id="evStartTime" value="09:00">
+                        </div>
+                        <div class="form-group">
+                            <label>結束時間</label>
+                            <input type="time" id="evEndTime" value="10:00">
+                        </div>
+                    </div>
+
+                    <div class="row-group" style="margin-bottom: 14px;">
+                        <div class="form-group" style="flex: 0.6;">
+                            <label>提前提醒</label>
+                            <input type="number" id="evReminderVal" value="" min="1" disabled placeholder="無">
+                        </div>
+                        <div class="form-group">
+                            <label>單位</label>
+                            <select id="evReminderUnit">
+                                <option value="none">不提醒</option>
+                                <option value="minutes">分鐘</option>
+                                <option value="hours">小時</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>備註說明 (選填)</label>
+                        <textarea id="evDesc" rows="2" placeholder="詳細內容..."></textarea>
+                    </div>
+                </div>
             </div>
 
+            <!-- 按鈕區塊 -->
             <div class="modal-btns">
-                <button class="btn-close" id="btnCloseModal">取消</button>
-                <button class="btn-save" id="btnSaveEvent">新增待辦</button>
-            </div>
-
-            <!-- 當天已有的待辦列表 -->
-            <div class="day-event-list">
-                <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #555;">📋 當日行程清單：</div>
-                <div id="dayEventsContainer"></div>
+                <button class="btn-cancel" id="btnCloseModal">關閉</button>
+                <button class="btn-cancel" id="btnCancelForm" style="display:none;">取消編輯</button>
+                <button class="btn-save" id="btnSaveEvent" style="display:none;">儲存</button>
             </div>
         </div>
     </div>
@@ -131,26 +209,17 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
-            getFirestore, 
-            collection, 
-            addDoc, 
-            deleteDoc, 
-            doc, 
-            onSnapshot, 
-            query, 
-            where, 
-            serverTimestamp 
+            getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
+            onSnapshot, serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化 (homebasedb)
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
             projectId: "homebasedb",
             storageBucket: "homebasedb.firebasestorage.app",
             messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
-            measurementId: "G-K7FSPG5B9R"
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -160,54 +229,65 @@
         let viewDate = new Date();
         let selectedDateKey = '';
         let allFetchedEvents = [];
+        let editingEventId = null;
 
-        // 2. 登入檢查
+        const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
+
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         if (!savedUserStr) {
-            alert('請先登入！');
-            window.location.href = 'index.html';
+            alert('請先登入！'); window.location.href = 'index.html';
         } else {
             currentUser = JSON.parse(savedUserStr);
-            document.getElementById('calUserAvatar').src = currentUser.avatar || 'homebase_icon.jpg';
+            document.getElementById('calUserAvatar').src = currentUser.avatar || 'https://ui-avatars.com/api/?name='+currentUser.name+'&background=ecfdf5&color=059669';
             document.getElementById('calUserName').innerText = currentUser.name || '';
             
             initCalendar();
             listenToEvents();
         }
 
-        // 3. 監聽 Firebase events 集合
+        async function recordLog(actionType, detailsText) {
+            try {
+                const now = new Date();
+                const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
+            } catch (e) { console.error("寫入 Log 失敗:", e); }
+        }
+        window.onload = async function() { await recordLog('功能瀏覽', '進入「家庭行事曆」'); };
+
         function listenToEvents() {
-            const eventsRef = collection(db, "events");
-            
-            onSnapshot(eventsRef, (snapshot) => {
+            onSnapshot(collection(db, "events"), (snapshot) => {
                 allFetchedEvents = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    // 權限過濾：如果是 public 全體，或是自己的 private 個人行程才加入
                     if (data.visibility === 'public' || data.operator === currentUser.name) {
                         allFetchedEvents.push({ id: docSnap.id, ...data });
                     }
                 });
                 renderCalendar();
-                if (selectedDateKey) {
+                if (document.getElementById('eventModal').style.display === 'flex' && !editingEventId) {
                     renderDayEvents(selectedDateKey);
                 }
-            }, (error) => {
-                console.error("監聽行程失敗:", error);
             });
         }
 
-        // 4. 渲染月曆結構
         function initCalendar() {
-            document.getElementById('btnPrevMonth').addEventListener('click', () => {
-                viewDate.setMonth(viewDate.getMonth() - 1);
-                renderCalendar();
-            });
-            document.getElementById('btnNextMonth').addEventListener('click', () => {
-                viewDate.setMonth(viewDate.getMonth() + 1);
-                renderCalendar();
-            });
+            document.getElementById('btnPrevMonth').addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
+            document.getElementById('btnNextMonth').addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
             renderCalendar();
+        }
+
+        function isEventExpired(evt, dateKey) {
+            const now = new Date();
+            const evtDate = new Date(dateKey);
+            if (evt.isAllDay !== false) { 
+                evtDate.setHours(23, 59, 59);
+                return now > evtDate;
+            } else {
+                if(!evt.endTime) return false;
+                const [h, m] = evt.endTime.split(':');
+                evtDate.setHours(h, m, 0);
+                return now > evtDate;
+            }
         }
 
         function renderCalendar() {
@@ -219,172 +299,245 @@
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            // 星期頭
             ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
-                const div = document.createElement('div');
-                div.className = 'weekday';
-                div.innerText = w;
-                grid.appendChild(div);
+                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
             });
 
             const firstDayIndex = new Date(year, month, 1).getDay();
             const totalDays = new Date(year, month + 1, 0).getDate();
             const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-            // 填補上個月空白
-            for (let i = 0; i < firstDayIndex; i++) {
-                grid.appendChild(document.createElement('div'));
-            }
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
 
-            // 填補日期格子
             for (let day = 1; day <= totalDays; day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'day-cell';
-
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
-                // 是否為今天
-                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                    dayCell.classList.add('today');
-                }
+                if (dateKey === todayStr) dayCell.classList.add('today');
+                else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
 
                 const numSpan = document.createElement('span');
-                numSpan.className = 'date-num';
-                numSpan.innerText = day;
+                numSpan.className = 'date-num'; numSpan.innerText = day;
                 dayCell.appendChild(numSpan);
 
-                // 找尋當日行程標籤
                 const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
                 dayEvts.slice(0, 3).forEach(evt => {
                     const badge = document.createElement('div');
-                    badge.className = `event-badge ${evt.visibility}`;
-                    badge.innerText = `${evt.visibility === 'private' ? '🔒' : ''}${evt.title}`;
+                    const isExpired = isEventExpired(evt, dateKey);
+                    badge.className = `event-badge ${evt.visibility || 'public'} ${isExpired ? 'expired' : ''}`;
+                    
+                    // ★ 舊資料相容：如果沒有 category，會預設顯示 📌
+                    const icon = categoryIcons[evt.category] || '📌';
+                    badge.innerText = `${icon} ${evt.title}`;
                     dayCell.appendChild(badge);
                 });
 
                 if (dayEvts.length > 3) {
                     const moreBadge = document.createElement('div');
-                    moreBadge.style.fontSize = '9px';
-                    moreBadge.style.color = '#888';
+                    moreBadge.style.cssText = 'font-size:10px; color:var(--text-sub); font-weight:bold; margin-top:2px;';
                     moreBadge.innerText = `+${dayEvts.length - 3} 更多`;
                     dayCell.appendChild(moreBadge);
                 }
 
-                // 點擊事件開啟彈窗
                 dayCell.addEventListener('click', () => openEventModal(dateKey));
-
                 grid.appendChild(dayCell);
             }
         }
 
-        // 5. 彈窗與新增/刪除待辦
+        // ================= Modal 控制邏輯 =================
         function openEventModal(dateKey) {
             selectedDateKey = dateKey;
-            document.getElementById('modalDateTitle').innerText = `${dateKey} 待辦事項`;
-            document.getElementById('eventTitleInput').value = '';
-            document.getElementById('eventDescInput').value = '';
-            document.getElementById('eventVisibilitySelect').value = 'public';
-            
-            renderDayEvents(dateKey);
+            document.getElementById('modalDateTitle').innerText = `${dateKey} 行程`;
+            showListView();
             document.getElementById('eventModal').style.display = 'flex';
+        }
+
+        function showListView() {
+            editingEventId = null;
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('formView').style.display = 'none';
+            document.getElementById('btnCloseModal').style.display = 'block';
+            document.getElementById('btnCancelForm').style.display = 'none';
+            document.getElementById('btnSaveEvent').style.display = 'none';
+            renderDayEvents(selectedDateKey);
+        }
+
+        function showFormView(evtData = null) {
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('formView').style.display = 'block';
+            document.getElementById('btnCloseModal').style.display = 'none';
+            document.getElementById('btnCancelForm').style.display = 'block';
+            document.getElementById('btnSaveEvent').style.display = 'block';
+
+            if (evtData) {
+                // ★ 編輯模式 (舊資料向下相容機制)
+                editingEventId = evtData.id;
+                document.getElementById('evTitle').value = evtData.title || '';
+                document.getElementById('evDesc').value = evtData.desc || '';
+                document.getElementById('evCategory').value = evtData.category || 'other'; // 舊資料預設為「其他」
+                document.getElementById('evVisibility').value = evtData.visibility || 'public';
+                document.getElementById('evIsAllDay').checked = evtData.isAllDay !== false; // 舊資料預設為「全天」
+                document.getElementById('evStartTime').value = evtData.startTime || '09:00';
+                document.getElementById('evEndTime').value = evtData.endTime || '10:00';
+                
+                const rUnit = evtData.reminderUnit || 'none'; // 舊資料預設為「無提醒」
+                document.getElementById('evReminderUnit').value = rUnit;
+                document.getElementById('evReminderVal').value = evtData.reminderValue || '';
+                document.getElementById('evReminderVal').disabled = (rUnit === 'none');
+            } else {
+                // 新增模式預設值
+                editingEventId = null;
+                document.getElementById('evTitle').value = '';
+                document.getElementById('evDesc').value = '';
+                document.getElementById('evCategory').value = 'other';
+                document.getElementById('evVisibility').value = 'public';
+                document.getElementById('evIsAllDay').checked = true;
+                document.getElementById('evStartTime').value = '09:00';
+                document.getElementById('evEndTime').value = '10:00';
+                document.getElementById('evReminderUnit').value = 'none';
+                document.getElementById('evReminderVal').value = '';
+                document.getElementById('evReminderVal').disabled = true;
+            }
+            toggleTimeInputs();
         }
 
         function renderDayEvents(dateKey) {
             const container = document.getElementById('dayEventsContainer');
             container.innerHTML = '';
-
             const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
 
             if (dayEvts.length === 0) {
-                container.innerHTML = '<div style="color:#888; font-size:13px;">當日無待辦事項</div>';
+                container.innerHTML = '<div style="color:var(--text-sub); text-align:center; padding:20px 0; font-weight:600;">當日無待辦事項</div>';
                 return;
             }
 
             dayEvts.forEach(evt => {
                 const item = document.createElement('div');
-                item.className = `event-item ${evt.visibility}`;
+                item.className = `event-item ${evt.visibility || 'public'}`;
                 
                 const isOwnerOrAdmin = (evt.operator === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+                const icon = categoryIcons[evt.category] || '📌';
+                const timeStr = (evt.isAllDay !== false) ? '🕒 全天' : `🕒 ${evt.startTime} - ${evt.endTime}`;
+                
+                // 判斷舊資料與新資料的提醒狀態
+                let reminderStr = '無提醒';
+                if (evt.reminderUnit === 'minutes') reminderStr = `提前 ${evt.reminderValue} 分鐘提醒`;
+                if (evt.reminderUnit === 'hours') reminderStr = `提前 ${evt.reminderValue} 小時提醒`;
+                if (isEventExpired(evt, dateKey)) reminderStr = '✅ 已結束';
 
                 item.innerHTML = `
-                    <div>
+                    <div class="event-item-main">
                         <div class="event-item-title">
-                            ${evt.visibility === 'private' ? '🔒 [個人] ' : '🌐 [全體] '} ${evt.title}
+                            ${evt.visibility === 'private' ? '🔒' : ''} ${icon} ${evt.title}
                         </div>
-                        ${evt.desc ? `<div style="font-size:12px; color:#555; margin-top:2px;">${evt.desc}</div>` : ''}
-                        <div class="event-item-meta">建立者: ${evt.operator || '未知'}</div>
+                        <div class="event-item-meta">
+                            <span>${timeStr}</span> | <span>🔔 ${reminderStr}</span>
+                        </div>
+                        ${evt.desc ? `<div style="font-size:12px; color:var(--text-sub); margin-top:6px;">${evt.desc}</div>` : ''}
                     </div>
-                    ${isOwnerOrAdmin ? `<button class="btn-del" data-id="${evt.id}">刪除</button>` : ''}
+                    ${isOwnerOrAdmin ? `
+                    <div class="event-actions">
+                        <button class="btn-icon edit" data-id="${evt.id}">✏️</button>
+                        <button class="btn-icon del" data-id="${evt.id}">🗑️</button>
+                    </div>` : ''}
                 `;
-
                 container.appendChild(item);
             });
 
-            // 綁定刪除事件
-            container.querySelectorAll('.btn-del').forEach(btn => {
+            container.querySelectorAll('.btn-icon.edit').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const targetEvt = allFetchedEvents.find(ev => ev.id === id);
+                    if(targetEvt) showFormView(targetEvt);
+                });
+            });
+            container.querySelectorAll('.btn-icon.del').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
                     deleteEvent(id);
                 });
             });
         }
 
-        // 新增行程
-        async function saveEvent() {
-            const title = document.getElementById('eventTitleInput').value.trim();
-            const desc = document.getElementById('eventDescInput').value.trim();
-            const visibility = document.getElementById('eventVisibilitySelect').value;
+        // ================= 表單操作 =================
+        const evIsAllDay = document.getElementById('evIsAllDay');
+        const timeInputsGroup = document.getElementById('timeInputsGroup');
+        const evReminderUnit = document.getElementById('evReminderUnit');
+        const evReminderVal = document.getElementById('evReminderVal');
 
-            if (!title) {
-                alert('請輸入行程標題！');
-                return;
+        function toggleTimeInputs() {
+            timeInputsGroup.style.display = evIsAllDay.checked ? 'none' : 'flex';
+        }
+        evIsAllDay.addEventListener('change', toggleTimeInputs);
+
+        // 切換提醒單位時的預設值處理
+        evReminderUnit.addEventListener('change', (e) => {
+            if (e.target.value === 'none') {
+                evReminderVal.disabled = true;
+                evReminderVal.value = '';
+            } else {
+                evReminderVal.disabled = false;
+                if (!evReminderVal.value) evReminderVal.value = '30';
             }
+        });
+
+        document.getElementById('btnShowAddForm').addEventListener('click', () => showFormView(null));
+        document.getElementById('btnCancelForm').addEventListener('click', showListView);
+        document.getElementById('btnCloseModal').addEventListener('click', () => { document.getElementById('eventModal').style.display = 'none'; });
+
+        async function saveEvent() {
+            const title = document.getElementById('evTitle').value.trim();
+            if (!title) return alert('請輸入行程標題！');
+
+            const isAllDay = document.getElementById('evIsAllDay').checked;
+            const startTime = document.getElementById('evStartTime').value;
+            const endTime = document.getElementById('evEndTime').value;
+            
+            if (!isAllDay && startTime >= endTime) return alert('結束時間必須晚於開始時間！');
+
+            const evtData = {
+                date: selectedDateKey,
+                title: title,
+                desc: document.getElementById('evDesc').value.trim(),
+                category: document.getElementById('evCategory').value,
+                visibility: document.getElementById('evVisibility').value,
+                isAllDay: isAllDay,
+                startTime: isAllDay ? null : startTime,
+                endTime: isAllDay ? null : endTime,
+                reminderValue: parseInt(document.getElementById('evReminderVal').value) || 0,
+                reminderUnit: document.getElementById('evReminderUnit').value,
+                operator: currentUser.name,
+                timestamp: serverTimestamp()
+            };
 
             try {
-                await addDoc(collection(db, "events"), {
-                    date: selectedDateKey,
-                    title: title,
-                    desc: desc,
-                    visibility: visibility,
-                    operator: currentUser.name,
-                    timestamp: serverTimestamp()
-                });
-
-                document.getElementById('eventTitleInput').value = '';
-                document.getElementById('eventDescInput').value = '';
-                alert('已新增待辦事項！');
-            } catch (error) {
-                console.error("新增失敗:", error);
-                alert("新增失敗，請檢查網路。");
-            }
-        }
-
-        // 刪除行程
-        async function deleteEvent(id) {
-            if (confirm('確定要刪除這筆待辦事項嗎？')) {
-                try {
-                    await deleteDoc(doc(db, "events", id));
-                } catch (error) {
-                    console.error("刪除失敗:", error);
-                    alert("刪除失敗，請檢查網路。");
+                document.getElementById('btnSaveEvent').disabled = true;
+                if (editingEventId) {
+                    await updateDoc(doc(db, "events", editingEventId), evtData);
+                } else {
+                    await addDoc(collection(db, "events"), evtData);
                 }
+                showListView(); 
+            } catch (error) {
+                alert("儲存失敗，請檢查網路。");
+            } finally {
+                document.getElementById('btnSaveEvent').disabled = false;
+            }
+        }
+        document.getElementById('btnSaveEvent').addEventListener('click', saveEvent);
+
+        async function deleteEvent(id) {
+            if (confirm('確定要刪除此待辦事項嗎？')) {
+                try { await deleteDoc(doc(db, "events", id)); } 
+                catch (error) { alert("刪除失敗，請檢查網路。"); }
             }
         }
 
-        // 事件綁定
-        document.getElementById('btnSaveEvent').addEventListener('click', saveEvent);
-        document.getElementById('btnCloseModal').addEventListener('click', () => {
-            document.getElementById('eventModal').style.display = 'none';
-        });
-
-        document.getElementById('btnBack').addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-
+        document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
         document.getElementById('btnLogout').addEventListener('click', () => {
-            sessionStorage.removeItem('familyCheckInUser');
-            localStorage.removeItem('familyCheckInUser');
-            window.location.href = 'index.html';
+            sessionStorage.removeItem('familyCheckInUser'); localStorage.removeItem('familyCheckInUser'); window.location.href = 'index.html';
         });
     </script>
 </body>
