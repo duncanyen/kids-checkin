@@ -47,24 +47,40 @@
         .chat-header-name { font-weight: bold; font-size: 16px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-room-settings { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
 
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; background: var(--chat-bg); display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
         
         .chat-msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; }
         .msg-mine-wrapper { align-self: flex-end; align-items: flex-end; }
         .msg-other-wrapper { align-self: flex-start; align-items: flex-start; }
 
-        .chat-msg { padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; cursor: pointer; }
+        .chat-msg { padding: 10px 14px; border-radius: 15px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; cursor: pointer; max-width: 100%; box-sizing: border-box; }
         .msg-mine { background: #dcf8c6; border-bottom-right-radius: 2px; }
         .msg-other { background: white; border-bottom-left-radius: 2px; }
         .msg-sender { font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold; }
         
-        /* 狀態列 (已讀顏色改為 #888，與時間一致) */
+        /* 狀態列 */
         .msg-status-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
         .msg-time { font-size: 10px; color: #888; }
-        .msg-read { font-size: 10px; color: #888; font-weight: normal; } /* 修改這裡 */
+        .msg-read { font-size: 10px; color: #888; font-weight: normal; }
 
-        /* 回覆與標記樣式 */
-        .reply-quote { background: rgba(0,0,0,0.05); border-left: 4px solid var(--primary-color); padding: 5px 8px; border-radius: 4px; font-size: 13px; color: #555; margin-bottom: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        /* ★ 修改 1：強化回覆引言區塊的防跑版限制 */
+        .reply-quote { 
+            background: rgba(0,0,0,0.05); 
+            border-left: 4px solid var(--primary-color); 
+            padding: 5px 8px; 
+            border-radius: 4px; 
+            font-size: 13px; 
+            color: #555; 
+            margin-bottom: 5px; 
+            /* 限制最大寬度，並讓過長的文字變成...且最多兩行 */
+            max-width: 100%; 
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-word;
+        }
         .mention-text { color: #1565c0; font-weight: bold; }
         .msg-retracted { background: transparent; border: 1px solid #ccc; color: #888; font-style: italic; padding: 6px 12px; cursor: default; }
         
@@ -74,7 +90,9 @@
         .input-container-wrapper { background: #f0f0f0; border-top: 1px solid #ddd; display: flex; flex-direction: column; position: relative; }
         
         .reply-preview-area { display: none; padding: 8px 15px; background: #e0e0e0; border-left: 4px solid var(--primary-color); font-size: 13px; color: #555; justify-content: space-between; align-items: center; }
-        .btn-cancel-reply { background: none; border: none; font-size: 18px; color: #888; cursor: pointer; }
+        /* 輸入框上方的預覽區也要防跑版 */
+        .reply-preview-text-box { flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; word-break: break-all; margin-right: 10px; }
+        .btn-cancel-reply { background: none; border: none; font-size: 18px; color: #888; cursor: pointer; flex-shrink: 0; }
 
         /* 標記選單強化 */
         .mention-menu { display: none; position: absolute; bottom: 100%; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: white; border-top: 1px solid #ddd; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 100; border-radius: 8px 8px 0 0; }
@@ -100,7 +118,7 @@
 
         /* --- 建立/編輯群組 Modal --- */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 90%; max-width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 90%; max-width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
         .modal-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; text-align: center; }
         
         .form-group { margin-bottom: 15px; }
@@ -117,6 +135,9 @@
         .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
         .btn-modal-cancel { background: #888; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-modal-confirm { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        
+        /* ★ 修改 3：新增退出群組的紅色按鈕樣式 */
+        .btn-leave-group { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 15px; cursor: pointer; display: none; }
     </style>
 </head>
 <body>
@@ -151,9 +172,9 @@
         <div class="input-container-wrapper">
             <!-- 回覆預覽區 -->
             <div class="reply-preview-area" id="replyPreviewArea">
-                <div style="overflow:hidden;">
+                <div class="reply-preview-text-box">
                     <strong id="replyPreviewSender" style="color:var(--primary-color);"></strong><br>
-                    <span id="replyPreviewText" style="white-space:nowrap;"></span>
+                    <span id="replyPreviewText"></span>
                 </div>
                 <button class="btn-cancel-reply" onclick="cancelReply()">✕</button>
             </div>
@@ -165,7 +186,7 @@
                 <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">📷</button>
                 <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
                 
-                <input type="text" id="chatInput" placeholder="輸入訊息... (輸入 @ 可標記成員)" autocomplete="off">
+                <input type="text" id="chatInput" placeholder="輸入訊息... (輸入 @ 可標記)" autocomplete="off">
                 <button class="btn-send" id="btnSend">傳送</button>
             </div>
         </div>
@@ -201,6 +222,9 @@
                 <div class="member-checkbox-list" id="memberListContainer"></div>
             </div>
 
+            <!-- ★ 修改 3：新增退出按鈕 (僅在編輯模式顯示) -->
+            <button class="btn-leave-group" id="btnLeaveGroup">🚪 退出此群組</button>
+
             <div class="modal-btns">
                 <button class="btn-modal-cancel" id="btnCancelModal">取消</button>
                 <button class="btn-modal-confirm" id="btnConfirmModal">儲存並進入</button>
@@ -218,7 +242,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, getDocs, query, where, orderBy, 
-            onSnapshot, serverTimestamp, doc, updateDoc 
+            onSnapshot, serverTimestamp, doc, updateDoc, arrayRemove 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -241,7 +265,7 @@
         let activeRoomData = null;
         let roomsUnsubscribe = null;
         let messagesUnsubscribe = null;
-        let singleRoomUnsubscribe = null; // 新增：專門監聽目前聊天室狀態的變數 (為了解決即時已讀)
+        let singleRoomUnsubscribe = null; 
 
         let uploadedAvatarBase64 = null; 
         let modalMode = 'create'; 
@@ -249,9 +273,8 @@
         let pendingReplyMsgId = null;
         let pendingReplyData = null;
         let selectedMsgForAction = null; 
-
-        // 為了不讓畫面一直重繪，暫存一份目前抓到的 messages 陣列
         let currentMessagesList = [];
+        let isFirstLoad = true; // 用於判斷是否為剛進入聊天室
 
         fetchFamilyUsers();
         listenToRooms();
@@ -320,6 +343,7 @@
             activeRoomId = roomId;
             activeRoomData = roomData;
             currentMessagesList = [];
+            isFirstLoad = true; // ★ 修改 2：標記為剛進入房間
             
             document.getElementById('viewRoomList').style.display = 'none';
             document.getElementById('viewChatRoom').style.display = 'flex';
@@ -329,17 +353,15 @@
             
             updateMyReadTimestamp(roomId);
             listenToMessages(roomId);
-            listenToActiveRoom(roomId); // 新增這行：開啟單一房間的即時監聽
+            listenToActiveRoom(roomId); 
         }
 
-        // 【新增功能】即時監聽當前房間的變動 (為了別人更新已讀時，畫面能立刻刷新)
         function listenToActiveRoom(roomId) {
-            if (singleRoomUnsubscribe) singleRoomUnsubscribe(); // 清除舊的監聽
-            
+            if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
             singleRoomUnsubscribe = onSnapshot(doc(db, "rooms", roomId), (docSnap) => {
                 if (docSnap.exists()) {
-                    activeRoomData = docSnap.data(); // 更新本地的房間資料 (包含最新的已讀時間)
-                    renderAllMessages();             // 重新把目前的訊息陣列畫一次，這樣已讀狀態就會變了！
+                    activeRoomData = docSnap.data(); 
+                    renderAllMessages();             
                 }
             });
         }
@@ -354,10 +376,11 @@
             } catch (e) { console.error("更新已讀時間失敗", e); }
         }
 
+        // 返回聊天清單
         document.getElementById('btnBackToList').addEventListener('click', () => {
             updateMyReadTimestamp(activeRoomId);
             if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
-            if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } // 離開時關閉監聽
+            if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } 
             
             activeRoomId = null;
             activeRoomData = null;
@@ -375,7 +398,7 @@
             const q = query(collection(db, "messages"), where("roomId", "==", roomId), orderBy("timestamp", "asc"));
 
             messagesUnsubscribe = onSnapshot(q, (snapshot) => {
-                currentMessagesList = []; // 每次 snapshot 更新時，重新組裝陣列
+                currentMessagesList = []; 
                 
                 if (snapshot.empty) {
                     msgContainer.innerHTML = '<div style="text-align:center; color:#888; font-size:13px; margin-top:20px;">發個訊息打招呼吧！</div>';
@@ -383,7 +406,7 @@
                     snapshot.forEach((docSnap) => {
                         currentMessagesList.push({ id: docSnap.id, ...docSnap.data() });
                     });
-                    renderAllMessages(); // 呼叫統一的渲染函式
+                    renderAllMessages(); 
                 }
                 
                 updateMyReadTimestamp(roomId);
@@ -391,9 +414,10 @@
             });
         }
 
-        // 把原本渲染的部分抽出來，因為我們現在有兩個地方(收到新訊息、或是有人已讀)都需要重繪畫面
+        // 統一的渲染與捲動邏輯
         function renderAllMessages() {
             const msgContainer = document.getElementById('chatMessages');
+            // 判斷目前捲動條是否本來就在最底部附近 (容許 100px 誤差)
             const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 100;
             
             msgContainer.innerHTML = '';
@@ -402,7 +426,18 @@
                 appendMessageUI(msg.id, msg);
             });
 
-            if (isAtBottom) msgContainer.scrollTop = msgContainer.scrollHeight;
+            // ★ 修改 2：解決進入聊天室捲動卡住的問題
+            // 如果是剛進聊天室，或是本來就在底部，強制捲動到最新訊息
+            if (isFirstLoad || isAtBottom) {
+                // 用 setTimeout 確保 DOM 和圖片初步渲染後，計算高度才會準確
+                setTimeout(() => {
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                }, 50);
+                setTimeout(() => {
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                }, 200);
+                isFirstLoad = false;
+            }
         }
 
         // ================= 新版訊息渲染 (含已讀、收回、標記、回覆) =================
@@ -428,7 +463,6 @@
                     }
                 });
             }
-            // 已讀顏色已透過 CSS 改為與時間相同的灰色 (#888)
             let readHtml = readCount > 0 ? `<span class="msg-read">已讀${readCount > 1 ? ' '+readCount : ''}</span>` : '';
 
             // 判斷是否收回
@@ -456,7 +490,7 @@
                 contentHtml = `<div>${displayText}</div>`;
             }
 
-            // 回覆引用
+            // 回覆引用 (CSS 已加上防跑版截斷)
             let replyHtml = '';
             if (msg.replyTo) {
                 const replyText = msg.replyTo.text ? msg.replyTo.text : (msg.replyTo.imageUrl ? '傳送了圖片' : '訊息');
@@ -489,24 +523,18 @@
             document.getElementById('viewerImage').src = '';
         };
 
-        // ================= 輸入區功能 (@標記優化 與 傳送) =================
+        // ================= 輸入區功能 (@標記與傳送) =================
         const chatInput = document.getElementById('chatInput');
         const mentionMenu = document.getElementById('mentionMenu');
 
         chatInput.addEventListener('input', (e) => {
             const val = e.target.value;
-            // 尋找最後一個出現的 @
             const lastAtIndex = val.lastIndexOf('@');
             
-            // 如果輸入框內存在 @，且該 @ 後面還沒有輸入完畢（或正在輸入）
             if (lastAtIndex !== -1) {
-                const searchStr = val.substring(lastAtIndex + 1).toLowerCase(); // @ 後面的字
-                
-                // 排除如果 @ 後面已經有空格，代表已經輸入完了，就不觸發選單
+                const searchStr = val.substring(lastAtIndex + 1).toLowerCase(); 
                 if (!searchStr.includes(' ')) {
                     const participants = activeRoomData.participants.filter(p => p !== currentUser.name);
-                    
-                    // 可選：如果有輸入部分名字，可以做過濾。這裡為了簡單直觀，只要打了 @ 就把所有人列出來給他選
                     if (participants.length > 0) {
                         mentionMenu.innerHTML = '';
                         participants.forEach(p => {
@@ -526,13 +554,11 @@
 
         function insertMention(name, atIndex) {
             const currentVal = chatInput.value;
-            // 將 @ 到結尾的部分，替換成選中的名字 + 一個空白
             chatInput.value = currentVal.substring(0, atIndex) + `@${name} `;
             mentionMenu.style.display = 'none';
             chatInput.focus();
         }
 
-        // 傳送文字訊息
         document.getElementById('btnSend').addEventListener('click', async () => {
             const text = chatInput.value.trim();
             if (!text && !document.getElementById('chatPhotoInput').files[0]) return;
@@ -560,6 +586,11 @@
                     lastMessage: `${currentUser.name}: ${text}`,
                     lastMessageTime: serverTimestamp()
                 });
+
+                // 傳送後，自己強制拉到底部
+                const msgContainer = document.getElementById('chatMessages');
+                setTimeout(() => msgContainer.scrollTop = msgContainer.scrollHeight, 100);
+
             } catch (e) {
                 console.error("發送文字失敗：", e);
             } finally {
@@ -573,9 +604,7 @@
         const btnTriggerPhoto = document.getElementById('btnTriggerPhoto');
         const chatPhotoInput = document.getElementById('chatPhotoInput');
 
-        btnTriggerPhoto.addEventListener('click', () => {
-            chatPhotoInput.click();
-        });
+        btnTriggerPhoto.addEventListener('click', () => { chatPhotoInput.click(); });
 
         chatPhotoInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -621,6 +650,12 @@
                             lastMessage: `${currentUser.name}: 傳送了圖片 📷`,
                             lastMessageTime: serverTimestamp()
                         });
+
+                        setTimeout(() => {
+                            const msgContainer = document.getElementById('chatMessages');
+                            msgContainer.scrollTop = msgContainer.scrollHeight;
+                        }, 200);
+
                     } catch (error) {
                         console.error("傳送圖片失敗：", error);
                         alert("傳送圖片失敗，可能照片過大，請檢查網路。");
@@ -688,7 +723,7 @@
         };
 
 
-        // ================= Modal 群組設定邏輯 =================
+        // ================= Modal 群組設定邏輯與退出群組 =================
         document.getElementById('groupAvatarInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -731,16 +766,22 @@
             uploadedAvatarBase64 = null;
             document.getElementById('modalAvatarPreview').src = 'https://ui-avatars.com/api/?name=G&background=4caf50&color=fff';
             populateMemberCheckboxes([]);
+            
+            // 建立模式不顯示退出按鈕
+            document.getElementById('btnLeaveGroup').style.display = 'none';
             document.getElementById('groupModal').style.display = 'flex';
         });
 
         document.getElementById('btnOpenEditModal').addEventListener('click', () => {
             modalMode = 'edit';
-            document.getElementById('modalTitle').innerText = '編輯群組設定';
+            document.getElementById('modalTitle').innerText = '群組設定';
             document.getElementById('modalGroupName').value = activeRoomData.name;
             uploadedAvatarBase64 = activeRoomData.avatar || null;
             document.getElementById('modalAvatarPreview').src = activeRoomData.avatar || `https://ui-avatars.com/api/?name=${activeRoomData.name}&background=e3f2fd&color=1565c0`;
             populateMemberCheckboxes(activeRoomData.participants || []);
+            
+            // ★ 編輯模式顯示退出群組按鈕
+            document.getElementById('btnLeaveGroup').style.display = 'block';
             document.getElementById('groupModal').style.display = 'flex';
         });
 
@@ -780,6 +821,27 @@
             } catch (e) {
                 console.error("儲存群組失敗：", e);
                 alert("儲存失敗，請檢查網路！");
+            }
+        });
+
+        // ★ 修改 3：實作退出群組功能
+        document.getElementById('btnLeaveGroup').addEventListener('click', async () => {
+            if (!confirm(`確定要退出「${activeRoomData.name}」群組嗎？\n退出後將無法看到此聊天室。`)) return;
+            
+            try {
+                // 將自己從 participants 陣列中移除
+                await updateDoc(doc(db, "rooms", activeRoomId), {
+                    participants: arrayRemove(currentUser.name)
+                });
+                
+                // 關閉 Modal 並退回群組列表
+                document.getElementById('groupModal').style.display = 'none';
+                document.getElementById('btnBackToList').click();
+                alert('您已成功退出群組！');
+                
+            } catch (e) {
+                console.error("退出群組失敗：", e);
+                alert("退出失敗，請檢查網路狀態。");
             }
         });
 
