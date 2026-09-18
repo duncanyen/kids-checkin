@@ -21,14 +21,7 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-            background: #f8fafc; 
-            margin: 0; 
-            padding: 20px; 
-            color: var(--text-main); 
-            -webkit-font-smoothing: antialiased;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
         
         /* 登入畫面 */
         #loginSection { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.4s ease-out; }
@@ -39,7 +32,7 @@
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
         .user-card:active { transform: scale(0.96); background: #f9fafb; }
-        .avatar-img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
+        .avatar-img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin-bottom: 12px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
         .user-name-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
 
         /* 密碼彈窗 */
@@ -56,19 +49,12 @@
         
         .current-user-badge { background: white; padding: 6px 14px 6px 6px; border-radius: 30px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.04); }
         .mini-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
-        .user-badge-info { text-align: left; display: flex; flex-direction: column; }
-        .user-badge-name { font-size: 14px; font-weight: 700; color: var(--text-main); line-height: 1.2; }
-        .user-badge-action { font-size: 11px; color: var(--text-sub); }
+        .user-badge-name { font-size: 15px; font-weight: 800; color: var(--text-main); }
 
         /* 動態九宮格 */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         
-        /* 模組卡片樣式 */
-        .dash-card { 
-            background: white; border-radius: 20px; padding: 22px 16px; text-align: left; 
-            box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.25s ease; 
-            position: relative; border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; height: 120px; 
-        }
+        .dash-card { background: white; border-radius: 20px; padding: 22px 16px; text-align: left; box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.25s ease; position: relative; border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; height: 120px; }
         .dash-card:active { transform: scale(0.96); background: #fcfcfc; }
         .dash-icon { font-size: 32px; width: 50px; height: 50px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
         .dash-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
@@ -76,9 +62,6 @@
         /* 特殊主題卡片 */
         .card-hero { grid-column: span 2; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; height: auto; padding: 24px; flex-direction: row; align-items: center; justify-content: space-between; }
         .card-hero .dash-icon { background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 18px; }
-        .card-wish { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fde68a; }
-        .card-wish .dash-icon { background: rgba(245, 158, 11, 0.15); }
-        .card-wish .dash-title { color: #d97706; }
         .card-admin { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe; grid-column: span 2; height: auto; flex-direction: row; align-items: center; padding: 18px 22px; }
         .card-admin .dash-icon { background: rgba(37, 99, 235, 0.15); }
         .card-admin .dash-title { color: #1d4ed8; font-size: 17px; }
@@ -91,15 +74,12 @@
 </head>
 <body>
 
-    <div class="loading-overlay" id="loadingView">
-        <span>載入資料中，請稍候...</span>
-    </div>
+    <div class="loading-overlay" id="loadingView"><span>載入資料中，請稍候...</span></div>
 
     <!-- 密碼彈窗 -->
     <div class="modal" id="pinModal">
         <div class="modal-content">
             <h3 id="modalUserTitle" style="margin-top:0; font-size:20px;">請輸入密碼</h3>
-            <p style="font-size: 13px; color: var(--text-sub); margin: 0;">預設密碼為 1234</p>
             <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" onkeypress="handlePinKeyPress(event)">
             <div class="modal-btns">
                 <button onclick="closePinModal()" style="background:#f3f4f6; color:var(--text-main);">取消</button>
@@ -112,7 +92,7 @@
     <div id="loginSection">
         <div class="login-logo-wrapper">🏡</div>
         <div class="login-title">HomeBase</div>
-        <div class="login-subtitle">屬於您家的專屬平台</div>
+        <div class="login-subtitle">您們家的專屬平台</div>
         <div class="user-selection" id="userSelectionContainer"></div>
     </div>
 
@@ -120,16 +100,12 @@
     <div id="dashboardView">
         <div class="app-header">
             <div class="app-brand">🏠 HomeBase</div>
-            <div class="current-user-badge" onclick="logout()" title="點擊登出">
+            <!-- ★ 點擊頭像改為前往 settings.html -->
+            <div class="current-user-badge" onclick="window.location.href='settings.html'" title="個人設定">
                 <img id="dashUserAvatar" class="mini-avatar" src="" alt="">
-                <div class="user-badge-info">
-                    <span id="dashUserName" class="user-badge-name"></span>
-                    <span class="user-badge-action">切換帳號</span>
-                </div>
+                <span id="dashUserName" class="user-badge-name"></span>
             </div>
         </div>
-
-        <!-- 動態排序與渲染卡片容器 -->
         <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
     </div>
 
@@ -145,20 +121,17 @@
             messagingSenderId: "476832900272",
             appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         let unreadUnsubscribe = null;
+        let calendarUnsubscribe = null;
         window.selectedUserObj = null;
 
         window.onload = function() {
             const savedUser = sessionStorage.getItem('familyCheckInUser');
-            if (savedUser) {
-                window.showDashboard();
-            } else {
-                window.fetchUsersAndRenderLogin();
-            }
+            if (savedUser) window.showDashboard();
+            else window.fetchUsersAndRenderLogin();
         };
 
         async function recordLog(operatorName, actionType, detailsText) {
@@ -175,15 +148,12 @@
                 let users = [];
                 if (querySnapshot.empty) {
                     const defaultUsers = [
-                        {name: "俊俊", pin: "1234", avatar: "junjun.jpg", role: "kid"},
-                        {name: "程寶", pin: "1234", avatar: "cheng.jpg", role: "kid"},
-                        {name: "媽咪", pin: "1234", avatar: "mom.jpg", role: "admin"},
-                        {name: "爸爸", pin: "1234", avatar: "dad.jpg", role: "admin"}
+                        {name: "俊俊", pin: "1234", avatar: "https://ui-avatars.com/api/?name=俊&background=10b981&color=fff", role: "kid"},
+                        {name: "程寶", pin: "1234", avatar: "https://ui-avatars.com/api/?name=程&background=10b981&color=fff", role: "kid"},
+                        {name: "媽咪", pin: "1234", avatar: "https://ui-avatars.com/api/?name=媽&background=10b981&color=fff", role: "admin"},
+                        {name: "爸爸", pin: "1234", avatar: "https://ui-avatars.com/api/?name=爸&background=10b981&color=fff", role: "admin"}
                     ];
-                    for (const u of defaultUsers) {
-                        await addDoc(collection(db, "users"), u);
-                        users.push(u);
-                    }
+                    for (const u of defaultUsers) { await addDoc(collection(db, "users"), u); users.push(u); }
                 } else {
                     querySnapshot.forEach(docSnap => users.push(docSnap.data()));
                 }
@@ -192,16 +162,10 @@
         };
 
         window.buildUserCards = function(users) {
-            const container = document.getElementById('userSelectionContainer');
-            container.innerHTML = '';
+            const container = document.getElementById('userSelectionContainer'); container.innerHTML = '';
             users.forEach(u => {
-                const card = document.createElement('div');
-                card.className = 'user-card';
-                card.onclick = () => window.openPinModal(u);
-                card.innerHTML = `
-                    <img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff&size=150'">
-                    <div class="user-name-title">${u.name}</div>
-                `;
+                const card = document.createElement('div'); card.className = 'user-card'; card.onclick = () => window.openPinModal(u);
+                card.innerHTML = `<img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff&size=150'"><div class="user-name-title">${u.name}</div>`;
                 container.appendChild(card);
             });
         };
@@ -211,36 +175,22 @@
             document.getElementById('modalUserTitle').innerText = `${user.name}，請輸入密碼`;
             document.getElementById('pinInput').value = '';
             document.getElementById('pinModal').style.display = 'flex';
-            document.getElementById('pinInput').focus();
+            setTimeout(() => document.getElementById('pinInput').focus(), 100);
         };
-
         window.closePinModal = function() { document.getElementById('pinModal').style.display = 'none'; };
         window.handlePinKeyPress = function(e) { if (e.key === 'Enter') window.verifyPin(); };
 
         window.verifyPin = function() {
             const pin = document.getElementById('pinInput').value.trim();
             if (pin === window.selectedUserObj.pin) {
-                window.closePinModal();
-                window.login(window.selectedUserObj);
-            } else {
-                alert('密碼錯誤！');
-                document.getElementById('pinInput').value = '';
-                document.getElementById('pinInput').focus();
-            }
+                window.closePinModal(); window.login(window.selectedUserObj);
+            } else { alert('密碼錯誤！'); document.getElementById('pinInput').value = ''; document.getElementById('pinInput').focus(); }
         };
 
         window.login = async function(userObj) {
             sessionStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
             await recordLog(userObj.name, '登入', '使用者成功登入系統');
             window.showDashboard();
-        };
-
-        window.logout = function() {
-            sessionStorage.removeItem('familyCheckInUser');
-            if (unreadUnsubscribe) { unreadUnsubscribe(); unreadUnsubscribe = null; }
-            document.getElementById('dashboardView').style.display = 'none';
-            document.getElementById('loginSection').style.display = 'flex';
-            window.fetchUsersAndRenderLogin();
         };
 
         window.showDashboard = async function() {
@@ -252,20 +202,17 @@
             document.getElementById('dashUserName').innerText = user.name;
 
             await renderDynamicModules(user);
-            window.checkUnreadMessages();
+            window.checkUnreadMessages(user);
+            window.checkCalendarAlerts(user); // ★ 啟動行事曆提醒監聽
         };
 
-        // ★ 支援個人自訂排序與模組開關的動態渲染引擎
         async function renderDynamicModules(user) {
-            const grid = document.getElementById('dynamicDashboardGrid');
-            grid.innerHTML = '';
-
-            // 1. 預設模組開關與預設順序
-            let modules = { chat: true, checkin: true, calendar: true, gallery: true, games: true, wishwall: true, expense: true, settings: true };
-            let order = ['chat', 'checkin', 'calendar', 'gallery', 'games', 'wishwall', 'expense', 'settings'];
+            const grid = document.getElementById('dynamicDashboardGrid'); grid.innerHTML = '';
+            // ★ 預設模組中移除了 settings
+            let modules = { chat: true, checkin: true, calendar: true, gallery: true, games: true, wishwall: true, expense: true };
+            let order = ['chat', 'checkin', 'calendar', 'gallery', 'games', 'wishwall', 'expense'];
 
             try {
-                // 優先讀取該使用者的個人化設定（若有），否則讀取全域設定
                 const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
                 if (userConfigDoc.exists()) {
                     const data = userConfigDoc.data();
@@ -279,120 +226,113 @@
                         if (data.order && Array.isArray(data.order)) order = data.order;
                     }
                 }
-            } catch (e) { console.log("使用預設模組與排序配置"); }
+            } catch (e) {}
 
-            // 定義所有卡片的生成範本
             const cardTemplates = {
-                chat: () => modules.chat !== false ? `
-                    <div class="dash-card card-hero" onclick="window.location.href='chat.html'">
-                        <div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div>
-                        <div>
-                            <div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">家庭聊天室</div>
-                            <div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div>
-                        </div>
-                        <div class="dash-icon">💬</div>
-                    </div>` : '',
-                checkin: () => modules.checkin !== false ? `
-                    <div class="dash-card" onclick="window.location.href='checkin.html'">
-                        <div><div class="dash-icon">📍</div></div>
-                        <div class="dash-title">到家打卡</div>
-                    </div>` : '',
+                chat: () => modules.chat !== false ? `<div class="dash-card card-hero" onclick="window.location.href='chat.html'"><div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div><div><div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">家庭聊天室</div><div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div></div><div class="dash-icon">💬</div></div>` : '',
+                checkin: () => modules.checkin !== false ? `<div class="dash-card" onclick="window.location.href='checkin.html'"><div><div class="dash-icon">📍</div></div><div class="dash-title">到家打卡</div></div>` : '',
                 calendar: () => modules.calendar !== false ? `
                     <div class="dash-card" onclick="window.location.href='calendar.html'">
-                        <div><div class="dash-icon">📅</div></div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+                            <div class="dash-icon">📅</div>
+                            <!-- ★ 行事曆提醒圖示區塊 -->
+                            <div id="calendarAlertsArea" style="display:flex; gap:4px; font-size:18px;"></div>
+                        </div>
                         <div class="dash-title">家庭行事曆</div>
                     </div>` : '',
-                gallery: () => modules.gallery !== false ? `
-                    <div class="dash-card" onclick="window.location.href='gallery.html'">
-                        <div><div class="dash-icon">📸</div></div>
-                        <div class="dash-title">Photo Dump</div>
-                    </div>` : '',
-                games: () => modules.games !== false ? `
-                    <div class="dash-card" onclick="window.location.href='games.html'">
-                        <div><div class="dash-icon">🎮</div></div>
-                        <div class="dash-title">遊戲區</div>
-                    </div>` : '',
-                wishwall: () => modules.wishwall !== false ? `
-                    <div class="dash-card card-wish" onclick="window.location.href='wishwall.html'">
-                        <div><div class="dash-icon">✨</div></div>
-                        <div class="dash-title">許願牆</div>
-                    </div>` : '',
-                expense: () => modules.expense !== false ? `
-                    <div class="dash-card" onclick="window.location.href='expense.html'">
-                        <div><div class="dash-icon">💰</div></div>
-                        <div class="dash-title">記帳本</div>
-                    </div>` : '',
-                settings: () => modules.settings !== false ? `
-                    <div class="dash-card" onclick="window.location.href='settings.html'">
-                        <div><div class="dash-icon">⚙️</div></div>
-                        <div class="dash-title">個人設定</div>
-                    </div>` : ''
+                gallery: () => modules.gallery !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
+                games: () => modules.games !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
+                // ★ 許願牆改為一般樣式 (移除 card-wish 類別)
+                wishwall: () => modules.wishwall !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
+                expense: () => modules.expense !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
             };
 
-            // 依照使用者自訂的順序依序渲染卡片
-            order.forEach(modKey => {
-                if (cardTemplates[modKey]) {
-                    grid.innerHTML += cardTemplates[modKey]();
-                }
-            });
+            order.forEach(modKey => { if (cardTemplates[modKey]) grid.innerHTML += cardTemplates[modKey](); });
 
-            // 如果是管理員，固定在最下方顯示管理者後台卡片
             if (user.role === 'admin' || user.role === 'parent') {
-                grid.innerHTML += `
-                    <div class="dash-card card-admin" onclick="window.location.href='admin.html'">
-                        <div class="dash-icon">🛡️</div>
-                        <div style="flex: 1; margin-left: 12px;">
-                            <div class="dash-title">管理者後台</div>
-                            <div style="font-size: 12px; color: var(--text-sub);">系統管理與稽核紀錄</div>
-                        </div>
-                    </div>
-                `;
+                grid.innerHTML += `<div class="dash-card card-admin" onclick="window.location.href='admin.html'"><div class="dash-icon">🛡️</div><div style="flex: 1; margin-left: 12px;"><div class="dash-title">管理者後台</div><div style="font-size: 12px; color: var(--text-sub);">系統管理與稽核紀錄</div></div></div>`;
             }
         }
 
-        window.checkUnreadMessages = function() {
-    const userStr = sessionStorage.getItem('familyCheckInUser');
-    if (!userStr) return;
-    const user = JSON.parse(userStr);
-
-    try {
-        const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
-        unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
-            let totalUnreadMessages = 0; // 改為計算所有的「未讀訊息數」總和
-
-            querySnapshot.forEach(docSnap => {
-                const room = docSnap.data();
-                
-                // ★ 新版邏輯：直接讀取該房間針對此使用者的未讀計數器
-                if (room.unreadCount && room.unreadCount[user.name]) {
-                    totalUnreadMessages += room.unreadCount[user.name];
-                } 
-                else {
-                    // 相容舊版資料：若尚無 unreadCount 欄位，仍提供基本的未讀提示
-                    let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
-                    let myReadTime = room.readTimestamps?.[user.name] || 0;
-                    const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
-                    const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
-
-                    if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) {
-                        totalUnreadMessages++;
+        // 計算聊天室未讀總數
+        window.checkUnreadMessages = function(user) {
+            try {
+                const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
+                unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                    let totalUnreadMessages = 0;
+                    querySnapshot.forEach(docSnap => {
+                        const room = docSnap.data();
+                        if (room.unreadCount && room.unreadCount[user.name]) {
+                            totalUnreadMessages += room.unreadCount[user.name];
+                        } else {
+                            let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
+                            let myReadTime = room.readTimestamps?.[user.name] || 0;
+                            const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
+                            const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+                            if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) totalUnreadMessages++;
+                        }
+                    });
+                    const badge = document.getElementById('chatBadge');
+                    if (badge) {
+                        if (totalUnreadMessages > 0) { badge.style.display = 'block'; badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages; } 
+                        else { badge.style.display = 'none'; }
                     }
-                }
-            });
+                });
+            } catch (e) { console.error("檢查未讀訊息失敗:", e); }
+        };
 
-            const badge = document.getElementById('chatBadge');
-            if (badge) {
-                if (totalUnreadMessages > 0) {
-                    badge.style.display = 'block';
-                    // 顯示真實的總計數字（超過99顯示99+）
-                    badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages;
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-        });
-    } catch (e) { console.error("檢查未讀訊息失敗:", e); }
-};
+        // ★ 新增：計算今日行事曆提醒區間
+        window.checkCalendarAlerts = function(user) {
+            const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
+            try {
+                calendarUnsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                    let activeIcons = [];
+
+                    snapshot.forEach(docSnap => {
+                        const evt = docSnap.data();
+                        if ((evt.visibility === 'public' || evt.operator === user.name) && evt.date === todayStr) {
+                            
+                            let start = new Date(now);
+                            let end = new Date(now);
+                            
+                            if (evt.isAllDay !== false) { // 預設或全天行程
+                                start.setHours(0,0,0,0);
+                                end.setHours(23,59,59,999);
+                            } else {
+                                if(evt.startTime) { const [sh, sm] = evt.startTime.split(':'); start.setHours(sh, sm, 0, 0); }
+                                if(evt.endTime) { const [eh, em] = evt.endTime.split(':'); end.setHours(eh, em, 0, 0); }
+                            }
+
+                            // 計算觸發時間
+                            let triggerTime = new Date(start);
+                            if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
+                            else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
+
+                            // 判斷現在是否介於 [觸發時間, 結束時間] 之間
+                            if (now >= triggerTime && now <= end) {
+                                activeIcons.push(categoryIcons[evt.category] || '📌');
+                            }
+                        }
+                    });
+
+                    const alertsArea = document.getElementById('calendarAlertsArea');
+                    if (alertsArea) {
+                        alertsArea.innerHTML = activeIcons.map(icon => `<span>${icon}</span>`).join('');
+                    }
+                });
+                
+                // 每分鐘自動檢查一次時間，刷新提醒狀態
+                setInterval(() => {
+                    if (calendarUnsubscribe) {
+                        calendarUnsubscribe(); // 重新觸發
+                        window.checkCalendarAlerts(user);
+                    }
+                }, 60000);
+
+            } catch (e) { console.error("檢查行事曆提醒失敗", e); }
+        };
     </script>
 </body>
 </html>
