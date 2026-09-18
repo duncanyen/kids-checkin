@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase - 家庭平台</title>
+    <title>HomeBase - 家庭智慧平台</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="mobile-web-app-capable" content="yes">
@@ -14,8 +14,6 @@
             --primary-light: #ecfdf5;
             --accent: #f59e0b;
             --danger: #ef4444;
-            --bg-gradient: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-            --card-bg: rgba(255, 255, 255, 0.9);
             --text-main: #1f2937;
             --text-sub: #6b7280;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -32,207 +30,63 @@
             -webkit-font-smoothing: antialiased;
         }
         
-        /* === 專屬高質感登入畫面 === */
-        #loginSection { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 90vh; 
-            text-align: center; 
-            animation: fadeIn 0.4s ease-out;
-        }
-        .login-logo-wrapper {
-            width: 90px;
-            height: 90px;
-            background: white;
-            border-radius: 28px;
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 45px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(0,0,0,0.04);
-        }
-        .login-title { color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
-        .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 40px; font-weight: 400; }
+        /* 登入畫面 */
+        #loginSection { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.4s ease-out; }
+        .login-logo-wrapper { width: 90px; height: 90px; background: white; border-radius: 28px; box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; font-size: 45px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.04); }
+        .login-title { color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+        .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 40px; }
         
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
-        .user-card { 
-            cursor: pointer; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
-            text-align: center; 
-            background: white; 
-            padding: 24px 12px; 
-            border-radius: 20px; 
-            box-shadow: var(--shadow-sm); 
-            border: 1px solid rgba(0,0,0,0.04);
-            position: relative;
-            overflow: hidden;
-        }
+        .user-card { cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
         .user-card:active { transform: scale(0.96); background: #f9fafb; }
-        .avatar-img { 
-            width: 72px; 
-            height: 72px; 
-            border-radius: 50%; 
-            object-fit: cover; 
-            border: 3px solid #10b981; 
-            margin-bottom: 12px; 
-            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
-        }
+        .avatar-img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #10b981; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
         .user-name-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
 
-        /* 密碼輸入彈窗 */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 3000; justify-content: center; align-items: center; animation: fadeIn 0.2s; }
-        .modal-content { background: white; padding: 30px 24px; border-radius: 24px; text-align: center; width: 90%; max-width: 340px; box-shadow: var(--shadow-lg); animation: scaleUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .modal-content h3 { margin-top: 0; color: var(--text-main); font-size: 20px; font-weight: 700; }
-        .pin-input { font-size: 26px; letter-spacing: 12px; text-align: center; width: 100%; padding: 14px; margin: 20px 0; border: 2px solid #e5e7eb; border-radius: 14px; outline: none; background: #f9fafb; transition: border-color 0.2s; }
-        .pin-input:focus { border-color: var(--primary); background: white; }
+        /* 密碼彈窗 */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px 24px; border-radius: 24px; text-align: center; width: 90%; max-width: 340px; box-shadow: var(--shadow-lg); }
+        .pin-input { font-size: 26px; letter-spacing: 12px; text-align: center; width: 100%; padding: 14px; margin: 20px 0; border: 2px solid #e5e7eb; border-radius: 14px; outline: none; background: #f9fafb; }
         .modal-btns { display: flex; gap: 12px; justify-content: center; }
-        .modal-btns button { flex: 1; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; }
-        .modal-btns button:active { opacity: 0.8; }
+        .modal-btns button { flex: 1; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
 
-        /* === 主選單 Dashboard 樣式 (現代 App 質感) === */
+        /* 主選單 Dashboard */
         #dashboardView { display: none; max-width: 480px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
-        
         .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px; }
-        .app-brand { display: flex; align-items: center; gap: 10px; }
-        .app-brand span { font-size: 24px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .app-brand { font-size: 24px; font-weight: 800; color: var(--text-main); }
         
-        .current-user-badge { 
-            background: white; 
-            padding: 6px 14px 6px 6px; 
-            border-radius: 30px; 
-            box-shadow: var(--shadow-sm); 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            cursor: pointer; 
-            border: 1px solid rgba(0,0,0,0.04);
-            transition: transform 0.2s;
-        }
-        .current-user-badge:active { transform: scale(0.95); }
+        .current-user-badge { background: white; padding: 6px 14px 6px 6px; border-radius: 30px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.04); }
         .mini-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
         .user-badge-info { text-align: left; display: flex; flex-direction: column; }
         .user-badge-name { font-size: 14px; font-weight: 700; color: var(--text-main); line-height: 1.2; }
         .user-badge-action { font-size: 11px; color: var(--text-sub); }
 
-        /* 儀表板九宮格/網格佈局 */
+        /* 動態九宮格 */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         
-        /* 英雄卡片 (跨兩欄) */
-        .dash-card-hero {
-            grid-column: span 2;
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            color: white;
-            border-radius: 22px;
-            padding: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .dash-card-hero:active { transform: scale(0.98); }
-        .dash-card-hero-content { z-index: 2; }
-        .dash-card-hero-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-        .dash-card-hero-sub { font-size: 13px; opacity: 0.9; }
-        .dash-card-hero-icon { font-size: 48px; z-index: 2; background: rgba(255,255,255,0.2); width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 20px; backdrop-filter: blur(4px); }
-
-        /* 一般精緻卡片 */
+        /* 模組卡片樣式 */
         .dash-card { 
-            background: white; 
-            border-radius: 20px; 
-            padding: 22px 16px; 
-            text-align: left; 
-            box-shadow: var(--shadow-sm); 
-            cursor: pointer; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
-            position: relative; 
-            border: 1px solid rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 120px;
+            background: white; border-radius: 20px; padding: 22px 16px; text-align: left; 
+            box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.25s ease; 
+            position: relative; border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; height: 120px; 
         }
-        .dash-card:active { transform: scale(0.96); box-shadow: none; background: #fcfcfc; }
-        .dash-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-        .dash-icon { 
-            font-size: 32px; 
-            width: 50px; 
-            height: 50px; 
-            background: #f3f4f6; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border-radius: 14px;
-            transition: background 0.2s;
-        }
-        .dash-card:active .dash-icon { background: #e5e7eb; }
+        .dash-card:active { transform: scale(0.96); background: #fcfcfc; }
+        .dash-icon { font-size: 32px; width: 50px; height: 50px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
         .dash-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
-        
-        /* 特殊卡片主題色彩 */
+
+        /* 特殊主題卡片 */
+        .card-hero { grid-column: span 2; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; height: auto; padding: 24px; flex-direction: row; align-items: center; justify-content: space-between; }
+        .card-hero .dash-icon { background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 18px; }
         .card-wish { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fde68a; }
         .card-wish .dash-icon { background: rgba(245, 158, 11, 0.15); }
         .card-wish .dash-title { color: #d97706; }
-
         .card-admin { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe; grid-column: span 2; height: auto; flex-direction: row; align-items: center; padding: 18px 22px; }
-        .card-admin .dash-icon { background: rgba(37, 99, 235, 0.15); margin-bottom: 0; }
+        .card-admin .dash-icon { background: rgba(37, 99, 235, 0.15); }
         .card-admin .dash-title { color: #1d4ed8; font-size: 17px; }
 
-        .notification-badge { 
-            display: none; 
-            position: absolute; 
-            top: 12px; 
-            right: 12px; 
-            background-color: var(--danger); 
-            color: white; 
-            font-size: 12px; 
-            font-weight: 800; 
-            height: 22px; 
-            min-width: 22px; 
-            line-height: 22px; 
-            border-radius: 11px; 
-            padding: 0 6px; 
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
-            animation: pulse 2s infinite;
-        }
-
-        /* === 打卡主系統畫面 === */
-        #mainSystemView { display: none; max-width: 500px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-        .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
-        
-        .controls { margin-bottom: 20px; display: flex; gap: 10px; }
-        button { font-size: 15px; font-weight: 700; padding: 14px 20px; border: none; border-radius: 14px; cursor: pointer; transition: opacity 0.2s; }
-        .btn-check { background-color: var(--primary); color: white; flex: 2; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
-        .btn-cancel { background-color: #fee2e2; color: var(--danger); flex: 1; }
-        
-        .checkin-config-box { background: white; padding: 16px; border-radius: 16px; margin-bottom: 20px; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; border: 1px solid #e5e7eb; }
-        .checkin-config-box select { padding: 8px 12px; border-radius: 10px; border: 1px solid #d1d5db; font-weight: 600; outline: none; background: #f9fafb; }
-
-        .calendar-container { background: white; padding: 20px; border-radius: 22px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); }
-        .calendar-header { font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; }
-        .month-btn { background: #f3f4f6; box-shadow: none; font-size: 16px; color: var(--text-main); width: 36px; height: 36px; border-radius: 50%; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-        .weekday { font-weight: 700; background-color: #f8fafc; padding: 8px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
-        .day { border: 1px solid #f1f5f9; border-radius: 12px; min-height: 75px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; transition: background 0.2s; }
-        .day .date-num { font-size: 13px; font-weight: 700; color: var(--text-sub); align-self: flex-start; }
-        .day .status { font-size: 20px; color: var(--primary); font-weight: bold; line-height: 1; margin: 2px 0; }
-        .day .time { font-size: 10px; color: var(--text-sub); font-weight: 600; margin-bottom: 2px; }
-        .today { border: 2px solid var(--primary); background-color: var(--primary-light); }
-        .today .date-num { color: var(--primary-dark); }
+        .notification-badge { display: none; position: absolute; top: 12px; right: 12px; background-color: var(--danger); color: white; font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); }
 
         .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); justify-content: center; align-items: center; font-size: 16px; font-weight: 700; color: var(--primary); z-index: 4000; flex-direction: column; gap: 12px; }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -241,15 +95,15 @@
         <span>載入資料中，請稍候...</span>
     </div>
 
-    <!-- 密碼輸入彈窗 -->
+    <!-- 密碼彈窗 -->
     <div class="modal" id="pinModal">
         <div class="modal-content">
-            <h3 id="modalUserTitle">請輸入密碼</h3>
+            <h3 id="modalUserTitle" style="margin-top:0; font-size:20px;">請輸入密碼</h3>
             <p style="font-size: 13px; color: var(--text-sub); margin: 0;">預設密碼為 1234</p>
             <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" onkeypress="handlePinKeyPress(event)">
             <div class="modal-btns">
-                <button class="btn-cancel" onclick="closePinModal()" style="background:#f3f4f6; color:var(--text-main);">取消</button>
-                <button class="btn-check" onclick="verifyPin()">確認</button>
+                <button onclick="closePinModal()" style="background:#f3f4f6; color:var(--text-main);">取消</button>
+                <button onclick="verifyPin()" style="background:var(--primary); color:white;">確認</button>
             </div>
         </div>
     </div>
@@ -258,16 +112,14 @@
     <div id="loginSection">
         <div class="login-logo-wrapper">🏡</div>
         <div class="login-title">HomeBase</div>
-        <div class="login-subtitle">您的智慧家庭共生平台</div>
+        <div class="login-subtitle">屬於您家的專屬平台</div>
         <div class="user-selection" id="userSelectionContainer"></div>
     </div>
 
-    <!-- 主選單 Dashboard (現代化 App 佈局) -->
+    <!-- 主選單 Dashboard -->
     <div id="dashboardView">
         <div class="app-header">
-            <div class="app-brand">
-                <span>🏠 HomeBase</span>
-            </div>
+            <div class="app-brand">🏠 HomeBase</div>
             <div class="current-user-badge" onclick="logout()" title="點擊登出">
                 <img id="dashUserAvatar" class="mini-avatar" src="" alt="">
                 <div class="user-badge-info">
@@ -277,124 +129,13 @@
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <!-- 核心功能英雄卡片：家庭聊天室 -->
-            <div class="dash-card-hero" onclick="window.location.href='chat.html'">
-                <div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div>
-                <div class="dash-card-hero-content">
-                    <div class="dash-card-hero-title">家庭聊天室</div>
-                    <div class="dash-card-hero-sub">隨時隨地與家人保持聯絡</div>
-                </div>
-                <div class="dash-card-hero-icon">💬</div>
-            </div>
-
-            <!-- 到家打卡 -->
-            <div class="dash-card" onclick="openCheckInView()">
-                <div class="dash-card-top">
-                    <div class="dash-icon">📍</div>
-                </div>
-                <div class="dash-title">到家打卡</div>
-            </div>
-
-            <!-- 行事曆 -->
-            <div class="dash-card" onclick="window.location.href='calendar.html'">
-                <div class="dash-card-top">
-                    <div class="dash-icon">📅</div>
-                </div>
-                <div class="dash-title">家庭行事曆</div>
-            </div>
-
-            <!-- Photo Dump -->
-            <div class="dash-card" onclick="window.location.href='gallery.html'">
-                <div class="dash-card-top">
-                    <div class="dash-icon">📸</div>
-                </div>
-                <div class="dash-title">Photo Dump</div>
-            </div>
-
-            <!-- 遊戲區 -->
-            <div class="dash-card" onclick="window.location.href='games.html'">
-                <div class="dash-card-top">
-                    <div class="dash-icon">🎮</div>
-                </div>
-                <div class="dash-title">遊戲區</div>
-            </div>
-
-            <!-- 許願牆 (特色卡片) -->
-            <div class="dash-card card-wish" onclick="window.location.href='wishwall.html'">
-                <div class="dash-card-top">
-                    <div class="dash-icon">✨</div>
-                </div>
-                <div class="dash-title">許願牆</div>
-            </div>
-
-            <!-- 記帳本 -->
-            <div class="dash-card" onclick="window.location.href='expense.html'">
-                <div class="dash-card-top">
-                    <div class="dash-icon">💰</div>
-                </div>
-                <div class="dash-title">記帳本</div>
-            </div>
-
-            <!-- 個人設定 (跨兩欄中的一半或獨立排版) -->
-            <div class="dash-card" onclick="window.location.href='settings.html'">
-                <div class="dash-card-top">
-                    <div class="dash-icon">⚙️</div>
-                </div>
-                <div class="dash-title">個人設定</div>
-            </div>
-
-            <!-- 管理者後台 (僅管理員可見) -->
-            <div class="dash-card card-admin" id="adminCard" style="display: none;" onclick="window.location.href='admin.html'">
-                <div class="dash-icon">🛡️</div>
-                <div style="flex: 1; margin-left: 12px;">
-                    <div class="dash-title">管理者後台</div>
-                    <div style="font-size: 12px; color: var(--text-sub);">系統管理與紀錄查詢</div>
-                </div>
-            </div>
-        </div>
+        <!-- 動態排序與渲染卡片容器 -->
+        <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
     </div>
 
-    <!-- 打卡主系統畫面 -->
-    <div id="mainSystemView">
-        <div class="top-nav">
-            <button class="btn-back" onclick="goBackToDashboard()">❮ 返回</button>
-            <div class="current-user-badge" onclick="logout()">
-                <img id="sysUserAvatar" class="mini-avatar" src="" alt="">
-                <span id="sysUserName" style="font-size: 14px; font-weight: 700;"></span>
-            </div>
-        </div>
-
-        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 16px; color: var(--text-main);">📍 到家打卡專區</h2>
-        
-        <!-- 管理員專屬：設定打卡推播聊天室 -->
-        <div class="checkin-config-box" id="adminCheckinConfig" style="display: none;">
-            <span>📢 推播聊天室：</span>
-            <select id="targetChatRoomSelect" onchange="saveTargetChatRoom(this.value)">
-                <option value="">-- 請選擇目標群組 --</option>
-            </select>
-        </div>
-
-        <div class="controls" id="actionControls">
-            <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
-            <button class="btn-cancel" onclick="cancelCheckIn()">取消打卡</button>
-        </div>
-
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <button class="month-btn" onclick="changeMonth(-1)">❮</button>
-                <span id="calendarMonth">月份載入中...</span>
-                <button class="month-btn" onclick="changeMonth(1)">❯</button>
-            </div>
-            <div class="calendar-grid" id="calendarGrid"></div>
-        </div>
-    </div>
-
-    <!-- Firebase 模組與核心邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where, deleteDoc, doc, serverTimestamp, onSnapshot, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where, doc, serverTimestamp, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -402,38 +143,14 @@
             projectId: "homebasedb",
             storageBucket: "homebasedb.firebasestorage.app",
             messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
-            measurementId: "G-K7FSPG5B9R"
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
         let unreadUnsubscribe = null;
-
         window.selectedUserObj = null;
-        window.attendanceData = {};
-        window.viewDate = new Date(); 
-        window.today = new Date();  
-
-        // ★ 通用 Log 寫入輔助函式 (確保管理者後台能抓到資料)
-        async function recordLog(operatorName, actionType, detailsText) {
-            try {
-                const now = new Date();
-                const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-                
-                await addDoc(collection(db, "logs"), {
-                    datetime: datetimeStr,
-                    operator: operatorName,
-                    actionType: actionType,
-                    details: detailsText,
-                    timestamp: serverTimestamp()
-                });
-            } catch (e) {
-                console.error("寫入 Log 失敗:", e);
-            }
-        }
 
         window.onload = function() {
             const savedUser = sessionStorage.getItem('familyCheckInUser');
@@ -444,11 +161,18 @@
             }
         };
 
+        async function recordLog(operatorName, actionType, detailsText) {
+            try {
+                const now = new Date();
+                const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: operatorName, actionType, details: detailsText, timestamp: serverTimestamp() });
+            } catch (e) { console.error("寫入 Log 失敗:", e); }
+        }
+
         window.fetchUsersAndRenderLogin = async function() {
             try {
                 const querySnapshot = await getDocs(collection(db, "users"));
                 let users = [];
-                
                 if (querySnapshot.empty) {
                     const defaultUsers = [
                         {name: "俊俊", pin: "1234", avatar: "junjun.jpg", role: "kid"},
@@ -461,18 +185,10 @@
                         users.push(u);
                     }
                 } else {
-                    querySnapshot.forEach(doc => users.push(doc.data()));
+                    querySnapshot.forEach(docSnap => users.push(docSnap.data()));
                 }
-                
-                localStorage.setItem('cachedUsers', JSON.stringify(users));
                 window.buildUserCards(users);
-            } catch (e) {
-                console.error("載入使用者失敗:", e);
-                const cached = localStorage.getItem('cachedUsers');
-                if (cached) {
-                    window.buildUserCards(JSON.parse(cached));
-                }
-            }
+            } catch (e) { console.error("載入使用者失敗:", e); }
         };
 
         window.buildUserCards = function(users) {
@@ -498,13 +214,8 @@
             document.getElementById('pinInput').focus();
         };
 
-        window.closePinModal = function() {
-            document.getElementById('pinModal').style.display = 'none';
-        };
-
-        window.handlePinKeyPress = function(event) {
-            if (event.key === 'Enter') window.verifyPin();
-        };
+        window.closePinModal = function() { document.getElementById('pinModal').style.display = 'none'; };
+        window.handlePinKeyPress = function(e) { if (e.key === 'Enter') window.verifyPin(); };
 
         window.verifyPin = function() {
             const pin = document.getElementById('pinInput').value.trim();
@@ -520,74 +231,138 @@
 
         window.login = async function(userObj) {
             sessionStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
-            
-            // ★ 記錄登入 Log
             await recordLog(userObj.name, '登入', '使用者成功登入系統');
-
             window.showDashboard();
         };
 
         window.logout = function() {
             sessionStorage.removeItem('familyCheckInUser');
-            if (unreadUnsubscribe) {
-                unreadUnsubscribe();
-                unreadUnsubscribe = null;
-            }
+            if (unreadUnsubscribe) { unreadUnsubscribe(); unreadUnsubscribe = null; }
             document.getElementById('dashboardView').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('loginSection').style.display = 'flex';
             window.fetchUsersAndRenderLogin();
         };
 
-        window.showDashboard = function() {
+        window.showDashboard = async function() {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'none';
             document.getElementById('dashboardView').style.display = 'block';
             
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
 
-            if (user.role === 'admin' || user.role === 'parent') {
-                document.getElementById('adminCard').style.display = 'flex';
-            } else {
-                document.getElementById('adminCard').style.display = 'none';
-            }
-
+            await renderDynamicModules(user);
             window.checkUnreadMessages();
         };
 
+        // ★ 支援個人自訂排序與模組開關的動態渲染引擎
+        async function renderDynamicModules(user) {
+            const grid = document.getElementById('dynamicDashboardGrid');
+            grid.innerHTML = '';
+
+            // 1. 預設模組開關與預設順序
+            let modules = { chat: true, checkin: true, calendar: true, gallery: true, games: true, wishwall: true, expense: true, settings: true };
+            let order = ['chat', 'checkin', 'calendar', 'gallery', 'games', 'wishwall', 'expense', 'settings'];
+
+            try {
+                // 優先讀取該使用者的個人化設定（若有），否則讀取全域設定
+                const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
+                if (userConfigDoc.exists()) {
+                    const data = userConfigDoc.data();
+                    if (data.modules) modules = { ...modules, ...data.modules };
+                    if (data.order && Array.isArray(data.order)) order = data.order;
+                } else {
+                    const configDoc = await getDoc(doc(db, "settings", "moduleConfig"));
+                    if (configDoc.exists()) {
+                        const data = configDoc.data();
+                        if (data.modules) modules = { ...modules, ...data.modules };
+                        if (data.order && Array.isArray(data.order)) order = data.order;
+                    }
+                }
+            } catch (e) { console.log("使用預設模組與排序配置"); }
+
+            // 定義所有卡片的生成範本
+            const cardTemplates = {
+                chat: () => modules.chat !== false ? `
+                    <div class="dash-card card-hero" onclick="window.location.href='chat.html'">
+                        <div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div>
+                        <div>
+                            <div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">家庭聊天室</div>
+                            <div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div>
+                        </div>
+                        <div class="dash-icon">💬</div>
+                    </div>` : '',
+                checkin: () => modules.checkin !== false ? `
+                    <div class="dash-card" onclick="window.location.href='checkin.html'">
+                        <div><div class="dash-icon">📍</div></div>
+                        <div class="dash-title">到家打卡</div>
+                    </div>` : '',
+                calendar: () => modules.calendar !== false ? `
+                    <div class="dash-card" onclick="window.location.href='calendar.html'">
+                        <div><div class="dash-icon">📅</div></div>
+                        <div class="dash-title">家庭行事曆</div>
+                    </div>` : '',
+                gallery: () => modules.gallery !== false ? `
+                    <div class="dash-card" onclick="window.location.href='gallery.html'">
+                        <div><div class="dash-icon">📸</div></div>
+                        <div class="dash-title">Photo Dump</div>
+                    </div>` : '',
+                games: () => modules.games !== false ? `
+                    <div class="dash-card" onclick="window.location.href='games.html'">
+                        <div><div class="dash-icon">🎮</div></div>
+                        <div class="dash-title">遊戲區</div>
+                    </div>` : '',
+                wishwall: () => modules.wishwall !== false ? `
+                    <div class="dash-card card-wish" onclick="window.location.href='wishwall.html'">
+                        <div><div class="dash-icon">✨</div></div>
+                        <div class="dash-title">許願牆</div>
+                    </div>` : '',
+                expense: () => modules.expense !== false ? `
+                    <div class="dash-card" onclick="window.location.href='expense.html'">
+                        <div><div class="dash-icon">💰</div></div>
+                        <div class="dash-title">記帳本</div>
+                    </div>` : '',
+                settings: () => modules.settings !== false ? `
+                    <div class="dash-card" onclick="window.location.href='settings.html'">
+                        <div><div class="dash-icon">⚙️</div></div>
+                        <div class="dash-title">個人設定</div>
+                    </div>` : ''
+            };
+
+            // 依照使用者自訂的順序依序渲染卡片
+            order.forEach(modKey => {
+                if (cardTemplates[modKey]) {
+                    grid.innerHTML += cardTemplates[modKey]();
+                }
+            });
+
+            // 如果是管理員，固定在最下方顯示管理者後台卡片
+            if (user.role === 'admin' || user.role === 'parent') {
+                grid.innerHTML += `
+                    <div class="dash-card card-admin" onclick="window.location.href='admin.html'">
+                        <div class="dash-icon">🛡️</div>
+                        <div style="flex: 1; margin-left: 12px;">
+                            <div class="dash-title">管理者後台</div>
+                            <div style="font-size: 12px; color: var(--text-sub);">系統管理與稽核紀錄</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         window.checkUnreadMessages = function() {
-            const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+            const userStr = sessionStorage.getItem('familyCheckInUser');
             if (!userStr) return;
             const user = JSON.parse(userStr);
 
-            if (unreadUnsubscribe) {
-                unreadUnsubscribe();
-            }
-
             try {
-                const q = query(
-                    collection(db, "rooms"),
-                    where("participants", "array-contains", user.name)
-                );
-                
+                const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
                 unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
                     let unreadRoomsCount = 0;
-
                     querySnapshot.forEach(docSnap => {
                         const room = docSnap.data();
-                        
-                        let lastMsgTime = 0;
-                        if (room.lastMessageTime && room.lastMessageTime.toDate) {
-                            lastMsgTime = room.lastMessageTime.toDate().getTime();
-                        }
-
-                        let myReadTime = 0;
-                        if (room.readTimestamps && room.readTimestamps[user.name]) {
-                            myReadTime = room.readTimestamps[user.name];
-                        }
-
+                        let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
+                        let myReadTime = room.readTimestamps?.[user.name] || 0;
                         const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
                         const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
 
@@ -595,221 +370,17 @@
                             unreadRoomsCount++;
                         }
                     });
-
                     const badge = document.getElementById('chatBadge');
-                    if (unreadRoomsCount > 0) {
-                        badge.style.display = 'block';
-                        badge.innerText = unreadRoomsCount > 99 ? '99+' : unreadRoomsCount;
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                });
-            } catch (e) {
-                console.error("檢查未讀訊息失敗:", e);
-            }
-        };
-
-        window.goBackToDashboard = function() {
-            document.getElementById('mainSystemView').style.display = 'none';
-            window.showDashboard();
-        };
-
-        window.openCheckInView = async function() {
-            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            document.getElementById('dashboardView').style.display = 'none';
-            document.getElementById('mainSystemView').style.display = 'block';
-            document.getElementById('sysUserAvatar').src = user.avatar;
-            document.getElementById('sysUserName').innerText = user.name;
-
-            const actionControls = document.getElementById('actionControls');
-            const adminConfig = document.getElementById('adminCheckinConfig');
-
-            if (user.role === 'admin' || user.role === 'parent') {
-                actionControls.style.display = 'flex';
-                adminConfig.style.display = 'flex';
-                await loadChatRoomsForSelect();
-            } else {
-                actionControls.style.display = 'flex';
-                adminConfig.style.display = 'none';
-            }
-            window.loadData(); 
-        };
-
-        async function loadChatRoomsForSelect() {
-            try {
-                const select = document.getElementById('targetChatRoomSelect');
-                select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
-                
-                const querySnapshot = await getDocs(collection(db, "rooms"));
-                querySnapshot.forEach(docSnap => {
-                    const room = docSnap.data();
-                    const opt = document.createElement('option');
-                    opt.value = docSnap.id;
-                    opt.innerText = room.name;
-                    select.appendChild(opt);
-                });
-
-                const configDoc = await getDoc(doc(db, "settings", "checkinConfig"));
-                if (configDoc.exists()) {
-                    const targetRoomId = configDoc.data().targetRoomId;
-                    if (targetRoomId) select.value = targetRoomId;
-                }
-            } catch (e) {
-                console.error("載入聊天室清單失敗", e);
-            }
-        }
-
-        window.saveTargetChatRoom = async function(roomId) {
-            try {
-                const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-                await setDoc(doc(db, "settings", "checkinConfig"), {
-                    targetRoomId: roomId,
-                    updatedAt: serverTimestamp()
-                }, { merge: true });
-
-                // ★ 記錄設定變更 Log
-                await recordLog(user ? user.name : '管理者', '設定變更', `變更打卡推播聊天室 ID: ${roomId}`);
-                alert('已成功設定打卡通知發送的聊天室！');
-            } catch (e) {
-                console.error("儲存設定失敗", e);
-                alert('設定儲存失敗，請檢查網路。');
-            }
-        };
-
-        window.loadData = async function() {
-            document.getElementById('loadingView').style.display = 'flex';
-
-            try {
-                const querySnapshot = await getDocs(collection(db, "checkins"));
-                window.attendanceData = {};
-                querySnapshot.forEach(docSnap => {
-                    const item = docSnap.data();
-                    if (item.date) {
-                        window.attendanceData[item.date] = { 
-                            checked: true, 
-                            time: item.time, 
-                            operator: item.operator,
-                            docId: docSnap.id 
-                        };
-                    }
-                });
-                window.initCalendar();
-            } catch (e) {
-                console.error("讀取打卡紀錄失敗:", e);
-                window.initCalendar();
-            } finally {
-                document.getElementById('loadingView').style.display = 'none';
-            }
-        };
-
-        window.initCalendar = function() {
-            const year = window.viewDate.getFullYear();
-            const month = window.viewDate.getMonth();
-            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-            document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
-            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
-            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
-                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
-            });
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const totalDays = new Date(year, month + 1, 0).getDate();
-            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
-            for (let day = 1; day <= totalDays; day++) {
-                const dayDiv = document.createElement('div'); dayDiv.className = 'day';
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                if (day === window.today.getDate() && month === window.today.getMonth() && year === window.today.getFullYear()) dayDiv.classList.add('today');
-                const numSpan = document.createElement('span'); numSpan.className = 'date-num'; numSpan.innerText = day;
-                dayDiv.appendChild(numSpan);
-                if (window.attendanceData[dateKey]) {
-                    const statusSpan = document.createElement('span'); statusSpan.className = 'status'; statusSpan.innerText = '✓';
-                    dayDiv.appendChild(statusSpan);
-                    if (window.attendanceData[dateKey].time) {
-                        let displayTime = window.attendanceData[dateKey].time;
-                        let match = String(displayTime).match(/(\d{2}:\d{2})/);
-                        if (match) displayTime = match[1];
-                        const timeDiv = document.createElement('div'); timeDiv.className = 'time'; timeDiv.innerText = displayTime;
-                        dayDiv.appendChild(timeDiv);
-                    }
-                }
-                grid.appendChild(dayDiv);
-            }
-        };
-
-        window.changeMonth = function(direction) { 
-            window.viewDate.setMonth(window.viewDate.getMonth() + direction); 
-            window.initCalendar(); 
-        };
-
-        window.checkIn = async function() {
-            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            const timeStr = `${String(window.today.getHours()).padStart(2, '0')}:${String(window.today.getMinutes()).padStart(2, '0')}`;
-            const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
-            
-            try {
-                const docRef = await addDoc(collection(db, "checkins"), {
-                    date: dateKey,
-                    time: timeStr,
-                    operator: user.name,
-                    timestamp: serverTimestamp()
-                });
-
-                window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: user.name, docId: docRef.id };
-                window.initCalendar();
-
-                // ★ 記錄打卡成功 Log
-                await recordLog(user.name, '到家打卡', `於 ${dateKey} ${timeStr} 進行安全到家打卡`);
-
-                const configDoc = await getDoc(doc(db, "settings", "checkinConfig"));
-                if (configDoc.exists() && configDoc.data().targetRoomId) {
-                    const targetRoomId = configDoc.data().targetRoomId;
-                    const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
-
-                    await addDoc(collection(db, "messages"), {
-                        roomId: targetRoomId,
-                        sender: user.name,
-                        text: chatMessageText,
-                        timestamp: serverTimestamp()
-                    });
-
-                    await updateDoc(doc(db, "rooms", targetRoomId), {
-                        lastMessage: `${user.name}: ${chatMessageText}`,
-                        lastMessageTime: serverTimestamp()
-                    });
-                }
-
-                alert('打卡成功！已同步通知聊天室。');
-            } catch (e) {
-                console.error("打卡寫入失敗:", e);
-                alert('打卡發生錯誤，請檢查網路。');
-            }
-        };
-
-        window.cancelCheckIn = async function() {
-            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            if (confirm(`確定要移除今天的打卡紀錄嗎？\n(操作者: ${user.name})`)) {
-                const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
-                
-                if (window.attendanceData[dateKey]) {
-                    const docId = window.attendanceData[dateKey].docId;
-                    if (docId) {
-                        try {
-                            await deleteDoc(doc(db, "checkins", docId));
-                            delete window.attendanceData[dateKey];
-                            window.initCalendar();
-
-                            // ★ 記錄取消打卡 Log
-                            await recordLog(user.name, '取消打卡', `移除了 ${dateKey} 的打卡紀錄`);
-
-                            alert('已成功移除打卡紀錄。');
-                        } catch (e) {
-                            console.error("刪除打卡失敗:", e);
-                            alert('刪除失敗，請檢查網路。');
+                    if (badge) {
+                        if (unreadRoomsCount > 0) {
+                            badge.style.display = 'block';
+                            badge.innerText = unreadRoomsCount > 99 ? '99+' : unreadRoomsCount;
+                        } else {
+                            badge.style.display = 'none';
                         }
                     }
-                } else { 
-                    alert('今天本來就沒有打卡紀錄喔！'); 
-                }
-            }
+                });
+            } catch (e) { console.error("檢查未讀訊息失敗:", e); }
         };
     </script>
 </body>
