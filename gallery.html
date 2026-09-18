@@ -3,91 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📸 Photo Dump</title>
+    <title>HomeBase - Photo Dump</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
-    <meta name="apple-mobile-web-app-title" content="OurBase">
+    <meta name="apple-mobile-web-app-title" content="HomeBase">
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
         :root {
-            --primary-color: #f57c00; /* 使用溫暖的橘色系代表相簿 */
-            --primary-light: #fff3e0;
-            --accent-color: #ff9800;
-            --bg-color: #f9fbe7;
-            --border-color: #e0e0e0;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #ecfdf5;
+            --danger: #ef4444;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            --bg-color: #f8fafc;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
-       
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
-        .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .page-title { color: var(--primary-color); font-size: 20px; font-weight: bold; margin: 0; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; color: var(--text-main); }
+        
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
+        .page-title { color: var(--text-main); font-size: 18px; font-weight: 800; margin: 0; }
 
-        .btn-upload-fab { position: fixed; bottom: 25px; right: 25px; background-color: var(--primary-color); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; border: none; box-shadow: 0 4px 15px rgba(245, 124, 0, 0.4); cursor: pointer; z-index: 100; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        /* 排序控制列 */
+        .sort-bar { max-width: 500px; margin: 0 auto 20px auto; display: flex; justify-content: flex-end; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-sub); }
+        .sort-select { padding: 6px 12px; border-radius: 12px; border: 1px solid #e5e7eb; background: white; font-weight: 700; color: var(--text-main); outline: none; cursor: pointer; box-shadow: var(--shadow-sm); }
+
+        .btn-upload-fab { position: fixed; bottom: 25px; right: 25px; background-color: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); cursor: pointer; z-index: 100; display: flex; justify-content: center; align-items: center; transition: transform 0.2s; }
         .btn-upload-fab:active { transform: scale(0.9); }
 
         /* 相簿動態牆容器 */
-        .feed-container { max-width: 650px; margin: 0 auto 80px auto; display: flex; flex-direction: column; gap: 20px; }
-       
+        .feed-container { max-width: 500px; margin: 0 auto 80px auto; display: flex; flex-direction: column; gap: 20px; }
+        
         /* 每一篇照片卡片 */
-        .photo-card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); overflow: hidden; }
-       
-        /* 卡片頭部 (發佈者) */
-        .card-header { padding: 12px 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0f0f0; }
-        .uploader-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .photo-card { background: white; border-radius: 22px; box-shadow: var(--shadow-sm); overflow: hidden; border: 1px solid rgba(0,0,0,0.03); }
+        
+        /* 卡片頭部 */
+        .card-header { padding: 14px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f8fafc; }
+        .uploader-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
         .uploader-info { flex: 1; }
-        .uploader-name { font-weight: bold; font-size: 15px; color: #333; }
-        .upload-time { font-size: 11px; color: #999; margin-top: 2px; }
-        .btn-delete { background: none; border: none; color: #e53935; cursor: pointer; font-size: 16px; padding: 5px; }
+        .uploader-name { font-weight: 800; font-size: 15px; color: var(--text-main); }
+        .upload-time { font-size: 11px; color: var(--text-sub); margin-top: 2px; font-weight: 600; }
+        .btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 6px; }
 
         /* 圖片與敘述 */
-        .card-image { width: 100%; max-height: 400px; object-fit: cover; display: block; cursor: pointer; background: #f5f5f5; }
-        .card-caption { padding: 12px 15px; font-size: 14.5px; line-height: 1.5; color: #222; }
+        .card-image { width: 100%; max-height: 450px; object-fit: cover; display: block; cursor: pointer; background: #f1f5f9; }
+        .card-caption { padding: 14px 18px; font-size: 15px; line-height: 1.5; color: var(--text-main); font-weight: 500; }
+
+        /* 互動列 (按讚與計數) */
+        .interaction-bar { padding: 0 18px 12px 18px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #f1f5f9; }
+        .btn-like { background: none; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--text-sub); font-weight: 700; }
+        .btn-like.liked { color: #e11d48; }
+        .likes-count { font-size: 13px; font-weight: 700; color: var(--text-sub); }
 
         /* 留言區塊 */
-        .comments-section { background: #fafafa; border-top: 1px solid #eee; padding: 12px 15px; }
+        .comments-section { background: #f8fafc; padding: 14px 18px; }
         .comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 250px; overflow-y: auto; }
-        .comment-item { font-size: 13.5px; line-height: 1.4; background: white; padding: 8px 12px; border-radius: 12px; border: 1px solid #eee; }
-        .comment-sender { font-weight: bold; color: var(--primary-color); margin-right: 5px; }
-        .comment-time { font-size: 10px; color: #aaa; margin-left: 6px; }
+        .comment-item { font-size: 14px; line-height: 1.4; background: white; padding: 10px 14px; border-radius: 14px; border: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .comment-content { flex: 1; word-break: break-all; }
+        .comment-sender { font-weight: 800; color: var(--primary-dark); margin-right: 6px; }
+        .comment-time { font-size: 10px; color: var(--text-sub); margin-left: 6px; font-weight: 600; }
+        .btn-del-comment { background: none; border: none; color: var(--danger); font-size: 12px; cursor: pointer; padding: 0 0 0 8px; flex-shrink: 0; }
 
         .comment-input-area { display: flex; gap: 8px; }
-        .comment-input { flex: 1; padding: 10px 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 14px; }
-        .btn-comment { background: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .comment-input { flex: 1; padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 20px; outline: none; font-size: 14px; background: white; font-family: inherit; }
+        .comment-input:focus { border-color: var(--primary); }
+        .btn-comment { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 800; cursor: pointer; font-size: 14px; box-shadow: 0 2px 6px rgba(16,185,129,0.2); }
        
         /* 上傳 Modal */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; }
-        .preview-upload-img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; background: #eee; margin-bottom: 15px; border: 1px solid #ddd; }
-        .upload-caption-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 20px; resize: none; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: var(--shadow-lg); }
+        .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; }
+        .preview-upload-img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 12px; background: #f1f5f9; margin-bottom: 16px; border: 1px solid #e5e7eb; }
+        .upload-caption-input { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 14px; box-sizing: border-box; margin-bottom: 20px; resize: none; background: #f8fafc; font-family: inherit; outline: none; }
+        .upload-caption-input:focus { border-color: var(--primary); background: white; }
         .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
-        .btn-cancel { background: #888; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-confirm { background: var(--primary-color); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-cancel { background: #f1f5f9; color: var(--text-main); border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .btn-confirm { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
 
         /* 照片全螢幕預覽 */
         .photo-viewer { display: none; position: fixed; z-index: 4000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; }
-        .viewer-content { max-width: 95%; max-height: 85vh; object-fit: contain; }
-        .close-viewer { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; font-weight: bold; cursor: pointer; width: 40px; height: 40px; text-align: center; line-height: 38px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+        .viewer-content { max-width: 95%; max-height: 85vh; object-fit: contain; border-radius: 12px; }
+        .close-viewer { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); }
     </style>
 </head>
 <body>
     <div class="top-nav">
         <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
         <div class="page-title">📸 Photo Dump</div>
-        <div style="width: 80px;"></div> <!-- 排版佔位 -->
+        <div style="width: 80px;"></div>
     </div>
 
-    <!-- 浮動的上傳按鈕 -->
+    <!-- 排序控制列 -->
+    <div class="sort-bar">
+        <span>排序方式：</span>
+        <select id="sortSelect" class="sort-select" onchange="changeSortMethod(this.value)">
+            <option value="latest">🕒 時間最晚 (最新)</option>
+            <option value="likes">❤️ 按讚數最多</option>
+            <option value="comments">💬 留言數最多</option>
+        </select>
+    </div>
+
     <button class="btn-upload-fab" id="btnTriggerFile">➕</button>
     <input type="file" id="fileInput" accept="image/*" style="display: none;">
 
-    <!-- 相簿動態牆 -->
     <div class="feed-container" id="feedContainer">
-        <div style="text-align:center; padding:50px; color:#888;">載入照片中...</div>
+        <div style="text-align:center; padding:50px; color:var(--text-sub); font-weight:600;">載入照片中...</div>
     </div>
 
-    <!-- 上傳預覽與編輯 Modal -->
+    <!-- 上傳 Modal -->
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <h3 class="modal-title">發佈新照片</h3>
@@ -110,10 +137,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import {
             getFirestore, collection, addDoc, query, orderBy, onSnapshot,
-            serverTimestamp, doc, updateDoc, arrayUnion, deleteDoc, getDoc
+            serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
@@ -125,34 +151,78 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. 取得登入者資訊
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
         let pendingUploadBase64 = null;
+        let allPhotosData = [];
+        let currentSort = 'latest'; // 預設排序
+
         const feedContainer = document.getElementById('feedContainer');
 
-        // ================= 照片讀取與渲染 =================
-        function listenToGallery() {
-            // 查詢 photos 集合，依時間遞減排序 (不需要額外設定複合索引)
-            const q = query(collection(db, "photos"), orderBy("timestamp", "desc"));
+        async function recordLog(actionType, detailsText) {
+            try {
+                const now = new Date();
+                const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
+            } catch (e) {}
+        }
 
+        window.onload = async function() {
+            await recordLog('功能瀏覽', '進入「Photo Dump」相簿專區');
+        };
+
+        function listenToGallery() {
+            const q = query(collection(db, "photos"), orderBy("timestamp", "desc"));
             onSnapshot(q, (snapshot) => {
-                feedContainer.innerHTML = '';
+                allPhotosData = [];
                 if (snapshot.empty) {
-                    feedContainer.innerHTML = '<div style="text-align:center; padding:50px; color:#888;">相簿空空的，趕快點擊右下角上傳第一張照片吧！</div>';
+                    feedContainer.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-sub); font-weight:600;">相簿空空的，趕快點擊右下角上傳第一張照片吧！</div>';
                     return;
                 }
-
                 snapshot.forEach((docSnap) => {
-                    const photoData = docSnap.data();
-                    renderPhotoCard(docSnap.id, photoData);
+                    allPhotosData.push({ id: docSnap.id, ...docSnap.data() });
                 });
+                renderFeed();
             }, (error) => {
                 console.error("載入相簿失敗：", error);
                 feedContainer.innerHTML = '<div style="text-align:center; padding:30px; color:red;">載入失敗，請檢查網路連線。</div>';
             });
+        }
+
+        window.changeSortMethod = function(method) {
+            currentSort = method;
+            renderFeed();
+        };
+
+        function renderFeed() {
+            feedContainer.innerHTML = '';
+            let sortedList = [...allPhotosData];
+
+            // 根據選單進行排序
+            if (currentSort === 'likes') {
+                sortedList.sort((a, b) => {
+                    const countA = (a.likes && Array.isArray(a.likes)) ? a.likes.length : 0;
+                    const countB = (b.likes && Array.isArray(b.likes)) ? b.likes.length : 0;
+                    return countB - countA; // 多的排前面
+                });
+            } else if (currentSort === 'comments') {
+                sortedList.sort((a, b) => {
+                    const countA = (a.comments && Array.isArray(a.comments)) ? a.comments.length : 0;
+                    const countB = (b.comments && Array.isArray(b.comments)) ? b.comments.length : 0;
+                    return countB - countA;
+                });
+            } else {
+                // latest
+                sortedList.sort((a, b) => {
+                    const timeA = a.timestamp?.toDate?.()?.getTime() || 0;
+                    const timeB = b.timestamp?.toDate?.()?.getTime() || 0;
+                    return timeB - timeA;
+                });
+            }
+
+            sortedList.forEach(photo => renderPhotoCard(photo.id, photo));
         }
 
         function renderPhotoCard(photoId, data) {
@@ -162,30 +232,40 @@
                 timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
             }
 
-            // 判斷是否為自己發佈的 (允許刪除)
             const isMine = (data.uploader === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
-            const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')">🗑️</button>` : '';
+            const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')" title="刪除貼文">🗑️</button>` : '';
 
-            // 生成留言列表 HTML
+            // ★ 按讚邏輯
+            const likesArray = (data.likes && Array.isArray(data.likes)) ? data.likes : [];
+            const hasLiked = likesArray.includes(currentUser.name);
+            const likesCount = likesArray.length;
+
+            // ★ 留言邏輯 (支援自己留言或管理員刪除)
             let commentsHtml = '';
             if (data.comments && data.comments.length > 0) {
-                data.comments.forEach(c => {
+                data.comments.forEach((c, index) => {
                     const cTime = new Date(c.timestamp);
                     const cTimeStr = `${String(cTime.getMonth()+1).padStart(2,'0')}/${String(cTime.getDate()).padStart(2,'0')} ${String(cTime.getHours()).padStart(2,'0')}:${String(cTime.getMinutes()).padStart(2,'0')}`;
+                    
+                    const canDeleteComment = (c.sender === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+                    const delCommentBtn = canDeleteComment ? `<button class="btn-del-comment" onclick="window.deleteComment('${photoId}', ${index})" title="刪除留言">刪除</button>` : '';
+
                     commentsHtml += `
                         <div class="comment-item">
-                            <span class="comment-sender">${c.sender}</span>
-                            <span>${c.text}</span>
-                            <span class="comment-time">${cTimeStr}</span>
+                            <div class="comment-content">
+                                <span class="comment-sender">${c.sender}</span>
+                                <span>${c.text}</span>
+                                <span class="comment-time">${cTimeStr}</span>
+                            </div>
+                            ${delCommentBtn}
                         </div>
                     `;
                 });
             } else {
-                commentsHtml = '<div style="color:#aaa; font-size:13px; text-align:center;">成為第一個留言的人吧！</div>';
+                commentsHtml = '<div style="color:var(--text-sub); font-size:13px; text-align:center; font-weight:600;">成為第一個留言的人吧！</div>';
             }
 
-            // 使用者大頭貼預設
-            const uploaderAvatar = data.uploaderAvatar || `https://ui-avatars.com/api/?name=${data.uploader}&background=ff9800&color=fff`;
+            const uploaderAvatar = data.uploaderAvatar || `https://ui-avatars.com/api/?name=${data.uploader}&background=10b981&color=fff`;
 
             const card = document.createElement('div');
             card.className = 'photo-card';
@@ -200,55 +280,95 @@
                 </div>
                 <img src="${data.imageUrl}" class="card-image" onclick="window.openPhotoViewer(this.src)">
                 ${data.caption ? `<div class="card-caption">${data.caption}</div>` : ''}
-               
+                
+                <div class="interaction-bar">
+                    <button class="btn-like ${hasLiked ? 'liked' : ''}" onclick="window.toggleLike('${photoId}', ${hasLiked})">
+                        ${hasLiked ? '❤️' : '🤍'} <span class="likes-count">${likesCount > 0 ? likesCount : '按讚'}</span>
+                    </button>
+                </div>
+
                 <div class="comments-section">
-                    <div class="comments-list" id="comments-${photoId}">
+                    <div class="comments-list">
                         ${commentsHtml}
                     </div>
                     <div class="comment-input-area">
-                        <input type="text" id="input-${photoId}" class="comment-input" placeholder="留個言吧...">
+                        <input type="text" id="input-${photoId}" class="comment-input" placeholder="留個言吧..." autocomplete="off">
                         <button class="btn-comment" onclick="window.submitComment('${photoId}')">留言</button>
                     </div>
                 </div>
             `;
             feedContainer.appendChild(card);
 
-            // 綁定 Enter 鍵留言
             document.getElementById(`input-${photoId}`).addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') window.submitComment(photoId);
             });
         }
 
-        // ================= 留言功能 (ArrayUnion) =================
+        // ================= 按讚與取消讚 =================
+        window.toggleLike = async function(photoId, hasLiked) {
+            try {
+                const photoRef = doc(db, "photos", photoId);
+                if (hasLiked) {
+                    // 取消讚：從陣列移除名字
+                    await updateDoc(photoRef, { likes: arrayRemove(currentUser.name) });
+                } else {
+                    // 按讚：將名字加入陣列
+                    await updateDoc(photoRef, { likes: arrayUnion(currentUser.name) });
+                }
+            } catch (e) {
+                console.error("按讚操作失敗：", e);
+                alert("操作失敗，請檢查網路。");
+            }
+        };
+
+        // ================= 留言與刪除留言 =================
         window.submitComment = async function(photoId) {
             const inputField = document.getElementById(`input-${photoId}`);
             const text = inputField.value.trim();
             if (!text) return;
 
-            inputField.value = ''; // 先清空畫面
-           
+            inputField.value = '';
             try {
                 const photoRef = doc(db, "photos", photoId);
-                // 使用 arrayUnion 將留言物件推入陣列中
                 await updateDoc(photoRef, {
                     comments: arrayUnion({
                         sender: currentUser.name,
                         text: text,
-                        timestamp: Date.now() // 用本地時間戳，避免 nested serverTimestamp 錯誤
+                        timestamp: Date.now()
                     })
                 });
+                await recordLog('相簿互動', '在相簿照片中發表了一則留言');
             } catch (e) {
                 console.error("留言失敗：", e);
                 alert("留言失敗，請檢查網路！");
-                inputField.value = text; // 失敗則還原文字
+                inputField.value = text;
             }
         };
 
-        // ================= 刪除照片 =================
+        window.deleteComment = async function(photoId, commentIndex) {
+            if (!confirm("確定要刪除這則留言嗎？")) return;
+            try {
+                const photoRef = doc(db, "photos", photoId);
+                const targetPhoto = allPhotosData.find(p => p.id === photoId);
+                if (targetPhoto && targetPhoto.comments) {
+                    // 複製一份留言陣列並移除指定索引的留言
+                    let updatedComments = [...targetPhoto.comments];
+                    updatedComments.splice(commentIndex, 1);
+                    
+                    await updateDoc(photoRef, { comments: updatedComments });
+                }
+            } catch (e) {
+                console.error("刪除留言失敗：", e);
+                alert("刪除留言失敗，請稍後再試。");
+            }
+        };
+
+        // ================= 刪除整篇貼文 =================
         window.deletePhoto = async function(photoId) {
-            if (confirm("確定要刪除這張照片嗎？(留言也會一併刪除喔)")) {
+            if (confirm("確定要刪除這張照片嗎？(留言與按讚也會一併刪除喔)")) {
                 try {
                     await deleteDoc(doc(db, "photos", photoId));
+                    await recordLog('相簿管理', '刪除了一張相簿照片');
                 } catch (e) {
                     console.error("刪除失敗：", e);
                     alert("刪除失敗，請再試一次。");
@@ -256,7 +376,7 @@
             }
         };
 
-        // ================= 上傳照片處理 (壓縮 + Modal) =================
+        // ================= 上傳照片處理 =================
         const btnTriggerFile = document.getElementById('btnTriggerFile');
         const fileInput = document.getElementById('fileInput');
 
@@ -273,7 +393,6 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                    
-                    // 壓縮照片：最大 800px，確保 Firestore 文件不會超過 1MB 限制
                     const maxSize = 800;
                     let width = img.width, height = img.height;
                     if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
@@ -293,14 +412,12 @@
             reader.readAsDataURL(file);
         });
 
-        // 關閉/取消上傳
         document.getElementById('btnCancelUpload').addEventListener('click', () => {
             document.getElementById('uploadModal').style.display = 'none';
             fileInput.value = '';
             pendingUploadBase64 = null;
         });
 
-        // 確認上傳至 Firestore
         document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
             if (!pendingUploadBase64) return;
             const caption = document.getElementById('uploadCaption').value.trim();
@@ -316,9 +433,11 @@
                     uploader: currentUser.name,
                     uploaderAvatar: currentUser.avatar || null,
                     timestamp: serverTimestamp(),
-                    comments: [] // 初始化空留言陣列
+                    comments: [],
+                    likes: [] // 初始化按讚陣列
                 });
 
+                await recordLog('相簿管理', '上傳了一張新照片至 Photo Dump');
                 document.getElementById('uploadModal').style.display = 'none';
                 fileInput.value = '';
                 pendingUploadBase64 = null;
@@ -331,7 +450,6 @@
             }
         });
 
-        // ================= 全螢幕檢視器 =================
         window.openPhotoViewer = function(src) {
             document.getElementById('viewerImage').src = src;
             document.getElementById('photoViewerModal').style.display = 'flex';
@@ -341,7 +459,6 @@
             document.getElementById('viewerImage').src = '';
         };
 
-        // 啟動監聽
         listenToGallery();
     </script>
 </body>
