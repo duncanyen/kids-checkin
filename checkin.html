@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HomeBase - 到家打卡</title>
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
+    <link rel="apple-touch-icon" href="homebase_icon.jpg">
+    <meta name="mobile-web-app-capable" content="yes">
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --primary-light: #ecfdf5;
+            --danger: #ef4444;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: var(--text-main); }
+        
+        #mainSystemView { max-width: 500px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+        .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
+        
+        .current-user-badge { background: white; padding: 6px 14px 6px 6px; border-radius: 30px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px; border: 1px solid rgba(0,0,0,0.04); }
+        .mini-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
+
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; }
+        button { font-size: 15px; font-weight: 700; padding: 14px 20px; border: none; border-radius: 14px; cursor: pointer; }
+        .btn-check { background-color: var(--primary); color: white; flex: 2; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .btn-cancel { background-color: #fee2e2; color: var(--danger); flex: 1; }
+        
+        .checkin-config-box { background: white; padding: 16px; border-radius: 16px; margin-bottom: 20px; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; border: 1px solid #e5e7eb; }
+        .checkin-config-box select { padding: 8px 12px; border-radius: 10px; border: 1px solid #d1d5db; font-weight: 600; outline: none; background: #f9fafb; }
+
+        .calendar-container { background: white; padding: 20px; border-radius: 22px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); }
+        .calendar-header { font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; }
+        .month-btn { background: #f3f4f6; font-size: 16px; color: var(--text-main); width: 36px; height: 36px; border-radius: 50%; padding: 0; margin: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .weekday { font-weight: 700; background-color: #f8fafc; padding: 8px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
+        .day { border: 1px solid #f1f5f9; border-radius: 12px; min-height: 75px; padding: 6px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background-color: #fff; }
+        .day .date-num { font-size: 13px; font-weight: 700; color: var(--text-sub); align-self: flex-start; }
+        .day .status { font-size: 20px; color: var(--primary); font-weight: bold; line-height: 1; margin: 2px 0; }
+        .day .time { font-size: 10px; color: var(--text-sub); font-weight: 600; margin-bottom: 2px; }
+        .today { border: 2px solid var(--primary); background-color: var(--primary-light); }
+        .today .date-num { color: var(--primary-dark); }
+
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); justify-content: center; align-items: center; font-size: 16px; font-weight: 700; color: var(--primary); z-index: 4000; flex-direction: column; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="loading-overlay" id="loadingView"><span>載入打卡紀錄中...</span></div>
+
+    <div id="mainSystemView">
+        <div class="top-nav">
+            <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+            <div class="current-user-badge">
+                <img id="sysUserAvatar" class="mini-avatar" src="" alt="">
+                <span id="sysUserName" style="font-size: 14px; font-weight: 700;"></span>
+            </div>
+        </div>
+
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 16px;">📍 到家打卡專區</h2>
+        
+        <!-- 管理員專屬：設定打卡推播聊天室 -->
+        <div class="checkin-config-box" id="adminCheckinConfig" style="display: none;">
+            <span>📢 推播聊天室：</span>
+            <select id="targetChatRoomSelect" onchange="saveTargetChatRoom(this.value)">
+                <option value="">-- 請選擇目標群組 --</option>
+            </select>
+        </div>
+
+        <div class="controls" id="actionControls">
+            <button class="btn-check" onclick="checkIn()">我安全到家了！</button>
+            <button class="btn-cancel" onclick="cancelCheckIn()">取消打卡</button>
+        </div>
+
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button class="month-btn" onclick="changeMonth(-1)">❮</button>
+                <span id="calendarMonth">月份載入中...</span>
+                <button class="month-btn" onclick="changeMonth(1)">❯</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        window.attendanceData = {};
+        window.viewDate = new Date(); 
+        window.today = new Date();  
+
+        // 通用 Log 寫入函式
+        async function recordLog(actionType, detailsText) {
+            try {
+                const now = new Date();
+                const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
+            } catch (e) { console.error("寫入 Log 失敗:", e); }
+        }
+
+        window.onload = async function() {
+            const userStr = sessionStorage.getItem('familyCheckInUser');
+            if (!userStr) {
+                alert('請先登入！');
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = JSON.parse(userStr);
+            document.getElementById('sysUserAvatar').src = currentUser.avatar;
+            document.getElementById('sysUserName').innerText = currentUser.name;
+
+            // ★ 進入打卡專區時自動寫入 Log
+            await recordLog('功能瀏覽', '進入「到家打卡」專區');
+
+            const adminConfig = document.getElementById('adminCheckinConfig');
+            if (currentUser.role === 'admin' || currentUser.role === 'parent') {
+                adminConfig.style.display = 'flex';
+                await loadChatRoomsForSelect();
+            } else {
+                adminConfig.style.display = 'none';
+            }
+            window.loadData();
+        };
+
+        async function loadChatRoomsForSelect() {
+            try {
+                const select = document.getElementById('targetChatRoomSelect');
+                select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
+                const querySnapshot = await getDocs(collection(db, "rooms"));
+                querySnapshot.forEach(docSnap => {
+                    const room = docSnap.data();
+                    const opt = document.createElement('option');
+                    opt.value = docSnap.id;
+                    opt.innerText = room.name;
+                    select.appendChild(opt);
+                });
+                const configDoc = await getDoc(doc(db, "settings", "checkinConfig"));
+                if (configDoc.exists()) {
+                    const targetRoomId = configDoc.data().targetRoomId;
+                    if (targetRoomId) select.value = targetRoomId;
+                }
+            } catch (e) { console.error("載入聊天室清單失敗", e); }
+        }
+
+        window.saveTargetChatRoom = async function(roomId) {
+            try {
+                await setDoc(doc(db, "settings", "checkinConfig"), { targetRoomId: roomId, updatedAt: serverTimestamp() }, { merge: true });
+                await recordLog('設定變更', `變更打卡推播聊天室 ID: ${roomId}`);
+                alert('已成功設定打卡通知發送的聊天室！');
+            } catch (e) { console.error("儲存設定失敗", e); alert('設定儲存失敗'); }
+        };
+
+        window.loadData = async function() {
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                const querySnapshot = await getDocs(collection(db, "checkins"));
+                window.attendanceData = {};
+                querySnapshot.forEach(docSnap => {
+                    const item = docSnap.data();
+                    if (item.date) {
+                        window.attendanceData[item.date] = { checked: true, time: item.time, operator: item.operator, docId: docSnap.id };
+                    }
+                });
+                window.initCalendar();
+            } catch (e) {
+                console.error("讀取打卡紀錄失敗:", e);
+                window.initCalendar();
+            } finally {
+                document.getElementById('loadingView').style.display = 'none';
+            }
+        };
+
+        window.initCalendar = function() {
+            const year = window.viewDate.getFullYear();
+            const month = window.viewDate.getMonth();
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            document.getElementById('calendarMonth').innerText = `${year} 年 ${monthNames[month]}`;
+            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
+                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
+            });
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div'); dayDiv.className = 'day';
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                if (day === window.today.getDate() && month === window.today.getMonth() && year === window.today.getFullYear()) dayDiv.classList.add('today');
+                const numSpan = document.createElement('span'); numSpan.className = 'date-num'; numSpan.innerText = day;
+                dayDiv.appendChild(numSpan);
+                if (window.attendanceData[dateKey]) {
+                    const statusSpan = document.createElement('span'); statusSpan.className = 'status'; statusSpan.innerText = '✓';
+                    dayDiv.appendChild(statusSpan);
+                    if (window.attendanceData[dateKey].time) {
+                        let displayTime = window.attendanceData[dateKey].time.match(/(\d{2}:\d{2})/)?.[1] || window.attendanceData[dateKey].time;
+                        const timeDiv = document.createElement('div'); timeDiv.className = 'time'; timeDiv.innerText = displayTime;
+                        dayDiv.appendChild(timeDiv);
+                    }
+                }
+                grid.appendChild(dayDiv);
+            }
+        };
+
+        window.changeMonth = function(dir) { window.viewDate.setMonth(window.viewDate.getMonth() + dir); window.initCalendar(); };
+
+        window.checkIn = async function() {
+            const timeStr = `${String(window.today.getHours()).padStart(2, '0')}:${String(window.today.getMinutes()).padStart(2, '0')}`;
+            const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
+            try {
+                const docRef = await addDoc(collection(db, "checkins"), { date: dateKey, time: timeStr, operator: currentUser.name, timestamp: serverTimestamp() });
+                window.attendanceData[dateKey] = { checked: true, time: timeStr, operator: currentUser.name, docId: docRef.id };
+                window.initCalendar();
+
+                // ★ 記錄打卡成功 Log
+                await recordLog('到家打卡', `於 ${dateKey} ${timeStr} 進行安全到家打卡`);
+
+                const configDoc = await getDoc(doc(db, "settings", "checkinConfig"));
+                if (configDoc.exists() && configDoc.data().targetRoomId) {
+                    const targetRoomId = configDoc.data().targetRoomId;
+                    const chatMessageText = `📍 我已經在 ${timeStr} 安全到家並完成打卡囉！`;
+                    await addDoc(collection(db, "messages"), { roomId: targetRoomId, sender: currentUser.name, text: chatMessageText, timestamp: serverTimestamp() });
+                    await updateDoc(doc(db, "rooms", targetRoomId), { lastMessage: `${currentUser.name}: ${chatMessageText}`, lastMessageTime: serverTimestamp() });
+                }
+                alert('打卡成功！');
+            } catch (e) { console.error("打卡失敗", e); alert('打卡發生錯誤'); }
+        };
+
+        window.cancelCheckIn = async function() {
+            if (confirm(`確定要移除今天的打卡紀錄嗎？`)) {
+                const dateKey = `${window.today.getFullYear()}-${String(window.today.getMonth() + 1).padStart(2, '0')}-${String(window.today.getDate()).padStart(2, '0')}`;
+                if (window.attendanceData[dateKey]?.docId) {
+                    try {
+                        await deleteDoc(doc(db, "checkins", window.attendanceData[dateKey].docId));
+                        delete window.attendanceData[dateKey];
+                        window.initCalendar();
+
+                        // ★ 記錄取消打卡 Log
+                        await recordLog('取消打卡', `移除了 ${dateKey} 的打卡紀錄`);
+
+                        alert('已成功移除打卡紀錄。');
+                    } catch (e) { console.error("刪除失敗", e); }
+                } else { alert('今天沒有打卡紀錄！'); }
+            }
+        };
+    </script>
+</body>
+</html>
