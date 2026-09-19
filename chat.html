@@ -130,7 +130,7 @@
         .btn-modal-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px; }
         .btn-modal-confirm { flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
         
-        /* --- ★ 新增：群組設定專用樣式 (類 LINE 選單) --- */
+        /* --- 群組設定選單 (類 LINE) --- */
         .settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
         .settings-icon-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--text-main); cursor: pointer; border: none; background: transparent; padding: 10px 0; outline: none; transition: transform 0.1s; }
         .settings-icon-btn:active { transform: scale(0.95); }
@@ -200,7 +200,7 @@
         </div>
     </div>
 
-    <!-- 訊息長按/點擊 操作選單 -->
+    <!-- 操作選單 -->
     <div class="msg-action-modal" id="msgActionModal" onclick="closeMsgActionModal(event)">
         <div class="msg-action-content">
             <button class="action-btn" id="btnActionReply" onclick="triggerReply()">回覆此訊息</button>
@@ -237,7 +237,7 @@
         </div>
     </div>
 
-    <!-- Modal 2: 聊天室右上角 群組設定選單 (類 LINE 介面) -->
+    <!-- Modal 2: 聊天室右上角 群組設定選單 -->
     <div class="modal" id="settingsModal">
         <div class="modal-content" style="padding: 24px 20px;">
             
@@ -263,7 +263,7 @@
                 <button class="btn-modal-cancel" style="width:100%; margin-top:24px;" onclick="document.getElementById('settingsModal').style.display='none'">關閉</button>
             </div>
 
-            <!-- 子視圖 1: 設定 (修改頭像與名稱) -->
+            <!-- 子視圖 1: 設定 -->
             <div id="settingsInfoView" style="display:none;">
                 <div class="sub-modal-header">
                     <button class="btn-sub-back" onclick="showSettingsSubView('main')">❮</button>
@@ -319,7 +319,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, getDocs, query, where, orderBy, 
-            onSnapshot, serverTimestamp, doc, updateDoc, arrayRemove, arrayUnion, increment 
+            onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, arrayRemove, arrayUnion, increment 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -344,7 +344,6 @@
         let messagesUnsubscribe = null;
         let singleRoomUnsubscribe = null; 
 
-        // 獨立控管圖片上傳狀態
         let uploadedCreateAvatarBase64 = null; 
         let uploadedSettingsAvatarBase64 = null; 
 
@@ -456,7 +455,6 @@
             singleRoomUnsubscribe = onSnapshot(doc(db, "rooms", roomId), (docSnap) => {
                 if (docSnap.exists()) {
                     activeRoomData = docSnap.data(); 
-                    // Update header if info changed
                     document.getElementById('activeRoomName').innerText = activeRoomData.name;
                     document.getElementById('activeRoomAvatar').src = activeRoomData.avatar || `https://ui-avatars.com/api/?name=${activeRoomData.name}&background=ecfdf5&color=059669`;
                     renderAllMessages();             
@@ -730,7 +728,7 @@
 
 
         // ==========================================
-        // 模組一：建立新群組邏輯 (Create Group)
+        // 建立新群組邏輯
         // ==========================================
         function populateCreateCheckboxes(selectedNames = []) {
             const container = document.getElementById('createMemberListContainer'); container.innerHTML = '';
@@ -777,7 +775,7 @@
 
 
         // ==========================================
-        // 模組二：群組設定邏輯 (Settings, Members, Invite, Leave)
+        // 群組設定邏輯 (修復退出錯誤)
         // ==========================================
         document.getElementById('btnOpenSettingsModal').addEventListener('click', () => {
             document.getElementById('settingsMenuRoomName').innerText = activeRoomData.name;
@@ -807,7 +805,7 @@
             }
         };
 
-        // 1. 設定 (更新頭像與名稱)
+        // 1. 設定
         document.getElementById('settingsAvatarInput').addEventListener('change', (e) => {
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = function(evt) {
@@ -824,7 +822,7 @@
         });
 
         document.getElementById('btnConfirmSettings').addEventListener('click', async () => {
-            const nameInput = document.getElementById('settingsGroupName').value.trim(); if (!nameInput) { alert('群組名稱不能為空！'); return; }
+            const nameInput = document.getElementById('settingsGroupName'].value.trim(); if (!nameInput) { alert('群組名稱不能為空！'); return; }
             try {
                 await updateDoc(doc(db, "rooms", activeRoomId), { name: nameInput, avatar: uploadedSettingsAvatarBase64 || '' });
                 document.getElementById('settingsMenuRoomName').innerText = nameInput;
@@ -834,11 +832,10 @@
             } catch (e) { alert("儲存失敗，請檢查網路！"); }
         });
 
-        // 2. 成員 (列出群組名單)
+        // 2. 成員
         function renderSettingsMembers() {
             const container = document.getElementById('settingsMemberListDisplay');
             container.innerHTML = '';
-            
             activeRoomData.participants.forEach(pName => {
                 const item = document.createElement('div');
                 item.className = 'member-display-item';
@@ -848,11 +845,10 @@
             });
         }
 
-        // 3. 邀請 (列出未加入成員)
+        // 3. 邀請
         function renderInviteCheckboxes() {
             const container = document.getElementById('settingsInviteCheckboxList');
             container.innerHTML = '';
-            
             const nonMembers = allUsers.filter(u => !activeRoomData.participants.includes(u.name));
             
             if (nonMembers.length === 0) {
@@ -875,7 +871,6 @@
             if (selected.length === 0) { alert('請先勾選要邀請的成員！'); return; }
             
             try {
-                // arrayUnion 支援展開運算子傳入多筆資料
                 await updateDoc(doc(db, "rooms", activeRoomId), {
                     participants: arrayUnion(...selected)
                 });
@@ -885,16 +880,41 @@
             } catch(e) { alert("邀請失敗，請檢查網路！"); }
         });
 
-        // 4. 退出
+        // 4. 退出群組 (★ 已完美修復錯誤並支援最後一人解散群組)
         window.triggerLeaveGroup = async function() {
+            const participants = activeRoomData.participants || [];
+            
+            if (participants.length <= 1) {
+                if (confirm(`目前群組只剩下您自己一人。\n若選擇退出，此群組將會被直接解散刪除。確定要解散嗎？`)) {
+                    try {
+                        await deleteDoc(doc(db, "rooms", activeRoomId));
+                        document.getElementById('settingsModal').style.display = 'none'; 
+                        document.getElementById('btnBackToList').click(); 
+                        await recordLog('群組管理', `解散並刪除了群組：「${activeRoomData.name}」`);
+                        alert('群組已成功解散！');
+                    } catch (e) {
+                        console.error("解散群組失敗：", e);
+                        alert("解散失敗，請檢查網路狀態。");
+                    }
+                }
+                return;
+            }
+
             if (!confirm(`確定要退出「${activeRoomData.name}」群組嗎？\n退出後將無法看到此聊天室。`)) return;
+            
             try {
-                await updateDoc(doc(db, "rooms", activeRoomId), { participants: arrayRemove(currentUser.name) });
+                // 安全移除自己
+                const newParticipants = participants.filter(name => name !== currentUser.name);
+                await updateDoc(doc(db, "rooms", activeRoomId), { participants: newParticipants });
+                
                 document.getElementById('settingsModal').style.display = 'none'; 
                 document.getElementById('btnBackToList').click(); 
                 await recordLog('群組管理', `退出了群組：「${activeRoomData.name}」`);
                 alert('您已成功退出群組！');
-            } catch (e) { alert("退出失敗，請檢查網路狀態。"); }
+            } catch (e) {
+                console.error("退出群組失敗：", e);
+                alert("退出失敗，請檢查網路狀態。");
+            }
         };
 
         document.getElementById('btnBackToDashboard').addEventListener('click', () => { window.location.href = 'index.html'; });
