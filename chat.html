@@ -83,6 +83,10 @@
         .msg-retracted { background: transparent; border: 1px solid #d1d5db; color: var(--text-sub); font-style: italic; padding: 8px 14px; cursor: default; box-shadow: none; border-radius: 12px; font-size: 13px; }
         .chat-photo { max-width: 100%; max-height: 220px; border-radius: 12px; cursor: pointer; display: block; border: 1px solid rgba(0,0,0,0.05); margin-top: 4px; }
         
+        /* --- 未讀分隔線 --- */
+        .unread-divider { text-align: center; margin: 10px 0; display: flex; align-items: center; color: var(--primary); font-size: 12px; font-weight: bold; }
+        .unread-divider hr { flex: 1; border: none; border-top: 1px dashed var(--primary); opacity: 0.5; }
+        
         /* --- 輸入區與功能擴充 --- */
         .input-container-wrapper { background: white; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; position: relative; z-index: 20; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
         
@@ -137,10 +141,9 @@
     </style>
 </head>
 <body>
-    <!-- ★ 加入 ID 以便在進入聊天室時隱藏 -->
     <div class="top-nav" id="mainTopNav">
         <button class="btn-back" id="btnBackToDashboard">❮ 返回主選單</button>
-        <div style="width: 80px;"></div> <!-- Spacer 保持按鈕置左 -->
+        <div style="width: 80px;"></div>
     </div>
 
     <!-- 視圖 1：群組清單 -->
@@ -167,7 +170,6 @@
         <div class="chat-messages" id="chatMessages"></div>
         
         <div class="input-container-wrapper">
-            <!-- 回覆預覽區 -->
             <div class="reply-preview-area" id="replyPreviewArea">
                 <div class="reply-preview-text-box">
                     <strong id="replyPreviewSender" style="color:var(--primary-dark);"></strong><br>
@@ -269,13 +271,16 @@
         let selectedMsgForAction = null; 
         let currentMessagesList = [];
         let isFirstLoad = true; 
+        
+        // ★ 紀錄剛進房間時的已讀時間戳記
+        let entryReadTimestamp = 0; 
 
         async function recordLog(actionType, detailsText) {
             try {
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
                 await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
-            } catch (e) { console.error("寫入 Log 失敗:", e); }
+            } catch (e) {}
         }
 
         fetchFamilyUsers();
@@ -293,7 +298,7 @@
                     const uData = docSnap.data();
                     if (uData.name !== currentUser.name) allUsers.push(uData);
                 });
-            } catch (error) { console.error("載入成員名單失敗：", error); }
+            } catch (error) {}
         }
 
         function listenToRooms() {
@@ -349,7 +354,11 @@
             currentMessagesList = [];
             isFirstLoad = true; 
             
-            // ★ 切換畫面時，隱藏最上方的「返回主選單」按鈕，釋放畫面高度
+            // ★ 取得進入房間那一刻，系統紀錄的「上一次已讀時間」
+            entryReadTimestamp = (roomData.readTimestamps && roomData.readTimestamps[currentUser.name]) ? roomData.readTimestamps[currentUser.name] : 0;
+            
+            document.getElementById('chatMessages').style.scrollBehavior = 'auto';
+            
             document.getElementById('mainTopNav').style.display = 'none';
             document.getElementById('viewRoomList').style.display = 'none';
             document.getElementById('viewChatRoom').style.display = 'flex';
@@ -359,6 +368,7 @@
             
             await recordLog('功能瀏覽', `進入聊天室：「${roomData.name}」`);
             
+            // 更新伺服器狀態為已讀
             updateMyReadTimestamp(roomId);
             listenToMessages(roomId);
             listenToActiveRoom(roomId); 
@@ -382,7 +392,7 @@
                 updateData[`readTimestamps.${currentUser.name}`] = Date.now();
                 updateData[`unreadCount.${currentUser.name}`] = 0; 
                 await updateDoc(roomRef, updateData);
-            } catch (e) { console.error("更新已讀時間失敗", e); }
+            } catch (e) {}
         }
 
         document.getElementById('btnBackToList').addEventListener('click', () => {
@@ -391,8 +401,8 @@
             if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } 
             
             activeRoomId = null; activeRoomData = null; currentMessagesList = [];
+            entryReadTimestamp = 0; // 重置已讀紀錄
             
-            // ★ 退回群組列表時，恢復顯示「返回主選單」按鈕
             document.getElementById('mainTopNav').style.display = 'flex';
             document.getElementById('viewChatRoom').style.display = 'none';
             document.getElementById('viewRoomList').style.display = 'flex';
@@ -420,24 +430,62 @@
             const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 100;
             
             msgContainer.innerHTML = '';
-            currentMessagesList.forEach(msg => { appendMessageUI(msg.id, msg); });
+            let unreadDividerAdded = false;
 
-            if (isFirstLoad || isAtBottom) {
-                setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 50);
-                setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 250);
+            currentMessagesList.forEach(msg => {
+                let msgTimestampMs = Date.now();
+                if (msg.timestamp && msg.timestamp.toDate) {
+                    msgTimestampMs = msg.timestamp.toDate().getTime();
+                }
+
+                // ★ 判斷是否需要插入未讀分隔線
+                if (!unreadDividerAdded && entryReadTimestamp > 0 && msgTimestampMs > entryReadTimestamp && msg.sender !== currentUser.name) {
+                    const divider = document.createElement('div');
+                    divider.id = "unread-divider-line";
+                    divider.className = "unread-divider";
+                    divider.innerHTML = `<hr style="margin-right:10px;"> ⬇ 以下為尚未閱讀的新訊息 <hr style="margin-left:10px;">`;
+                    msgContainer.appendChild(divider);
+                    unreadDividerAdded = true;
+                }
+
+                appendMessageUI(msg.id, msg, msgTimestampMs);
+            });
+
+            // ★ 畫面定位邏輯
+            if (isFirstLoad) {
+                msgContainer.style.scrollBehavior = 'auto'; // 暫時關閉平滑滾動
+                const divider = document.getElementById('unread-divider-line');
+                
+                if (divider) {
+                    // 找到未讀分隔線，定位到該位置並保留一點頂部空間
+                    msgContainer.scrollTop = divider.offsetTop - 60;
+                    setTimeout(() => {
+                        const d = document.getElementById('unread-divider-line');
+                        if (d) msgContainer.scrollTop = d.offsetTop - 60;
+                        msgContainer.style.scrollBehavior = 'smooth';
+                    }, 50);
+                } else {
+                    // 若沒有未讀訊息，直接置底
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                    setTimeout(() => {
+                        msgContainer.scrollTop = msgContainer.scrollHeight;
+                        msgContainer.style.scrollBehavior = 'smooth';
+                    }, 50);
+                }
                 isFirstLoad = false;
+            } else if (isAtBottom) {
+                setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 50);
             }
         }
 
-        function appendMessageUI(msgId, msg) {
+        // 修改參數加入 msgTimestampMs，避免重複計算
+        function appendMessageUI(msgId, msg, msgTimestampMs) {
             const isMine = (msg.sender === currentUser.name);
             const wrapper = document.createElement('div');
             wrapper.className = `chat-msg-wrapper ${isMine ? 'msg-mine-wrapper' : 'msg-other-wrapper'}`;
             
             let timeStr = "剛才";
-            let msgTimestampMs = Date.now();
             if (msg.timestamp && msg.timestamp.toDate) {
-                msgTimestampMs = msg.timestamp.toDate().getTime();
                 const d = msg.timestamp.toDate();
                 timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
             }
