@@ -55,7 +55,8 @@
         .chat-header-name { font-weight: 800; font-size: 16px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-room-settings { background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        .chat-messages { flex: 1; padding: 20px 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+        /* ★ scroll-behavior 改由 JS 動態控制，這裡先預設 auto */
+        .chat-messages { flex: 1; padding: 20px 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 16px; scroll-behavior: auto; }
         
         .chat-msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; }
         .msg-mine-wrapper { align-self: flex-end; align-items: flex-end; }
@@ -84,8 +85,8 @@
         .chat-photo { max-width: 100%; max-height: 220px; border-radius: 12px; cursor: pointer; display: block; border: 1px solid rgba(0,0,0,0.05); margin-top: 4px; }
         
         /* --- 未讀分隔線 --- */
-        .unread-divider { text-align: center; margin: 10px 0; display: flex; align-items: center; color: var(--primary); font-size: 12px; font-weight: bold; }
-        .unread-divider hr { flex: 1; border: none; border-top: 1px dashed var(--primary); opacity: 0.5; }
+        .unread-divider { text-align: center; margin: 20px 0 10px 0; display: flex; align-items: center; color: var(--primary); font-size: 13px; font-weight: 800; }
+        .unread-divider hr { flex: 1; border: none; border-top: 1.5px dashed var(--primary); opacity: 0.4; }
         
         /* --- 輸入區與功能擴充 --- */
         .input-container-wrapper { background: white; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; position: relative; z-index: 20; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
@@ -270,9 +271,10 @@
         let pendingReplyData = null;
         let selectedMsgForAction = null; 
         let currentMessagesList = [];
+        
         let isFirstLoad = true; 
         
-        // ★ 紀錄剛進房間時的已讀時間戳記
+        // ★ 紀錄進房瞬間，系統資料庫記錄的「上次已讀時間」
         let entryReadTimestamp = 0; 
 
         async function recordLog(actionType, detailsText) {
@@ -354,9 +356,10 @@
             currentMessagesList = [];
             isFirstLoad = true; 
             
-            // ★ 取得進入房間那一刻，系統紀錄的「上一次已讀時間」
+            // ★ 在進入房間的瞬間，抓取我們「上一次的已讀時間」
             entryReadTimestamp = (roomData.readTimestamps && roomData.readTimestamps[currentUser.name]) ? roomData.readTimestamps[currentUser.name] : 0;
             
+            // 進入房間時先關閉平滑滾動，避免從別處殘留的特效影響初始定位
             document.getElementById('chatMessages').style.scrollBehavior = 'auto';
             
             document.getElementById('mainTopNav').style.display = 'none';
@@ -368,7 +371,7 @@
             
             await recordLog('功能瀏覽', `進入聊天室：「${roomData.name}」`);
             
-            // 更新伺服器狀態為已讀
+            // 更新伺服器狀態，表示我們現在正在看
             updateMyReadTimestamp(roomId);
             listenToMessages(roomId);
             listenToActiveRoom(roomId); 
@@ -425,9 +428,16 @@
             });
         }
 
+        // ★ 核心升級：完美的捲動定位邏輯 (完全消除不合理的置底彈跳)
         function renderAllMessages() {
             const msgContainer = document.getElementById('chatMessages');
-            const isAtBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 100;
+            
+            // 1. 先記住「重繪前」您的確切捲動位置
+            const prevScrollTop = msgContainer.scrollTop;
+            const prevScrollHeight = msgContainer.scrollHeight;
+            
+            // 判斷原本是不是貼在最底部（容錯範圍 150px）
+            const isAtBottom = (prevScrollHeight - prevScrollTop) <= (msgContainer.clientHeight + 150);
             
             msgContainer.innerHTML = '';
             let unreadDividerAdded = false;
@@ -438,12 +448,12 @@
                     msgTimestampMs = msg.timestamp.toDate().getTime();
                 }
 
-                // ★ 判斷是否需要插入未讀分隔線
+                // ★ 條件：有前次已讀紀錄 (非0) + 訊息比已讀時間新 + 不是自己傳的
                 if (!unreadDividerAdded && entryReadTimestamp > 0 && msgTimestampMs > entryReadTimestamp && msg.sender !== currentUser.name) {
                     const divider = document.createElement('div');
                     divider.id = "unread-divider-line";
                     divider.className = "unread-divider";
-                    divider.innerHTML = `<hr style="margin-right:10px;"> ⬇ 以下為尚未閱讀的新訊息 <hr style="margin-left:10px;">`;
+                    divider.innerHTML = `<hr style="margin-right:10px;"> <span>⬇ 以下為尚未閱讀的新訊息</span> <hr style="margin-left:10px;">`;
                     msgContainer.appendChild(divider);
                     unreadDividerAdded = true;
                 }
@@ -451,34 +461,40 @@
                 appendMessageUI(msg.id, msg, msgTimestampMs);
             });
 
-            // ★ 畫面定位邏輯
+            // 3. 同步進行畫面定位 (去除 setTimeout，避免畫面閃爍與 Race Condition)
             if (isFirstLoad) {
-                msgContainer.style.scrollBehavior = 'auto'; // 暫時關閉平滑滾動
+                // 首次進房：確保關閉平滑滾動，瞬間到位
+                msgContainer.style.scrollBehavior = 'auto'; 
                 const divider = document.getElementById('unread-divider-line');
                 
                 if (divider) {
-                    // 找到未讀分隔線，定位到該位置並保留一點頂部空間
-                    msgContainer.scrollTop = divider.offsetTop - 60;
-                    setTimeout(() => {
-                        const d = document.getElementById('unread-divider-line');
-                        if (d) msgContainer.scrollTop = d.offsetTop - 60;
-                        msgContainer.style.scrollBehavior = 'smooth';
-                    }, 50);
+                    // 如果有未讀：瞬間停留在「未讀分隔線」上方一點點，絕不自動置底！
+                    msgContainer.scrollTop = Math.max(0, divider.offsetTop - 60);
                 } else {
-                    // 若沒有未讀訊息，直接置底
+                    // 如果完全沒有未讀訊息：預設停在最底端
                     msgContainer.scrollTop = msgContainer.scrollHeight;
-                    setTimeout(() => {
-                        msgContainer.scrollTop = msgContainer.scrollHeight;
-                        msgContainer.style.scrollBehavior = 'smooth';
-                    }, 50);
                 }
+                
                 isFirstLoad = false;
-            } else if (isAtBottom) {
-                setTimeout(() => { msgContainer.scrollTop = msgContainer.scrollHeight; }, 50);
+                
+                // 定位完成後，重新打開平滑滾動，讓以後的訊息有好看的滑動特效
+                setTimeout(() => {
+                    msgContainer.style.scrollBehavior = 'smooth';
+                }, 100);
+                
+            } else {
+                // 非首次進房 (可能是有新訊息傳來，或是有人已讀更新狀態)
+                if (isAtBottom) {
+                    // 如果您本來就正在看最新訊息，收到新訊息就跟著推到底
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                } else {
+                    // ★ 關鍵保護：如果您正在「往上看舊訊息」或是「停留在分隔線位置」，
+                    // 重繪後我們會強制把卷軸定在原本的地方，絕對不會再自動往下拉！
+                    msgContainer.scrollTop = prevScrollTop; 
+                }
             }
         }
 
-        // 修改參數加入 msgTimestampMs，避免重複計算
         function appendMessageUI(msgId, msg, msgTimestampMs) {
             const isMine = (msg.sender === currentUser.name);
             const wrapper = document.createElement('div');
@@ -589,7 +605,12 @@
                     }
                 });
                 await updateDoc(roomRef, updatePayload);
-                setTimeout(() => document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight, 100);
+                
+                // 自己送出訊息時，強制將畫面推到底部
+                setTimeout(() => {
+                    const container = document.getElementById('chatMessages');
+                    container.scrollTop = container.scrollHeight;
+                }, 50);
             } catch (e) { console.error("發送失敗：", e); } 
             finally { document.getElementById('btnSend').disabled = false; chatInput.focus(); }
         });
@@ -624,7 +645,12 @@
                             if (p !== currentUser.name) { updatePayload[`unreadCount.${p}`] = increment(1); }
                         });
                         await updateDoc(roomRef, updatePayload);
-                        setTimeout(() => document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight, 200);
+                        
+                        // 傳送圖片成功，強制定位置底
+                        setTimeout(() => {
+                            const container = document.getElementById('chatMessages');
+                            container.scrollTop = container.scrollHeight;
+                        }, 100);
                     } catch (error) { alert("傳送圖片失敗。"); } 
                     finally { document.getElementById('btnSend').disabled = false; btnTriggerPhoto.disabled = false; btnTriggerPhoto.innerText = '📷'; chatPhotoInput.value = ''; }
                 }; img.src = evt.target.result;
