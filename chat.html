@@ -23,7 +23,6 @@
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* ★ 將 height: 100vh 改為 100dvh，完美解決手機瀏覽器底部工具列遮擋問題 */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: var(--text-main); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 500px; width: 100%; margin-left: auto; margin-right: auto; flex-shrink: 0; }
@@ -55,8 +54,8 @@
         .chat-header-name { font-weight: 800; font-size: 16px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-room-settings { background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* ★ scroll-behavior 改由 JS 動態控制，這裡先預設 auto */
-        .chat-messages { flex: 1; padding: 20px 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 16px; scroll-behavior: auto; }
+        /* ★ 徹底移除 scroll-behavior 屬性，確保定位瞬間完成 */
+        .chat-messages { flex: 1; padding: 20px 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 16px; }
         
         .chat-msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; }
         .msg-mine-wrapper { align-self: flex-end; align-items: flex-end; }
@@ -272,9 +271,9 @@
         let selectedMsgForAction = null; 
         let currentMessagesList = [];
         
+        // 控制定位狀態的核心變數
         let isFirstLoad = true; 
-        
-        // ★ 紀錄進房瞬間，系統資料庫記錄的「上次已讀時間」
+        window._isChatJustLoaded = false; 
         let entryReadTimestamp = 0; 
 
         async function recordLog(actionType, detailsText) {
@@ -356,11 +355,8 @@
             currentMessagesList = [];
             isFirstLoad = true; 
             
-            // ★ 在進入房間的瞬間，抓取我們「上一次的已讀時間」
+            // ★ 紀錄進房的已讀時間
             entryReadTimestamp = (roomData.readTimestamps && roomData.readTimestamps[currentUser.name]) ? roomData.readTimestamps[currentUser.name] : 0;
-            
-            // 進入房間時先關閉平滑滾動，避免從別處殘留的特效影響初始定位
-            document.getElementById('chatMessages').style.scrollBehavior = 'auto';
             
             document.getElementById('mainTopNav').style.display = 'none';
             document.getElementById('viewRoomList').style.display = 'none';
@@ -371,7 +367,6 @@
             
             await recordLog('功能瀏覽', `進入聊天室：「${roomData.name}」`);
             
-            // 更新伺服器狀態，表示我們現在正在看
             updateMyReadTimestamp(roomId);
             listenToMessages(roomId);
             listenToActiveRoom(roomId); 
@@ -404,7 +399,7 @@
             if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } 
             
             activeRoomId = null; activeRoomData = null; currentMessagesList = [];
-            entryReadTimestamp = 0; // 重置已讀紀錄
+            entryReadTimestamp = 0; 
             
             document.getElementById('mainTopNav').style.display = 'flex';
             document.getElementById('viewChatRoom').style.display = 'none';
@@ -428,15 +423,26 @@
             });
         }
 
-        // ★ 核心升級：完美的捲動定位邏輯 (完全消除不合理的置底彈跳)
+        // ★ 核心方法：將畫面瞬間定位到分隔線，絕不滑動
+        window.lockScrollPosition = function() {
+            const msgContainer = document.getElementById('chatMessages');
+            if (!msgContainer) return;
+            const divider = document.getElementById('unread-divider-line');
+            if (divider) {
+                // 定位在分隔線稍上方一點的位置
+                msgContainer.scrollTop = Math.max(0, divider.offsetTop - 80);
+            } else {
+                // 如果沒有分隔線，代表沒有未讀，就置底
+                msgContainer.scrollTop = msgContainer.scrollHeight;
+            }
+        };
+
         function renderAllMessages() {
             const msgContainer = document.getElementById('chatMessages');
             
-            // 1. 先記住「重繪前」您的確切捲動位置
+            // 紀錄重繪前的確切位置與高度
             const prevScrollTop = msgContainer.scrollTop;
             const prevScrollHeight = msgContainer.scrollHeight;
-            
-            // 判斷原本是不是貼在最底部（容錯範圍 150px）
             const isAtBottom = (prevScrollHeight - prevScrollTop) <= (msgContainer.clientHeight + 150);
             
             msgContainer.innerHTML = '';
@@ -448,7 +454,7 @@
                     msgTimestampMs = msg.timestamp.toDate().getTime();
                 }
 
-                // ★ 條件：有前次已讀紀錄 (非0) + 訊息比已讀時間新 + 不是自己傳的
+                // 判斷是否需要插入未讀分隔線
                 if (!unreadDividerAdded && entryReadTimestamp > 0 && msgTimestampMs > entryReadTimestamp && msg.sender !== currentUser.name) {
                     const divider = document.createElement('div');
                     divider.id = "unread-divider-line";
@@ -461,36 +467,28 @@
                 appendMessageUI(msg.id, msg, msgTimestampMs);
             });
 
-            // 3. 同步進行畫面定位 (去除 setTimeout，避免畫面閃爍與 Race Condition)
             if (isFirstLoad) {
-                // 首次進房：確保關閉平滑滾動，瞬間到位
-                msgContainer.style.scrollBehavior = 'auto'; 
-                const divider = document.getElementById('unread-divider-line');
-                
-                if (divider) {
-                    // 如果有未讀：瞬間停留在「未讀分隔線」上方一點點，絕不自動置底！
-                    msgContainer.scrollTop = Math.max(0, divider.offsetTop - 60);
-                } else {
-                    // 如果完全沒有未讀訊息：預設停在最底端
-                    msgContainer.scrollTop = msgContainer.scrollHeight;
-                }
-                
                 isFirstLoad = false;
+                window._isChatJustLoaded = true; // 開啟圖片防抖動鎖定
                 
-                // 定位完成後，重新打開平滑滾動，讓以後的訊息有好看的滑動特效
-                setTimeout(() => {
-                    msgContainer.style.scrollBehavior = 'smooth';
-                }, 100);
+                // 確保 DOM 渲染後瞬間定位 (無動畫)
+                requestAnimationFrame(() => {
+                    window.lockScrollPosition();
+                });
                 
+                // 設定 1 秒後解除載入鎖定，之後就不再強制介入定位
+                setTimeout(() => { window._isChatJustLoaded = false; }, 1000);
+
             } else {
-                // 非首次進房 (可能是有新訊息傳來，或是有人已讀更新狀態)
+                // 已經在聊天室內，收到新訊息或狀態更新
                 if (isAtBottom) {
-                    // 如果您本來就正在看最新訊息，收到新訊息就跟著推到底
-                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                    // 若本身就在最底端，平滑捲動到底
+                    setTimeout(() => {
+                        msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' });
+                    }, 50);
                 } else {
-                    // ★ 關鍵保護：如果您正在「往上看舊訊息」或是「停留在分隔線位置」，
-                    // 重繪後我們會強制把卷軸定在原本的地方，絕對不會再自動往下拉！
-                    msgContainer.scrollTop = prevScrollTop; 
+                    // ★ 關鍵：若正在往上看舊訊息，畫面會「瞬間」維持在原本的高度，絕對不會被拉走
+                    msgContainer.scrollTop = prevScrollTop;
                 }
             }
         }
@@ -530,7 +528,8 @@
                 });
             }
 
-            let contentHtml = msg.imageUrl ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)">` : `<div>${displayText}</div>`;
+            // ★ 圖片加上 onload 事件：若是剛進房間，圖片載入會撐開高度，我們立刻觸發再次定位，確保不會跑位
+            let contentHtml = msg.imageUrl ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)" onload="if(window._isChatJustLoaded) window.lockScrollPosition();">` : `<div>${displayText}</div>`;
             
             let replyHtml = '';
             if (msg.replyTo) {
@@ -606,10 +605,10 @@
                 });
                 await updateDoc(roomRef, updatePayload);
                 
-                // 自己送出訊息時，強制將畫面推到底部
+                // ★ 手動送出訊息時，使用一次性的平滑動畫滑到最底
                 setTimeout(() => {
                     const container = document.getElementById('chatMessages');
-                    container.scrollTop = container.scrollHeight;
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
                 }, 50);
             } catch (e) { console.error("發送失敗：", e); } 
             finally { document.getElementById('btnSend').disabled = false; chatInput.focus(); }
@@ -646,10 +645,10 @@
                         });
                         await updateDoc(roomRef, updatePayload);
                         
-                        // 傳送圖片成功，強制定位置底
+                        // ★ 上傳圖片完成後，使用平滑動畫滑到最底
                         setTimeout(() => {
                             const container = document.getElementById('chatMessages');
-                            container.scrollTop = container.scrollHeight;
+                            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
                         }, 100);
                     } catch (error) { alert("傳送圖片失敗。"); } 
                     finally { document.getElementById('btnSend').disabled = false; btnTriggerPhoto.disabled = false; btnTriggerPhoto.innerText = '📷'; chatPhotoInput.value = ''; }
