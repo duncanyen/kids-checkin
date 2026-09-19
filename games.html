@@ -18,19 +18,33 @@
             --bg-color: #f4f9f4;
             --game-bg: #e3f2fd;
         }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; text-align: center; }
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 500px; margin-left: auto; margin-right: auto; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; color: var(--primary-color); }
         .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
-        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 10px; }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; }
         
+        /* 遊戲選擇大廳選單 */
+        .game-lobby { max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+        .game-card-item { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 15px; cursor: pointer; transition: transform 0.1s, background 0.2s; border: 2px solid transparent; text-align: left; }
+        .game-card-item:active { transform: scale(0.98); background: #f8fafc; }
+        .game-card-icon { font-size: 40px; background: var(--primary-light); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .game-card-info { flex: 1; }
+        .game-card-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 4px; }
+        .game-card-desc { font-size: 13px; color: #666; }
+
         /* 管理者模式切換 Tab */
         .mode-switch-container { display: none; justify-content: center; gap: 10px; margin-bottom: 15px; }
         .btn-switch { background: white; border: 2px solid var(--primary-color); color: var(--primary-color); padding: 6px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
         .btn-switch.active { background: var(--primary-color); color: white; }
 
-        /* 遊戲與管理樣式 */
+        /* 通用遊戲容器包裝 */
+        .sub-game-container { max-width: 500px; margin: 0 auto; display: none; }
+        .btn-return-lobby { background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 14px; font-weight: bold; color: #334155; cursor: pointer; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+
+        /* 剪刀石頭布樣式 */
         .score-board { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         .score-item { text-align: center; }
         .score-label { font-size: 12px; color: #777; margin-bottom: 5px; }
@@ -45,7 +59,33 @@
         .p-card:active { transform: scale(0.9); }
         .p-card.disabled { opacity: 0.5; cursor: not-allowed; transform: none; border-color: transparent; }
         .game-result { font-size: 18px; font-weight: bold; margin-top: 20px; height: 25px; color: #e53935; }
-        .admin-panel { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; }
+        
+        /* 2048 遊戲專屬樣式 */
+        .g2048-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .g2048-scores { display: flex; gap: 8px; }
+        .g2048-box { background: #bbada0; padding: 6px 14px; border-radius: 6px; color: white; text-align: center; }
+        .g2048-box .lbl { font-size: 10px; text-transform: uppercase; color: #eee4da; font-weight: bold; }
+        .g2048-box .val { font-size: 16px; font-weight: bold; }
+        .g2048-board { background: #bbada0; border-radius: 10px; padding: 10px; width: 340px; height: 340px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 10px; position: relative; box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+        .g2048-cell { background: rgba(238, 228, 218, 0.35); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; color: #776e65; user-select: none; }
+        
+        /* 2048 數字方塊配色 */
+        .tile-2 { background: #eee4da; color: #776e65; }
+        .tile-4 { background: #ede0c8; color: #776e65; }
+        .tile-8 { background: #f2b179; color: #f9f6f2; }
+        .tile-16 { background: #f59563; color: #f9f6f2; }
+        .tile-32 { background: #f67c5f; color: #f9f6f2; }
+        .tile-64 { background: #f65e3b; color: #f9f6f2; }
+        .tile-128 { background: #edcf72; color: #f9f6f2; font-size: 20px; }
+        .tile-256 { background: #edcc61; color: #f9f6f2; font-size: 20px; }
+        .tile-512 { background: #edc850; color: #f9f6f2; font-size: 20px; }
+        .tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 16px; }
+        .tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 16px; }
+
+        .btn-restart-2048 { background: #8f7a66; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+
+        /* 管理面板 */
+        .admin-panel { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: left; max-width: 500px; margin: 0 auto; }
         .admin-title { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; }
         .kid-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
         .kid-info font { font-weight: bold; font-size: 16px; }
@@ -73,8 +113,27 @@
         <button class="btn-switch" id="btnModePlay">🎮 親自玩遊戲</button>
     </div>
 
-    <!-- 剪刀石頭布遊戲區域 -->
-    <div id="kidGameContainer" style="display: none;">
+    <!-- 遊戲大廳選擇頁面 (小孩或家長遊玩模式下顯示) -->
+    <div class="game-lobby" id="gameLobby">
+        <div class="game-card-item" onclick="selectGame('rps')">
+            <div class="game-card-icon">✊</div>
+            <div class="game-card-info">
+                <div class="game-card-title">剪刀石頭布對決</div>
+                <div class="game-card-desc">經典 PK 挑戰，測試今日好手氣！(每日限制3場)</div>
+            </div>
+        </div>
+        <div class="game-card-item" onclick="selectGame('g2048')">
+            <div class="game-card-icon">🔢</div>
+            <div class="game-card-info">
+                <div class="game-card-title">2048 數字方塊</div>
+                <div class="game-card-desc">動腦益智滑動合併，挑戰最高數字與積分！</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 剪刀石頭布遊戲容器 -->
+    <div class="sub-game-container" id="kidGameContainer">
+        <button class="btn-return-lobby" onclick="returnToLobby()">❮ 回到遊戲選擇</button>
         <div class="score-board">
             <div class="score-item">
                 <div class="score-label">總積分</div>
@@ -104,10 +163,27 @@
         </div>
     </div>
 
+    <!-- 2048 遊戲容器 -->
+    <div class="sub-game-container" id="g2048Container">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 340px; margin: 0 auto 15px auto;">
+            <button class="btn-return-lobby" style="margin-bottom:0;" onclick="returnToLobby()">❮ 遊戲選擇</button>
+            <button class="btn-restart-2048" onclick="init2048Game()">重新開始</button>
+        </div>
+        <div class="g2048-header" style="max-width: 340px; margin: 0 auto 10px auto;">
+            <div style="font-weight: 800; font-size: 20px; color: #776e65;">2048</div>
+            <div class="g2048-scores">
+                <div class="g2048-box"><div class="lbl">分數</div><div class="val" id="g2048Score">0</div></div>
+                <div class="g2048-box"><div class="lbl">最高分</div><div class="val" id="g2048BestScore">0</div></div>
+            </div>
+        </div>
+        <div class="g2048-board" id="g2048Board"></div>
+        <div id="g2048Status" style="font-weight: bold; margin-top: 15px; color: #e53935; height: 25px;"></div>
+    </div>
+
     <!-- 家長視角：管理面板 -->
     <div id="parentAdminContainer" style="display: none;">
         <div class="admin-panel">
-            <div class="admin-title">🛡️ 小朋友遊玩額度管理</div>
+            <div class="admin-title">🛡️ 小朋友遊玩額度管理 (剪刀石頭布)</div>
             <div id="adminKidList">資料載入中...</div>
         </div>
     </div>
@@ -124,7 +200,6 @@
             serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化 (homebasedb)
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
@@ -142,7 +217,6 @@
         let isGameLocked = false;
         let isParent = false;
         
-        // 2. 登入身分檢查 (優先讀取 sessionStorage)
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
@@ -157,7 +231,6 @@
             setupView();
         }
 
-        // 3. 視角切換控制
         function setupView() {
             if (isParent) {
                 document.getElementById('modeSwitchContainer').style.display = 'flex';
@@ -165,10 +238,13 @@
                 listenParentAdminData();
             } else {
                 document.getElementById('modeSwitchContainer').style.display = 'none';
-                document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布";
-                document.getElementById('kidGameContainer').style.display = 'block';
+                document.getElementById('gameZoneTitle').innerText = "🎮 遊戲區";
+                document.getElementById('gameLobby').style.display = 'flex';
+                document.getElementById('kidGameContainer').style.display = 'none';
+                document.getElementById('g2048Container').style.display = 'none';
                 document.getElementById('parentAdminContainer').style.display = 'none';
                 listenKidGameData(currentUser.name);
+                listen2048UserData(currentUser.name);
             }
         }
 
@@ -181,16 +257,41 @@
                 btnPlay.classList.remove('active');
                 document.getElementById('gameZoneTitle').innerText = "🛡️ 家長遊戲管理中心";
                 document.getElementById('parentAdminContainer').style.display = 'block';
+                document.getElementById('gameLobby').style.display = 'none';
                 document.getElementById('kidGameContainer').style.display = 'none';
+                document.getElementById('g2048Container').style.display = 'none';
             } else {
                 btnPlay.classList.add('active');
                 btnAdmin.classList.remove('active');
-                document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布 (無限制試玩)";
-                document.getElementById('kidGameContainer').style.display = 'block';
+                document.getElementById('gameZoneTitle').innerText = "🎮 遊戲區 (無限制試玩)";
                 document.getElementById('parentAdminContainer').style.display = 'none';
+                document.getElementById('gameLobby').style.display = 'flex';
+                document.getElementById('kidGameContainer').style.display = 'none';
+                document.getElementById('g2048Container').style.display = 'none';
                 listenKidGameData(currentUser.name);
+                listen2048UserData(currentUser.name);
             }
         }
+
+        // 導航到指定遊戲
+        window.selectGame = function(gameType) {
+            document.getElementById('gameLobby').style.display = 'none';
+            if (gameType === 'rps') {
+                document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布對決";
+                document.getElementById('kidGameContainer').style.display = 'block';
+            } else if (gameType === 'g2048') {
+                document.getElementById('gameZoneTitle').innerText = "🔢 2048 數字方塊";
+                document.getElementById('g2048Container').style.display = 'block';
+                init2048Game();
+            }
+        };
+
+        window.returnToLobby = function() {
+            document.getElementById('kidGameContainer').style.display = 'none';
+            document.getElementById('g2048Container').style.display = 'none';
+            document.getElementById('gameLobby').style.display = 'flex';
+            document.getElementById('gameZoneTitle').innerText = isParent && document.getElementById('btnModePlay').classList.contains('active') ? "🎮 遊戲區 (無限制試玩)" : "🎮 遊戲區";
+        };
 
         function getTodayStr() {
             const d = new Date();
@@ -279,7 +380,7 @@
             }
         }
 
-        // ================= 遊戲核心邏輯 =================
+        // ================= 剪刀石頭布遊戲邏輯 =================
         let currentKidStats = getInitialStats();
 
         function listenKidGameData(user) {
@@ -308,8 +409,6 @@
             document.getElementById('gameStreak').innerText = currentKidStats.currentStreak || 0;
             
             const cards = document.querySelectorAll('.p-card');
-            
-            // 家長完全不受場次限制；小朋友若額度用完則鎖定
             if (!isParent && currentKidStats.playsToday >= 3) {
                 cards.forEach(card => card.classList.add('disabled'));
                 document.getElementById('gameResultText').innerText = "今日額度已用完，請找爸爸或媽咪解鎖！";
@@ -332,7 +431,6 @@
 
         async function playGame(playerChoice) {
             if (isGameLocked) return;
-            // 家長可無限次玩，小朋友到達3次鎖定
             if (!isParent && currentKidStats.playsToday >= 3) return;
 
             isGameLocked = true;
@@ -379,7 +477,6 @@
                     resultTextEl.style.color = "#e53935";
                 }
 
-                // 1. 同步更動至 Firebase game_records
                 const docRef = doc(db, "game_records", currentUser.name);
                 await setDoc(docRef, {
                     totalScore: currentKidStats.totalScore,
@@ -388,7 +485,6 @@
                     currentStreak: currentKidStats.currentStreak
                 }, { merge: true });
 
-                // 2. 若獲勝加分，自動同步寫入 scores 集合供許願牆採計點數
                 if (addedPoints > 0) {
                     await addDoc(collection(db, "scores"), {
                         date: getTodayStr(),
@@ -412,6 +508,206 @@
                 }
             }
         }
+
+
+        // ================= 2048 遊戲核心邏輯 =================
+        let g2048Board = [
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]
+        ];
+        let g2048Score = 0;
+        let g2048BestScore = 0;
+        let g2048GameOver = false;
+
+        function listen2048UserData(user) {
+            const docRef = doc(db, "game_records_2048", user);
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    g2048BestScore = docSnap.data().bestScore || 0;
+                    document.getElementById('g2048BestScore').innerText = g2048BestScore;
+                }
+            });
+        }
+
+        window.init2048Game = function() {
+            g2048Board = [
+                [0,0,0,0],
+                [0,0,0,0],
+                [0,0,0,0],
+                [0,0,0,0]
+            ];
+            g2048Score = 0;
+            g2048GameOver = false;
+            document.getElementById('g2048Score').innerText = g2048Score;
+            document.getElementById('g2048Status').innerText = "";
+            addNewTile();
+            addNewTile();
+            render2048Board();
+        };
+
+        function addNewTile() {
+            let emptyCells = [];
+            for(let r=0; r<4; r++) {
+                for(let c=0; c<4; c++) {
+                    if(g2048Board[r][c] === 0) emptyCells.push({r, c});
+                }
+            }
+            if(emptyCells.length > 0) {
+                let cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                g2048Board[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4;
+            }
+        }
+
+        function render2048Board() {
+            const boardEl = document.getElementById('g2048Board');
+            boardEl.innerHTML = '';
+            for(let r=0; r<4; r++) {
+                for(let c=0; c<4; c++) {
+                    let val = g2048Board[r][c];
+                    let cellDiv = document.createElement('div');
+                    cellDiv.className = `g2048-cell ${val > 0 ? 'tile-'+val : ''}`;
+                    cellDiv.innerText = val > 0 ? val : '';
+                    boardEl.appendChild(cellDiv);
+                }
+            }
+            document.getElementById('g2048Score').innerText = g2048Score;
+            if(g2048Score > g2048BestScore) {
+                g2048BestScore = g2048Score;
+                document.getElementById('g2048BestScore').innerText = g2048BestScore;
+                save2048BestScore();
+            }
+        }
+
+        async function save2048BestScore() {
+            try {
+                const docRef = doc(db, "game_records_2048", currentUser.name);
+                await setDoc(docRef, { bestScore: g2048BestScore }, { merge: true });
+            } catch(e) {}
+        }
+
+        // 滑動處理邏輯
+        function slideRow(row) {
+            let arr = row.filter(val => val !== 0);
+            for(let i=0; i<arr.length-1; i++) {
+                if(arr[i] === arr[i+1]) {
+                    arr[i] *= 2;
+                    g2048Score += arr[i];
+                    arr[i+1] = 0;
+                }
+            }
+            arr = arr.filter(val => val !== 0);
+            while(arr.length < 4) arr.push(0);
+            return arr;
+        }
+
+        function moveLeft() {
+            let changed = false;
+            for(let r=0; r<4; r++) {
+                let original = [...g2048Board[r]];
+                g2048Board[r] = slideRow(g2048Board[r]);
+                if(original.toString() !== g2048Board[r].toString()) changed = true;
+            }
+            return changed;
+        }
+
+        function rotateBoard() {
+            let newBoard = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+            for(let r=0; r<4; r++) {
+                for(let c=0; c<4; c++) {
+                    newBoard[c][3-r] = g2048Board[r][c];
+                }
+            }
+            g2048Board = newBoard;
+        }
+
+        function makeMove(direction) {
+            if(g2048GameOver) return;
+            let moved = false;
+            if(direction === 'left') {
+                moved = moveLeft();
+            } else if(direction === 'up') {
+                rotateBoard(); rotateBoard(); rotateBoard();
+                moved = moveLeft();
+                rotateBoard();
+            } else if(direction === 'right') {
+                rotateBoard(); rotateBoard();
+                moved = moveLeft();
+                rotateBoard(); rotateBoard();
+            } else if(direction === 'down') {
+                rotateBoard();
+                moved = moveLeft();
+                rotateBoard(); rotateBoard(); rotateBoard();
+            }
+
+            if(moved) {
+                addNewTile();
+                render2048Board();
+                checkGameOver();
+            }
+        }
+
+        function checkGameOver() {
+            let hasZero = false;
+            let canMerge = false;
+            for(let r=0; r<4; r++) {
+                for(let c=0; c<4; c++) {
+                    if(g2048Board[r][c] === 2048 && !window._hasWon2048) {
+                        window._hasWon2048 = true;
+                        document.getElementById('g2048Status').innerText = "🏆 太神啦！成功拼出 2048！";
+                        document.getElementById('g2048Status').style.color = "#4caf50";
+                    }
+                    if(g2048Board[r][c] === 0) hasZero = true;
+                    if(c < 3 && g2048Board[r][c] === g2048Board[r][c+1]) canMerge = true;
+                    if(r < 3 && g2048Board[r][c] === g2048Board[r+1][c]) canMerge = true;
+                }
+            }
+            if(!hasZero && !canMerge) {
+                g2048GameOver = true;
+                document.getElementById('g2048Status').innerText = "😢 遊戲結束！沒有步數囉！";
+                document.getElementById('g2048Status').style.color = "#e53935";
+            }
+        }
+
+        // 鍵盤與觸控事件監聽
+        window.addEventListener('keydown', (e) => {
+            if(document.getElementById('g2048Container').style.display === 'block') {
+                if(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", " "].includes(e.key)) {
+                    e.preventDefault();
+                }
+                if(e.key === 'ArrowLeft') makeMove('left');
+                if(e.key === 'ArrowUp') makeMove('up');
+                if(e.key === 'ArrowRight') makeMove('right');
+                if(e.key === 'ArrowDown') makeMove('down');
+            }
+        });
+
+        // 觸控滑動支援 (手機端)
+        let touchStartX = 0, touchStartY = 0;
+        const boardEl = document.getElementById('g2048Board');
+        boardEl.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, {passive: true});
+
+        boardEl.addEventListener('touchend', (e) => {
+            if(document.getElementById('g2048Container').style.display !== 'block') return;
+            let deltaX = e.changedTouches[0].clientX - touchStartX;
+            let deltaY = e.changedTouches[0].clientY - touchStartY;
+            if(Math.abs(deltaX) > Math.abs(deltaY)) {
+                if(Math.abs(deltaX) > 30) {
+                    if(deltaX > 0) makeMove('right');
+                    else makeMove('left');
+                }
+            } else {
+                if(Math.abs(deltaY) > 30) {
+                    if(deltaY > 0) makeMove('down');
+                    else makeMove('up');
+                }
+            }
+        }, {passive: true});
+
 
         // 事件綁定
         document.querySelectorAll('.p-card').forEach(card => {
