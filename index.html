@@ -280,7 +280,7 @@
             } catch (e) { console.error("檢查未讀訊息失敗:", e); }
         };
 
-        // ★ 新增：計算 Photo Dump 未讀新照片數
+// ★ 修正版：計算 Photo Dump 未讀新照片數（只算真正的新發文，不因留言被重複計算）
         window.checkGalleryUnreads = function(user) {
             try {
                 galleryUnsubscribe = onSnapshot(collection(db, "photos"), (snapshot) => {
@@ -290,7 +290,8 @@
                     snapshot.forEach(docSnap => {
                         const photo = docSnap.data();
                         const photoTime = photo.timestamp?.toDate?.()?.getTime() || 0;
-                        // 若照片時間大於最後讀取時間，且不是自己上傳的，就計為未讀
+                        
+                        // 條件：發文時間大於最後閱讀時間 且 不是自己發的
                         if (photoTime > lastReadTime && photo.uploader !== user.name) {
                             unreadCount++;
                         }
