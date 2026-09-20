@@ -15,8 +15,7 @@
             --primary-dark: #059669;
             --primary-light: #ecfdf5;
             --danger: #ef4444;
-            --weekend-color: #ef4444; /* 假日紅字 */
-            --saturday-color: #3b82f6; /* 週六藍字 (可依喜好調整，或統一用紅色) */
+            --weekend-color: #ef4444; /* 週休假日統一紅字 */
             --text-main: #1f2937;
             --text-sub: #6b7280;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -51,8 +50,7 @@
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
         .weekday { font-weight: 700; background-color: #f8fafc; padding: 10px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
-        .weekday.sun { color: var(--danger); }
-        .weekday.sat { color: var(--saturday-color); }
+        .weekday.weekend { color: var(--weekend-color); }
 
         .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; min-height: 90px; padding: 6px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
         .day-cell:active { background-color: #f8fafc; border-color: var(--primary); }
@@ -60,9 +58,8 @@
         .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); }
         
-        /* 假日紅字與週末樣式 */
-        .day-cell.is-sunday .date-num, .day-cell.is-holiday .date-num { color: var(--danger); }
-        .day-cell.is-saturday .date-num { color: var(--saturday-color); }
+        /* 週六、週日與國定假日統一步調使用紅色 */
+        .day-cell.is-weekend .date-num, .day-cell.is-holiday .date-num { color: var(--weekend-color); }
 
         /* 國定假日小標籤 */
         .holiday-tag { font-size: 9px; background: #fee2e2; color: #dc2626; padding: 1px 4px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
@@ -323,15 +320,15 @@
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            // 星期列表 (日為紅色，六為藍色/星期六)
+            // 星期列表 (週六與週日皆套用 weekend 類別顯示紅字)
             const weekdays = [
-                { name: '日', className: 'sun' },
+                { name: '日', className: 'weekend' },
                 { name: '一', className: '' },
                 { name: '二', className: '' },
                 { name: '三', className: '' },
                 { name: '四', className: '' },
                 { name: '五', className: '' },
-                { name: '六', className: 'sat' }
+                { name: '六', className: 'weekend' }
             ];
             weekdays.forEach(w => {
                 const div = document.createElement('div'); 
@@ -358,10 +355,13 @@
                 const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const holidayName = publicHolidays[mmdd];
 
-                // 套用週末與國定假日樣式
-                if (dayOfWeek === 0) dayCell.classList.add('is-sunday');
-                if (dayOfWeek === 6) dayCell.classList.add('is-saturday');
-                if (holidayName) dayCell.classList.add('is-holiday');
+                // 判斷是否為週末 (週六或週日) 或國定假日
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    dayCell.classList.add('is-weekend');
+                }
+                if (holidayName) {
+                    dayCell.classList.add('is-holiday');
+                }
 
                 if (dateKey === todayStr) dayCell.classList.add('today');
                 else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
