@@ -100,7 +100,6 @@
     <div id="dashboardView">
         <div class="app-header">
             <div class="app-brand">🏠 HomeBase</div>
-            <!-- ★ 點擊頭像改為前往 settings.html -->
             <div class="current-user-badge" onclick="window.location.href='settings.html'" title="個人設定">
                 <img id="dashUserAvatar" class="mini-avatar" src="" alt="">
                 <span id="dashUserName" class="user-badge-name"></span>
@@ -125,6 +124,7 @@
         const db = getFirestore(app);
 
         let unreadUnsubscribe = null;
+        let galleryUnsubscribe = null; // ★ 新增 Photo Dump 監聽指標
         let calendarUnsubscribe = null;
         window.selectedUserObj = null;
 
@@ -203,12 +203,12 @@
 
             await renderDynamicModules(user);
             window.checkUnreadMessages(user);
-            window.checkCalendarAlerts(user); // ★ 啟動行事曆提醒監聽
+            window.checkGalleryUnreads(user); // ★ 啟動 Photo Dump 未讀監聽
+            window.checkCalendarAlerts(user); 
         };
 
         async function renderDynamicModules(user) {
             const grid = document.getElementById('dynamicDashboardGrid'); grid.innerHTML = '';
-            // ★ 預設模組中移除了 settings
             let modules = { chat: true, checkin: true, calendar: true, gallery: true, games: true, wishwall: true, expense: true };
             let order = ['chat', 'checkin', 'calendar', 'gallery', 'games', 'wishwall', 'expense'];
 
@@ -235,14 +235,13 @@
                     <div class="dash-card" onclick="window.location.href='calendar.html'">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
                             <div class="dash-icon">📅</div>
-                            <!-- ★ 行事曆提醒圖示區塊 -->
                             <div id="calendarAlertsArea" style="display:flex; gap:4px; font-size:18px;"></div>
                         </div>
                         <div class="dash-title">家庭行事曆</div>
                     </div>` : '',
-                gallery: () => modules.gallery !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
+                // ★ 加入 Photo Dump 未讀徽章容器 (galleryBadge)
+                gallery: () => modules.gallery !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div class="notification-badge" id="galleryBadge">0</div><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
                 games: () => modules.games !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
-                // ★ 許願牆改為一般樣式 (移除 card-wish 類別)
                 wishwall: () => modules.wishwall !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
                 expense: () => modules.expense !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
             };
@@ -281,7 +280,36 @@
             } catch (e) { console.error("檢查未讀訊息失敗:", e); }
         };
 
-        // ★ 新增：計算今日行事曆提醒區間
+        // ★ 新增：計算 Photo Dump 未讀新照片數
+        window.checkGalleryUnreads = function(user) {
+            try {
+                galleryUnsubscribe = onSnapshot(collection(db, "photos"), (snapshot) => {
+                    const lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
+                    let unreadCount = 0;
+
+                    snapshot.forEach(docSnap => {
+                        const photo = docSnap.data();
+                        const photoTime = photo.timestamp?.toDate?.()?.getTime() || 0;
+                        // 若照片時間大於最後讀取時間，且不是自己上傳的，就計為未讀
+                        if (photoTime > lastReadTime && photo.uploader !== user.name) {
+                            unreadCount++;
+                        }
+                    });
+
+                    const badge = document.getElementById('galleryBadge');
+                    if (badge) {
+                        if (unreadCount > 0) {
+                            badge.style.display = 'block';
+                            badge.innerText = `+${unreadCount}`;
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                });
+            } catch (e) { console.error("檢查相簿未讀失敗:", e); }
+        };
+
+        // 計算今日行事曆提醒區間
         window.checkCalendarAlerts = function(user) {
             const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
             try {
@@ -297,7 +325,7 @@
                             let start = new Date(now);
                             let end = new Date(now);
                             
-                            if (evt.isAllDay !== false) { // 預設或全天行程
+                            if (evt.isAllDay !== false) { 
                                 start.setHours(0,0,0,0);
                                 end.setHours(23,59,59,999);
                             } else {
@@ -305,12 +333,10 @@
                                 if(evt.endTime) { const [eh, em] = evt.endTime.split(':'); end.setHours(eh, em, 0, 0); }
                             }
 
-                            // 計算觸發時間
                             let triggerTime = new Date(start);
                             if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
                             else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
 
-                            // 判斷現在是否介於 [觸發時間, 結束時間] 之間
                             if (now >= triggerTime && now <= end) {
                                 activeIcons.push(categoryIcons[evt.category] || '📌');
                             }
@@ -323,10 +349,9 @@
                     }
                 });
                 
-                // 每分鐘自動檢查一次時間，刷新提醒狀態
                 setInterval(() => {
                     if (calendarUnsubscribe) {
-                        calendarUnsubscribe(); // 重新觸發
+                        calendarUnsubscribe();
                         window.checkCalendarAlerts(user);
                     }
                 }, 60000);
