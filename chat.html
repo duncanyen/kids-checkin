@@ -106,7 +106,7 @@
         .modal-header h3 { margin: 0; font-size: 18px; font-weight: 800; }
         .modal-header .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-main); font-weight: bold; }
 
-        /* --- 新增：LINE 風格群組設定選單 --- */
+        /* --- LINE 風格群組設定選單 --- */
         .settings-top-bar { display: flex; justify-content: space-around; padding: 20px 0; border-bottom: 6px solid #f1f5f9; background: white; }
         .settings-icon-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--text-main); }
         .settings-icon-btn .icon { font-size: 24px; background: #f8fafc; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -200,7 +200,7 @@
 
     <!-- ================= 核心：全新 LINE 風格設定與各項 Modal ================= -->
     
-    <!-- 1. 新增群組 Modal (原版的 Create) -->
+    <!-- 1. 新增群組 Modal -->
     <div class="modal" id="createGroupModal">
         <div class="modal-content">
             <div class="modal-header" style="padding:0 0 16px 0; border:none;">
@@ -236,11 +236,11 @@
             </div>
             <!-- 上方三大圖示 -->
             <div class="settings-top-bar">
-                <div class="settings-icon-btn" onclick="openSubModal('membersEditModal')">
+                <div class="settings-icon-btn" onclick="openViewMembers()">
                     <div class="icon">👥</div>
                     <span>成員</span>
                 </div>
-                <div class="settings-icon-btn" onclick="openSubModal('membersEditModal')">
+                <div class="settings-icon-btn" onclick="openInviteMembers()">
                     <div class="icon">➕</div>
                     <span>邀請</span>
                 </div>
@@ -252,15 +252,15 @@
             <!-- 下方列表 -->
             <div class="settings-menu-list">
                 <div class="settings-menu-item" onclick="openPhotoGallery()">
-                    <span>🖼️ 群組內容照片集</span>
+                    <span>群組照片</span>
                     <span class="arrow">❯</span>
                 </div>
                 <div class="settings-menu-item" onclick="openSubModal('editGroupModal')">
-                    <span>⚙️ 設定 (變更群組名稱與頭像)</span>
+                    <span>設定 (變更群組名稱與頭像)</span>
                     <span class="arrow">❯</span>
                 </div>
                 <div class="settings-menu-item" onclick="exportChatHistory()">
-                    <span>📥 傳送聊天記錄 (匯出txt)</span>
+                    <span>傳送聊天記錄 (匯出txt)</span>
                     <span class="arrow">❯</span>
                 </div>
             </div>
@@ -272,7 +272,7 @@
         <div class="full-modal-content">
             <div class="modal-header">
                 <button class="btn-close" onclick="backToSettings('photoGalleryModal')">❮</button>
-                <h3>照片集</h3>
+                <h3>群組照片</h3>
                 <span style="width: 24px;"></span>
             </div>
             <div class="gallery-grid" id="galleryGrid">
@@ -304,18 +304,32 @@
         </div>
     </div>
 
-    <!-- 2-3. 成員與邀請 (子畫面) -->
-    <div class="full-modal" id="membersEditModal">
+    <!-- 2-3. 純檢視成員 (子畫面) -->
+    <div class="full-modal" id="viewMembersModal">
         <div class="full-modal-content">
             <div class="modal-header">
-                <button class="btn-close" onclick="backToSettings('membersEditModal')">❮</button>
-                <h3>成員管理</h3>
+                <button class="btn-close" onclick="backToSettings('viewMembersModal')">❮</button>
+                <h3>群組成員</h3>
                 <span style="width: 24px;"></span>
             </div>
             <div style="flex:1; padding: 20px; overflow-y:auto;">
-                <label style="font-size:14px; font-weight:700; color:var(--text-sub);">勾選以加入/移除成員 (自己已預設加入)</label>
-                <div class="member-checkbox-list" id="editMemberList" style="margin-top:10px;"></div>
-                <button class="btn-save-bottom" id="btnSaveMembers" style="margin: 20px 0 0 0; width:100%;">更新名單</button>
+                <div class="member-checkbox-list" id="viewMemberList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2-4. 邀請成員 (子畫面) -->
+    <div class="full-modal" id="inviteMembersModal">
+        <div class="full-modal-content">
+            <div class="modal-header">
+                <button class="btn-close" onclick="backToSettings('inviteMembersModal')">❮</button>
+                <h3>邀請成員</h3>
+                <span style="width: 24px;"></span>
+            </div>
+            <div style="flex:1; padding: 20px; overflow-y:auto;">
+                <label style="font-size:14px; font-weight:700; color:var(--text-sub);">勾選以邀請家人加入群組</label>
+                <div class="member-checkbox-list" id="inviteMemberList" style="margin-top:10px;"></div>
+                <button class="btn-save-bottom" id="btnSaveInvite" style="margin: 20px 0 0 0; width:100%;">新增成員</button>
             </div>
         </div>
     </div>
@@ -712,11 +726,43 @@
             uploadedAvatarBase64_Edit = activeRoomData.avatar || null;
             document.getElementById('editAvatarPreview').src = uploadedAvatarBase64_Edit || `https://ui-avatars.com/api/?name=${activeRoomData.name}&background=ecfdf5&color=059669`;
             
-            // 初始化成員名單
-            getCheckboxesHtml('editMemberList', activeRoomData.participants || []);
-            
             document.getElementById('roomSettingsMenu').style.display = 'flex';
         });
+
+        // [設定 - 檢視成員] (純顯示，不可編輯)
+        window.openViewMembers = function() {
+            let html = '';
+            const members = activeRoomData.participants || [];
+            members.forEach(p => {
+                html += `<div class="member-item" style="cursor:default; padding: 4px 0;"><span>👤 ${p}</span></div>`;
+            });
+            document.getElementById('viewMemberList').innerHTML = html;
+            openSubModal('viewMembersModal');
+        };
+
+        // [設定 - 邀請成員] (只顯示尚未在群組內的家人)
+        window.openInviteMembers = function() {
+            let html = '';
+            let hasCandidates = false;
+            const currentMembers = activeRoomData.participants || [];
+            
+            allUsers.forEach(u => {
+                if (!currentMembers.includes(u.name)) {
+                    hasCandidates = true;
+                    html += `<label class="member-item"><input type="checkbox" value="${u.name}"> <span>${u.name}</span></label>`;
+                }
+            });
+
+            if (!hasCandidates) {
+                html = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding:20px 0;">所有家人都已經在群組內囉！</div>';
+                document.getElementById('btnSaveInvite').style.display = 'none';
+            } else {
+                document.getElementById('btnSaveInvite').style.display = 'block';
+            }
+
+            document.getElementById('inviteMemberList').innerHTML = html;
+            openSubModal('inviteMembersModal');
+        };
 
         // [設定 - 儲存群組名稱與頭像]
         document.getElementById('btnSaveGroupEdit').addEventListener('click', async () => {
@@ -729,14 +775,18 @@
             } catch (e) { alert("儲存失敗"); }
         });
 
-        // [設定 - 儲存成員更新]
-        document.getElementById('btnSaveMembers').addEventListener('click', async () => {
-            const checkboxes = document.querySelectorAll('#editMemberList input[type="checkbox"]:checked');
-            const participants = [currentUser.name, ...Array.from(checkboxes).map(cb => cb.value)];
+        // [設定 - 儲存邀請的新成員]
+        document.getElementById('btnSaveInvite').addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('#inviteMemberList input[type="checkbox"]:checked');
+            const newMembers = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (newMembers.length === 0) return alert('請先勾選要邀請的家人！');
+            
+            const participants = [...(activeRoomData.participants || []), ...newMembers];
             try {
                 await updateDoc(doc(db, "rooms", activeRoomId), { participants });
-                backToSettings('membersEditModal');
-            } catch (e) { alert("更新成員失敗"); }
+                backToSettings('inviteMembersModal');
+            } catch (e) { alert("邀請成員失敗"); }
         });
 
         // [設定 - 退出群組]
