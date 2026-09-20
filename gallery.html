@@ -176,9 +176,9 @@
             } catch (e) {}
         }
 
-        window.onload = async function() {
+window.onload = async function() {
             await recordLog('功能瀏覽', '進入「Photo Dump」相簿專區');
-            // 進入頁面時，更新最後讀取時間為現在，清除未讀計數
+            // 進入頁面時，記錄當前時間為最後已讀時間，清除紅點
             localStorage.setItem('homebase_photodump_last_read', Date.now().toString());
         };
 
