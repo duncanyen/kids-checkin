@@ -28,7 +28,14 @@
         .login-logo-wrapper { width: 90px; height: 90px; background: white; border-radius: 28px; box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; font-size: 45px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.04); }
         .login-title { color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 6px; }
         .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 40px; }
-        
+
+/* 確保原有的 login-logo-wrapper 設定還在，另外加上 custom-logo 的設定 */
+.custom-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit; /* 繼承外框的圓角設定 */
+}
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
         .user-card:active { transform: scale(0.96); background: #f9fafb; }
@@ -88,9 +95,13 @@
         </div>
     </div>
 
+
+
     <!-- 登入畫面 -->
     <div id="loginSection">
-        <div class="login-logo-wrapper">🏡</div>
+<div class="login-logo-wrapper">
+    <img src="Nexus.png" alt="HomeBase Logo" class="custom-logo">
+</div>
         <div class="login-title">Nexus</div>
         <div class="login-subtitle">連結彼此的日常 讓家更靠近</div>
         <div class="user-selection" id="userSelectionContainer"></div>
