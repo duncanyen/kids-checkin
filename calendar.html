@@ -15,6 +15,8 @@
             --primary-dark: #059669;
             --primary-light: #ecfdf5;
             --danger: #ef4444;
+            --weekend-color: #ef4444; /* 假日紅字 */
+            --saturday-color: #3b82f6; /* 週六藍字 (可依喜好調整，或統一用紅色) */
             --text-main: #1f2937;
             --text-sub: #6b7280;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -49,10 +51,22 @@
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
         .weekday { font-weight: 700; background-color: #f8fafc; padding: 10px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
+        .weekday.sun { color: var(--danger); }
+        .weekday.sat { color: var(--saturday-color); }
+
         .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; min-height: 90px; padding: 6px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
         .day-cell:active { background-color: #f8fafc; border-color: var(--primary); }
-        .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); align-self: flex-start; margin-bottom: 4px; }
         
+        .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); }
+        
+        /* 假日紅字與週末樣式 */
+        .day-cell.is-sunday .date-num, .day-cell.is-holiday .date-num { color: var(--danger); }
+        .day-cell.is-saturday .date-num { color: var(--saturday-color); }
+
+        /* 國定假日小標籤 */
+        .holiday-tag { font-size: 9px; background: #fee2e2; color: #dc2626; padding: 1px 4px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
+
         .day-cell.today { border: 2px solid var(--primary); background-color: var(--today-bg); }
         .day-cell.today .date-num { color: var(--primary-dark); }
         .day-cell.past-day { opacity: 0.6; background-color: #fafafa; }
@@ -233,6 +247,16 @@
 
         const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
 
+        // 台灣固定國定假日對照表 (MM-DD 格式)
+        const publicHolidays = {
+            "01-01": "元旦",
+            "02-28": "和平紀念日",
+            "04-04": "兒童節",
+            "04-05": "清明節",
+            "05-01": "勞動節",
+            "10-10": "國慶日"
+        };
+
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         if (!savedUserStr) {
             alert('請先登入！'); window.location.href = 'index.html';
@@ -299,8 +323,21 @@
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            ['日', '一', '二', '三', '四', '五', '六'].forEach(w => {
-                const div = document.createElement('div'); div.className = 'weekday'; div.innerText = w; grid.appendChild(div);
+            // 星期列表 (日為紅色，六為藍色/星期六)
+            const weekdays = [
+                { name: '日', className: 'sun' },
+                { name: '一', className: '' },
+                { name: '二', className: '' },
+                { name: '三', className: '' },
+                { name: '四', className: '' },
+                { name: '五', className: '' },
+                { name: '六', className: 'sat' }
+            ];
+            weekdays.forEach(w => {
+                const div = document.createElement('div'); 
+                div.className = `weekday ${w.className}`; 
+                div.innerText = w.name; 
+                grid.appendChild(div);
             });
 
             const firstDayIndex = new Date(year, month, 1).getDay();
@@ -313,14 +350,39 @@
             for (let day = 1; day <= totalDays; day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'day-cell';
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const cellDate = new Date(year, month, day);
+                const dayOfWeek = cellDate.getDay(); // 0 是週日，6 是週六
+                
+                const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const holidayName = publicHolidays[mmdd];
+
+                // 套用週末與國定假日樣式
+                if (dayOfWeek === 0) dayCell.classList.add('is-sunday');
+                if (dayOfWeek === 6) dayCell.classList.add('is-saturday');
+                if (holidayName) dayCell.classList.add('is-holiday');
+
                 if (dateKey === todayStr) dayCell.classList.add('today');
                 else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
 
+                // 日期與假日標籤列
+                const headerRow = document.createElement('div');
+                headerRow.className = 'day-header-row';
+
                 const numSpan = document.createElement('span');
-                numSpan.className = 'date-num'; numSpan.innerText = day;
-                dayCell.appendChild(numSpan);
+                numSpan.className = 'date-num'; 
+                numSpan.innerText = day;
+                headerRow.appendChild(numSpan);
+
+                if (holidayName) {
+                    const tag = document.createElement('span');
+                    tag.className = 'holiday-tag';
+                    tag.innerText = holidayName;
+                    headerRow.appendChild(tag);
+                }
+
+                dayCell.appendChild(headerRow);
 
                 const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
                 dayEvts.slice(0, 3).forEach(evt => {
@@ -328,7 +390,6 @@
                     const isExpired = isEventExpired(evt, dateKey);
                     badge.className = `event-badge ${evt.visibility || 'public'} ${isExpired ? 'expired' : ''}`;
                     
-                    // ★ 舊資料相容：如果沒有 category，會預設顯示 📌
                     const icon = categoryIcons[evt.category] || '📌';
                     badge.innerText = `${icon} ${evt.title}`;
                     dayCell.appendChild(badge);
@@ -372,22 +433,20 @@
             document.getElementById('btnSaveEvent').style.display = 'block';
 
             if (evtData) {
-                // ★ 編輯模式 (舊資料向下相容機制)
                 editingEventId = evtData.id;
                 document.getElementById('evTitle').value = evtData.title || '';
                 document.getElementById('evDesc').value = evtData.desc || '';
-                document.getElementById('evCategory').value = evtData.category || 'other'; // 舊資料預設為「其他」
+                document.getElementById('evCategory').value = evtData.category || 'other';
                 document.getElementById('evVisibility').value = evtData.visibility || 'public';
-                document.getElementById('evIsAllDay').checked = evtData.isAllDay !== false; // 舊資料預設為「全天」
+                document.getElementById('evIsAllDay').checked = evtData.isAllDay !== false;
                 document.getElementById('evStartTime').value = evtData.startTime || '09:00';
                 document.getElementById('evEndTime').value = evtData.endTime || '10:00';
                 
-                const rUnit = evtData.reminderUnit || 'none'; // 舊資料預設為「無提醒」
+                const rUnit = evtData.reminderUnit || 'none';
                 document.getElementById('evReminderUnit').value = rUnit;
                 document.getElementById('evReminderVal').value = evtData.reminderValue || '';
                 document.getElementById('evReminderVal').disabled = (rUnit === 'none');
             } else {
-                // 新增模式預設值
                 editingEventId = null;
                 document.getElementById('evTitle').value = '';
                 document.getElementById('evDesc').value = '';
@@ -421,7 +480,6 @@
                 const icon = categoryIcons[evt.category] || '📌';
                 const timeStr = (evt.isAllDay !== false) ? '🕒 全天' : `🕒 ${evt.startTime} - ${evt.endTime}`;
                 
-                // 判斷舊資料與新資料的提醒狀態
                 let reminderStr = '無提醒';
                 if (evt.reminderUnit === 'minutes') reminderStr = `提前 ${evt.reminderValue} 分鐘提醒`;
                 if (evt.reminderUnit === 'hours') reminderStr = `提前 ${evt.reminderValue} 小時提醒`;
@@ -472,7 +530,6 @@
         }
         evIsAllDay.addEventListener('change', toggleTimeInputs);
 
-        // 切換提醒單位時的預設值處理
         evReminderUnit.addEventListener('change', (e) => {
             if (e.target.value === 'none') {
                 evReminderVal.disabled = true;
