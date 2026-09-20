@@ -36,6 +36,22 @@
     object-fit: cover;
     border-radius: inherit; /* 繼承外框的圓角設定 */
 }
+
+        /* 讓圖示與文字水平對齊，並加上一點間距 */
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* 圖片與文字之間的距離，可以自行調整數字 */
+}
+
+/* 調整自訂圖示的大小 */
+.brand-logo {
+    width: 24px;       /* 圖片寬度，可以依據你的喜好調大或調小 */
+    height: 24px;      /* 圖片高度，通常跟寬度一樣保持正方形 */
+    object-fit: cover; /* 確保圖片不變形 */
+    border-radius: 4px;/* 如果想要邊角微圓可以留著；如果是圓形圖示可以改成 50% */
+}
+        
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
         .user-card:active { transform: scale(0.96); background: #f9fafb; }
@@ -110,7 +126,9 @@
     <!-- 主選單 Dashboard -->
     <div id="dashboardView">
         <div class="app-header">
-            <div class="app-brand">🏠 Nexus</div>
+            <div class="app-brand">
+    <img src="Nexus.png" alt="Logo" class="brand-logo"> Nexus
+</div>
             <div class="current-user-badge" onclick="window.location.href='settings.html'" title="個人設定">
                 <img id="dashUserAvatar" class="mini-avatar" src="" alt="">
                 <span id="dashUserName" class="user-badge-name"></span>
