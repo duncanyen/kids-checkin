@@ -216,10 +216,22 @@
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-        // ================= 權限判斷邏輯 =================
-        // 判斷是否有權限查看/編輯收入 (依照角色是否為家長或管理員)
-        const userRole = currentUser.role || '';
-        const canViewIncome = userRole.includes('家長') || userRole.includes('管理');
+        // ================= 權限判斷邏輯 (已強化與放寬條件) =================
+        // 為了避免因登入時寫入的 role 或大小寫格式不同導致誤判，我們將條件放寬。
+        const roleStr = String(currentUser.role || '').toLowerCase();
+        const nameStr = String(currentUser.name || '').toLowerCase(); 
+
+        const canViewIncome = 
+            roleStr.includes('家長') || 
+            roleStr.includes('管理') || 
+            roleStr.includes('admin') || 
+            roleStr.includes('parent') ||
+            nameStr.includes('爸') ||   // 備用：如果是爸爸登入，自動解鎖
+            nameStr.includes('媽') ||   // 備用：如果是媽媽登入，自動解鎖
+            nameStr.includes('admin');
+
+        // 也可以打開這行在 F12 Console 觀察目前的權限判定狀態
+        console.log("目前使用者角色:", currentUser.role, "是否可見收入:", canViewIncome);
 
         // 如果沒有權限，隱藏介面上的「收入」按鈕與統計區塊
         if (!canViewIncome) {
