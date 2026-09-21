@@ -144,6 +144,7 @@
                     <div class="stat-label">本月支出</div>
                     <div class="stat-amount expense" id="monthTotalExpense">$0</div>
                 </div>
+                <!-- 收入統計框，依據權限決定是否顯示 -->
                 <div class="stat-box" id="statBoxIncome" onclick="switchChartType('income')">
                     <div class="stat-label">本月收入</div>
                     <div class="stat-amount income" id="monthTotalIncome">$0</div>
@@ -166,6 +167,7 @@
             <!-- 收支切換 -->
             <div class="type-toggle">
                 <button id="btnTypeExpense" class="type-btn active expense" onclick="switchModalType('expense')">支出</button>
+                <!-- 收入按鈕，依據權限決定是否顯示 -->
                 <button id="btnTypeIncome" class="type-btn" onclick="switchModalType('income')">收入</button>
             </div>
 
@@ -214,11 +216,22 @@
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
+        // ================= 權限判斷邏輯 =================
+        // 判斷是否有權限查看/編輯收入 (依照角色是否為家長或管理員)
+        const userRole = currentUser.role || '';
+        const canViewIncome = userRole.includes('家長') || userRole.includes('管理');
+
+        // 如果沒有權限，隱藏介面上的「收入」按鈕與統計區塊
+        if (!canViewIncome) {
+            document.getElementById('statBoxIncome').style.display = 'none';
+            document.getElementById('btnTypeIncome').style.display = 'none';
+        }
+
         // --- 全域變數 ---
         let currentDate = new Date(); 
         let selectedDateStr = "";     
-        let monthData = [];           
-        let chartInstance = null;     
+        let monthData = [];            
+        let chartInstance = null;      
         
         let currentModalType = 'expense'; // 'expense' 或 'income'
         let currentChartType = 'expense'; // 圖表當前顯示類型
@@ -276,7 +289,6 @@
                 monthData = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    // 確保舊資料預設為 expense
                     if (!data.type) data.type = 'expense';
                     monthData.push({ id: docSnap.id, ...data });
                 });
@@ -299,7 +311,6 @@
             const totalDays = new Date(year, month, 0).getDate();
             const today = new Date();
 
-            // 統計每天的 總支出 與 總收入
             const dailyStats = {};
             monthData.forEach(item => {
                 if (!dailyStats[item.date]) dailyStats[item.date] = { expense: 0, income: 0 };
@@ -324,10 +335,13 @@
                 dayDiv.className = `day-cell ${isToday ? 'today' : ''}`;
                 dayDiv.onclick = () => openModal(dateStr);
 
-                // 使用 formatK() 讓大數字變成 1.5k 避免換行
                 let html = `<div class="date-num">${day}</div>`;
                 if (stats.expense > 0) html += `<div class="day-expense">-${formatK(stats.expense)}</div>`;
-                if (stats.income > 0) html += `<div class="day-income">+${formatK(stats.income)}</div>`;
+                
+                // 【權限控制】如果具備權限，且有收入，才在月曆上顯示收入金額
+                if (canViewIncome && stats.income > 0) {
+                    html += `<div class="day-income">+${formatK(stats.income)}</div>`;
+                }
                 
                 dayDiv.innerHTML = html;
                 grid.appendChild(dayDiv);
@@ -341,6 +355,9 @@
 
         // ================= 圓餅圖繪製 =================
         window.switchChartType = function(type) {
+            // 【權限控制】阻擋無權限者切換至收入圖表
+            if (type === 'income' && !canViewIncome) return;
+
             currentChartType = type;
             document.getElementById('statBoxExpense').className = `stat-box ${type === 'expense' ? 'active-expense' : ''}`;
             document.getElementById('statBoxIncome').className = `stat-box ${type === 'income' ? 'active-income' : ''}`;
@@ -360,13 +377,13 @@
                     totalExpense += amt;
                 }
                 
-                // 依據目前選擇的圖表類型累加分類
                 if (item.type === currentChartType) {
                     categorySums[item.category] = (categorySums[item.category] || 0) + amt;
                 }
             });
 
             document.getElementById('monthTotalExpense').innerText = `$${totalExpense.toLocaleString()}`;
+            // 收入總額就算被計算，也會因為 UI 隱藏而看不見
             document.getElementById('monthTotalIncome').innerText = `$${totalIncome.toLocaleString()}`;
 
             const labels = [];
@@ -411,13 +428,14 @@
 
         // ================= 新增/編輯 Modal 邏輯 =================
         window.switchModalType = function(type) {
+            // 【權限控制】阻擋無權限者切換至收入紀錄
+            if (type === 'income' && !canViewIncome) return;
+
             currentModalType = type;
             
-            // UI 按鈕切換
             document.getElementById('btnTypeExpense').className = `type-btn ${type === 'expense' ? 'active expense' : ''}`;
             document.getElementById('btnTypeIncome').className = `type-btn ${type === 'income' ? 'active income' : ''}`;
             
-            // 金額輸入框顏色切換
             document.getElementById('amountWrapper').className = `amount-input-wrapper ${type}`;
             document.getElementById('btnSaveExpense').className = `btn-save ${type}`;
 
@@ -440,7 +458,7 @@
                 `;
                 grid.appendChild(btn);
             });
-            selectCategory(list[0].id); // 預設選第一個
+            selectCategory(list[0].id); 
         }
 
         function selectCategory(catId) {
@@ -485,7 +503,7 @@
                     date: selectedDateStr,
                     amount: amount,
                     category: selectedCategory,
-                    type: currentModalType, // 標記是 income 還是 expense
+                    type: currentModalType, 
                     note: note,
                     operator: currentUser.name,
                     timestamp: serverTimestamp()
@@ -515,7 +533,12 @@
             const container = document.getElementById('dayExpenseList');
             container.innerHTML = '';
             
-            const dayRecords = monthData.filter(e => e.date === selectedDateStr);
+            let dayRecords = monthData.filter(e => e.date === selectedDateStr);
+
+            // 【權限控制】如果沒有權限，就過濾掉所有的收入紀錄，不讓他們在明細中看見
+            if (!canViewIncome) {
+                dayRecords = dayRecords.filter(e => e.type !== 'income');
+            }
 
             if (dayRecords.length === 0) {
                 container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa; font-size:13px;">當日尚無紀錄</div>';
