@@ -241,13 +241,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const targetDate = localStorage.getItem('calendar_target_date');
-if (targetDate) {
-    localStorage.removeItem('calendar_target_date'); // 讀取後清除
-    // 假設你的行事曆頁面原本點擊日期會觸發某個函數叫 openModal(targetDate)，在這裡呼叫它即可：
-    // openModal(targetDate);
-}
-
         let currentUser = null;
         let viewDate = new Date();
         let selectedDateKey = '';
@@ -256,7 +249,6 @@ if (targetDate) {
 
         const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
 
-        // 台灣固定國定假日對照表 (MM-DD 格式)
         const publicHolidays = {
             "01-01": "元旦",
             "02-28": "和平紀念日",
@@ -285,7 +277,7 @@ if (targetDate) {
                 await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
             } catch (e) { console.error("寫入 Log 失敗:", e); }
         }
-        window.onload = async function() { await recordLog('功能瀏覽', '進入「家庭行事曆」'); };
+        window.onload = async function() { await recordLog('功能瀏覽', '進入〈家庭行事曆〉'); };
 
         function listenToEvents() {
             onSnapshot(collection(db, "events"), (snapshot) => {
@@ -297,6 +289,21 @@ if (targetDate) {
                     }
                 });
                 renderCalendar();
+
+                // 【核心修正】在這裡檢查是否有從首頁帶過來的 targetDate
+                const targetDate = localStorage.getItem('calendar_target_date');
+                if (targetDate) {
+                    localStorage.removeItem('calendar_target_date'); // 讀取後立刻清除
+                    
+                    // 自動切換行事曆月份到該目標日期所在月份
+                    const [tYear, tMonth] = targetDate.split('-');
+                    viewDate = new Date(parseInt(tYear), parseInt(tMonth) - 1, 1);
+                    renderCalendar();
+
+                    // 直接開啟該日的行程彈窗
+                    openEventModal(targetDate);
+                }
+
                 if (document.getElementById('eventModal').style.display === 'flex' && !editingEventId) {
                     renderDayEvents(selectedDateKey);
                 }
@@ -332,7 +339,6 @@ if (targetDate) {
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            // 星期列表 (週六與週日皆套用 weekend 類別顯示紅字)
             const weekdays = [
                 { name: '日', className: 'weekend' },
                 { name: '一', className: '' },
@@ -367,7 +373,6 @@ if (targetDate) {
                 const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const holidayName = publicHolidays[mmdd];
 
-                // 判斷是否為週末 (週六或週日) 或國定假日
                 if (dayOfWeek === 0 || dayOfWeek === 6) {
                     dayCell.classList.add('is-weekend');
                 }
@@ -378,7 +383,6 @@ if (targetDate) {
                 if (dateKey === todayStr) dayCell.classList.add('today');
                 else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
 
-                // 日期與假日標籤列
                 const headerRow = document.createElement('div');
                 headerRow.className = 'day-header-row';
 
@@ -398,7 +402,6 @@ if (targetDate) {
 
                 const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
                 
-                // 【核心修改】每天最多只顯示 2 筆行程
                 dayEvts.slice(0, 2).forEach(evt => {
                     const badge = document.createElement('span');
                     const isExpired = isEventExpired(evt, dateKey);
@@ -409,7 +412,6 @@ if (targetDate) {
                     dayCell.appendChild(badge);
                 });
 
-                // 【核心修改】超過 2 筆時，顯示 +N 提示
                 if (dayEvts.length > 2) {
                     const moreBadge = document.createElement('div');
                     moreBadge.className = 'more-badge';
@@ -558,7 +560,6 @@ if (targetDate) {
         document.getElementById('btnShowAddForm').addEventListener('click', () => showFormView(null));
         document.getElementById('btnCancelForm').addEventListener('click', showListView);
         
-        // 點擊背景可關閉 Modal
         window.addEventListener('click', (e) => {
             const modal = document.getElementById('eventModal');
             if (e.target === modal) modal.style.display = 'none';
