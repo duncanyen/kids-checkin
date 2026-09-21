@@ -83,20 +83,10 @@
         .btn-cancel-reply { background: #e2e8f0; border: none; font-size: 14px; width: 24px; height: 24px; border-radius: 50%; color: var(--text-main); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
         .chat-input-area { padding: 12px 16px; display: flex; gap: 10px; align-items: center; position: relative; background: white;}
-        .btn-action-icon { background: #f3f4f6; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
+        .btn-upload-photo { background: #f3f4f6; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
         .chat-input-area input[type="text"] { flex: 1; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 20px; outline: none; font-size: 15px; background: #f8fafc; font-family: inherit; }
         .chat-input-area input[type="text"]:focus { border-color: var(--primary); background: white; }
         .chat-input-area button.btn-send { padding: 10px 20px; background: var(--primary); color: white; border: none; font-weight: 800; border-radius: 20px; cursor: pointer; font-size: 15px; box-shadow: 0 4px 10px rgba(16,185,129,0.2); transition: transform 0.1s; }
-
-        /* LINE 風格語音錄製工具列 */
-        .voice-recording-bar { display: none; padding: 12px 20px; align-items: center; justify-content: space-between; background: white; width: 100%; }
-        .voice-timer { font-size: 14px; font-weight: 700; color: var(--danger); display: flex; align-items: center; gap: 6px; }
-        .voice-controls { display: flex; align-items: center; gap: 20px; }
-        .btn-voice-action { border: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: var(--shadow-sm); }
-        .btn-voice-trash { background: #fee2e2; color: var(--danger); }
-        .btn-voice-main { background: var(--danger); color: white; font-size: 22px; }
-        .btn-voice-main.playing { background: var(--primary); }
-        .btn-voice-send { background: var(--primary); color: white; }
 
         /* --- 彈跳選單 Modal 基礎設計 --- */
         .msg-action-modal, .modal, .photo-viewer, .full-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 5000; justify-content: center; }
@@ -190,33 +180,14 @@
                 <button class="btn-cancel-reply" onclick="cancelReply()">✕</button>
             </div>
             
-            <!-- 文字與照片輸入列 -->
-            <div class="chat-input-area" id="normalInputBar">
-                <button class="btn-action-icon" id="btnTriggerPhoto" title="傳送圖片">📷</button>
+            <div class="chat-input-area">
+                <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">📷</button>
                 <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
                 <input type="text" id="chatInput" placeholder="輸入訊息..." autocomplete="off">
-                <button class="btn-action-icon" id="btnTriggerVoice" title="語音錄製">🎤</button>
                 <button class="btn-send" id="btnSend">傳送</button>
-            </div>
-
-            <!-- LINE 風格錄音控制列 -->
-            <div class="voice-recording-bar" id="voiceRecordingBar">
-                <button class="btn-voice-action btn-voice-trash" id="btnVoiceTrash" title="丟到垃圾桶">🗑️</button>
-                <div class="voice-timer" id="voiceTimer">
-                    <span style="width:8px; height:8px; background:var(--danger); border-radius:50%; display:inline-block; animation:blink 1s infinite;"></span>
-                    <span id="voiceTimeText">00:00</span>
-                </div>
-                <div class="voice-controls">
-                    <button class="btn-voice-action btn-voice-main" id="btnVoiceMain" title="開始/停止/播放">🔴</button>
-                </div>
-                <button class="btn-voice-action btn-voice-send" id="btnVoiceSend" title="傳送語音" style="display:none;">✔</button>
             </div>
         </div>
     </div>
-
-    <style>
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
-    </style>
 
     <!-- 動作選單 (長按訊息使用) -->
     <div class="msg-action-modal" id="msgActionModal" onclick="closeMsgActionModal(event)">
@@ -424,7 +395,7 @@
             } catch (error) {}
         }
 
-        // ================= 1. 群組列表邏輯 =================
+        // ================= 1. 群組列表邏輯 (修復相容性防呆) =================
         function listenToRooms() {
             const roomsRef = collection(db, "rooms");
             const q = query(roomsRef, where("participants", "array-contains", currentUser.name), orderBy("lastMessageTime", "desc"));
@@ -440,6 +411,7 @@
                     const room = docSnap.data();
                     const roomId = docSnap.id;
                     
+                    // 防呆：確保 participants 存在
                     if (!room.participants) room.participants = [currentUser.name];
 
                     let timeStr = "";
@@ -475,7 +447,7 @@
         async function enterRoom(roomId, roomData) {
             activeRoomId = roomId;
             activeRoomData = roomData;
-            if (!activeRoomData.participants) activeRoomData.participants = [currentUser.name];
+            if (!activeRoomData.participants) activeRoomData.participants = [currentUser.name]; // 防呆
 
             currentMessagesList = [];
             isFirstLoad = true; 
@@ -612,25 +584,19 @@
                 return;
             }
 
-            let contentHtml = '';
-            if (msg.imageUrl) {
-                contentHtml = `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)" onload="if(window._isChatJustLoaded) window.lockScrollPosition();">`;
-            } else if (msg.audioUrl) {
-                contentHtml = `<div style="display:flex; align-items:center; gap:8px; min-width:140px;"><span style="font-size:18px;">🔊</span><audio controls src="${msg.audioUrl}" style="height:32px; max-width:180px;"></audio></div>`;
-            } else {
-                contentHtml = `<div>${msg.text || ''}</div>`;
-            }
+            let displayText = msg.text || '';
+            let contentHtml = msg.imageUrl ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)" onload="if(window._isChatJustLoaded) window.lockScrollPosition();">` : `<div>${displayText}</div>`;
             
             let replyHtml = '';
             if (msg.replyTo) {
-                const replyText = msg.replyTo.text ? msg.replyTo.text : (msg.replyTo.audioUrl ? '傳送了語音訊息' : '傳送了圖片');
+                const replyText = msg.replyTo.text ? msg.replyTo.text : '傳送了圖片';
                 replyHtml = `<div class="reply-quote"><strong>${msg.replyTo.sender}</strong>: ${replyText}</div>`;
             }
             const safeText = (msg.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
             wrapper.innerHTML = `
                 ${!isMine ? `<div class="msg-sender">${msg.sender}</div>` : ''}
-                <div class="chat-msg ${isMine ? 'msg-mine' : 'msg-other'}" onclick="openMsgAction('${msgId}', ${isMine}, ${msgTimestampMs}, '${msg.sender}', '${msg.imageUrl ? '[圖片]' : (msg.audioUrl ? '[語音]' : safeText)}')">
+                <div class="chat-msg ${isMine ? 'msg-mine' : 'msg-other'}" onclick="openMsgAction('${msgId}', ${isMine}, ${msgTimestampMs}, '${msg.sender}', '${msg.imageUrl ? '[圖片]' : safeText}')">
                     ${replyHtml} ${contentHtml}
                 </div>
                 <div class="msg-status-row">${isMine ? readHtml : ''}<span class="msg-time">${timeStr}</span></div>
@@ -641,7 +607,7 @@
         window.openPhotoViewer = function(src) { document.getElementById('viewerImage').src = src; document.getElementById('photoViewerModal').style.display = 'flex'; };
         window.closePhotoViewer = function() { document.getElementById('photoViewerModal').style.display = 'none'; document.getElementById('viewerImage').src = ''; };
 
-        // ================= 3. 傳送訊息、照片與 LINE 風格語音 =================
+        // ================= 3. 傳送訊息與回覆 =================
         const chatInput = document.getElementById('chatInput');
         document.getElementById('btnSend').addEventListener('click', async () => {
             const text = chatInput.value.trim();
@@ -700,144 +666,6 @@
             }; reader.readAsDataURL(file);
         });
 
-        // --- LINE 風格錄音邏輯 ---
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let recordedAudioBlob = null;
-        let recordedAudioUrl = null;
-        let recordingTimer = null;
-        let recordingSeconds = 0;
-        let currentAudioPlayer = null;
-
-        const btnTriggerVoice = document.getElementById('btnTriggerVoice');
-        const normalInputBar = document.getElementById('normalInputBar');
-        const voiceRecordingBar = document.getElementById('voiceRecordingBar');
-        const btnVoiceMain = document.getElementById('btnVoiceMain');
-        const btnVoiceTrash = document.getElementById('btnVoiceTrash');
-        const btnVoiceSend = document.getElementById('btnVoiceSend');
-        const voiceTimeText = document.getElementById('voiceTimeText');
-
-        btnTriggerVoice.addEventListener('click', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = event => {
-                    if (event.data.size > 0) audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = () => {
-                    recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    recordedAudioUrl = URL.createObjectURL(recordedAudioBlob);
-                    currentAudioPlayer = new Audio(recordedAudioUrl);
-                };
-
-                normalInputBar.style.display = 'none';
-                voiceRecordingBar.style.display = 'flex';
-                
-                // 進入準備錄音狀態 (紅點)
-                btnVoiceMain.innerHTML = '🔴';
-                btnVoiceMain.className = 'btn-voice-action btn-voice-main';
-                btnVoiceSend.style.display = 'none';
-                voiceTimeText.innerText = '00:00';
-                recordingSeconds = 0;
-            } catch (err) {
-                alert('無法存取麥克風，請檢查瀏覽器權限設定！');
-            }
-        });
-
-        // 點擊垃圾桶：取消重置
-        btnVoiceTrash.addEventListener('click', () => {
-            stopRecordingSession();
-        });
-
-        function stopRecordingSession() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            if (recordingTimer) clearInterval(recordingTimer);
-            if (currentAudioPlayer) { currentAudioPlayer.pause(); currentAudioPlayer = null; }
-            voiceRecordingBar.style.display = 'none';
-            normalInputBar.style.display = 'flex';
-            recordedAudioBlob = null;
-            recordedAudioUrl = null;
-        }
-
-        // 中央大按鈕點擊狀態切換 (紅點錄音 -> 方塊停止 -> 綠箭頭播放)
-        let recordingState = 'ready'; // ready -> recording -> stopped
-        btnVoiceMain.addEventListener('click', () => {
-            if (btnVoiceMain.innerHTML === '🔴') {
-                // 開始錄音
-                audioChunks = [];
-                mediaRecorder.start();
-                recordingState = 'recording';
-                btnVoiceMain.innerHTML = '⬛'; // 停止正方格
-                recordingSeconds = 0;
-                voiceTimeText.innerText = '00:00';
-                recordingTimer = setInterval(() => {
-                    recordingSeconds++;
-                    let m = String(Math.floor(recordingSeconds / 60)).padStart(2, '0');
-                    let s = String(recordingSeconds % 60).padStart(2, '0');
-                    voiceTimeText.innerText = `${m}:${s}`;
-                }, 1000);
-            } else if (btnVoiceMain.innerHTML === '⬛') {
-                // 停止錄音
-                mediaRecorder.stop();
-                if (recordingTimer) clearInterval(recordingTimer);
-                recordingState = 'stopped';
-                btnVoiceMain.innerHTML = '▶'; // 執行播放箭頭
-                btnVoiceMain.classList.add('playing');
-                btnVoiceSend.style.display = 'flex'; // 顯示傳送鈕
-            } else if (btnVoiceMain.innerHTML === '▶') {
-                // 試聽播放
-                if (currentAudioPlayer) {
-                    currentAudioPlayer.play();
-                    btnVoiceMain.innerHTML = '❚❚'; // 暫停圖示
-                    currentAudioPlayer.onended = () => {
-                        btnVoiceMain.innerHTML = '▶';
-                    };
-                }
-            } else if (btnVoiceMain.innerHTML === '❚❚') {
-                // 暫停試聽
-                if (currentAudioPlayer) {
-                    currentAudioPlayer.pause();
-                    btnVoiceMain.innerHTML = '▶';
-                }
-            }
-        });
-
-        // 點擊傳送語音
-        btnVoiceSend.addEventListener('click', async () => {
-            if (!recordedAudioBlob || !activeRoomId) return;
-            btnVoiceSend.disabled = true;
-
-            const reader = new FileReader();
-            reader.readAsDataURL(recordedAudioBlob);
-            reader.onloadend = async function() {
-                const base64Audio = reader.result;
-                try {
-                    const msgData = { roomId: activeRoomId, sender: currentUser.name, text: "傳送了語音訊息", audioUrl: base64Audio, timestamp: serverTimestamp() };
-                    if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
-                    await addDoc(collection(db, "messages"), msgData);
-
-                    let updatePayload = { lastMessage: `${currentUser.name}: 傳送了語音 🎤`, lastMessageTime: serverTimestamp() };
-                    if(activeRoomData && activeRoomData.participants) {
-                        activeRoomData.participants.forEach(p => {
-                            if (p !== currentUser.name) updatePayload[`unreadCount.${p}`] = increment(1);
-                        });
-                    }
-                    await updateDoc(doc(db, "rooms", activeRoomId), updatePayload);
-                    setTimeout(() => document.getElementById('chatMessages').scrollTo({ top: 99999, behavior: 'smooth' }), 100);
-                } catch (e) {
-                    alert('語音傳送失敗');
-                } finally {
-                    btnVoiceSend.disabled = false;
-                    stopRecordingSession();
-                }
-            };
-        });
-
         window.openMsgAction = function(msgId, isMine, timestampMs, sender, text) {
             selectedMsgForAction = { id: msgId, sender, text, isMine, timestampMs };
             const hoursPassed = (Date.now() - timestampMs) / (1000 * 60 * 60);
@@ -855,15 +683,17 @@
         window.cancelReply = function() { pendingReplyMsgId = null; pendingReplyData = null; document.getElementById('replyPreviewArea').style.display = 'none'; };
         window.triggerRetract = async function() {
             if (!confirm("確定要收回此訊息嗎？")) return;
-            try { await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null, audioUrl: null }); } catch(e) {}
+            try { await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null }); } catch(e) {}
             document.getElementById('msgActionModal').style.display = 'none';
         };
+
 
         // ================= 4. 群組設定與功能 =================
         window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; }
         window.openSubModal = function(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
         window.backToSettings = function(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
 
+        // [建立群組]
         function getCheckboxesHtml(containerId, selected = []) {
             let html = '';
             allUsers.forEach(u => {
@@ -889,7 +719,9 @@
             } catch (e) { alert("建立失敗！"); }
         });
 
+        // [LINE 風格群組設定主選單]
         document.getElementById('btnOpenSettingsMenu').addEventListener('click', () => {
+            // 初始化變更名稱/頭像表單
             document.getElementById('editGroupName').value = activeRoomData.name;
             uploadedAvatarBase64_Edit = activeRoomData.avatar || null;
             document.getElementById('editAvatarPreview').src = uploadedAvatarBase64_Edit || `https://ui-avatars.com/api/?name=${activeRoomData.name}&background=ecfdf5&color=059669`;
@@ -897,6 +729,7 @@
             document.getElementById('roomSettingsMenu').style.display = 'flex';
         });
 
+        // [設定 - 檢視成員] (純顯示，不可編輯)
         window.openViewMembers = function() {
             let html = '';
             const members = activeRoomData.participants || [];
@@ -907,6 +740,7 @@
             openSubModal('viewMembersModal');
         };
 
+        // [設定 - 邀請成員] (只顯示尚未在群組內的家人)
         window.openInviteMembers = function() {
             let html = '';
             let hasCandidates = false;
@@ -930,6 +764,7 @@
             openSubModal('inviteMembersModal');
         };
 
+        // [設定 - 儲存群組名稱與頭像]
         document.getElementById('btnSaveGroupEdit').addEventListener('click', async () => {
             const name = document.getElementById('editGroupName').value.trim(); if (!name) return alert('請輸入名稱！');
             try {
@@ -940,6 +775,7 @@
             } catch (e) { alert("儲存失敗"); }
         });
 
+        // [設定 - 儲存邀請的新成員]
         document.getElementById('btnSaveInvite').addEventListener('click', async () => {
             const checkboxes = document.querySelectorAll('#inviteMemberList input[type="checkbox"]:checked');
             const newMembers = Array.from(checkboxes).map(cb => cb.value);
@@ -953,6 +789,7 @@
             } catch (e) { alert("邀請成員失敗"); }
         });
 
+        // [設定 - 退出群組]
         window.leaveGroup = async function() {
             if (!confirm(`確定要退出「${activeRoomData.name}」群組嗎？`)) return;
             try {
@@ -962,6 +799,7 @@
             } catch (e) { alert("退出失敗"); }
         };
 
+        // [設定 - 匯出聊天記錄]
         window.exportChatHistory = function() {
             if (currentMessagesList.length === 0) return alert("目前沒有聊天記錄");
             let textOutput = `=== 【${activeRoomData.name}】聊天記錄 ===\n匯出時間：${new Date().toLocaleString()}\n\n`;
@@ -972,7 +810,7 @@
                     const d = msg.timestamp.toDate();
                     timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                 }
-                const content = msg.isRetracted ? "(收回了訊息)" : (msg.imageUrl ? "[傳送了圖片]" : (msg.audioUrl ? "[傳送了語音]" : msg.text));
+                const content = msg.isRetracted ? "(收回了訊息)" : (msg.imageUrl ? "[傳送了圖片]" : msg.text);
                 textOutput += `[${timeStr}] ${msg.sender}: ${content}\n`;
             });
 
@@ -984,6 +822,7 @@
             URL.revokeObjectURL(url);
         };
 
+        // [設定 - 相片集]
         window.openPhotoGallery = function() {
             const grid = document.getElementById('galleryGrid');
             grid.innerHTML = '';
@@ -1002,6 +841,7 @@
             openSubModal('photoGalleryModal');
         };
 
+        // 圖片上傳壓縮共用函式
         function handleAvatarUpload(inputId, previewId, isCreate) {
             document.getElementById(inputId).addEventListener('change', (e) => {
                 const file = e.target.files[0]; if (!file) return;
