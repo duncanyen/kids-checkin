@@ -21,7 +21,7 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 15px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
         
         /* 登入畫面 */
         #loginSection { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.4s ease-out; }
@@ -29,27 +29,24 @@
         .login-title { color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 6px; }
         .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 40px; }
 
-        /* 確保原有的 login-logo-wrapper 設定還在，另外加上 custom-logo 的設定 */
         .custom-logo {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: inherit; /* 繼承外框的圓角設定 */
+            border-radius: inherit;
         }
 
-        /* 讓圖示與文字水平對齊，並加上一點間距 */
         .app-brand {
             display: flex;
             align-items: center;
-            gap: 8px; /* 圖片與文字之間的距離，可以自行調整數字 */
+            gap: 8px;
         }
 
-        /* 調整自訂圖示的大小 */
         .brand-logo {
-            width: 24px;       /* 圖片寬度，可以依據你的喜好調大或調小 */
-            height: 24px;      /* 圖片高度，通常跟寬度一樣保持正方形 */
-            object-fit: cover; /* 確保圖片不變形 */
-            border-radius: 4px;/* 如果想要邊角微圓可以留著；如果是圓形圖示可以改成 50% */
+            width: 24px;
+            height: 24px;
+            object-fit: cover;
+            border-radius: 4px;
         }
         
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
@@ -67,20 +64,20 @@
 
         /* 主選單 Dashboard */
         #dashboardView { display: none; max-width: 480px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
-        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
         .app-brand { font-size: 24px; font-weight: 800; color: var(--text-main); }
         
         .current-user-badge { background: white; padding: 6px 14px 6px 6px; border-radius: 30px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.04); }
         .mini-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
         .user-badge-name { font-size: 15px; font-weight: 800; color: var(--text-main); }
 
-        /* === 新增：今日行程卡片樣式 === */
-        .agenda-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
+        /* === 今日行程卡片樣式 (已調高位置與精簡間距) === */
+        .agenda-card { background: white; border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
         .agenda-card:active { transform: scale(0.98); background: #fcfcfc; }
-        .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e5e7eb; padding-bottom: 10px; margin-bottom: 10px; }
-        .agenda-date { font-size: 16px; font-weight: 800; color: var(--primary-dark); }
-        .agenda-count { font-size: 12px; font-weight: 700; color: var(--text-sub); background: #f1f5f9; padding: 3px 8px; border-radius: 12px; }
-        .agenda-list { display: flex; flex-direction: column; gap: 10px; max-height: 120px; overflow-y: auto; padding-right: 4px; }
+        .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
+        .agenda-date { font-size: 15px; font-weight: 800; color: var(--primary-dark); }
+        .agenda-count { font-size: 12px; font-weight: 700; color: var(--text-sub); background: #f1f5f9; padding: 2px 8px; border-radius: 12px; }
+        .agenda-list { display: flex; flex-direction: column; gap: 8px; max-height: 110px; overflow-y: auto; padding-right: 4px; }
         .agenda-list::-webkit-scrollbar { width: 4px; }
         .agenda-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .agenda-item { display: flex; align-items: center; gap: 8px; }
@@ -148,7 +145,7 @@
             </div>
         </div>
 
-        <!-- === 新增：今日行程卡片容器 === -->
+        <!-- 今日行程卡片容器 (緊湊置頂) -->
         <div id="todayAgendaContainer" style="display: none;"></div>
 
         <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
@@ -170,11 +167,10 @@
         const db = getFirestore(app);
 
         let unreadUnsubscribe = null;
-        let galleryUnsubscribe = null; // ★ 新增 Photo Dump 監聽指標
+        let galleryUnsubscribe = null;
         let calendarUnsubscribe = null;
         window.selectedUserObj = null;
         
-        // ★ 全域暫存使用者頭像，供行程卡片顯示使用
         window.userAvatarMap = {};
 
         window.onload = function() {
@@ -252,7 +248,7 @@
 
             await renderDynamicModules(user);
             window.checkUnreadMessages(user);
-            window.checkGalleryUnreads(user); // ★ 啟動 Photo Dump 未讀監聽
+            window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
         };
 
@@ -288,7 +284,6 @@
                         </div>
                         <div class="dash-title">家庭行事曆</div>
                     </div>` : '',
-                // ★ 加入 Photo Dump 未讀徽章容器 (galleryBadge)
                 gallery: () => modules.gallery !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div class="notification-badge" id="galleryBadge">0</div><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
                 games: () => modules.games !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
                 wishwall: () => modules.wishwall !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
@@ -302,7 +297,6 @@
             }
         }
 
-        // 計算聊天室未讀總數
         window.checkUnreadMessages = function(user) {
             try {
                 const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
@@ -329,7 +323,6 @@
             } catch (e) { console.error("檢查未讀訊息失敗:", e); }
         };
 
-        // ★ 修正版：計算 Photo Dump 未讀新照片數
         window.checkGalleryUnreads = function(user) {
             try {
                 galleryUnsubscribe = onSnapshot(collection(db, "photos"), (snapshot) => {
@@ -357,9 +350,7 @@
             } catch (e) { console.error("檢查相簿未讀失敗:", e); }
         };
 
-        // 計算今日行事曆提醒與今日行程卡片
         window.checkCalendarAlerts = async function(user) {
-            // 先取得所有使用者的頭像，供行程列表顯示
             if (Object.keys(window.userAvatarMap).length === 0) {
                 try {
                     const usersSnap = await getDocs(collection(db, "users"));
@@ -373,13 +364,12 @@
                     const now = new Date();
                     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
                     let activeIcons = [];
-                    let todayEventsList = []; // 收集今日的行程供上方卡片顯示
+                    let todayEventsList = [];
 
                     snapshot.forEach(docSnap => {
                         const evt = docSnap.data();
                         if ((evt.visibility === 'public' || evt.operator === user.name) && evt.date === todayStr) {
                             
-                            // 收集至今日行程列表
                             todayEventsList.push(evt);
 
                             let start = new Date(now);
@@ -403,16 +393,13 @@
                         }
                     });
 
-                    // 渲染行事曆卡片右上角的提醒 Icon
                     const alertsArea = document.getElementById('calendarAlertsArea');
                     if (alertsArea) {
                         alertsArea.innerHTML = activeIcons.map(icon => `<span>${icon}</span>`).join('');
                     }
 
-                    // ====== 渲染上方全新的「今日行程」卡片 ======
                     const agendaContainer = document.getElementById('todayAgendaContainer');
                     if (todayEventsList.length > 0) {
-                        // 依照時間排序 (全天的排最前面，接著依開始時間)
                         todayEventsList.sort((a, b) => {
                             if (a.isAllDay && !b.isAllDay) return -1;
                             if (!a.isAllDay && b.isAllDay) return 1;
@@ -425,7 +412,6 @@
 
                         let listHtml = todayEventsList.map(evt => {
                             let timeStr = (evt.isAllDay !== false) ? '全天' : `${evt.startTime} - ${evt.endTime}`;
-                            // 若使用者刪除了頭像，提供一個默認的 UI Avatar
                             const avatar = window.userAvatarMap[evt.operator] || `https://ui-avatars.com/api/?name=${evt.operator}&background=e5e7eb`;
                             
                             return `
@@ -438,8 +424,9 @@
                             `;
                         }).join('');
 
+                        // 點擊卡片直接帶入當天日期參數進入行事曆頁面 (可直接開啟該日編輯/明細)
                         agendaContainer.innerHTML = `
-                            <div class="agenda-card" onclick="window.location.href='calendar.html'">
+                            <div class="agenda-card" onclick="window.location.href='calendar.html?date=${todayStr}'">
                                 <div class="agenda-header">
                                     <div class="agenda-date">${dateTitle}</div>
                                     <div class="agenda-count">今天有 ${todayEventsList.length} 個行程</div>
@@ -451,7 +438,7 @@
                         `;
                         agendaContainer.style.display = 'block';
                     } else {
-                        agendaContainer.style.display = 'none'; // 若今日無行程則隱藏此卡片
+                        agendaContainer.style.display = 'none';
                     }
                 });
                 
