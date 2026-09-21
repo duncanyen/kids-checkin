@@ -52,33 +52,38 @@
         .weekday { font-weight: 700; background-color: #f8fafc; padding: 10px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
         .weekday.weekend { color: var(--weekend-color); }
 
-        .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; min-height: 90px; padding: 6px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        /* 格子固定大小，超出隱藏 */
+        .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; height: 90px; overflow: hidden; padding: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
         .day-cell:active { background-color: #f8fafc; border-color: var(--primary); }
         
         .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); }
+        .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); margin-left: 2px; }
         
         /* 週六、週日與國定假日統一步調使用紅色 */
         .day-cell.is-weekend .date-num, .day-cell.is-holiday .date-num { color: var(--weekend-color); }
 
         /* 國定假日小標籤 */
-        .holiday-tag { font-size: 9px; background: #fee2e2; color: #dc2626; padding: 1px 4px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
+        .holiday-tag { font-size: 9px; background: #fee2e2; color: #dc2626; padding: 1px 4px; border-radius: 4px; font-weight: 700; white-space: nowrap; transform: scale(0.9); transform-origin: right; }
 
         .day-cell.today { border: 2px solid var(--primary); background-color: var(--today-bg); }
         .day-cell.today .date-num { color: var(--primary-dark); }
         .day-cell.past-day { opacity: 0.6; background-color: #fafafa; }
 
-        /* 行程標籤條 */
-        .event-badge { font-size: 11px; border-radius: 6px; padding: 3px 5px; margin-bottom: 3px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; line-height: 1.2; font-weight: 600; display: flex; align-items: center; gap: 3px; }
+        /* 行程標籤條：單行截斷、縮小字體 */
+        .event-badge { font-size: 10px; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; line-height: 1.3; font-weight: 600; display: block; }
         .event-badge.public { background-color: var(--public-event); }
         .event-badge.private { background-color: var(--private-event); }
         .event-badge.expired { opacity: 0.5; filter: grayscale(100%); }
 
-        /* 彈窗 Modal */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 24px; border-radius: 24px; text-align: left; width: 90%; max-width: 420px; box-shadow: var(--shadow-lg); max-height: 85vh; display: flex; flex-direction: column; }
+        /* +N 更多標籤：推到底部對齊 */
+        .more-badge { font-size: 10px; color: var(--text-sub); font-weight: 800; text-align: right; margin-top: auto; padding-right: 2px; }
+
+        /* 彈窗 Modal (改版為 BottomSheet) */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: flex-end; /* 靠底部對齊 */ }
+        .modal-content { background: white; padding: 24px 20px; border-radius: 24px 24px 0 0; /* 上方圓角 */ text-align: left; width: 100%; max-width: 600px; box-shadow: var(--shadow-lg); max-height: 85vh; display: flex; flex-direction: column; animation: slideUp 0.3s ease-out; margin: 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); /* 適配手機底部橫條 */ }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
         .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
-        
         .modal-body { overflow-y: auto; flex: 1; padding-right: 5px; }
 
         /* 列表模式 */
@@ -129,7 +134,7 @@
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
-    <!-- 共用 Modal (列表與表單) -->
+    <!-- 共用 Modal (改為 BottomSheet) -->
     <div class="modal" id="eventModal">
         <div class="modal-content">
             <h3 class="modal-title" id="modalDateTitle">2026-09-16</h3>
@@ -350,7 +355,7 @@
                 
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const cellDate = new Date(year, month, day);
-                const dayOfWeek = cellDate.getDay(); // 0 是週日，6 是週六
+                const dayOfWeek = cellDate.getDay(); 
                 
                 const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const holidayName = publicHolidays[mmdd];
@@ -385,8 +390,10 @@
                 dayCell.appendChild(headerRow);
 
                 const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
-                dayEvts.slice(0, 3).forEach(evt => {
-                    const badge = document.createElement('div');
+                
+                // 【核心修改】每天最多只顯示 2 筆行程
+                dayEvts.slice(0, 2).forEach(evt => {
+                    const badge = document.createElement('span');
                     const isExpired = isEventExpired(evt, dateKey);
                     badge.className = `event-badge ${evt.visibility || 'public'} ${isExpired ? 'expired' : ''}`;
                     
@@ -395,10 +402,11 @@
                     dayCell.appendChild(badge);
                 });
 
-                if (dayEvts.length > 3) {
+                // 【核心修改】超過 2 筆時，顯示 +N 提示
+                if (dayEvts.length > 2) {
                     const moreBadge = document.createElement('div');
-                    moreBadge.style.cssText = 'font-size:10px; color:var(--text-sub); font-weight:bold; margin-top:2px;';
-                    moreBadge.innerText = `+${dayEvts.length - 3} 更多`;
+                    moreBadge.className = 'more-badge';
+                    moreBadge.innerText = `+${dayEvts.length - 2}`;
                     dayCell.appendChild(moreBadge);
                 }
 
@@ -476,7 +484,7 @@
                 const item = document.createElement('div');
                 item.className = `event-item ${evt.visibility || 'public'}`;
                 
-                const isOwnerOrAdmin = (evt.operator === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+                const isOwnerOrAdmin = (evt.operator === currentUser.name || currentUser.role === 'admin' || currentUser.role === '家長');
                 const icon = categoryIcons[evt.category] || '📌';
                 const timeStr = (evt.isAllDay !== false) ? '🕒 全天' : `🕒 ${evt.startTime} - ${evt.endTime}`;
                 
@@ -542,6 +550,12 @@
 
         document.getElementById('btnShowAddForm').addEventListener('click', () => showFormView(null));
         document.getElementById('btnCancelForm').addEventListener('click', showListView);
+        
+        // 點擊背景可關閉 Modal
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('eventModal');
+            if (e.target === modal) modal.style.display = 'none';
+        });
         document.getElementById('btnCloseModal').addEventListener('click', () => { document.getElementById('eventModal').style.display = 'none'; });
 
         async function saveEvent() {
