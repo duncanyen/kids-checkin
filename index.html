@@ -71,7 +71,7 @@
         .mini-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
         .user-badge-name { font-size: 15px; font-weight: 800; color: var(--text-main); }
 
-        /* === 今日行程卡片樣式 (已調高位置與精簡間距) === */
+        /* === 今日行程卡片樣式 === */
         .agenda-card { background: white; border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
         .agenda-card:active { transform: scale(0.98); background: #fcfcfc; }
         .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
@@ -145,7 +145,7 @@
             </div>
         </div>
 
-        <!-- 今日行程卡片容器 (緊湊置頂) -->
+        <!-- 今日行程卡片容器 -->
         <div id="todayAgendaContainer" style="display: none;"></div>
 
         <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
@@ -424,9 +424,9 @@
                             `;
                         }).join('');
 
-                        // 點擊卡片直接帶入當天日期參數進入行事曆頁面 (可直接開啟該日編輯/明細)
+                        // ★ 修改點擊事件：利用 localStorage 傳遞當天日期，並直接跳轉至 calendar.html
                         agendaContainer.innerHTML = `
-                            <div class="agenda-card" onclick="window.location.href='calendar.html?date=${todayStr}'">
+                            <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
                                 <div class="agenda-header">
                                     <div class="agenda-date">${dateTitle}</div>
                                     <div class="agenda-count">今天有 ${todayEventsList.length} 個行程</div>
