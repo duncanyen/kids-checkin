@@ -241,6 +241,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        const targetDate = localStorage.getItem('calendar_target_date');
+if (targetDate) {
+    localStorage.removeItem('calendar_target_date'); // 讀取後清除
+    // 假設你的行事曆頁面原本點擊日期會觸發某個函數叫 openModal(targetDate)，在這裡呼叫它即可：
+    // openModal(targetDate);
+}
+
         let currentUser = null;
         let viewDate = new Date();
         let selectedDateKey = '';
