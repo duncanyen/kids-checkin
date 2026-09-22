@@ -109,8 +109,8 @@
         #stickerLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
         
         /* 可拖曳貼圖 */
-        .sticker-item { position: absolute; font-size: 45px; pointer-events: auto; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; }
-        .sticker-del { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; border: 2px solid white; box-shadow: var(--shadow-sm); }
+        .sticker-item { position: absolute; font-size: 45px; pointer-events: auto; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+        .sticker-item:active { transform: translate(-50%, -50%) scale(1.1) !important; }
         
         /* 工具列 */
         .draw-toolbar { background: white; padding: 15px 20px 25px 20px; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.03); z-index: 10; }
@@ -127,7 +127,7 @@
         .tool-btn.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); }
 
         .sticker-palette { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; flex: 1; }
-        .sticker-btn { font-size: 26px; cursor: pointer; background: none; border: none; transition: transform 0.1s; }
+        .sticker-btn { font-size: 26px; cursor: pointer; background: none; border: none; transition: transform 0.1s; flex-shrink: 0; }
         .sticker-btn:active { transform: scale(1.2); }
     </style>
 </head>
@@ -211,7 +211,7 @@
                 </div>
             </div>
             
-            <!-- 筆刷粗細與貼圖 -->
+            <!-- 筆刷粗細與貼圖 (擴充多種圓臉) -->
             <div class="toolbar-row" style="margin-top: 5px;">
                 <div style="display:flex; gap:10px; border-right: 1px solid #e5e7eb; padding-right: 15px;">
                     <div class="size-btn" onclick="setSize(3, this)"><div class="size-dot" style="width: 4px; height: 4px;"></div></div>
@@ -221,10 +221,16 @@
                 <!-- 貼圖列 -->
                 <div class="sticker-palette">
                     <button class="sticker-btn" onclick="addSticker('😊')">😊</button>
+                    <button class="sticker-btn" onclick="addSticker('😂')">😂</button>
+                    <button class="sticker-btn" onclick="addSticker('😍')">😍</button>
+                    <button class="sticker-btn" onclick="addSticker('😎')">😎</button>
+                    <button class="sticker-btn" onclick="addSticker('🥺')">🥺</button>
+                    <button class="sticker-btn" onclick="addSticker('😭')">😭</button>
+                    <button class="sticker-btn" onclick="addSticker('😡')">😡</button>
+                    <button class="sticker-btn" onclick="addSticker('😮')">😮</button>
                     <button class="sticker-btn" onclick="addSticker('❤️')">❤️</button>
                     <button class="sticker-btn" onclick="addSticker('⭐')">⭐</button>
                     <button class="sticker-btn" onclick="addSticker('🎉')">🎉</button>
-                    <button class="sticker-btn" onclick="addSticker('🎂')">🎂</button>
                     <button class="sticker-btn" onclick="addSticker('🔥')">🔥</button>
                     <button class="sticker-btn" onclick="addSticker('👍')">👍</button>
                 </div>
@@ -505,7 +511,6 @@
             }
         });
 
-        // 點擊其他地方關閉 FAB 選單
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.fab-container')) {
                 fabMenu.style.display = 'none';
@@ -519,7 +524,6 @@
             document.getElementById('fileInput').click();
         };
 
-        // 處理一般圖片上傳
         document.getElementById('fileInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -598,7 +602,7 @@
         let isDrawing = false;
         let drawColor = '#000000';
         let drawSize = 8;
-        let activeTool = 'pen'; // 'pen' 或 'eraser'
+        let activeTool = 'pen'; 
         let undoStack = [];
 
         window.openDrawingBoard = function() {
@@ -607,18 +611,16 @@
             
             drawModal.style.display = 'flex';
             
-            // 初始化畫布尺寸
             const container = document.getElementById('canvasContainer');
             drawCanvas.width = container.offsetWidth;
             drawCanvas.height = container.offsetHeight;
             
-            // 預設填滿白色背景 (以符合照片儲存)
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
             
-            stickerLayer.innerHTML = ''; // 清空舊貼圖
+            stickerLayer.innerHTML = ''; 
             undoStack = []; 
-            saveCanvasState(); // 記錄初始空白狀態
+            saveCanvasState(); 
         };
 
         window.closeDrawingBoard = function() {
@@ -652,7 +654,6 @@
             document.getElementById('toolEraser').classList.toggle('active', activeTool === 'eraser');
         }
 
-        // 畫布事件
         function getPointerPos(e) {
             const rect = drawCanvas.getBoundingClientRect();
             let clientX = e.clientX, clientY = e.clientY;
@@ -681,7 +682,7 @@
             ctx.lineWidth = drawSize;
             
             if (activeTool === 'eraser') {
-                ctx.strokeStyle = '#ffffff'; // 橡皮擦實作為畫白線
+                ctx.strokeStyle = '#ffffff'; 
             } else {
                 ctx.strokeStyle = drawColor;
             }
@@ -694,7 +695,7 @@
             if (isDrawing) {
                 isDrawing = false;
                 ctx.closePath();
-                saveCanvasState(); // 記錄至 Undo Stack
+                saveCanvasState(); 
             }
         }
 
@@ -706,15 +707,14 @@
         drawCanvas.addEventListener('touchmove', draw, {passive: false});
         window.addEventListener('touchend', stopDrawing);
 
-        // 還原與清除
         function saveCanvasState() {
-            if (undoStack.length >= 20) undoStack.shift(); // 最多存20步
+            if (undoStack.length >= 20) undoStack.shift(); 
             undoStack.push(drawCanvas.toDataURL());
         }
 
         window.undoDraw = function() {
             if (undoStack.length > 1) {
-                undoStack.pop(); // 移除當前狀態
+                undoStack.pop(); 
                 const prevDataUrl = undoStack[undoStack.length - 1];
                 const img = new Image();
                 img.onload = () => {
@@ -723,7 +723,7 @@
                 };
                 img.src = prevDataUrl;
             } else if (undoStack.length === 1) {
-                window.clearDraw(); // 到底了就全清空
+                window.clearDraw(); 
             }
         };
 
@@ -735,7 +735,7 @@
             saveCanvasState();
         };
 
-        // 貼圖功能 (可拖曳 DOM 元素)
+        // 貼圖功能 (可拖曳與雙擊刪除 DOM 元素)
         window.addSticker = function(emoji) {
             const wrapper = document.createElement('div');
             wrapper.className = 'sticker-item';
@@ -745,26 +745,31 @@
 
             const textSpan = document.createElement('span');
             textSpan.innerText = emoji;
-            
-            const delBtn = document.createElement('div');
-            delBtn.className = 'sticker-del';
-            delBtn.innerText = '✕';
-            delBtn.onclick = (e) => { e.stopPropagation(); wrapper.remove(); };
 
             wrapper.appendChild(textSpan);
-            wrapper.appendChild(delBtn);
             stickerLayer.appendChild(wrapper);
 
-            // 拖曳邏輯
+            // 拖曳與雙擊刪除邏輯
             let isDraggingSticker = false, startX, startY, initialLeft, initialTop;
+            let lastTapTime = 0; // 用於偵測雙擊
             
             function onDragStart(e) {
+                // 雙擊刪除判斷 (間隔小於 300 毫秒)
+                const now = Date.now();
+                if (now - lastTapTime < 300) {
+                    wrapper.remove();
+                    return; // 終止拖曳
+                }
+                lastTapTime = now;
+
                 isDraggingSticker = true;
                 startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
                 startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
                 initialLeft = wrapper.offsetLeft;
                 initialTop = wrapper.offsetTop;
                 wrapper.style.zIndex = 1000;
+                
+                // 取消預設的點擊以防止觸發畫布下層事件，但不影響 touchend
                 if(e.cancelable) e.preventDefault();
             }
             
@@ -791,25 +796,20 @@
             window.addEventListener('mouseup', onDragEnd);
         };
 
-        // 儲存塗鴉 (合併畫布與貼圖並轉交給 Upload Modal)
         window.saveDraw = function() {
-            // 建立一個隱藏的暫時畫布來合併
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = drawCanvas.width;
             tempCanvas.height = drawCanvas.height;
             const tCtx = tempCanvas.getContext('2d');
 
-            // 1. 畫上背景與筆跡
             tCtx.drawImage(drawCanvas, 0, 0);
 
-            // 2. 將所有的貼圖依照當前座標畫上去
             const layerRect = stickerLayer.getBoundingClientRect();
             const stickers = stickerLayer.querySelectorAll('.sticker-item');
             
             stickers.forEach(st => {
                 const span = st.querySelector('span');
                 const stRect = span.getBoundingClientRect();
-                // 計算貼圖中心點相對於畫布的座標
                 const cx = stRect.left - layerRect.left + (stRect.width / 2);
                 const cy = stRect.top - layerRect.top + (stRect.height / 2);
                 
@@ -819,7 +819,6 @@
                 tCtx.fillText(span.innerText, cx, cy);
             });
 
-            // 轉存並開啟預覽上傳視窗
             pendingUploadBase64 = tempCanvas.toDataURL('image/jpeg', 0.9);
             document.getElementById('uploadPreviewImg').src = pendingUploadBase64;
             document.getElementById('uploadCaption').value = '';
