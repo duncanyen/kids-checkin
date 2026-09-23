@@ -95,7 +95,7 @@
         textarea.form-control { resize: vertical; min-height: 100px; }
 
         /* === 今日行程與卡片樣式 === */
-        .agenda-card { background: white; border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
+        .agenda-card { background: white; border-radius: 20px; padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
         .agenda-card:active { transform: scale(0.98); background: #fcfcfc; }
         .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
         .agenda-date { font-size: 15px; font-weight: 800; color: var(--primary-dark); }
@@ -108,6 +108,26 @@
         .agenda-divider { width: 2px; height: 12px; background: #e5e7eb; border-radius: 1px; }
         .agenda-title { flex: 1; font-weight: 700; font-size: 14px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .agenda-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid #e5e7eb; flex-shrink: 0; }
+        .agenda-empty { text-align: center; font-size: 14px; font-weight: 600; color: var(--text-sub); padding: 12px 0; }
+
+        /* === Photo Dump 主頁輪播 === */
+        .photo-carousel-section { margin-bottom: 16px; }
+        .photo-carousel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; }
+        .photo-carousel-title { font-size: 16px; font-weight: 800; color: var(--text-main); }
+        .photo-carousel-more { font-size: 13px; color: var(--primary); font-weight: 700; cursor: pointer; }
+        .carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding-bottom: 8px; scrollbar-width: none; }
+        .carousel-container::-webkit-scrollbar { display: none; }
+        .carousel-item { flex: 0 0 85%; scroll-snap-align: center; background: white; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
+        .carousel-img { width: 100%; height: 220px; object-fit: cover; cursor: pointer; display: block; }
+        .carousel-info { padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+        .carousel-author { display: flex; align-items: center; gap: 8px; }
+        .carousel-author-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; }
+        .carousel-author-name { font-size: 14px; font-weight: 700; color: var(--text-main); line-height: 1.2; }
+        .carousel-date { font-size: 11px; color: var(--text-sub); }
+        .like-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #cbd5e1; display: flex; align-items: center; gap: 6px; padding: 0; transition: transform 0.2s; }
+        .like-btn:active { transform: scale(0.8); }
+        .like-btn.liked { color: var(--danger); }
+        .like-count { font-size: 14px; font-weight: 700; color: var(--text-main); }
 
         /* 動態九宮格 */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -130,6 +150,9 @@
 <body>
 
     <div class="loading-overlay" id="loadingView"><span>處理中，請稍候...</span></div>
+
+    <!-- 隱藏的檔案上傳元件 -->
+    <input type="file" id="avatarUploadInput" accept="image/*" style="display:none;">
 
     <!-- 密碼彈窗 -->
     <div class="modal" id="pinModal">
@@ -193,8 +216,23 @@
             </div>
         </div>
 
-        <!-- 今日行程卡片容器 -->
-        <div id="todayAgendaContainer" style="display: none;"></div>
+        <!-- 1. 今日行程卡片容器 (常駐顯示) -->
+        <div id="todayAgendaContainer"></div>
+        
+        <!-- 3. Photo Dump 照片輪播區 (獨立移出主頁下方) -->
+        <div id="photoCarouselSection" class="photo-carousel-section" style="display: none;">
+            <div class="photo-carousel-header">
+                <div class="photo-carousel-title">最新回憶 📸</div>
+                <div class="photo-carousel-more" onclick="window.location.href='gallery.html'">
+                    查看相簿 <span id="galleryBadgeText" style="color:var(--danger); display:none;"></span>
+                </div>
+            </div>
+            <div class="carousel-container" id="photoCarouselContainer">
+                <!-- 動態載入照片 -->
+            </div>
+        </div>
+
+        <!-- 功能導覽九宮格 -->
         <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
     </div>
 
@@ -204,7 +242,8 @@
         <div class="sidebar-profile">
             <div class="sidebar-avatar-wrapper">
                 <img id="sideAvatar" class="sidebar-avatar" src="">
-                <button class="sidebar-edit-btn" onclick="editAvatar()">✎</button>
+                <!-- 點擊觸發選擇照片 -->
+                <button class="sidebar-edit-btn" onclick="triggerAvatarUpload()">✎</button>
             </div>
             <div class="sidebar-username" id="sideUserName"></div>
             <div class="sidebar-role" id="sideUserRole"></div>
@@ -240,7 +279,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where, doc, serverTimestamp, onSnapshot, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where, doc, serverTimestamp, onSnapshot, getDoc, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -276,7 +315,7 @@
                         window.fetchUsersAndRenderLogin();
                     } else {
                         const latestUser = snap.docs[0].data();
-                        latestUser.docId = snap.docs[0].id; // 記錄 DocID 供後續編輯頭像使用
+                        latestUser.docId = snap.docs[0].id;
                         sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
                         document.getElementById('loadingView').style.display = 'none';
                         window.showDashboard();
@@ -366,19 +405,24 @@
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
             
-            // 綁定側邊欄個人資料
             document.getElementById('sideAvatar').src = user.avatar;
             document.getElementById('sideUserName').innerText = user.name;
             document.getElementById('sideUserRole').innerText = (user.role === 'admin' || user.role === 'parent') ? '管理員' : '一般成員';
 
             await renderDynamicModules(user);
-            fetchAndRenderGroupMembers(); // 載入群組成員
+            fetchAndRenderGroupMembers();
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
+            
+            // 檢查使用者權限是否允許觀看相簿輪播
+            const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone'];
+            if (allowedMenus.includes('photodump')) {
+                window.fetchAndRenderPhotoCarousel(user);
+            }
         };
 
-        // --- 側邊選單功能 ---
+        // --- 側邊選單與相片上傳功能 ---
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -386,47 +430,83 @@
             overlay.classList.toggle('active');
         };
 
-        window.editAvatar = async function() {
-            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            const newUrl = prompt("請輸入新的頭像圖片網址 (URL)：\n(建議使用正方形圖片以獲取最佳顯示效果)", user.avatar);
+        // 2. 觸發隱藏的 input:file
+        window.triggerAvatarUpload = function() {
+            document.getElementById('avatarUploadInput').click();
+        };
+
+        // 監聽圖片選擇並使用 Canvas 縮放
+        document.getElementById('avatarUploadInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('loadingView').style.display = 'flex';
+            const reader = new FileReader();
             
-            if (newUrl && newUrl.trim() !== "" && newUrl !== user.avatar) {
-                document.getElementById('loadingView').style.display = 'flex';
-                try {
-                    // 若 sessionStorage 沒存 docId，則透過 query 找尋
-                    let docRefId = user.docId;
-                    if (!docRefId) {
-                        const q = query(collection(db, "users"), where("name", "==", user.name));
-                        const snap = await getDocs(q);
-                        if (!snap.empty) docRefId = snap.docs[0].id;
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = async function() {
+                    // 設定最大寬高進行壓縮
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 300; 
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                    } else {
+                        if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
                     }
                     
-                    if (docRefId) {
-                        await updateDoc(doc(db, "users", docRefId), { avatar: newUrl.trim() });
-                        user.avatar = newUrl.trim();
-                        sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 轉為 Base64 格式 (品質0.8)
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    try {
+                        const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+                        let docRefId = user.docId;
+                        if (!docRefId) {
+                            const q = query(collection(db, "users"), where("name", "==", user.name));
+                            const snap = await getDocs(q);
+                            if (!snap.empty) docRefId = snap.docs[0].id;
+                        }
                         
-                        // 更新畫面上所有的頭像
-                        document.getElementById('dashUserAvatar').src = user.avatar;
-                        document.getElementById('sideAvatar').src = user.avatar;
-                        alert("頭像更新成功！");
-                    } else {
-                        alert("找不到使用者資料，無法更新。");
+                        if (docRefId) {
+                            await updateDoc(doc(db, "users", docRefId), { avatar: dataUrl });
+                            user.avatar = dataUrl;
+                            sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
+                            
+                            document.getElementById('dashUserAvatar').src = user.avatar;
+                            document.getElementById('sideAvatar').src = user.avatar;
+                            alert("頭像更新成功！");
+                        }
+                    } catch (err) {
+                        console.error("更新頭像失敗:", err);
+                        alert("更新失敗，請檢查網路連線。");
                     }
-                } catch (e) {
-                    console.error("更新頭像失敗:", e);
-                    alert("更新失敗，請稍後再試。");
-                }
-                document.getElementById('loadingView').style.display = 'none';
-            }
-        };
+                    document.getElementById('loadingView').style.display = 'none';
+                    // 清除 input 數值以便下次能選取同一張圖
+                    document.getElementById('avatarUploadInput').value = '';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
 
         async function fetchAndRenderGroupMembers() {
             try {
                 if (window.allSystemUsers.length === 0) {
                     const snap = await getDocs(collection(db, "users"));
                     window.allSystemUsers = [];
-                    snap.forEach(doc => window.allSystemUsers.push(doc.data()));
+                    snap.forEach(doc => {
+                        let u = doc.data();
+                        window.userAvatarMap[u.name] = u.avatar;
+                        window.allSystemUsers.push(u);
+                    });
                 }
                 const container = document.getElementById('sideMembersList');
                 container.innerHTML = window.allSystemUsers.map(u => `
@@ -442,7 +522,7 @@
 
         // --- 關於 Nexus 功能 ---
         window.openContactModal = function() {
-            toggleSidebar(); // 關閉側邊欄
+            toggleSidebar();
             document.getElementById('contactEmail').value = '';
             document.getElementById('contactContent').value = '';
             document.getElementById('contactModal').style.display = 'flex';
@@ -477,13 +557,10 @@
             }
             document.getElementById('loadingView').style.display = 'none';
         };
-
         window.rateApp = function() {
             toggleSidebar();
-            // 實務上這裡可以使用 window.location.href 導向 App Store / Play Store 連結
             alert("感謝您的支持！您的五星好評是 Nexus 持續進步的動力。");
         };
-
         window.shareApp = async function() {
             toggleSidebar();
             const shareData = {
@@ -492,16 +569,12 @@
                 url: window.location.href
             };
             try {
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                } else {
-                    // 若不支援原生分享，提供複製網址
+                if (navigator.share) await navigator.share(shareData);
+                else {
                     await navigator.clipboard.writeText(shareData.url);
                     alert("已複製 Nexus 連結！趕快貼給親朋好友吧。");
                 }
-            } catch (err) {
-                console.log("分享取消或失敗:", err);
-            }
+            } catch (err) {}
         };
 
         async function renderDynamicModules(user) {
@@ -530,7 +603,7 @@
                 order = [...allowedMenus];
             }
 
-            // 主畫面九宮格卡片 Template
+            // 3. 原本的 photodump 卡片已從 grid 移除 (回傳空字串)
             const cardTemplates = {
                 chat: () => modules.chat !== false ? `<div class="dash-card card-hero" onclick="window.location.href='chat.html'"><div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div><div><div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">聊天室</div><div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div></div><div class="dash-icon">💬</div></div>` : '',
                 checkin: () => modules.checkin !== false ? `<div class="dash-card" onclick="window.location.href='checkin.html'"><div><div class="dash-icon">📍</div></div><div class="dash-title">到家打卡</div></div>` : '',
@@ -542,18 +615,17 @@
                         </div>
                         <div class="dash-title">行事曆</div>
                     </div>` : '',
-                photodump: () => modules.photodump !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div class="notification-badge" id="galleryBadge">0</div><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
+                photodump: () => '', // 不顯示在九宮格
                 gamezone: () => modules.gamezone !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
                 wishlist: () => modules.wishlist !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
                 finance: () => modules.finance !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
             };
 
-            // 側邊選單列表 Template
             const sideMenuTemplates = {
                 chat: `<div class="sidebar-item" onclick="window.location.href='chat.html'"><span class="sidebar-icon">💬</span>聊天室</div>`,
                 checkin: `<div class="sidebar-item" onclick="window.location.href='checkin.html'"><span class="sidebar-icon">📍</span>到家打卡</div>`,
                 calendar: `<div class="sidebar-item" onclick="window.location.href='calendar.html'"><span class="sidebar-icon">📅</span>行事曆</div>`,
-                photodump: `<div class="sidebar-item" onclick="window.location.href='gallery.html'"><span class="sidebar-icon">📸</span>Photo Dump</div>`,
+                photodump: `<div class="sidebar-item" onclick="window.location.href='gallery.html'"><span class="sidebar-icon">📸</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
                 gamezone: `<div class="sidebar-item" onclick="window.location.href='games.html'"><span class="sidebar-icon">🎮</span>遊戲區</div>`,
                 wishlist: `<div class="sidebar-item" onclick="window.location.href='wishwall.html'"><span class="sidebar-icon">✨</span>許願牆</div>`,
                 finance: `<div class="sidebar-item" onclick="window.location.href='expense.html'"><span class="sidebar-icon">💰</span>記帳本</div>`
@@ -597,7 +669,7 @@
                         else { badge.style.display = 'none'; }
                     }
                 });
-            } catch (e) { console.error("檢查未讀訊息失敗:", e); }
+            } catch (e) {}
         };
 
         window.checkGalleryUnreads = function(user) {
@@ -609,24 +681,25 @@
                     snapshot.forEach(docSnap => {
                         const photo = docSnap.data();
                         const photoTime = photo.timestamp?.toDate?.()?.getTime() || 0;
-                        if (photoTime > lastReadTime && photo.uploader !== user.name) {
-                            unreadCount++;
-                        }
+                        if (photoTime > lastReadTime && photo.uploader !== user.name) unreadCount++;
                     });
 
-                    const badge = document.getElementById('galleryBadge');
-                    if (badge) {
-                        if (unreadCount > 0) {
-                            badge.style.display = 'block';
-                            badge.innerText = `+${unreadCount}`;
-                        } else {
-                            badge.style.display = 'none';
-                        }
+                    // 綁定側邊欄與標題的 Badge
+                    const badgeText = document.getElementById('galleryBadgeText');
+                    const sideBadge = document.getElementById('sideGalleryBadge');
+                    
+                    if (unreadCount > 0) {
+                        if (badgeText) { badgeText.style.display = 'inline'; badgeText.innerText = `(+${unreadCount})`; }
+                        if (sideBadge) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${unreadCount}`; }
+                    } else {
+                        if (badgeText) badgeText.style.display = 'none';
+                        if (sideBadge) sideBadge.style.display = 'none';
                     }
                 });
-            } catch (e) { console.error("檢查相簿未讀失敗:", e); }
+            } catch (e) {}
         };
 
+        // 1. 行事曆無論有無行程，上方皆會顯示
         window.checkCalendarAlerts = async function(user) {
             if (Object.keys(window.userAvatarMap).length === 0) {
                 try {
@@ -646,12 +719,10 @@
                     snapshot.forEach(docSnap => {
                         const evt = docSnap.data();
                         if ((evt.visibility === 'public' || evt.operator === user.name) && evt.date === todayStr) {
-                            
                             todayEventsList.push(evt);
 
                             let start = new Date(now);
                             let end = new Date(now);
-                            
                             if (evt.isAllDay !== false) { 
                                 start.setHours(0,0,0,0);
                                 end.setHours(23,59,59,999);
@@ -664,9 +735,7 @@
                             if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
                             else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
 
-                            if (now >= triggerTime && now <= end) {
-                                activeIcons.push(categoryIcons[evt.category] || '📌');
-                            }
+                            if (now >= triggerTime && now <= end) activeIcons.push(categoryIcons[evt.category] || '📌');
                         }
                     });
 
@@ -676,6 +745,10 @@
                     }
 
                     const agendaContainer = document.getElementById('todayAgendaContainer');
+                    const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                    const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
+                    
+                    let listHtml = '';
                     if (todayEventsList.length > 0) {
                         todayEventsList.sort((a, b) => {
                             if (a.isAllDay && !b.isAllDay) return -1;
@@ -684,13 +757,9 @@
                             return 0;
                         });
 
-                        const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-                        const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
-
-                        let listHtml = todayEventsList.map(evt => {
+                        listHtml = todayEventsList.map(evt => {
                             let timeStr = (evt.isAllDay !== false) ? '全天' : `${evt.startTime} - ${evt.endTime}`;
                             const avatar = window.userAvatarMap[evt.operator] || `https://ui-avatars.com/api/?name=${evt.operator}&background=e5e7eb`;
-                            
                             return `
                                 <div class="agenda-item">
                                     <div class="agenda-time">${timeStr}</div>
@@ -700,22 +769,22 @@
                                 </div>
                             `;
                         }).join('');
-
-                        agendaContainer.innerHTML = `
-                            <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
-                                <div class="agenda-header">
-                                    <div class="agenda-date">${dateTitle}</div>
-                                    <div class="agenda-count">今天有 ${todayEventsList.length} 個行程</div>
-                                </div>
-                                <div class="agenda-list">
-                                    ${listHtml}
-                                </div>
-                            </div>
-                        `;
-                        agendaContainer.style.display = 'block';
                     } else {
-                        agendaContainer.style.display = 'none';
+                        // 當今日無行程時的顯示畫面
+                        listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
                     }
+
+                    agendaContainer.innerHTML = `
+                        <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
+                            <div class="agenda-header">
+                                <div class="agenda-date">${dateTitle}</div>
+                                <div class="agenda-count">${todayEventsList.length > 0 ? `今天有 ${todayEventsList.length} 個行程` : '自由日'}</div>
+                            </div>
+                            <div class="agenda-list">
+                                ${listHtml}
+                            </div>
+                        </div>
+                    `;
                 });
                 
                 setInterval(() => {
@@ -727,6 +796,80 @@
 
             } catch (e) { console.error("檢查行事曆提醒失敗", e); }
         };
+
+        // 3. 載入並渲染 Photo Dump 照片輪播
+        window.fetchAndRenderPhotoCarousel = function(user) {
+            // 抓取最新的 5 張照片
+            const q = query(collection(db, "photos"), orderBy("timestamp", "desc"), limit(5));
+            onSnapshot(q, (snapshot) => {
+                const section = document.getElementById('photoCarouselSection');
+                const container = document.getElementById('photoCarouselContainer');
+                
+                if (snapshot.empty) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                section.style.display = 'block';
+                let html = '';
+                
+                snapshot.forEach(docSnap => {
+                    const photo = docSnap.data();
+                    const photoId = docSnap.id;
+                    const dateObj = photo.timestamp ? photo.timestamp.toDate() : new Date();
+                    const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
+                    const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
+                    
+                    const likes = photo.likes || [];
+                    const isLiked = likes.includes(user.name);
+                    const likeCount = likes.length;
+
+                    html += `
+                        <div class="carousel-item">
+                            <!-- 點擊照片本體進入 gallery.html -->
+                            <img class="carousel-img" src="${photo.url}" onclick="window.location.href='gallery.html'">
+                            <div class="carousel-info">
+                                <div class="carousel-author">
+                                    <img class="carousel-author-img" src="${uploaderAvatar}">
+                                    <div>
+                                        <div class="carousel-author-name">${photo.uploader}</div>
+                                        <div class="carousel-date">${dateStr}</div>
+                                    </div>
+                                </div>
+                                <div class="carousel-actions">
+                                    <!-- 點讚按鈕 -->
+                                    <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">
+                                        ${isLiked ? '❤️' : '♡'} <span class="like-count" style="color: ${isLiked ? 'var(--danger)' : 'var(--text-sub)'}">${likeCount > 0 ? likeCount : '讚'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            });
+        };
+
+        // 相片輪播區按讚功能
+        window.togglePhotoLike = async function(photoId) {
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+            try {
+                const photoRef = doc(db, "photos", photoId);
+                const photoSnap = await getDoc(photoRef);
+                if (photoSnap.exists()) {
+                    let likes = photoSnap.data().likes || [];
+                    if (likes.includes(user.name)) {
+                        likes = likes.filter(n => n !== user.name); // 取消讚
+                    } else {
+                        likes.push(user.name); // 新增讚
+                    }
+                    await updateDoc(photoRef, { likes: likes });
+                }
+            } catch(e) {
+                console.error("按讚失敗", e);
+            }
+        };
+
     </script>
 </body>
 </html>
