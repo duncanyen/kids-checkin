@@ -94,7 +94,7 @@
         
         <div class="section-card" style="border-color: #fecaca; background: #fff5f5; margin-top: 20px;">
             <h3 class="section-title" style="color: var(--danger);">⚠️ 危險區域</h3>
-            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">刪除帳戶後將無法再進入此家庭群組，需由管理員重新加入。若您有綁定 Email，再次登入將進入建立群組流程；若無 Email，帳號將直接失效。</p>
+            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">刪除帳戶後將無法再進入此群組，需由管理員重新加入。若您有綁定 Email，再次登入將進入建立群組流程；若無 Email，帳號將直接失效。</p>
             <button class="btn-logout" onclick="deleteMyAccount()">🗑️ 刪除我的帳戶</button>
         </div>
         
@@ -121,8 +121,8 @@
         
         // ★ 對齊管理者後台的 keys
         const moduleMeta = {
-            chat: { name: "💬 家庭聊天室" },
-            calendar: { name: "📅 家庭行事曆" },
+            chat: { name: "💬 聊天室" },
+            calendar: { name: "📅 行事曆" },
             finance: { name: "💰 記帳本" },
             photodump: { name: "📸 Photo Dump" },
             gamezone: { name: "🎮 遊戲區" },
@@ -320,7 +320,7 @@
 
         // ★ 刪除帳戶
         window.deleteMyAccount = async function() {
-            const confirm1 = confirm("⚠️ 警告：刪除帳戶後將無法再進入此家庭群組！\n\n您確定要刪除自己的帳戶嗎？");
+            const confirm1 = confirm("⚠️ 警告：刪除帳戶後將無法再進入此群組！\n\n您確定要刪除自己的帳戶嗎？");
             if (!confirm1) return;
             
             const confirm2 = confirm("這是最後的確認，刪除後若要重新加入，需請管理人員協助新增。\n\n請點擊「確定」以永久刪除此帳戶。");
