@@ -94,7 +94,7 @@
         .form-control:focus { outline: none; border-color: var(--primary); background: white; }
         textarea.form-control { resize: vertical; min-height: 100px; }
 
-        /* === 今日行程與卡片樣式 === */
+        /* === 1. 今日行程樣式 === */
         .agenda-card { background: white; border-radius: 20px; padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
         .agenda-card:active { transform: scale(0.98); background: #fcfcfc; }
         .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
@@ -110,15 +110,19 @@
         .agenda-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid #e5e7eb; flex-shrink: 0; }
         .agenda-empty { text-align: center; font-size: 14px; font-weight: 600; color: var(--text-sub); padding: 12px 0; }
 
-        /* === Photo Dump 主頁輪播 === */
+        /* === 2. 聊天室卡片專屬樣式 === */
+        .card-hero { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; height: auto; padding: 24px; border-radius: 20px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 16px; box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.25s ease; position: relative; }
+        .card-hero:active { transform: scale(0.96); }
+        .card-hero .dash-icon { background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 18px; font-size: 32px; display: flex; align-items: center; justify-content: center; }
+
+        /* === 3. Photo Dump 主頁輪播 === */
         .photo-carousel-section { margin-bottom: 16px; }
-        .photo-carousel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; }
+        .photo-carousel-header { margin-bottom: 10px; padding: 0 4px; }
         .photo-carousel-title { font-size: 16px; font-weight: 800; color: var(--text-main); }
-        .photo-carousel-more { font-size: 13px; color: var(--primary); font-weight: 700; cursor: pointer; }
         .carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding-bottom: 8px; scrollbar-width: none; }
         .carousel-container::-webkit-scrollbar { display: none; }
         .carousel-item { flex: 0 0 85%; scroll-snap-align: center; background: white; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
-        .carousel-img { width: 100%; height: 220px; object-fit: cover; cursor: pointer; display: block; }
+        .carousel-img { width: 100%; height: 220px; object-fit: cover; cursor: pointer; display: block; background: #f1f5f9; }
         .carousel-info { padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
         .carousel-author { display: flex; align-items: center; gap: 8px; }
         .carousel-author-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; }
@@ -128,19 +132,6 @@
         .like-btn:active { transform: scale(0.8); }
         .like-btn.liked { color: var(--danger); }
         .like-count { font-size: 14px; font-weight: 700; color: var(--text-main); }
-
-        /* 動態九宮格 */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        .dash-card { background: white; border-radius: 20px; padding: 22px 16px; text-align: left; box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.25s ease; position: relative; border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; height: 120px; }
-        .dash-card:active { transform: scale(0.96); background: #fcfcfc; }
-        .dash-icon { font-size: 32px; width: 50px; height: 50px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
-        .dash-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
-
-        .card-hero { grid-column: span 2; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; height: auto; padding: 24px; flex-direction: row; align-items: center; justify-content: space-between; }
-        .card-hero .dash-icon { background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 18px; }
-        .card-admin { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe; grid-column: span 2; height: auto; flex-direction: row; align-items: center; padding: 18px 22px; }
-        .card-admin .dash-icon { background: rgba(37, 99, 235, 0.15); }
-        .card-admin .dash-title { color: #1d4ed8; font-size: 17px; }
 
         .notification-badge { display: none; position: absolute; top: 12px; right: 12px; background-color: var(--danger); color: white; font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); }
         .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); justify-content: center; align-items: center; font-size: 16px; font-weight: 700; color: var(--primary); z-index: 6000; flex-direction: column; gap: 12px; }
@@ -216,24 +207,21 @@
             </div>
         </div>
 
-        <!-- 1. 今日行程卡片容器 (常駐顯示) -->
+        <!-- 1. 行事曆卡片區塊 -->
         <div id="todayAgendaContainer"></div>
         
-        <!-- 3. Photo Dump 照片輪播區 (獨立移出主頁下方) -->
+        <!-- 2. 聊天室卡片區塊 -->
+        <div id="chatMainCardContainer"></div>
+        
+        <!-- 3. Photo Dump 照片輪播區 -->
         <div id="photoCarouselSection" class="photo-carousel-section" style="display: none;">
             <div class="photo-carousel-header">
-                <div class="photo-carousel-title">最新回憶 📸</div>
-                <div class="photo-carousel-more" onclick="window.location.href='gallery.html'">
-                    查看相簿 <span id="galleryBadgeText" style="color:var(--danger); display:none;"></span>
-                </div>
+                <div class="photo-carousel-title">Photo Dump</div>
             </div>
             <div class="carousel-container" id="photoCarouselContainer">
                 <!-- 動態載入照片 -->
             </div>
         </div>
-
-        <!-- 功能導覽九宮格 -->
-        <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
     </div>
 
     <!-- 側邊選單 Sidebar -->
@@ -242,7 +230,6 @@
         <div class="sidebar-profile">
             <div class="sidebar-avatar-wrapper">
                 <img id="sideAvatar" class="sidebar-avatar" src="">
-                <!-- 點擊觸發選擇照片 -->
                 <button class="sidebar-edit-btn" onclick="triggerAvatarUpload()">✎</button>
             </div>
             <div class="sidebar-username" id="sideUserName"></div>
@@ -252,7 +239,7 @@
         <div class="sidebar-section">
             <div class="sidebar-title">功能導覽</div>
             <div id="sideMenuFeatureList">
-                <!-- 動態載入使用者權限選單 -->
+                <!-- 動態載入所有使用者權限選單 -->
             </div>
         </div>
 
@@ -409,7 +396,9 @@
             document.getElementById('sideUserName').innerText = user.name;
             document.getElementById('sideUserRole').innerText = (user.role === 'admin' || user.role === 'parent') ? '管理員' : '一般成員';
 
+            // 1. 建立側邊欄與載入聊天室卡片
             await renderDynamicModules(user);
+            
             fetchAndRenderGroupMembers();
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
@@ -430,12 +419,10 @@
             overlay.classList.toggle('active');
         };
 
-        // 2. 觸發隱藏的 input:file
         window.triggerAvatarUpload = function() {
             document.getElementById('avatarUploadInput').click();
         };
 
-        // 監聽圖片選擇並使用 Canvas 縮放
         document.getElementById('avatarUploadInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -446,7 +433,6 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = async function() {
-                    // 設定最大寬高進行壓縮
                     const canvas = document.createElement('canvas');
                     const MAX_SIZE = 300; 
                     let width = img.width;
@@ -463,7 +449,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // 轉為 Base64 格式 (品質0.8)
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     
                     try {
@@ -489,7 +474,6 @@
                         alert("更新失敗，請檢查網路連線。");
                     }
                     document.getElementById('loadingView').style.display = 'none';
-                    // 清除 input 數值以便下次能選取同一張圖
                     document.getElementById('avatarUploadInput').value = '';
                 };
                 img.src = event.target.result;
@@ -515,73 +499,43 @@
                         <div class="member-name">${u.name}</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.error("載入成員失敗", e);
-            }
+            } catch (e) {}
         }
 
         // --- 關於 Nexus 功能 ---
-        window.openContactModal = function() {
-            toggleSidebar();
-            document.getElementById('contactEmail').value = '';
-            document.getElementById('contactContent').value = '';
-            document.getElementById('contactModal').style.display = 'flex';
-        };
-        window.closeContactModal = function() {
-            document.getElementById('contactModal').style.display = 'none';
-        };
+        window.openContactModal = function() { toggleSidebar(); document.getElementById('contactEmail').value = ''; document.getElementById('contactContent').value = ''; document.getElementById('contactModal').style.display = 'flex'; };
+        window.closeContactModal = function() { document.getElementById('contactModal').style.display = 'none'; };
         window.submitContact = async function() {
             const type = document.getElementById('contactType').value;
             const email = document.getElementById('contactEmail').value.trim();
             const content = document.getElementById('contactContent').value.trim();
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-
-            if (!email || !content) {
-                alert("請完整填寫信箱與內容！");
-                return;
-            }
+            if (!email || !content) { alert("請完整填寫信箱與內容！"); return; }
 
             document.getElementById('loadingView').style.display = 'flex';
             try {
-                await addDoc(collection(db, "feedbacks"), {
-                    userName: user.name,
-                    type: type,
-                    email: email,
-                    content: content,
-                    timestamp: serverTimestamp()
-                });
+                await addDoc(collection(db, "feedbacks"), { userName: user.name, type: type, email: email, content: content, timestamp: serverTimestamp() });
                 alert("感謝您的回饋！我們已收到您的訊息，會盡快處理。");
                 closeContactModal();
-            } catch (e) {
-                alert("送出失敗，請檢查網路連線。");
-            }
+            } catch (e) { alert("送出失敗，請檢查網路連線。"); }
             document.getElementById('loadingView').style.display = 'none';
         };
-        window.rateApp = function() {
-            toggleSidebar();
-            alert("感謝您的支持！您的五星好評是 Nexus 持續進步的動力。");
-        };
+        window.rateApp = function() { toggleSidebar(); alert("感謝您的支持！您的五星好評是 Nexus 持續進步的動力。"); };
         window.shareApp = async function() {
             toggleSidebar();
-            const shareData = {
-                title: 'Nexus - 串聯生活每一刻',
-                text: '這是一款超讚的群組互動 App，快來看看！',
-                url: window.location.href
-            };
+            const shareData = { title: 'Nexus - 串聯生活每一刻', text: '這是一款超讚的群組互動 App，快來看看！', url: window.location.href };
             try {
                 if (navigator.share) await navigator.share(shareData);
-                else {
-                    await navigator.clipboard.writeText(shareData.url);
-                    alert("已複製 Nexus 連結！趕快貼給親朋好友吧。");
-                }
+                else { await navigator.clipboard.writeText(shareData.url); alert("已複製 Nexus 連結！趕快貼給親朋好友吧。"); }
             } catch (err) {}
         };
 
         async function renderDynamicModules(user) {
-            const grid = document.getElementById('dynamicDashboardGrid'); 
             const sideList = document.getElementById('sideMenuFeatureList');
-            grid.innerHTML = '';
+            const chatContainer = document.getElementById('chatMainCardContainer');
+            
             sideList.innerHTML = '';
+            chatContainer.innerHTML = '';
             
             const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone']; 
             const allowedMenus = user.menus || defaultAllowed;
@@ -603,24 +557,7 @@
                 order = [...allowedMenus];
             }
 
-            // 3. 原本的 photodump 卡片已從 grid 移除 (回傳空字串)
-            const cardTemplates = {
-                chat: () => modules.chat !== false ? `<div class="dash-card card-hero" onclick="window.location.href='chat.html'"><div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div><div><div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">聊天室</div><div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div></div><div class="dash-icon">💬</div></div>` : '',
-                checkin: () => modules.checkin !== false ? `<div class="dash-card" onclick="window.location.href='checkin.html'"><div><div class="dash-icon">📍</div></div><div class="dash-title">到家打卡</div></div>` : '',
-                calendar: () => modules.calendar !== false ? `
-                    <div class="dash-card" onclick="window.location.href='calendar.html'">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
-                            <div class="dash-icon">📅</div>
-                            <div id="calendarAlertsArea" style="display:flex; gap:4px; font-size:18px;"></div>
-                        </div>
-                        <div class="dash-title">行事曆</div>
-                    </div>` : '',
-                photodump: () => '', // 不顯示在九宮格
-                gamezone: () => modules.gamezone !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
-                wishlist: () => modules.wishlist !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
-                finance: () => modules.finance !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
-            };
-
+            // 側邊選單列表 Template
             const sideMenuTemplates = {
                 chat: `<div class="sidebar-item" onclick="window.location.href='chat.html'"><span class="sidebar-icon">💬</span>聊天室</div>`,
                 checkin: `<div class="sidebar-item" onclick="window.location.href='checkin.html'"><span class="sidebar-icon">📍</span>到家打卡</div>`,
@@ -631,18 +568,29 @@
                 finance: `<div class="sidebar-item" onclick="window.location.href='expense.html'"><span class="sidebar-icon">💰</span>記帳本</div>`
             };
 
+            // 渲染側邊欄
             order.forEach(modKey => { 
-                if (cardTemplates[modKey] && allowedMenus.includes(modKey)) {
-                    grid.innerHTML += cardTemplates[modKey](); 
-                    if (sideMenuTemplates[modKey]) {
-                        sideList.innerHTML += sideMenuTemplates[modKey];
-                    }
+                if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) {
+                    sideList.innerHTML += sideMenuTemplates[modKey];
                 }
             });
 
             if (user.role === 'admin' || user.role === 'parent') {
-                grid.innerHTML += `<div class="dash-card card-admin" onclick="window.location.href='admin.html'"><div class="dash-icon">🛡️</div><div style="flex: 1; margin-left: 12px;"><div class="dash-title">管理者後台</div><div style="font-size: 12px; color: var(--text-sub);">系統管理與權限設定</div></div></div>`;
                 sideList.innerHTML += `<div class="sidebar-item" onclick="window.location.href='admin.html'" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
+            }
+
+            // 單獨渲染主頁的「聊天室」卡片 (如果權限允許)
+            if (allowedMenus.includes('chat') && modules.chat !== false) {
+                chatContainer.innerHTML = `
+                    <div class="card-hero" onclick="window.location.href='chat.html'">
+                        <div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div>
+                        <div>
+                            <div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">聊天室</div>
+                            <div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div>
+                        </div>
+                        <div class="dash-icon">💬</div>
+                    </div>
+                `;
             }
         }
 
@@ -684,22 +632,16 @@
                         if (photoTime > lastReadTime && photo.uploader !== user.name) unreadCount++;
                     });
 
-                    // 綁定側邊欄與標題的 Badge
-                    const badgeText = document.getElementById('galleryBadgeText');
                     const sideBadge = document.getElementById('sideGalleryBadge');
-                    
                     if (unreadCount > 0) {
-                        if (badgeText) { badgeText.style.display = 'inline'; badgeText.innerText = `(+${unreadCount})`; }
                         if (sideBadge) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${unreadCount}`; }
                     } else {
-                        if (badgeText) badgeText.style.display = 'none';
                         if (sideBadge) sideBadge.style.display = 'none';
                     }
                 });
             } catch (e) {}
         };
 
-        // 1. 行事曆無論有無行程，上方皆會顯示
         window.checkCalendarAlerts = async function(user) {
             if (Object.keys(window.userAvatarMap).length === 0) {
                 try {
@@ -739,11 +681,6 @@
                         }
                     });
 
-                    const alertsArea = document.getElementById('calendarAlertsArea');
-                    if (alertsArea) {
-                        alertsArea.innerHTML = activeIcons.map(icon => `<span>${icon}</span>`).join('');
-                    }
-
                     const agendaContainer = document.getElementById('todayAgendaContainer');
                     const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
                     const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
@@ -770,15 +707,18 @@
                             `;
                         }).join('');
                     } else {
-                        // 當今日無行程時的顯示畫面
                         listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
                     }
 
+                    // 重新寫入卡片內容，右上角顯示對應圖示
                     agendaContainer.innerHTML = `
                         <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
                             <div class="agenda-header">
                                 <div class="agenda-date">${dateTitle}</div>
-                                <div class="agenda-count">${todayEventsList.length > 0 ? `今天有 ${todayEventsList.length} 個行程` : '自由日'}</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
+                                    <div class="agenda-count">${todayEventsList.length > 0 ? `今天有 ${todayEventsList.length} 個行程` : '自由日'}</div>
+                                </div>
                             </div>
                             <div class="agenda-list">
                                 ${listHtml}
@@ -797,9 +737,8 @@
             } catch (e) { console.error("檢查行事曆提醒失敗", e); }
         };
 
-        // 3. 載入並渲染 Photo Dump 照片輪播
+        // 3. 載入並渲染 Photo Dump 照片輪播 (修復照片抓取邏輯)
         window.fetchAndRenderPhotoCarousel = function(user) {
-            // 抓取最新的 5 張照片
             const q = query(collection(db, "photos"), orderBy("timestamp", "desc"), limit(5));
             onSnapshot(q, (snapshot) => {
                 const section = document.getElementById('photoCarouselSection');
@@ -820,14 +759,17 @@
                     const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
                     const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
                     
+                    // 防呆：可能使用的多種圖片網址欄位名稱
+                    const imageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
+                    
                     const likes = photo.likes || [];
                     const isLiked = likes.includes(user.name);
                     const likeCount = likes.length;
 
                     html += `
                         <div class="carousel-item">
-                            <!-- 點擊照片本體進入 gallery.html -->
-                            <img class="carousel-img" src="${photo.url}" onclick="window.location.href='gallery.html'">
+                            <!-- 點擊照片進入 gallery.html -->
+                            <img class="carousel-img" src="${imageUrl}" onerror="this.style.display='none';" onclick="window.location.href='gallery.html'">
                             <div class="carousel-info">
                                 <div class="carousel-author">
                                     <img class="carousel-author-img" src="${uploaderAvatar}">
@@ -837,7 +779,6 @@
                                     </div>
                                 </div>
                                 <div class="carousel-actions">
-                                    <!-- 點讚按鈕 -->
                                     <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">
                                         ${isLiked ? '❤️' : '♡'} <span class="like-count" style="color: ${isLiked ? 'var(--danger)' : 'var(--text-sub)'}">${likeCount > 0 ? likeCount : '讚'}</span>
                                     </button>
@@ -850,7 +791,6 @@
             });
         };
 
-        // 相片輪播區按讚功能
         window.togglePhotoLike = async function(photoId) {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             try {
@@ -859,17 +799,14 @@
                 if (photoSnap.exists()) {
                     let likes = photoSnap.data().likes || [];
                     if (likes.includes(user.name)) {
-                        likes = likes.filter(n => n !== user.name); // 取消讚
+                        likes = likes.filter(n => n !== user.name); 
                     } else {
-                        likes.push(user.name); // 新增讚
+                        likes.push(user.name); 
                     }
                     await updateDoc(photoRef, { likes: likes });
                 }
-            } catch(e) {
-                console.error("按讚失敗", e);
-            }
+            } catch(e) {}
         };
-
     </script>
 </body>
 </html>
