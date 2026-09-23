@@ -257,7 +257,7 @@
                     const qName = query(usersRef, where("name", "==", newName));
                     const nameSnap = await getDocs(qName);
                     if (!nameSnap.empty) {
-                        alert("這個名稱已經有其他家庭成員使用了，請換一個名稱！");
+                        alert("這個名稱已經有其他群組成員使用了，請換一個名稱！");
                         document.getElementById('loadingView').style.display = 'none';
                         return;
                     }
