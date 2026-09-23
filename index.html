@@ -29,25 +29,9 @@
         .login-title { color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 6px; }
         .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 40px; }
 
-        .custom-logo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: inherit;
-        }
-
-        .app-brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .brand-logo {
-            width: 24px;
-            height: 24px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
+        .custom-logo { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+        .app-brand { display: flex; align-items: center; gap: 8px; }
+        .brand-logo { width: 24px; height: 24px; object-fit: cover; border-radius: 4px; }
         
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
@@ -173,10 +157,36 @@
         
         window.userAvatarMap = {};
 
-        window.onload = function() {
-            const savedUser = sessionStorage.getItem('familyCheckInUser');
-            if (savedUser) window.showDashboard();
-            else window.fetchUsersAndRenderLogin();
+        // ★ 修改 onload: 增加「驗證帳號是否失效或被刪除」機制，並更新最新權限
+        window.onload = async function() {
+            const savedUserStr = sessionStorage.getItem('familyCheckInUser');
+            if (savedUserStr) {
+                document.getElementById('loadingView').style.display = 'flex';
+                try {
+                    const savedUser = JSON.parse(savedUserStr);
+                    const q = query(collection(db, "users"), where("name", "==", savedUser.name));
+                    const snap = await getDocs(q);
+                    
+                    if (snap.empty) {
+                        alert("此帳號已失效或被刪除，請重新登入。");
+                        sessionStorage.removeItem('familyCheckInUser');
+                        document.getElementById('loadingView').style.display = 'none';
+                        window.fetchUsersAndRenderLogin();
+                    } else {
+                        // 更新快取到最新的資料 (含最新的 menus 權限)
+                        const latestUser = snap.docs[0].data();
+                        sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
+                        document.getElementById('loadingView').style.display = 'none';
+                        window.showDashboard();
+                    }
+                } catch (e) {
+                    // 若網路異常，退回使用舊快取直接登入
+                    document.getElementById('loadingView').style.display = 'none';
+                    window.showDashboard();
+                }
+            } else {
+                window.fetchUsersAndRenderLogin();
+            }
         };
 
         async function recordLog(operatorName, actionType, detailsText) {
@@ -252,29 +262,41 @@
             window.checkCalendarAlerts(user); 
         };
 
+        // ★ 修改：與後台統一卡片代碼(Key)，並套用權限檢查
         async function renderDynamicModules(user) {
             const grid = document.getElementById('dynamicDashboardGrid'); grid.innerHTML = '';
-            let modules = { chat: true, checkin: true, calendar: true, gallery: true, games: true, wishwall: true, expense: true };
-            let order = ['chat', 'checkin', 'calendar', 'gallery', 'games', 'wishwall', 'expense'];
+            
+            // 預設允許清單 (與管理者後台對齊)
+            const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone']; 
+            const allowedMenus = user.menus || defaultAllowed;
+
+            let modules = {};
+            let order = [];
 
             try {
                 const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
                 if (userConfigDoc.exists()) {
                     const data = userConfigDoc.data();
-                    if (data.modules) modules = { ...modules, ...data.modules };
-                    if (data.order && Array.isArray(data.order)) order = data.order;
-                } else {
-                    const configDoc = await getDoc(doc(db, "settings", "moduleConfig"));
-                    if (configDoc.exists()) {
-                        const data = configDoc.data();
-                        if (data.modules) modules = { ...modules, ...data.modules };
-                        if (data.order && Array.isArray(data.order)) order = data.order;
+                    if (data.modules) modules = data.modules;
+                    
+                    if (data.order && Array.isArray(data.order)) {
+                        // 只顯示在 allowedMenus 中被授權的模組
+                        order = data.order.filter(k => allowedMenus.includes(k));
                     }
                 }
-            } catch (e) {}
+                
+                // 補齊未在設定順序中的授權功能 (加到最後面)
+                allowedMenus.forEach(k => {
+                    if (!order.includes(k)) order.push(k);
+                });
+                
+            } catch (e) {
+                order = [...allowedMenus];
+            }
 
+            // ★ HTML 跳轉目標檔案維持原名 (如 expense.html, gallery.html)，以免舊連結失效
             const cardTemplates = {
-                chat: () => modules.chat !== false ? `<div class="dash-card card-hero" onclick="window.location.href='chat.html'"><div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div><div><div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">家庭聊天室</div><div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div></div><div class="dash-icon">💬</div></div>` : '',
+                chat: () => modules.chat !== false ? `<div class="dash-card card-hero" onclick="window.location.href='chat.html'"><div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div><div><div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">聊天室</div><div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div></div><div class="dash-icon">💬</div></div>` : '',
                 checkin: () => modules.checkin !== false ? `<div class="dash-card" onclick="window.location.href='checkin.html'"><div><div class="dash-icon">📍</div></div><div class="dash-title">到家打卡</div></div>` : '',
                 calendar: () => modules.calendar !== false ? `
                     <div class="dash-card" onclick="window.location.href='calendar.html'">
@@ -282,18 +304,23 @@
                             <div class="dash-icon">📅</div>
                             <div id="calendarAlertsArea" style="display:flex; gap:4px; font-size:18px;"></div>
                         </div>
-                        <div class="dash-title">家庭行事曆</div>
+                        <div class="dash-title">行事曆</div>
                     </div>` : '',
-                gallery: () => modules.gallery !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div class="notification-badge" id="galleryBadge">0</div><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
-                games: () => modules.games !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
-                wishwall: () => modules.wishwall !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
-                expense: () => modules.expense !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
+                photodump: () => modules.photodump !== false ? `<div class="dash-card" onclick="window.location.href='gallery.html'"><div class="notification-badge" id="galleryBadge">0</div><div><div class="dash-icon">📸</div></div><div class="dash-title">Photo Dump</div></div>` : '',
+                gamezone: () => modules.gamezone !== false ? `<div class="dash-card" onclick="window.location.href='games.html'"><div><div class="dash-icon">🎮</div></div><div class="dash-title">遊戲區</div></div>` : '',
+                wishlist: () => modules.wishlist !== false ? `<div class="dash-card" onclick="window.location.href='wishwall.html'"><div><div class="dash-icon">✨</div></div><div class="dash-title">許願牆</div></div>` : '',
+                finance: () => modules.finance !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
             };
 
-            order.forEach(modKey => { if (cardTemplates[modKey]) grid.innerHTML += cardTemplates[modKey](); });
+            // 嚴格檢查權限後渲染
+            order.forEach(modKey => { 
+                if (cardTemplates[modKey] && allowedMenus.includes(modKey)) {
+                    grid.innerHTML += cardTemplates[modKey](); 
+                }
+            });
 
             if (user.role === 'admin' || user.role === 'parent') {
-                grid.innerHTML += `<div class="dash-card card-admin" onclick="window.location.href='admin.html'"><div class="dash-icon">🛡️</div><div style="flex: 1; margin-left: 12px;"><div class="dash-title">管理者後台</div><div style="font-size: 12px; color: var(--text-sub);">系統管理與稽核紀錄</div></div></div>`;
+                grid.innerHTML += `<div class="dash-card card-admin" onclick="window.location.href='admin.html'"><div class="dash-icon">🛡️</div><div style="flex: 1; margin-left: 12px;"><div class="dash-title">管理者後台</div><div style="font-size: 12px; color: var(--text-sub);">系統管理與權限設定</div></div></div>`;
             }
         }
 
@@ -424,7 +451,6 @@
                             `;
                         }).join('');
 
-                        // ★ 修改點擊事件：利用 localStorage 傳遞當天日期，並直接跳轉至 calendar.html
                         agendaContainer.innerHTML = `
                             <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
                                 <div class="agenda-header">
