@@ -44,7 +44,7 @@
         .btn-add { background: var(--accent-color); width: 100%; padding: 12px; font-size: 15px;}
         .btn-edit:disabled, .btn-delete:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* 新增成員收合按鈕 */
+        /* 新增/收合按鈕 */
         .toggle-form-btn { background: #e3f2fd; color: var(--primary-color); border: 1px dashed var(--primary-color); padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 15px; transition: background 0.2s;}
         .toggle-form-btn:hover { background: #bbdefb; }
 
@@ -81,7 +81,7 @@
     <div class="panel">
         <h2 class="system-title">👥 家族成員管理</h2>
         
-        <!-- 收合按鈕 -->
+        <!-- 新增成員收合按鈕 -->
         <button class="toggle-form-btn" id="btnToggleAddForm">
             <span>➕ 新增成員帳號</span>
             <span id="toggleIcon">▼</span>
@@ -123,25 +123,36 @@
             <button class="btn-add" id="btnAddUser" style="margin-top: 10px;">確認新增成員</button>
         </div>
 
-        <div style="font-weight: bold; margin-bottom: 10px; color: #555;">📋 現有成員名單</div>
-        <div class="user-reset-list" id="userListContainer">
+        <!-- 現有成員名單收合按鈕 -->
+        <button class="toggle-form-btn" id="btnToggleUserList" style="margin-bottom: 10px;">
+            <span>📋 現有成員名單</span>
+            <span id="toggleIconUserList">▼</span>
+        </button>
+
+        <!-- 現有成員清單區塊 (預設隱藏) -->
+        <div class="user-reset-list" id="userListContainer" style="display: none; animation: fadeIn 0.3s ease;">
             <div style="text-align:center; color:#888;">載入成員名單中...</div>
         </div>
     </div>
 
-    <!-- 2. 系統操作紀錄 (Logs) -->
+    <!-- 2. 成員操作紀錄 (Logs) -->
     <div class="panel">
-        <h2 class="system-title">📜 系統操作紀錄 (Logs)</h2>
+        <h2 class="system-title" id="btnToggleLogs" style="cursor: pointer; user-select: none; margin-bottom: 0; display: flex; justify-content: center; align-items: center; gap: 8px;">
+            📜 成員操作紀錄 <span id="toggleIconLogs" style="font-size: 14px;">▼</span>
+        </h2>
         
-        <div class="filter-group">
-            <label style="font-weight: bold;">篩選人員：</label>
-            <select id="userFilter">
-                <option value="all">全部人員</option>
-            </select>
-        </div>
+        <!-- 操作紀錄區塊 (預設隱藏) -->
+        <div id="logsSection" style="display: none; margin-top: 15px; animation: fadeIn 0.3s ease;">
+            <div class="filter-group">
+                <label style="font-weight: bold;">篩選人員：</label>
+                <select id="userFilter">
+                    <option value="all">全部人員</option>
+                </select>
+            </div>
 
-        <div class="log-container" id="logContainer">
-            <div style="text-align:center; color:#888;">紀錄載入中...</div>
+            <div class="log-container" id="logContainer">
+                <div style="text-align:center; color:#888;">紀錄載入中...</div>
+            </div>
         </div>
     </div>
 
@@ -211,14 +222,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ★ 系統預設可用的主選單功能清單 (已更新：抽籤工具 -> 遊戲區)
+        // ★ 系統預設可用的主選單功能清單 (新增屬性分類)
+        // group: 'all' 表示通用群組，預設會加入；group: 'family' 表示家庭專屬功能，預設不加入。
         const systemMenuOptions = [
-            { id: 'chat', label: '💬 家庭聊天室' },
-            { id: 'calendar', label: '📅 家庭行事曆' },
-            { id: 'finance', label: '💰 記帳本' },
-            { id: 'photodump', label: '📸 Photo Dump' },
-            { id: 'wishlist', label: '⭐ 許願牆' },
-            { id: 'gamezone', label: '🎮 遊戲區' }
+            { id: 'chat', label: '💬 家庭聊天室', isDefault: true, group: 'all' },
+            { id: 'calendar', label: '📅 家庭行事曆', isDefault: true, group: 'all' },
+            { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all' },
+            { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all' },
+            { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all' },
+            { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family' }, // 新增的打卡功能
+            { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family' }
         ];
 
         let allLogs = [];
@@ -243,8 +256,8 @@
         }
 
         async function initAdminPage() {
-            renderMenuCheckboxes('newMenusContainer'); 
-            renderMenuCheckboxes('editMenusContainer'); 
+            renderMenuCheckboxes('newMenusContainer', false); 
+            renderMenuCheckboxes('editMenusContainer', true); 
             
             // 表單收合按鈕邏輯
             const btnToggle = document.getElementById('btnToggleAddForm');
@@ -252,12 +265,42 @@
             const toggleIcon = document.getElementById('toggleIcon');
             
             btnToggle.addEventListener('click', () => {
-                if (addForm.style.display === 'flex') {
-                    addForm.style.display = 'none';
-                    toggleIcon.innerText = '▼';
-                } else {
+                if (addForm.style.display === 'none' || addForm.style.display === '') {
                     addForm.style.display = 'flex';
                     toggleIcon.innerText = '▲';
+                } else {
+                    addForm.style.display = 'none';
+                    toggleIcon.innerText = '▼';
+                }
+            });
+
+            // 成員名單收合邏輯
+            const btnToggleUserList = document.getElementById('btnToggleUserList');
+            const userListContainer = document.getElementById('userListContainer');
+            const toggleIconUserList = document.getElementById('toggleIconUserList');
+            
+            btnToggleUserList.addEventListener('click', () => {
+                if (userListContainer.style.display === 'none' || userListContainer.style.display === '') {
+                    userListContainer.style.display = 'flex';
+                    toggleIconUserList.innerText = '▲';
+                } else {
+                    userListContainer.style.display = 'none';
+                    toggleIconUserList.innerText = '▼';
+                }
+            });
+
+            // 操作紀錄收合邏輯
+            const btnToggleLogs = document.getElementById('btnToggleLogs');
+            const logsSection = document.getElementById('logsSection');
+            const toggleIconLogs = document.getElementById('toggleIconLogs');
+
+            btnToggleLogs.addEventListener('click', () => {
+                if (logsSection.style.display === 'none' || logsSection.style.display === '') {
+                    logsSection.style.display = 'block';
+                    toggleIconLogs.innerText = '▲';
+                } else {
+                    logsSection.style.display = 'none';
+                    toggleIconLogs.innerText = '▼';
                 }
             });
             
@@ -266,15 +309,16 @@
             document.getElementById('btnAddUser').addEventListener('click', addNewUser);
         }
 
-        // 動態生成 Checkbox
-        function renderMenuCheckboxes(containerId) {
+        // 動態生成 Checkbox (搭配 isDefault 屬性)
+        function renderMenuCheckboxes(containerId, isEdit) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
             systemMenuOptions.forEach(menu => {
                 const label = document.createElement('label');
                 label.className = 'checkbox-label';
-                // 預設全勾選
-                label.innerHTML = `<input type="checkbox" value="${menu.id}" checked> ${menu.label}`;
+                // 若為新增表單，只有 isDefault=true 的項目才預設打勾
+                const checkedStr = (!isEdit && menu.isDefault) ? 'checked' : '';
+                label.innerHTML = `<input type="checkbox" value="${menu.id}" ${checkedStr}> ${menu.label}`;
                 container.appendChild(label);
             });
         }
@@ -389,7 +433,7 @@
                 document.getElementById('newUserName').value = '';
                 document.getElementById('newUserPin').value = '';
                 document.getElementById('newUserEmail').value = '';
-                renderMenuCheckboxes('newMenusContainer'); 
+                renderMenuCheckboxes('newMenusContainer', false); 
                 
                 // 新增完畢自動收合表單
                 document.getElementById('addUserForm').style.display = 'none';
@@ -426,7 +470,8 @@
                 accountIdInput.title = "首次設定，設定後未來將不可更改";
             }
 
-            const menusToSet = user.menus || systemMenuOptions.map(m => m.id);
+            // 若舊用戶無 menus 紀錄，則預設賦予 default 屬性的功能
+            const menusToSet = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
             const container = document.getElementById('editMenusContainer');
             const checkboxes = container.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(cb => {
