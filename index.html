@@ -18,20 +18,18 @@
             --text-sub: #6b7280;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            --menu-width: 280px;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 15px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 15px; color: var(--text-main); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
         
         /* 登入畫面 */
         #loginSection { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.4s ease-out; }
         .login-logo-wrapper { width: 90px; height: 90px; background: white; border-radius: 28px; box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; font-size: 45px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.04); }
         .login-title { color: var(--text-main); font-size: 28px; font-weight: 800; margin-bottom: 6px; }
         .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 40px; }
-
         .custom-logo { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
-        .app-brand { display: flex; align-items: center; gap: 8px; }
-        .brand-logo { width: 24px; height: 24px; object-fit: cover; border-radius: 4px; }
         
         .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 400px; width: 100%; }
         .user-card { cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.04); }
@@ -40,22 +38,63 @@
         .user-name-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
 
         /* 密碼彈窗 */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 30px 24px; border-radius: 24px; text-align: center; width: 90%; max-width: 340px; box-shadow: var(--shadow-lg); }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 5000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px 24px; border-radius: 24px; width: 90%; max-width: 340px; box-shadow: var(--shadow-lg); position: relative; }
+        .modal-content.text-center { text-align: center; }
         .pin-input { font-size: 26px; letter-spacing: 12px; text-align: center; width: 100%; padding: 14px; margin: 20px 0; border: 2px solid #e5e7eb; border-radius: 14px; outline: none; background: #f9fafb; }
-        .modal-btns { display: flex; gap: 12px; justify-content: center; }
-        .modal-btns button { flex: 1; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
+        .modal-btns { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+        .modal-btns button { flex: 1; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; }
+        .modal-btns button:active { transform: scale(0.95); }
 
         /* 主選單 Dashboard */
         #dashboardView { display: none; max-width: 480px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
-        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
-        .app-brand { font-size: 24px; font-weight: 800; color: var(--text-main); }
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; }
+        .app-brand { font-size: 24px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+        .brand-logo { width: 28px; height: 28px; object-fit: cover; border-radius: 6px; }
+        .hamburger-btn { font-size: 26px; cursor: pointer; color: var(--text-main); padding: 4px; transition: 0.2s; }
+        .hamburger-btn:active { opacity: 0.5; }
         
         .current-user-badge { background: white; padding: 6px 14px 6px 6px; border-radius: 30px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.04); }
         .mini-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
         .user-badge-name { font-size: 15px; font-weight: 800; color: var(--text-main); }
 
-        /* === 今日行程卡片樣式 === */
+        /* === 側邊選單 Sidebar === */
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 3000; opacity: 0; visibility: hidden; transition: 0.3s ease; }
+        .sidebar-overlay.active { opacity: 1; visibility: visible; }
+        .sidebar { position: fixed; top: 0; left: -100%; width: var(--menu-width); height: 100%; background: white; z-index: 3100; box-shadow: 2px 0 15px rgba(0,0,0,0.1); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar.active { left: 0; }
+        
+        /* 側邊選單 - 個人檔案區 */
+        .sidebar-profile { background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 40px 20px 20px; text-align: center; position: relative; color: white; }
+        .sidebar-avatar-wrapper { position: relative; display: inline-block; margin-bottom: 12px; }
+        .sidebar-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: var(--shadow-sm); }
+        .sidebar-edit-btn { position: absolute; bottom: 0; right: 0; background: white; color: var(--primary-dark); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: var(--shadow-sm); cursor: pointer; border: none; }
+        .sidebar-edit-btn:active { transform: scale(0.9); }
+        .sidebar-username { font-size: 20px; font-weight: 800; }
+        .sidebar-role { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+
+        /* 側邊選單 - 區塊與列表 */
+        .sidebar-section { padding: 16px 0; border-bottom: 1px solid #f1f5f9; }
+        .sidebar-title { font-size: 12px; font-weight: 700; color: var(--text-sub); padding: 0 20px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .sidebar-item { display: flex; align-items: center; padding: 12px 20px; color: var(--text-main); text-decoration: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .sidebar-item:hover, .sidebar-item:active { background: var(--primary-light); color: var(--primary-dark); }
+        .sidebar-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
+
+        /* 側邊選單 - 成員群組 */
+        .sidebar-members { display: flex; gap: 10px; padding: 10px 20px; overflow-x: auto; scrollbar-width: none; }
+        .sidebar-members::-webkit-scrollbar { display: none; }
+        .member-avatar-container { text-align: center; flex-shrink: 0; }
+        .member-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb; margin-bottom: 4px; }
+        .member-name { font-size: 11px; color: var(--text-sub); width: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* === 聯絡我們 表單設計 === */
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-label { display: block; font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: inherit; transition: 0.2s; background: #f9fafb; }
+        .form-control:focus { outline: none; border-color: var(--primary); background: white; }
+        textarea.form-control { resize: vertical; min-height: 100px; }
+
+        /* === 今日行程與卡片樣式 === */
         .agenda-card { background: white; border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: all 0.25s ease; }
         .agenda-card:active { transform: scale(0.98); background: #fcfcfc; }
         .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
@@ -72,13 +111,11 @@
 
         /* 動態九宮格 */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        
         .dash-card { background: white; border-radius: 20px; padding: 22px 16px; text-align: left; box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.25s ease; position: relative; border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between; height: 120px; }
         .dash-card:active { transform: scale(0.96); background: #fcfcfc; }
         .dash-icon { font-size: 32px; width: 50px; height: 50px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
         .dash-title { font-size: 16px; font-weight: 700; color: var(--text-main); }
 
-        /* 特殊主題卡片 */
         .card-hero { grid-column: span 2; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; height: auto; padding: 24px; flex-direction: row; align-items: center; justify-content: space-between; }
         .card-hero .dash-icon { background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 18px; }
         .card-admin { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe; grid-column: span 2; height: auto; flex-direction: row; align-items: center; padding: 18px 22px; }
@@ -86,18 +123,17 @@
         .card-admin .dash-title { color: #1d4ed8; font-size: 17px; }
 
         .notification-badge { display: none; position: absolute; top: 12px; right: 12px; background-color: var(--danger); color: white; font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); }
-
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); justify-content: center; align-items: center; font-size: 16px; font-weight: 700; color: var(--primary); z-index: 4000; flex-direction: column; gap: 12px; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); justify-content: center; align-items: center; font-size: 16px; font-weight: 700; color: var(--primary); z-index: 6000; flex-direction: column; gap: 12px; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="loading-overlay" id="loadingView"><span>載入資料中，請稍候...</span></div>
+    <div class="loading-overlay" id="loadingView"><span>處理中，請稍候...</span></div>
 
     <!-- 密碼彈窗 -->
     <div class="modal" id="pinModal">
-        <div class="modal-content">
+        <div class="modal-content text-center">
             <h3 id="modalUserTitle" style="margin-top:0; font-size:20px;">請輸入密碼</h3>
             <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" onkeypress="handlePinKeyPress(event)">
             <div class="modal-btns">
@@ -107,10 +143,37 @@
         </div>
     </div>
 
+    <!-- 聯絡我們彈窗 -->
+    <div class="modal" id="contactModal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; font-size:20px; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:16px;">聯絡 Nexus</h3>
+            <div class="form-group">
+                <label class="form-label">諮詢類型</label>
+                <select id="contactType" class="form-control">
+                    <option value="建議">💡 建議</option>
+                    <option value="要求">🎯 要求新增功能</option>
+                    <option value="異常問題">⚠️ 異常問題回報</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">電子郵件地址 (必填)</label>
+                <input type="email" id="contactEmail" class="form-control" placeholder="example@email.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">內容 (必填)</label>
+                <textarea id="contactContent" class="form-control" placeholder="請詳細描述您的問題或建議..." required></textarea>
+            </div>
+            <div class="modal-btns">
+                <button onclick="closeContactModal()" style="background:#f3f4f6; color:var(--text-main);">取消</button>
+                <button onclick="submitContact()" style="background:var(--primary); color:white;">提交送出</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 登入畫面 -->
     <div id="loginSection">
         <div class="login-logo-wrapper">
-            <img src="Nexus.png" alt="HomeBase Logo" class="custom-logo">
+            <img src="Nexus.png" alt="Nexus Logo" class="custom-logo">
         </div>
         <div class="login-title">Nexus</div>
         <div class="login-subtitle">連結彼此的日常 讓心更靠近</div>
@@ -121,6 +184,7 @@
     <div id="dashboardView">
         <div class="app-header">
             <div class="app-brand">
+                <div class="hamburger-btn" onclick="toggleSidebar()">☰</div>
                 <img src="Nexus.png" alt="Logo" class="brand-logo"> Nexus
             </div>
             <div class="current-user-badge" onclick="window.location.href='settings.html'" title="個人設定">
@@ -131,13 +195,52 @@
 
         <!-- 今日行程卡片容器 -->
         <div id="todayAgendaContainer" style="display: none;"></div>
-
         <div class="dashboard-grid" id="dynamicDashboardGrid"></div>
+    </div>
+
+    <!-- 側邊選單 Sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-profile">
+            <div class="sidebar-avatar-wrapper">
+                <img id="sideAvatar" class="sidebar-avatar" src="">
+                <button class="sidebar-edit-btn" onclick="editAvatar()">✎</button>
+            </div>
+            <div class="sidebar-username" id="sideUserName"></div>
+            <div class="sidebar-role" id="sideUserRole"></div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">功能導覽</div>
+            <div id="sideMenuFeatureList">
+                <!-- 動態載入使用者權限選單 -->
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">群組成員</div>
+            <div class="sidebar-members" id="sideMembersList">
+                <!-- 動態載入群組成員 -->
+            </div>
+        </div>
+
+        <div class="sidebar-section" style="border-bottom: none;">
+            <div class="sidebar-title">關於 Nexus</div>
+            <div class="sidebar-item" onclick="openContactModal()">
+                <span class="sidebar-icon">📝</span>聯絡我們
+            </div>
+            <div class="sidebar-item" onclick="rateApp()">
+                <span class="sidebar-icon">⭐</span>給予評價支持我們
+            </div>
+            <div class="sidebar-item" onclick="shareApp()">
+                <span class="sidebar-icon">📤</span>推薦 Nexus
+            </div>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where, doc, serverTimestamp, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where, doc, serverTimestamp, onSnapshot, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -154,10 +257,9 @@
         let galleryUnsubscribe = null;
         let calendarUnsubscribe = null;
         window.selectedUserObj = null;
-        
         window.userAvatarMap = {};
+        window.allSystemUsers = [];
 
-        // ★ 修改 onload: 增加「驗證帳號是否失效或被刪除」機制，並更新最新權限
         window.onload = async function() {
             const savedUserStr = sessionStorage.getItem('familyCheckInUser');
             if (savedUserStr) {
@@ -173,14 +275,13 @@
                         document.getElementById('loadingView').style.display = 'none';
                         window.fetchUsersAndRenderLogin();
                     } else {
-                        // 更新快取到最新的資料 (含最新的 menus 權限)
                         const latestUser = snap.docs[0].data();
+                        latestUser.docId = snap.docs[0].id; // 記錄 DocID 供後續編輯頭像使用
                         sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
                         document.getElementById('loadingView').style.display = 'none';
                         window.showDashboard();
                     }
                 } catch (e) {
-                    // 若網路異常，退回使用舊快取直接登入
                     document.getElementById('loadingView').style.display = 'none';
                     window.showDashboard();
                 }
@@ -194,7 +295,7 @@
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
                 await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: operatorName, actionType, details: detailsText, timestamp: serverTimestamp() });
-            } catch (e) { console.error("寫入 Log 失敗:", e); }
+            } catch (e) {}
         }
 
         window.fetchUsersAndRenderLogin = async function() {
@@ -208,10 +309,19 @@
                         {name: "媽咪", pin: "1234", avatar: "https://ui-avatars.com/api/?name=媽&background=10b981&color=fff", role: "admin"},
                         {name: "爸爸", pin: "1234", avatar: "https://ui-avatars.com/api/?name=爸&background=10b981&color=fff", role: "admin"}
                     ];
-                    for (const u of defaultUsers) { await addDoc(collection(db, "users"), u); users.push(u); }
+                    for (const u of defaultUsers) { 
+                        const docRef = await addDoc(collection(db, "users"), u); 
+                        u.docId = docRef.id;
+                        users.push(u); 
+                    }
                 } else {
-                    querySnapshot.forEach(docSnap => users.push(docSnap.data()));
+                    querySnapshot.forEach(docSnap => {
+                        let u = docSnap.data();
+                        u.docId = docSnap.id;
+                        users.push(u);
+                    });
                 }
+                window.allSystemUsers = users;
                 window.buildUserCards(users);
             } catch (e) { console.error("載入使用者失敗:", e); }
         };
@@ -255,18 +365,151 @@
             
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
+            
+            // 綁定側邊欄個人資料
+            document.getElementById('sideAvatar').src = user.avatar;
+            document.getElementById('sideUserName').innerText = user.name;
+            document.getElementById('sideUserRole').innerText = (user.role === 'admin' || user.role === 'parent') ? '管理員' : '一般成員';
 
             await renderDynamicModules(user);
+            fetchAndRenderGroupMembers(); // 載入群組成員
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
         };
 
-        // ★ 修改：與後台統一卡片代碼(Key)，並套用權限檢查
-        async function renderDynamicModules(user) {
-            const grid = document.getElementById('dynamicDashboardGrid'); grid.innerHTML = '';
+        // --- 側邊選單功能 ---
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        };
+
+        window.editAvatar = async function() {
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+            const newUrl = prompt("請輸入新的頭像圖片網址 (URL)：\n(建議使用正方形圖片以獲取最佳顯示效果)", user.avatar);
             
-            // 預設允許清單 (與管理者後台對齊)
+            if (newUrl && newUrl.trim() !== "" && newUrl !== user.avatar) {
+                document.getElementById('loadingView').style.display = 'flex';
+                try {
+                    // 若 sessionStorage 沒存 docId，則透過 query 找尋
+                    let docRefId = user.docId;
+                    if (!docRefId) {
+                        const q = query(collection(db, "users"), where("name", "==", user.name));
+                        const snap = await getDocs(q);
+                        if (!snap.empty) docRefId = snap.docs[0].id;
+                    }
+                    
+                    if (docRefId) {
+                        await updateDoc(doc(db, "users", docRefId), { avatar: newUrl.trim() });
+                        user.avatar = newUrl.trim();
+                        sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
+                        
+                        // 更新畫面上所有的頭像
+                        document.getElementById('dashUserAvatar').src = user.avatar;
+                        document.getElementById('sideAvatar').src = user.avatar;
+                        alert("頭像更新成功！");
+                    } else {
+                        alert("找不到使用者資料，無法更新。");
+                    }
+                } catch (e) {
+                    console.error("更新頭像失敗:", e);
+                    alert("更新失敗，請稍後再試。");
+                }
+                document.getElementById('loadingView').style.display = 'none';
+            }
+        };
+
+        async function fetchAndRenderGroupMembers() {
+            try {
+                if (window.allSystemUsers.length === 0) {
+                    const snap = await getDocs(collection(db, "users"));
+                    window.allSystemUsers = [];
+                    snap.forEach(doc => window.allSystemUsers.push(doc.data()));
+                }
+                const container = document.getElementById('sideMembersList');
+                container.innerHTML = window.allSystemUsers.map(u => `
+                    <div class="member-avatar-container">
+                        <img class="member-avatar" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff'">
+                        <div class="member-name">${u.name}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("載入成員失敗", e);
+            }
+        }
+
+        // --- 關於 Nexus 功能 ---
+        window.openContactModal = function() {
+            toggleSidebar(); // 關閉側邊欄
+            document.getElementById('contactEmail').value = '';
+            document.getElementById('contactContent').value = '';
+            document.getElementById('contactModal').style.display = 'flex';
+        };
+        window.closeContactModal = function() {
+            document.getElementById('contactModal').style.display = 'none';
+        };
+        window.submitContact = async function() {
+            const type = document.getElementById('contactType').value;
+            const email = document.getElementById('contactEmail').value.trim();
+            const content = document.getElementById('contactContent').value.trim();
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+
+            if (!email || !content) {
+                alert("請完整填寫信箱與內容！");
+                return;
+            }
+
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                await addDoc(collection(db, "feedbacks"), {
+                    userName: user.name,
+                    type: type,
+                    email: email,
+                    content: content,
+                    timestamp: serverTimestamp()
+                });
+                alert("感謝您的回饋！我們已收到您的訊息，會盡快處理。");
+                closeContactModal();
+            } catch (e) {
+                alert("送出失敗，請檢查網路連線。");
+            }
+            document.getElementById('loadingView').style.display = 'none';
+        };
+
+        window.rateApp = function() {
+            toggleSidebar();
+            // 實務上這裡可以使用 window.location.href 導向 App Store / Play Store 連結
+            alert("感謝您的支持！您的五星好評是 Nexus 持續進步的動力。");
+        };
+
+        window.shareApp = async function() {
+            toggleSidebar();
+            const shareData = {
+                title: 'Nexus - 串聯生活每一刻',
+                text: '這是一款超讚的群組互動 App，快來看看！',
+                url: window.location.href
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    // 若不支援原生分享，提供複製網址
+                    await navigator.clipboard.writeText(shareData.url);
+                    alert("已複製 Nexus 連結！趕快貼給親朋好友吧。");
+                }
+            } catch (err) {
+                console.log("分享取消或失敗:", err);
+            }
+        };
+
+        async function renderDynamicModules(user) {
+            const grid = document.getElementById('dynamicDashboardGrid'); 
+            const sideList = document.getElementById('sideMenuFeatureList');
+            grid.innerHTML = '';
+            sideList.innerHTML = '';
+            
             const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone']; 
             const allowedMenus = user.menus || defaultAllowed;
 
@@ -278,23 +521,16 @@
                 if (userConfigDoc.exists()) {
                     const data = userConfigDoc.data();
                     if (data.modules) modules = data.modules;
-                    
                     if (data.order && Array.isArray(data.order)) {
-                        // 只顯示在 allowedMenus 中被授權的模組
                         order = data.order.filter(k => allowedMenus.includes(k));
                     }
                 }
-                
-                // 補齊未在設定順序中的授權功能 (加到最後面)
-                allowedMenus.forEach(k => {
-                    if (!order.includes(k)) order.push(k);
-                });
-                
+                allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
             } catch (e) {
                 order = [...allowedMenus];
             }
 
-            // ★ HTML 跳轉目標檔案維持原名 (如 expense.html, gallery.html)，以免舊連結失效
+            // 主畫面九宮格卡片 Template
             const cardTemplates = {
                 chat: () => modules.chat !== false ? `<div class="dash-card card-hero" onclick="window.location.href='chat.html'"><div class="notification-badge" id="chatBadge" style="display:none; top: 16px; right: 16px;">0</div><div><div style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">聊天室</div><div style="font-size: 13px; opacity: 0.9;">隨時隨地與家人保持聯絡</div></div><div class="dash-icon">💬</div></div>` : '',
                 checkin: () => modules.checkin !== false ? `<div class="dash-card" onclick="window.location.href='checkin.html'"><div><div class="dash-icon">📍</div></div><div class="dash-title">到家打卡</div></div>` : '',
@@ -312,15 +548,29 @@
                 finance: () => modules.finance !== false ? `<div class="dash-card" onclick="window.location.href='expense.html'"><div><div class="dash-icon">💰</div></div><div class="dash-title">記帳本</div></div>` : ''
             };
 
-            // 嚴格檢查權限後渲染
+            // 側邊選單列表 Template
+            const sideMenuTemplates = {
+                chat: `<div class="sidebar-item" onclick="window.location.href='chat.html'"><span class="sidebar-icon">💬</span>聊天室</div>`,
+                checkin: `<div class="sidebar-item" onclick="window.location.href='checkin.html'"><span class="sidebar-icon">📍</span>到家打卡</div>`,
+                calendar: `<div class="sidebar-item" onclick="window.location.href='calendar.html'"><span class="sidebar-icon">📅</span>行事曆</div>`,
+                photodump: `<div class="sidebar-item" onclick="window.location.href='gallery.html'"><span class="sidebar-icon">📸</span>Photo Dump</div>`,
+                gamezone: `<div class="sidebar-item" onclick="window.location.href='games.html'"><span class="sidebar-icon">🎮</span>遊戲區</div>`,
+                wishlist: `<div class="sidebar-item" onclick="window.location.href='wishwall.html'"><span class="sidebar-icon">✨</span>許願牆</div>`,
+                finance: `<div class="sidebar-item" onclick="window.location.href='expense.html'"><span class="sidebar-icon">💰</span>記帳本</div>`
+            };
+
             order.forEach(modKey => { 
                 if (cardTemplates[modKey] && allowedMenus.includes(modKey)) {
                     grid.innerHTML += cardTemplates[modKey](); 
+                    if (sideMenuTemplates[modKey]) {
+                        sideList.innerHTML += sideMenuTemplates[modKey];
+                    }
                 }
             });
 
             if (user.role === 'admin' || user.role === 'parent') {
                 grid.innerHTML += `<div class="dash-card card-admin" onclick="window.location.href='admin.html'"><div class="dash-icon">🛡️</div><div style="flex: 1; margin-left: 12px;"><div class="dash-title">管理者後台</div><div style="font-size: 12px; color: var(--text-sub);">系統管理與權限設定</div></div></div>`;
+                sideList.innerHTML += `<div class="sidebar-item" onclick="window.location.href='admin.html'" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
             }
         }
 
