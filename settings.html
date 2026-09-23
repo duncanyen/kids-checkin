@@ -29,7 +29,7 @@
         
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-sub); }
-        .form-group input[type="text"], .form-group input[type="password"] { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 15px; outline: none; background: #f9fafb; font-family: inherit; }
+        .form-group input[type="text"], .form-group input[type="password"] { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 15px; outline: none; background: #f9fafb; font-family: inherit; transition: border 0.2s; }
         .form-group input:focus { border-color: var(--primary); background: white; }
         
         /* 排序清單 */
@@ -62,41 +62,48 @@
         <div class="section-card">
             <h3 class="section-title">👤 基本資料與安全</h3>
             <div class="form-group">
-                <label>使用者名稱</label>
-                <input type="text" id="settingsName" disabled style="background:#eee; color:#888;">
+                <label>使用者名稱 (家族內不可重複)</label>
+                <input type="text" id="settingsName" placeholder="請輸入使用者名稱">
             </div>
             
-            <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;">
-            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px; font-weight: bold;">修改登入密碼 (需為 4 位數字)</p>
+            <hr style="border: 0; border-top: 1px dashed #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px; font-weight: bold;">修改資料或密碼需要舊密碼驗證</p>
 
             <div class="form-group">
-                <label>請輸入【舊密碼】驗證身分</label>
-                <input type="password" id="oldPin" placeholder="請輸入您目前的密碼">
+                <label>請輸入【舊密碼】驗證身分 (必填)</label>
+                <input type="password" id="oldPin" placeholder="請輸入您目前的登入密碼">
             </div>
             <div class="form-group">
-                <label>請輸入【新密碼】</label>
+                <label>請設定【新密碼】(不修改密碼請留白)</label>
                 <input type="password" id="newPin" maxlength="4" pattern="\d*" inputmode="numeric" placeholder="請輸入 4 位數新密碼">
             </div>
-            <button class="btn-save" onclick="saveUserProfile()">更新密碼</button>
+            <button class="btn-save" onclick="saveUserProfile()">更新資料與密碼</button>
         </div>
 
         <!-- 版面模組與順序自訂區塊 -->
         <div class="section-card">
             <h3 class="section-title">🎨 主選單卡片排序</h3>
-            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">您可以勾選要顯示的功能，並調整卡片出現的順序。</p>
+            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">您可以勾選要顯示的功能，並調整卡片出現的順序。(僅顯示管理者開放給您的功能)</p>
             <div class="module-sort-list" id="moduleSortListContainer"></div>
             <br>
             <button class="btn-save" onclick="savePersonalLayout()">儲存版面設定</button>
         </div>
 
-        <!-- 登出按鈕 -->
-        <button class="btn-logout" onclick="logoutSystem()">🚪 登出系統</button>
+        <!-- 登出與刪除按鈕 -->
+        <button class="btn-logout" style="background: white; border: 1px solid #e5e7eb; color: var(--text-main);" onclick="logoutSystem()">🚪 登出系統</button>
+        
+        <div class="section-card" style="border-color: #fecaca; background: #fff5f5; margin-top: 20px;">
+            <h3 class="section-title" style="color: var(--danger);">⚠️ 危險區域</h3>
+            <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">刪除帳戶後將無法再進入此家庭群組，需由管理員重新加入。若您有綁定 Email，再次登入將進入建立群組流程；若無 Email，帳號將直接失效。</p>
+            <button class="btn-logout" onclick="deleteMyAccount()">🗑️ 刪除我的帳戶</button>
+        </div>
+        
         <div style="height: 40px;"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -112,25 +119,32 @@
 
         let currentUser = null;
         
-        // ★ 移除了 settings 卡片
+        // ★ 對齊管理者後台的 keys
         const moduleMeta = {
-            chat: { name: "💬 家庭聊天室", defaultOn: true },
-            checkin: { name: "📍 到家打卡專區", defaultOn: true },
-            calendar: { name: "📅 家庭行事曆", defaultOn: true },
-            gallery: { name: "📸 Photo Dump", defaultOn: true },
-            games: { name: "🎮 遊戲區", defaultOn: true },
-            wishwall: { name: "✨ 許願牆", defaultOn: true },
-            expense: { name: "💰 記帳本", defaultOn: true }
+            chat: { name: "💬 家庭聊天室" },
+            calendar: { name: "📅 家庭行事曆" },
+            finance: { name: "💰 記帳本" },
+            photodump: { name: "📸 Photo Dump" },
+            gamezone: { name: "🎮 遊戲區" },
+            checkin: { name: "📍 到家打卡" },
+            wishlist: { name: "⭐ 許願牆" }
         };
 
-        let currentOrder = ['chat', 'checkin', 'calendar', 'gallery', 'games', 'wishwall', 'expense'];
-        let currentModules = { chat: true, checkin: true, calendar: true, gallery: true, games: true, wishwall: true, expense: true };
+        let currentOrder = [];
+        let currentModules = {};
+        let allowedMenus = []; // 用來存放從使用者資料抓到的允許清單
 
         window.onload = async function() {
-            const userStr = sessionStorage.getItem('familyCheckInUser');
+            const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
             if (!userStr) { alert('請先登入！'); window.location.href = 'index.html'; return; }
             currentUser = JSON.parse(userStr);
             document.getElementById('settingsName').value = currentUser.name;
+
+            // 取得此使用者被管理者允許的功能 (若無紀錄則預設帶入所有模組)
+            allowedMenus = currentUser.menus || Object.keys(moduleMeta);
+            
+            // 預設將所有允許的模組啟用
+            allowedMenus.forEach(k => { if(moduleMeta[k]) currentModules[k] = true; });
 
             await loadPersonalConfig();
             renderSortList();
@@ -148,20 +162,40 @@
             try {
                 const docRef = doc(db, "userSettings", currentUser.name);
                 const docSnap = await getDoc(docRef);
+                let savedOrder = [];
+                
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     if (data.order && Array.isArray(data.order)) {
-                        // 過濾掉可能遺留的 settings
-                        currentOrder = data.order.filter(k => k !== 'settings');
-                        Object.keys(moduleMeta).forEach(k => { if (!currentOrder.includes(k)) currentOrder.push(k); });
+                        savedOrder = data.order;
                     }
-                    if (data.modules) currentModules = { ...currentModules, ...data.modules };
+                    if (data.modules) {
+                        currentModules = { ...currentModules, ...data.modules };
+                    }
                 }
+                
+                // 1. 過濾出存在於「允許清單(allowedMenus)」的卡片順序
+                currentOrder = savedOrder.filter(k => allowedMenus.includes(k) && moduleMeta[k]);
+                
+                // 2. 將允許清單中，未出現在排序裡的卡片補到最後面 (應對新功能開放)
+                allowedMenus.forEach(k => { 
+                    if (!currentOrder.includes(k) && moduleMeta[k]) {
+                        currentOrder.push(k); 
+                    }
+                });
+                
             } catch (e) {}
         }
 
         function renderSortList() {
-            const container = document.getElementById('moduleSortListContainer'); container.innerHTML = '';
+            const container = document.getElementById('moduleSortListContainer'); 
+            container.innerHTML = '';
+            
+            if(currentOrder.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding: 10px;">目前沒有可用的功能卡片</div>';
+                return;
+            }
+
             currentOrder.forEach((modKey, index) => {
                 if (!moduleMeta[modKey]) return;
                 const isChecked = currentModules[modKey] !== false;
@@ -198,41 +232,81 @@
             finally { document.getElementById('loadingView').style.display = 'none'; }
         };
 
-        // ★ 變更密碼邏輯 (包含舊密碼驗證與 4 碼數字規則)
+        // ★ 變更基本資料與密碼
         window.saveUserProfile = async function() {
+            const newName = document.getElementById('settingsName').value.trim();
             const oldPin = document.getElementById('oldPin').value.trim();
             const newPin = document.getElementById('newPin').value.trim();
 
+            if (!newName) { alert('使用者名稱不可為空白！'); return; }
             if (!oldPin) { alert('請輸入舊密碼以驗證身分！'); return; }
             if (oldPin !== currentUser.pin) { alert('舊密碼輸入錯誤，請重新輸入。'); return; }
 
-            if (!newPin) { alert('請輸入新密碼！'); return; }
-            // 驗證新密碼是否剛好為 4 碼數字正則表達式
-            if (!/^\d{4}$/.test(newPin)) {
+            // 如果有填寫新密碼才進行格式驗證
+            if (newPin && !/^\d{4}$/.test(newPin)) {
                 alert('新密碼必須剛好為「4位數數字」！請重新設定。');
                 return;
             }
 
             document.getElementById('loadingView').style.display = 'flex';
             try {
-                // 將新密碼寫回 users 資料庫
                 const usersRef = collection(db, "users");
-                const q = query(usersRef, where("name", "==", currentUser.name));
-                const querySnapshot = await getDocs(q);
+
+                // 若名稱有更改，先檢查是否與他人重複
+                if (newName !== currentUser.name) {
+                    const qName = query(usersRef, where("name", "==", newName));
+                    const nameSnap = await getDocs(qName);
+                    if (!nameSnap.empty) {
+                        alert("這個名稱已經有其他家庭成員使用了，請換一個名稱！");
+                        document.getElementById('loadingView').style.display = 'none';
+                        return;
+                    }
+                }
+
+                // 找出目前使用者的文件
+                const qUser = query(usersRef, where("name", "==", currentUser.name));
+                const userSnap = await getDocs(qUser);
                 
-                if (!querySnapshot.empty) {
-                    const userDoc = querySnapshot.docs[0];
-                    await updateDoc(userDoc.ref, { pin: newPin });
-                    
-                    // 更新本地 Session
-                    currentUser.pin = newPin;
-                    sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
-                    
-                    await recordLog('個人設定', '成功變更了登入密碼');
-                    alert('密碼修改成功！下次登入請使用新密碼。');
-                    
-                    document.getElementById('oldPin').value = '';
-                    document.getElementById('newPin').value = '';
+                if (!userSnap.empty) {
+                    const userDoc = userSnap.docs[0];
+                    const updateData = {};
+                    let nameChanged = false;
+
+                    if (newName !== currentUser.name) { updateData.name = newName; nameChanged = true; }
+                    if (newPin) { updateData.pin = newPin; }
+
+                    if (Object.keys(updateData).length > 0) {
+                        await updateDoc(userDoc.ref, updateData);
+
+                        // ★ 若名稱更改，需將舊版面設定移轉給新名稱，以免設定遺失
+                        if (nameChanged) {
+                            const oldSettingsRef = doc(db, "userSettings", currentUser.name);
+                            const newSettingsRef = doc(db, "userSettings", newName);
+                            const oldSettingsSnap = await getDoc(oldSettingsRef);
+                            
+                            if (oldSettingsSnap.exists()) {
+                                await setDoc(newSettingsRef, oldSettingsSnap.data());
+                                await deleteDoc(oldSettingsRef); // 刪除舊紀錄
+                            }
+                        }
+
+                        // 更新本地 Session/Local 緩存
+                        if (nameChanged) currentUser.name = newName;
+                        if (newPin) currentUser.pin = newPin;
+                        
+                        sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+                        if (localStorage.getItem('familyCheckInUser')) {
+                            localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+                        }
+                        
+                        await recordLog('個人設定', `更新了基本資料/密碼`);
+                        alert('設定更新成功！');
+                        
+                        document.getElementById('oldPin').value = '';
+                        document.getElementById('newPin').value = '';
+                    } else {
+                        alert('您沒有修改任何資料。');
+                    }
                 } else {
                     alert('找不到使用者資料，更新失敗。');
                 }
@@ -244,7 +318,44 @@
             }
         };
 
-        // ★ 登出系統
+        // ★ 刪除帳戶
+        window.deleteMyAccount = async function() {
+            const confirm1 = confirm("⚠️ 警告：刪除帳戶後將無法再進入此家庭群組！\n\n您確定要刪除自己的帳戶嗎？");
+            if (!confirm1) return;
+            
+            const confirm2 = confirm("這是最後的確認，刪除後若要重新加入，需請管理人員協助新增。\n\n請點擊「確定」以永久刪除此帳戶。");
+            if (!confirm2) return;
+
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                const usersRef = collection(db, "users");
+                const qUser = query(usersRef, where("name", "==", currentUser.name));
+                const userSnap = await getDocs(qUser);
+                
+                if (!userSnap.empty) {
+                    const userDoc = userSnap.docs[0];
+                    await deleteDoc(userDoc.ref); // 從資料庫移除成員
+                    
+                    await recordLog('刪除帳戶', `成員 ${currentUser.name} 自行刪除了帳戶`);
+                    
+                    // 清除登入快取
+                    sessionStorage.removeItem('familyCheckInUser');
+                    localStorage.removeItem('familyCheckInUser');
+                    
+                    alert("帳戶已成功刪除，將返回首頁。");
+                    window.location.href = 'index.html';
+                } else {
+                    alert('找不到您的資料，無法刪除。');
+                }
+            } catch (e) {
+                console.error("刪除失敗", e);
+                alert('帳戶刪除失敗，請檢查網路連線。');
+            } finally {
+                document.getElementById('loadingView').style.display = 'none';
+            }
+        };
+
+        // 登出系統
         window.logoutSystem = function() {
             if(confirm("確定要登出系統嗎？")) {
                 sessionStorage.removeItem('familyCheckInUser');
