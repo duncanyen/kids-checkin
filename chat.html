@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase - 家庭聊天室</title>
+    <title>Nexus - 聊天室</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="apple-mobile-web-app-title" content="HomeBase">
@@ -82,10 +82,14 @@
         .reply-preview-text-box { flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; word-break: break-all; margin-right: 10px; line-height: 1.4; }
         .btn-cancel-reply { background: #e2e8f0; border: none; font-size: 14px; width: 24px; height: 24px; border-radius: 50%; color: var(--text-main); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
-        /* --- @ 標註選單 --- */
+        /* --- @ 標註選單及高亮樣式 --- */
         .mention-dropdown { display: none; position: absolute; bottom: 100%; left: 16px; right: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: var(--shadow-lg); max-height: 160px; overflow-y: auto; z-index: 30; margin-bottom: 6px; }
         .mention-item { padding: 10px 14px; font-size: 14px; font-weight: 700; color: var(--text-main); cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
         .mention-item:hover, .mention-item:active { background: var(--primary-light); color: var(--primary-dark); }
+        
+        /* 新增：@人員 高亮樣式 */
+        .mention-highlight { color: var(--primary-dark); font-weight: 800; background: var(--primary-light); padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
+        .msg-mine .mention-highlight { color: #fff; background: rgba(255, 255, 255, 0.25); }
 
         .chat-input-area { padding: 12px 16px; display: flex; gap: 10px; align-items: center; position: relative; background: white;}
         .btn-upload-photo { background: #f3f4f6; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
@@ -345,7 +349,8 @@
     <!-- 圖片全螢幕檢視器 -->
     <div id="photoViewerModal" class="photo-viewer" onclick="window.closePhotoViewer()">
         <span class="close-viewer">✕</span>
-        <img class="viewer-content" id="viewerImage">
+        <!-- 點擊圖片本身不關閉預覽，阻止事件冒泡 -->
+        <img class="viewer-content" id="viewerImage" onclick="event.stopPropagation()">
     </div>
 
     <script type="module">
@@ -403,7 +408,7 @@
             } catch (error) {}
         }
 
-        // ================= 1. 群組列表邏輯 (修復相容性防呆) =================
+        // ================= 1. 群組列表邏輯 =================
         function listenToRooms() {
             const roomsRef = collection(db, "rooms");
             const q = query(roomsRef, where("participants", "array-contains", currentUser.name), orderBy("lastMessageTime", "desc"));
@@ -595,7 +600,19 @@
             }
 
             let displayText = msg.text || '';
-            let contentHtml = msg.imageUrl ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="window.openPhotoViewer(this.src)" onload="if(window._isChatJustLoaded) window.lockScrollPosition();">` : `<div>${displayText}</div>`;
+            // 基礎 HTML 跳脫避免安全問題
+            displayText = displayText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            // @人員 高亮替換機制
+            const allNames = [currentUser.name, ...allUsers.map(u => u.name)];
+            allNames.forEach(pName => {
+                displayText = displayText.split(`@${pName}`).join(`<span class="mention-highlight">@${pName}</span>`);
+            });
+
+            // 修復：在圖片加入 onclick="event.stopPropagation();"，避免觸發父層氣泡框呼出功能選單
+            let contentHtml = msg.imageUrl 
+                ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="event.stopPropagation(); window.openPhotoViewer(this.src);" onload="if(window._isChatJustLoaded) window.lockScrollPosition();">` 
+                : `<div>${displayText}</div>`;
             
             let replyHtml = '';
             if (msg.replyTo) {
@@ -723,6 +740,7 @@
             document.getElementById('msgActionModal').style.display = 'flex';
         };
         window.closeMsgActionModal = function(e) { if (e.target.id === 'msgActionModal' || e.target.tagName === 'BUTTON') document.getElementById('msgActionModal').style.display = 'none'; };
+        
         window.triggerReply = function() {
             pendingReplyMsgId = selectedMsgForAction.id; pendingReplyData = { sender: selectedMsgForAction.sender, text: selectedMsgForAction.text };
             document.getElementById('replyPreviewSender').innerText = selectedMsgForAction.sender;
@@ -731,9 +749,17 @@
             document.getElementById('msgActionModal').style.display = 'none'; chatInput.focus();
         };
         window.cancelReply = function() { pendingReplyMsgId = null; pendingReplyData = null; document.getElementById('replyPreviewArea').style.display = 'none'; };
+        
         window.triggerRetract = async function() {
             if (!confirm("確定要收回此訊息嗎？")) return;
-            try { await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null }); } catch(e) {}
+            try {
+                await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null });
+                
+                // 修復：檢查如果收回的訊息是這個群組最新的一則訊息，就同步更新房間狀態的 lastMessage，以免外層清單仍看到舊文字
+                if (currentMessagesList.length > 0 && currentMessagesList[currentMessagesList.length - 1].id === selectedMsgForAction.id) {
+                    await updateDoc(doc(db, "rooms", activeRoomId), { lastMessage: `${currentUser.name} 收回了一則訊息` });
+                }
+            } catch(e) {}
             document.getElementById('msgActionModal').style.display = 'none';
         };
 
@@ -875,7 +901,11 @@
                 photos.forEach(m => {
                     const img = document.createElement('img');
                     img.src = m.imageUrl; img.className = 'gallery-item';
-                    img.onclick = () => window.openPhotoViewer(m.imageUrl);
+                    // 加上 stopPropagation 避免觸發底層點擊事件
+                    img.onclick = (e) => {
+                        e.stopPropagation();
+                        window.openPhotoViewer(m.imageUrl);
+                    };
                     grid.appendChild(img);
                 });
             }
