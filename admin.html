@@ -35,7 +35,8 @@
         .user-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 150px; }
         .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
         .user-name { font-weight: bold; font-size: 16px; }
-        .user-subtext { font-size: 12px; color: #777; margin-top: 2px; }
+        .user-subtext { font-size: 12px; color: #777; margin-top: 2px; line-height: 1.4; }
+        .user-features { font-size: 12px; color: var(--primary-color); font-weight: 600; margin-top: 4px; }
         
         .action-buttons { display: flex; gap: 8px; }
         .btn-edit, .btn-delete, .btn-add { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
@@ -114,7 +115,7 @@
                 </select>
             </div>
             <div class="form-row">
-                <label>主選單功能開放設定 (打勾才顯示)</label>
+                <label>主選單功能開放設定 (打勾才允許該成員使用)</label>
                 <div class="checkbox-group" id="newMenusContainer">
                     <!-- JS 動態生成 Checkbox -->
                 </div>
@@ -189,7 +190,7 @@
                     </select>
                 </div>
                 <div class="form-row">
-                    <label>主選單功能開放設定 (打勾才顯示)</label>
+                    <label>主選單功能開放設定 (限制該成員可使用的功能)</label>
                     <div class="checkbox-group" id="editMenusContainer">
                         <!-- JS 動態生成 Checkbox -->
                     </div>
@@ -225,12 +226,12 @@
         // ★ 系統預設可用的主選單功能清單 (新增屬性分類)
         // group: 'all' 表示通用群組，預設會加入；group: 'family' 表示家庭專屬功能，預設不加入。
         const systemMenuOptions = [
-            { id: 'chat', label: '💬 家庭聊天室', isDefault: true, group: 'all' },
-            { id: 'calendar', label: '📅 家庭行事曆', isDefault: true, group: 'all' },
+            { id: 'chat', label: '💬 聊天室', isDefault: true, group: 'all' },
+            { id: 'calendar', label: '📅 行事曆', isDefault: true, group: 'all' },
             { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all' },
             { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all' },
             { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all' },
-            { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family' }, // 新增的打卡功能
+            { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family' }, 
             { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family' }
         ];
 
@@ -355,7 +356,7 @@
             }
         }
 
-        // 4. 渲染成員管理清單
+        // 4. 渲染成員管理清單 (新增：顯示已開放的功能)
         function renderUserList() {
             const container = document.getElementById('userListContainer');
             container.innerHTML = '';
@@ -372,6 +373,13 @@
                 
                 const idDisplay = user.accountId ? `ID: ${user.accountId}` : '<span style="color:#e53935;">(無帳號ID)</span>';
 
+                // ★ 抓取並顯示該成員目前允許使用的功能清單
+                const userMenus = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
+                const menuLabels = systemMenuOptions
+                    .filter(m => userMenus.includes(m.id))
+                    .map(m => m.label)
+                    .join('、');
+
                 const div = document.createElement('div');
                 div.className = 'user-reset-item';
                 div.innerHTML = `
@@ -380,6 +388,7 @@
                         <div>
                             <div class="user-name">${user.name}</div>
                             <div class="user-subtext">${roleDisplay} | ${idDisplay}</div>
+                            <div class="user-features">✓ 授權: ${menuLabels || '無'}</div>
                         </div>
                     </div>
                     <div class="action-buttons">
@@ -474,6 +483,8 @@
             const menusToSet = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
             const container = document.getElementById('editMenusContainer');
             const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            
+            // ★ 將目前該成員的權限綁定到 Checkbox 的勾選狀態上
             checkboxes.forEach(cb => {
                 cb.checked = menusToSet.includes(cb.value);
             });
@@ -492,6 +503,8 @@
             const pinInput = document.getElementById('editPin').value.trim();
             const emailInput = document.getElementById('editEmail').value.trim();
             const roleInput = document.getElementById('editRole').value;
+            
+            // ★ 取得管理員在此次編輯所勾選的最新功能清單
             const selectedMenus = getCheckedMenus('editMenusContainer');
 
             if (!idInput) return alert("請設定帳號 ID！");
@@ -510,6 +523,8 @@
 
             try {
                 const userRef = doc(db, "users", docId);
+                
+                // 將修改後的設定(包含選單 menus) 更新到 Firebase
                 await updateDoc(userRef, {
                     accountId: idInput,
                     name: nameInput,
@@ -519,7 +534,21 @@
                     menus: selectedMenus
                 });
 
-                await logAction('編輯成員', `更新了成員資訊：${nameInput}`);
+                // ★ 若管理員編輯的是「自己」，需要同步更新本地的 Session 避免權限遺失需要重登
+                if (currentUser && currentUser.name === allUsers.find(u => u.docId === docId)?.name) {
+                    currentUser.accountId = idInput;
+                    currentUser.name = nameInput;
+                    currentUser.pin = pinInput;
+                    currentUser.email = emailInput || null;
+                    currentUser.role = roleInput;
+                    currentUser.menus = selectedMenus;
+                    sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+                    if (localStorage.getItem('familyCheckInUser')) {
+                        localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
+                    }
+                }
+
+                await logAction('編輯成員', `更新了成員資訊：${nameInput} (含功能權限修改)`);
                 alert("儲存成功！");
                 closeEditModal();
                 await loadUsersFromFirebase();
