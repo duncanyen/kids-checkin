@@ -11,6 +11,7 @@
             --primary-color: #1565c0; 
             --primary-light: #e3f2fd;
             --accent-color: #4caf50;
+            --danger-color: #e53935;
             --bg-color: #f0f4f8; 
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
@@ -28,14 +29,23 @@
         .log-user { font-weight: bold; color: var(--primary-color); }
         .log-action { background: var(--primary-light); padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px; color: var(--primary-color); font-weight: bold; }
         
-        /* 人員密碼重置樣式 */
+        /* 人員名單樣式 */
         .user-reset-list { display: flex; flex-direction: column; gap: 10px; }
-        .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; }
-        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; flex-wrap: wrap; gap: 10px;}
+        .user-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 150px; }
         .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
         .user-name { font-weight: bold; font-size: 16px; }
-        .btn-reset { background: var(--primary-color); color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
-        .btn-reset:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .action-buttons { display: flex; gap: 8px; }
+        .btn-reset, .btn-delete, .btn-add { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-reset { background: var(--primary-color); }
+        .btn-delete { background: var(--danger-color); }
+        .btn-add { background: var(--accent-color); width: 100%; padding: 12px; font-size: 15px;}
+        .btn-reset:disabled, .btn-delete:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* 新增成員表單 */
+        .add-user-form { display: flex; flex-direction: column; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 20px;}
+        .add-user-form input, .add-user-form select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
     </style>
 </head>
 <body>
@@ -44,9 +54,24 @@
         <span style="font-weight: bold; color: var(--primary-color);">🛡️ 管理者專區</span>
     </div>
 
-    <!-- 1. 人員密碼重置專區 -->
+    <!-- 1. 人員管理專區 (新增與修改/刪除) -->
     <div class="panel">
-        <h2 class="system-title">🔑 人員密碼重置與管理</h2>
+        <h2 class="system-title">👥 家族成員管理</h2>
+        
+        <!-- 新增成員區塊 -->
+        <div class="add-user-form">
+            <div style="font-weight: bold; margin-bottom: 5px; color: #555;">➕ 新增成員</div>
+            <input type="text" id="newUserName" placeholder="輸入成員稱呼 (例: 哥哥、阿公)">
+            <input type="text" id="newUserPin" placeholder="設定 4 位數密碼 (例: 1234)" maxlength="4">
+            <select id="newUserRole">
+                <option value="member">一般成員</option>
+                <option value="parent">家長 (同管理員權限)</option>
+                <option value="admin">系統管理者</option>
+            </select>
+            <button class="btn-add" id="btnAddUser">確認新增成員</button>
+        </div>
+
+        <div style="font-weight: bold; margin-bottom: 10px; color: #555;">📋 現有成員名單</div>
         <div class="user-reset-list" id="userResetContainer">
             <div style="text-align:center; color:#888;">載入成員名單中...</div>
         </div>
@@ -77,13 +102,14 @@
             doc, 
             updateDoc, 
             addDoc, 
+            deleteDoc,
             query, 
             orderBy, 
             onSnapshot, 
             serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化 (homebasedb)
+        // 1. Firebase 初始化
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
@@ -121,9 +147,10 @@
         async function initAdminPage() {
             await loadUsersFromFirebase();
             listenToLogs();
+            document.getElementById('btnAddUser').addEventListener('click', addNewUser);
         }
 
-        // 3. 從 Firebase 載入成員資料 (供密碼重置與下拉選單使用)
+        // 3. 從 Firebase 載入成員資料
         async function loadUsersFromFirebase() {
             try {
                 const querySnapshot = await getDocs(collection(db, "users"));
@@ -149,7 +176,7 @@
             }
         }
 
-        // 4. 渲染成員重置清單
+        // 4. 渲染成員管理清單
         function renderUserResetList() {
             const container = document.getElementById('userResetContainer');
             container.innerHTML = '';
@@ -160,6 +187,10 @@
             }
 
             allUsers.forEach(user => {
+                let roleDisplay = '一般成員';
+                if (user.role === 'admin') roleDisplay = '管理者';
+                if (user.role === 'parent') roleDisplay = '家長';
+
                 const div = document.createElement('div');
                 div.className = 'user-reset-item';
                 div.innerHTML = `
@@ -167,47 +198,100 @@
                         <img class="user-avatar" src="${user.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${user.name}'">
                         <div>
                             <div class="user-name">${user.name}</div>
-                            <div style="font-size:12px; color:#777;">角色: ${user.role === 'admin' ? '管理者' : '一般成員'}</div>
+                            <div style="font-size:12px; color:#777;">角色: ${roleDisplay}</div>
                         </div>
                     </div>
-                    <button class="btn-reset" data-id="${user.docId}" data-name="${user.name}">重置密碼</button>
+                    <div class="action-buttons">
+                        <button class="btn-reset" data-id="${user.docId}" data-name="${user.name}">重置密碼</button>
+                        <button class="btn-delete" data-id="${user.docId}" data-name="${user.name}">刪除</button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
 
-            // 綁定重置按鈕事件
+            // 綁定按鈕事件
             container.querySelectorAll('.btn-reset').forEach(btn => {
                 btn.addEventListener('click', () => resetUserPin(btn.getAttribute('data-id'), btn.getAttribute('data-name')));
             });
+            container.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteUser(btn.getAttribute('data-id'), btn.getAttribute('data-name')));
+            });
         }
 
-        // 5. 重置密碼動作
+        // 5. 新增成員功能
+        async function addNewUser() {
+            const nameInput = document.getElementById('newUserName').value.trim();
+            const pinInput = document.getElementById('newUserPin').value.trim();
+            const roleInput = document.getElementById('newUserRole').value;
+
+            if (!nameInput) return alert("請輸入成員稱呼！");
+            if (!/^\d{4}$/.test(pinInput)) return alert("密碼格式錯誤，必須為 4 位數字！");
+            
+            // 檢查名稱是否重複
+            if (allUsers.some(u => u.name === nameInput)) {
+                return alert("此稱呼已存在，請使用其他名稱！");
+            }
+
+            try {
+                const newUser = {
+                    name: nameInput,
+                    pin: pinInput,
+                    role: roleInput,
+                    avatar: `https://ui-avatars.com/api/?name=${nameInput}&background=random` // 預設頭像
+                };
+
+                await addDoc(collection(db, "users"), newUser);
+                await logAction('新增成員', `新增了成員：${nameInput} (${roleInput})`);
+                
+                alert(`成功新增成員：${nameInput}！`);
+                
+                // 清空表單並重新載入名單
+                document.getElementById('newUserName').value = '';
+                document.getElementById('newUserPin').value = '';
+                await loadUsersFromFirebase();
+
+            } catch (error) {
+                console.error("新增成員失敗：", error);
+                alert("新增成員失敗，請檢視連線或權限。");
+            }
+        }
+
+        // 6. 刪除成員功能
+        async function deleteUser(docId, targetName) {
+            // 安全機制：禁止刪除自己
+            if (targetName === currentUser.name) {
+                return alert("為保護系統安全，您無法刪除自己的帳號！");
+            }
+
+            const confirmMsg = `⚠️ 警告：確定要刪除成員【${targetName}】嗎？\n\n(註：為保留過往回憶，該成員過去在聊天室、行事曆、記帳本的紀錄將會保留，不會被刪除。)`;
+            if (confirm(confirmMsg)) {
+                try {
+                    await deleteDoc(doc(db, "users", docId));
+                    await logAction('刪除成員', `刪除了成員：${targetName}`);
+                    
+                    alert(`已成功刪除成員：${targetName}`);
+                    await loadUsersFromFirebase(); // 重新載入
+                } catch (error) {
+                    console.error("刪除成員失敗：", error);
+                    alert("刪除成員失敗，請檢視連線。");
+                }
+            }
+        }
+
+        // 7. 重置密碼動作
         async function resetUserPin(docId, targetName) {
             const newPin = prompt(`請輸入 ${targetName} 的新 4 位數密碼：`, "1234");
             
             if (newPin === null) return; 
             if (!/^\d{4}$/.test(newPin.trim())) {
-                alert("密碼格式錯誤，必須剛好為 4 位數字！");
-                return;
+                return alert("密碼格式錯誤，必須剛好為 4 位數字！");
             }
 
-            const confirmMsg = `確定要將【${targetName}】的密碼重置為 [ ${newPin.trim()} ] 嗎？`;
-            if (confirm(confirmMsg)) {
+            if (confirm(`確定要將【${targetName}】的密碼重置為 [ ${newPin.trim()} ] 嗎？`)) {
                 try {
                     const userRef = doc(db, "users", docId);
                     await updateDoc(userRef, { pin: newPin.trim() });
-
-                    // 記錄寫入 Logs
-                    const now = new Date();
-                    const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-                    
-                    await addDoc(collection(db, "logs"), {
-                        datetime: datetimeStr,
-                        operator: currentUser.name,
-                        actionType: '重置密碼',
-                        details: `重置了 ${targetName} 的密碼`,
-                        timestamp: serverTimestamp()
-                    });
+                    await logAction('重置密碼', `重置了 ${targetName} 的密碼`);
 
                     alert(`已成功將 ${targetName} 的密碼重置為 ${newPin.trim()}！`);
                 } catch (error) {
@@ -217,7 +301,21 @@
             }
         }
 
-        // 6. 即時監聽系統操作紀錄 (Logs)
+        // 8. 寫入 Logs 共用函式
+        async function logAction(actionType, details) {
+            const now = new Date();
+            const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            
+            await addDoc(collection(db, "logs"), {
+                datetime: datetimeStr,
+                operator: currentUser.name,
+                actionType: actionType,
+                details: details,
+                timestamp: serverTimestamp()
+            });
+        }
+
+        // 9. 即時監聽系統操作紀錄 (Logs)
         function listenToLogs() {
             const logsRef = collection(db, "logs");
             const q = query(logsRef, orderBy("timestamp", "desc"));
@@ -231,7 +329,7 @@
             });
         }
 
-        // 7. 渲染畫面與篩選邏輯
+        // 10. 渲染畫面與篩選邏輯
         function renderLogs() {
             const container = document.getElementById('logContainer');
             const filterName = document.getElementById('userFilter').value;
