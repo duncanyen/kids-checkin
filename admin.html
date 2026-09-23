@@ -35,17 +35,34 @@
         .user-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 150px; }
         .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
         .user-name { font-weight: bold; font-size: 16px; }
+        .user-subtext { font-size: 12px; color: #777; margin-top: 2px; }
         
         .action-buttons { display: flex; gap: 8px; }
-        .btn-reset, .btn-delete, .btn-add { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
-        .btn-reset { background: var(--primary-color); }
+        .btn-edit, .btn-delete, .btn-add { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-edit { background: var(--primary-color); }
         .btn-delete { background: var(--danger-color); }
         .btn-add { background: var(--accent-color); width: 100%; padding: 12px; font-size: 15px;}
-        .btn-reset:disabled, .btn-delete:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-edit:disabled, .btn-delete:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* 新增成員表單 */
-        .add-user-form { display: flex; flex-direction: column; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 20px;}
-        .add-user-form input, .add-user-form select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
+        /* 表單與彈窗通用樣式 */
+        .form-group { display: flex; flex-direction: column; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 20px;}
+        .form-row { display: flex; flex-direction: column; gap: 4px; }
+        .form-row label { font-size: 13px; font-weight: bold; color: #555; }
+        .form-row input, .form-row select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
+        .form-row input[readonly] { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; border-style: dashed; }
+        
+        /* Checkbox 群組 */
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: white; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0; }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; color: #333;}
+        .checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
+
+        /* 彈出視窗 Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;}
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-header { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #e0e0e0; color: #333; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-save { background: var(--primary-color); color: white; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -54,25 +71,50 @@
         <span style="font-weight: bold; color: var(--primary-color);">🛡️ 管理者專區</span>
     </div>
 
-    <!-- 1. 人員管理專區 (新增與修改/刪除) -->
+    <!-- 1. 人員管理專區 -->
     <div class="panel">
         <h2 class="system-title">👥 家族成員管理</h2>
         
         <!-- 新增成員區塊 -->
-        <div class="add-user-form">
-            <div style="font-weight: bold; margin-bottom: 5px; color: #555;">➕ 新增成員</div>
-            <input type="text" id="newUserName" placeholder="輸入成員稱呼 (例: 哥哥、阿公)">
-            <input type="text" id="newUserPin" placeholder="設定 4 位數密碼 (例: 1234)" maxlength="4">
-            <select id="newUserRole">
-                <option value="member">一般成員</option>
-                <option value="parent">家長 (同管理員權限)</option>
-                <option value="admin">系統管理者</option>
-            </select>
-            <button class="btn-add" id="btnAddUser">確認新增成員</button>
+        <div class="form-group" id="addUserForm">
+            <div style="font-weight: bold; margin-bottom: 5px; color: var(--primary-color);">➕ 新增成員</div>
+            
+            <div class="form-row">
+                <label>帳號 ID (唯一值，英文或數字)</label>
+                <input type="text" id="newUserId" placeholder="例: papa123" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>成員稱呼 (顯示名稱)</label>
+                <input type="text" id="newUserName" placeholder="例: 爸爸" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>登入密碼 (4位數字)</label>
+                <input type="text" id="newUserPin" placeholder="例: 1234" maxlength="4" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>電子郵件 (選填)</label>
+                <input type="email" id="newUserEmail" placeholder="例: user@example.com" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>系統角色權限</label>
+                <select id="newUserRole">
+                    <option value="member">一般成員</option>
+                    <option value="parent">家長 (同管理員權限)</option>
+                    <option value="admin">系統管理者</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>主選單功能開放設定</label>
+                <div class="checkbox-group" id="newMenusContainer">
+                    <!-- JS 動態生成 Checkbox -->
+                </div>
+            </div>
+
+            <button class="btn-add" id="btnAddUser" style="margin-top: 10px;">確認新增成員</button>
         </div>
 
         <div style="font-weight: bold; margin-bottom: 10px; color: #555;">📋 現有成員名單</div>
-        <div class="user-reset-list" id="userResetContainer">
+        <div class="user-reset-list" id="userListContainer">
             <div style="text-align:center; color:#888;">載入成員名單中...</div>
         </div>
     </div>
@@ -93,20 +135,58 @@
         </div>
     </div>
 
+    <!-- 編輯成員 Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">✏️ 編輯成員資料</div>
+            
+            <input type="hidden" id="editDocId">
+            
+            <div class="form-group" style="border: none; padding: 0; background: transparent; margin-bottom: 0;">
+                <div class="form-row">
+                    <label>帳號 ID (建立後不可更改)</label>
+                    <input type="text" id="editAccountId" placeholder="設定唯一的帳號ID" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>成員稱呼 (顯示名稱)</label>
+                    <input type="text" id="editName" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>登入密碼 (4位數字)</label>
+                    <input type="text" id="editPin" maxlength="4" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>電子郵件 (選填)</label>
+                    <input type="email" id="editEmail" placeholder="選填" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>系統角色權限</label>
+                    <select id="editRole">
+                        <option value="member">一般成員</option>
+                        <option value="parent">家長 (同管理員權限)</option>
+                        <option value="admin">系統管理者</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>主選單功能開放設定</label>
+                    <div class="checkbox-group" id="editMenusContainer">
+                        <!-- JS 動態生成 Checkbox -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeEditModal()">取消</button>
+                <button class="btn-save" onclick="saveEditUser()">儲存修改</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
-            getFirestore, 
-            collection, 
-            getDocs, 
-            doc, 
-            updateDoc, 
-            addDoc, 
-            deleteDoc,
-            query, 
-            orderBy, 
-            onSnapshot, 
-            serverTimestamp 
+            getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc,
+            query, orderBy, onSnapshot, serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         // 1. Firebase 初始化
@@ -116,12 +196,20 @@
             projectId: "homebasedb",
             storageBucket: "homebasedb.firebasestorage.app",
             messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775",
-            measurementId: "G-K7FSPG5B9R"
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        // 系統預設可用的主選單功能清單 (擴充準備)
+        const systemMenuOptions = [
+            { id: 'chat', label: '💬 家庭聊天室' },
+            { id: 'calendar', label: '📅 家庭行事曆' },
+            { id: 'finance', label: '💰 記帳本' },
+            { id: 'photodump', label: '📸 Photo Dump' },
+            { id: 'wishlist', label: '⭐ 許願牆' },
+            { id: 'lottery', label: '🎲 抽籤工具' }
+        ];
 
         let allLogs = [];
         let allUsers = [];
@@ -145,9 +233,32 @@
         }
 
         async function initAdminPage() {
+            renderMenuCheckboxes('newMenusContainer'); // 渲染新增表單的選單
+            renderMenuCheckboxes('editMenusContainer'); // 渲染編輯表單的選單
+            
             await loadUsersFromFirebase();
             listenToLogs();
             document.getElementById('btnAddUser').addEventListener('click', addNewUser);
+        }
+
+        // 動態生成 Checkbox
+        function renderMenuCheckboxes(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            systemMenuOptions.forEach(menu => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-label';
+                // 預設全勾選
+                label.innerHTML = `<input type="checkbox" value="${menu.id}" checked> ${menu.label}`;
+                container.appendChild(label);
+            });
+        }
+
+        // 取得容器內已勾選的選項陣列
+        function getCheckedMenus(containerId) {
+            const container = document.getElementById(containerId);
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
         }
 
         // 3. 從 Firebase 載入成員資料
@@ -162,23 +273,22 @@
                     const uData = docSnap.data();
                     allUsers.push({ docId: docSnap.id, ...uData });
 
-                    // 填入下拉選單
                     const opt = document.createElement('option');
                     opt.value = uData.name;
                     opt.innerText = uData.name;
                     filterSelect.appendChild(opt);
                 });
 
-                renderUserResetList();
+                renderUserList();
             } catch (error) {
                 console.error("載入成員失敗：", error);
-                document.getElementById('userResetContainer').innerHTML = '<div style="text-align:center; color:#e53935;">載入成員失敗</div>';
+                document.getElementById('userListContainer').innerHTML = '<div style="text-align:center; color:#e53935;">載入成員失敗</div>';
             }
         }
 
         // 4. 渲染成員管理清單
-        function renderUserResetList() {
-            const container = document.getElementById('userResetContainer');
+        function renderUserList() {
+            const container = document.getElementById('userListContainer');
             container.innerHTML = '';
 
             if (allUsers.length === 0) {
@@ -190,6 +300,8 @@
                 let roleDisplay = '一般成員';
                 if (user.role === 'admin') roleDisplay = '管理者';
                 if (user.role === 'parent') roleDisplay = '家長';
+                
+                const idDisplay = user.accountId ? `ID: ${user.accountId}` : '<span style="color:#e53935;">(尚未設定帳號ID)</span>';
 
                 const div = document.createElement('div');
                 div.className = 'user-reset-item';
@@ -198,108 +310,183 @@
                         <img class="user-avatar" src="${user.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${user.name}'">
                         <div>
                             <div class="user-name">${user.name}</div>
-                            <div style="font-size:12px; color:#777;">角色: ${roleDisplay}</div>
+                            <div class="user-subtext">${roleDisplay} | ${idDisplay}</div>
                         </div>
                     </div>
                     <div class="action-buttons">
-                        <button class="btn-reset" data-id="${user.docId}" data-name="${user.name}">重置密碼</button>
-                        <button class="btn-delete" data-id="${user.docId}" data-name="${user.name}">刪除</button>
+                        <button class="btn-edit" onclick="window.openEditModal('${user.docId}')">編輯</button>
+                        <button class="btn-delete" onclick="window.deleteUser('${user.docId}', '${user.name}')">刪除</button>
                     </div>
                 `;
                 container.appendChild(div);
             });
-
-            // 綁定按鈕事件
-            container.querySelectorAll('.btn-reset').forEach(btn => {
-                btn.addEventListener('click', () => resetUserPin(btn.getAttribute('data-id'), btn.getAttribute('data-name')));
-            });
-            container.querySelectorAll('.btn-delete').forEach(btn => {
-                btn.addEventListener('click', () => deleteUser(btn.getAttribute('data-id'), btn.getAttribute('data-name')));
-            });
         }
 
-        // 5. 新增成員功能
+        // ================= 5. 新增成員 =================
         async function addNewUser() {
+            const idInput = document.getElementById('newUserId').value.trim();
             const nameInput = document.getElementById('newUserName').value.trim();
             const pinInput = document.getElementById('newUserPin').value.trim();
+            const emailInput = document.getElementById('newUserEmail').value.trim();
             const roleInput = document.getElementById('newUserRole').value;
+            const selectedMenus = getCheckedMenus('newMenusContainer');
 
+            // 基礎驗證
+            if (!idInput) return alert("請設定帳號 ID！");
+            if (!/^[a-zA-Z0-9_]+$/.test(idInput)) return alert("帳號 ID 只能包含英文、數字與底線！");
             if (!nameInput) return alert("請輸入成員稱呼！");
             if (!/^\d{4}$/.test(pinInput)) return alert("密碼格式錯誤，必須為 4 位數字！");
-            
-            // 檢查名稱是否重複
-            if (allUsers.some(u => u.name === nameInput)) {
-                return alert("此稱呼已存在，請使用其他名稱！");
+            if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+                return alert("電子郵件格式不正確！");
             }
+            
+            // 唯一性驗證
+            if (allUsers.some(u => u.accountId === idInput)) return alert("此「帳號 ID」已存在，請更換一個！");
+            if (allUsers.some(u => u.name === nameInput)) return alert("此「稱呼」已存在，請更換一個！");
 
             try {
+                document.getElementById('btnAddUser').disabled = true;
+                document.getElementById('btnAddUser').innerText = "處理中...";
+
                 const newUser = {
+                    accountId: idInput,
                     name: nameInput,
                     pin: pinInput,
+                    email: emailInput || null,
                     role: roleInput,
-                    avatar: `https://ui-avatars.com/api/?name=${nameInput}&background=random` // 預設頭像
+                    menus: selectedMenus,
+                    avatar: `https://ui-avatars.com/api/?name=${nameInput}&background=random`
                 };
 
                 await addDoc(collection(db, "users"), newUser);
-                await logAction('新增成員', `新增了成員：${nameInput} (${roleInput})`);
+                await logAction('新增成員', `新增了成員：${nameInput} (${idInput})`);
                 
                 alert(`成功新增成員：${nameInput}！`);
                 
-                // 清空表單並重新載入名單
+                // 清空表單
+                document.getElementById('newUserId').value = '';
                 document.getElementById('newUserName').value = '';
                 document.getElementById('newUserPin').value = '';
-                await loadUsersFromFirebase();
+                document.getElementById('newUserEmail').value = '';
+                // 恢復預設全選
+                renderMenuCheckboxes('newMenusContainer'); 
 
+                await loadUsersFromFirebase();
             } catch (error) {
                 console.error("新增成員失敗：", error);
                 alert("新增成員失敗，請檢視連線或權限。");
+            } finally {
+                document.getElementById('btnAddUser').disabled = false;
+                document.getElementById('btnAddUser').innerText = "確認新增成員";
             }
         }
 
-        // 6. 刪除成員功能
-        async function deleteUser(docId, targetName) {
-            // 安全機制：禁止刪除自己
+        // ================= 6. 編輯成員 (Modal 邏輯) =================
+        window.openEditModal = function(docId) {
+            const user = allUsers.find(u => u.docId === docId);
+            if (!user) return;
+
+            document.getElementById('editDocId').value = user.docId;
+            document.getElementById('editName').value = user.name;
+            document.getElementById('editPin').value = user.pin;
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editRole').value = user.role;
+            
+            const accountIdInput = document.getElementById('editAccountId');
+            accountIdInput.value = user.accountId || '';
+            
+            // 首次更新機制：如果有值就鎖定唯讀，如果是舊資料空的則允許輸入
+            if (user.accountId) {
+                accountIdInput.readOnly = true;
+                accountIdInput.title = "帳號 ID 設定後不可更改";
+            } else {
+                accountIdInput.readOnly = false;
+                accountIdInput.title = "首次設定，設定後未來將不可更改";
+            }
+
+            // 還原 Checkbox 狀態 (如果沒設定過 menus，預設全勾)
+            const menusToSet = user.menus || systemMenuOptions.map(m => m.id);
+            const container = document.getElementById('editMenusContainer');
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = menusToSet.includes(cb.value);
+            });
+
+            document.getElementById('editModal').style.display = 'flex';
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editModal').style.display = 'none';
+        };
+
+        window.saveEditUser = async function() {
+            const docId = document.getElementById('editDocId').value;
+            const idInput = document.getElementById('editAccountId').value.trim();
+            const nameInput = document.getElementById('editName').value.trim();
+            const pinInput = document.getElementById('editPin').value.trim();
+            const emailInput = document.getElementById('editEmail').value.trim();
+            const roleInput = document.getElementById('editRole').value;
+            const selectedMenus = getCheckedMenus('editMenusContainer');
+
+            // 基礎驗證
+            if (!idInput) return alert("請設定帳號 ID！");
+            if (!/^[a-zA-Z0-9_]+$/.test(idInput)) return alert("帳號 ID 只能包含英文、數字與底線！");
+            if (!nameInput) return alert("請輸入成員稱呼！");
+            if (!/^\d{4}$/.test(pinInput)) return alert("密碼格式錯誤，必須為 4 位數字！");
+            if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
+                return alert("電子郵件格式不正確！");
+            }
+            
+            // 唯一性驗證 (排除自己當前的文件 ID)
+            if (allUsers.some(u => u.accountId === idInput && u.docId !== docId)) {
+                return alert("此「帳號 ID」已與其他成員重複，請更換！");
+            }
+            if (allUsers.some(u => u.name === nameInput && u.docId !== docId)) {
+                return alert("此「稱呼」已與其他成員重複，請更換！");
+            }
+
+            try {
+                const userRef = doc(db, "users", docId);
+                await updateDoc(userRef, {
+                    accountId: idInput,
+                    name: nameInput,
+                    pin: pinInput,
+                    email: emailInput || null,
+                    role: roleInput,
+                    menus: selectedMenus
+                });
+
+                await logAction('編輯成員', `更新了成員資訊：${nameInput}`);
+                alert("儲存成功！");
+                closeEditModal();
+                await loadUsersFromFirebase();
+
+            } catch (error) {
+                console.error("更新失敗：", error);
+                alert("更新失敗，請檢視網路。");
+            }
+        };
+
+        // 7. 刪除成員
+        window.deleteUser = async function(docId, targetName) {
             if (targetName === currentUser.name) {
                 return alert("為保護系統安全，您無法刪除自己的帳號！");
             }
 
-            const confirmMsg = `⚠️ 警告：確定要刪除成員【${targetName}】嗎？\n\n(註：為保留過往回憶，該成員過去在聊天室、行事曆、記帳本的紀錄將會保留，不會被刪除。)`;
+            const confirmMsg = `⚠️ 警告：確定要刪除成員【${targetName}】嗎？\n\n(註：該成員過去的紀錄將會保留，不會被刪除。)`;
             if (confirm(confirmMsg)) {
                 try {
                     await deleteDoc(doc(db, "users", docId));
                     await logAction('刪除成員', `刪除了成員：${targetName}`);
                     
                     alert(`已成功刪除成員：${targetName}`);
-                    await loadUsersFromFirebase(); // 重新載入
+                    await loadUsersFromFirebase(); 
                 } catch (error) {
                     console.error("刪除成員失敗：", error);
                     alert("刪除成員失敗，請檢視連線。");
                 }
             }
-        }
-
-        // 7. 重置密碼動作
-        async function resetUserPin(docId, targetName) {
-            const newPin = prompt(`請輸入 ${targetName} 的新 4 位數密碼：`, "1234");
-            
-            if (newPin === null) return; 
-            if (!/^\d{4}$/.test(newPin.trim())) {
-                return alert("密碼格式錯誤，必須剛好為 4 位數字！");
-            }
-
-            if (confirm(`確定要將【${targetName}】的密碼重置為 [ ${newPin.trim()} ] 嗎？`)) {
-                try {
-                    const userRef = doc(db, "users", docId);
-                    await updateDoc(userRef, { pin: newPin.trim() });
-                    await logAction('重置密碼', `重置了 ${targetName} 的密碼`);
-
-                    alert(`已成功將 ${targetName} 的密碼重置為 ${newPin.trim()}！`);
-                } catch (error) {
-                    console.error("重置密碼失敗：", error);
-                    alert("重置密碼失敗，請檢視網路。");
-                }
-            }
-        }
+        };
 
         // 8. 寫入 Logs 共用函式
         async function logAction(actionType, details) {
@@ -315,7 +502,7 @@
             });
         }
 
-        // 9. 即時監聽系統操作紀錄 (Logs)
+        // 9. 監聽 Logs
         function listenToLogs() {
             const logsRef = collection(db, "logs");
             const q = query(logsRef, orderBy("timestamp", "desc"));
@@ -329,7 +516,6 @@
             });
         }
 
-        // 10. 渲染畫面與篩選邏輯
         function renderLogs() {
             const container = document.getElementById('logContainer');
             const filterName = document.getElementById('userFilter').value;
