@@ -48,9 +48,9 @@
             overflow-x: hidden; 
         }
         
-        /* 區塊標題共用樣式 (已隱藏，依需求保留備用) */
+        /* 區塊標題共用樣式 (已啟用) */
         .section-header {
-            display: none; /* 根據需求，移除首頁的區塊標題文字 */
+            display: flex; 
             margin: 24px 0 12px 4px;
             align-items: center;
         }
@@ -180,7 +180,7 @@
         
         /* 聊天室未讀紅點 */
         .notification-badge { 
-            display: none; position: absolute; top: 12px; left: 12px; /* 移到左上角，或者跟著設計調整 */
+            display: none; position: absolute; top: 12px; left: 12px; 
             background-color: var(--danger); color: white; 
             font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; 
             border-radius: 11px; padding: 0 6px; text-align: center; 
@@ -239,7 +239,7 @@
         .like-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.3); }
         .like-btn.liked { background: rgba(255,255,255,0.9); border-color: white; }
         .like-count { font-size: 14px; font-weight: 800; color: white; }
-        .like-btn.liked .like-count { color: var(--danger); }
+        .like-btn.liked .like-count { color: var(--danger); } /* 修改：按讚後確保是清晰的紅色 */
 
         /* === 側邊選單 Sidebar === */
         .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(3px); z-index: 3000; opacity: 0; visibility: hidden; transition: 0.3s ease; }
@@ -259,7 +259,21 @@
         .sidebar-title { font-size: 12px; font-weight: 800; color: #94a3b8; padding: 0 24px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
         .sidebar-item { display: flex; align-items: center; padding: 14px 24px; color: var(--text-main); text-decoration: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .sidebar-item:hover, .sidebar-item:active { background: var(--primary-light); color: var(--primary-dark); border-right: 4px solid var(--primary); }
-        .sidebar-icon { font-size: 22px; margin-right: 16px; width: 26px; text-align: center; }
+        
+        /* 修改：為側邊欄圖示增加外框與圓角設計 */
+        .sidebar-icon { 
+            font-size: 18px; 
+            margin-right: 14px; 
+            width: 34px; 
+            height: 34px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            border-radius: 10px; /* 圓弧型四邊角 */
+            background: var(--bg-body);
+            transition: 0.2s;
+        }
 
         .sidebar-members { display: flex; gap: 12px; padding: 8px 24px 16px; overflow-x: auto; scrollbar-width: none; }
         .sidebar-members::-webkit-scrollbar { display: none; }
@@ -359,6 +373,8 @@
         
         <!-- 3. Photo Dump 照片輪播區 -->
         <div id="photoCarouselSection" class="photo-carousel-section" style="display: none;">
+            <!-- 修改：加上 Photo Dump 標題 -->
+            <div class="section-header"><div class="section-title">Photo Dump</div></div>
             <div class="carousel-container" id="photoCarouselContainer">
                 <!-- 動態載入照片 -->
             </div>
@@ -720,9 +736,10 @@
                 sideList.innerHTML += `<div class="sidebar-item" onclick="window.location.href='admin.html'" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
             }
 
-            // 🌟 修改：聊天室卡片改為與主頁一致風格
+            // 🌟 修改：新增 Chat 區塊標題文字並維持卡片結構
             if (allowedMenus.includes('chat') && modules.chat !== false) {
                 chatContainer.innerHTML = `
+                    <div class="section-header"><div class="section-title">Chat</div></div>
                     <div class="card-hero" onclick="window.location.href='chat.html'">
                         <div class="notification-badge" id="chatBadge">0</div>
                         <div>
@@ -817,14 +834,12 @@
                                 if(evt.endTime) { 
                                     const [eh, em] = evt.endTime.split(':'); 
                                     end.setHours(eh, em, 0, 0); 
-                                    // 🌟 檢查：如果已經超過結束時間，則標記為過期
                                     if (now > end) {
                                         isExpired = true;
                                     }
                                 }
                             }
 
-                            // 🌟 條件：如果沒有過期，才加進今日列表中
                             if (!isExpired) {
                                 todayEventsList.push(evt);
 
@@ -866,8 +881,9 @@
                         listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
                     }
 
-                    // 重新寫入卡片內容
+                    // 🌟 修改：新增 Calendar 區塊標題
                     agendaContainer.innerHTML = `
+                        <div class="section-header"><div class="section-title">Calendar</div></div>
                         <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
                             <div class="agenda-header">
                                 <div class="agenda-date">${dateTitle}</div>
@@ -926,6 +942,7 @@
                     const likeCount = likes.length;
 
                     if (displayImageUrl) {
+                        // 修改：將 style="color: ..." 行內樣式移除，改讓 CSS .like-btn.liked .like-count 來掌控色彩
                         html += `
                             <div class="carousel-item">
                                 <!-- 點擊照片進入 gallery.html -->
@@ -940,7 +957,7 @@
                                     </div>
                                     <div class="carousel-actions">
                                         <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">
-                                            ${isLiked ? '❤️' : '♡'} <span class="like-count" style="color: ${isLiked ? 'var(--danger-light)' : 'white'}">${likeCount > 0 ? likeCount : '讚'}</span>
+                                            ${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span>
                                         </button>
                                     </div>
                                 </div>
