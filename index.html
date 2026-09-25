@@ -48,10 +48,10 @@
             overflow-x: hidden; 
         }
         
-        /* 區塊標題共用樣式 */
+        /* 區塊標題共用樣式 (已隱藏，依需求保留備用) */
         .section-header {
+            display: none; /* 根據需求，移除首頁的區塊標題文字 */
             margin: 24px 0 12px 4px;
-            display: flex;
             align-items: center;
         }
         .section-title {
@@ -61,7 +61,6 @@
             letter-spacing: 0.5px;
             position: relative;
         }
-        /* 標題下方的小裝飾線 */
         .section-title::after {
             content: '';
             position: absolute;
@@ -103,7 +102,7 @@
         #dashboardView { display: none; max-width: 500px; margin: 0 auto; animation: fadeIn 0.4s ease-out forwards; opacity: 0; padding-bottom: 40px; }
         
         /* App Header (頂部導覽) */
-        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 8px 0; position: sticky; top: 0; background: var(--bg-body); z-index: 100; backdrop-filter: blur(10px); }
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 8px 0; position: sticky; top: 0; background: var(--bg-body); z-index: 100; backdrop-filter: blur(10px); }
         .app-brand { font-size: 24px; font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
         .hamburger-btn { 
             width: 40px; height: 40px; 
@@ -134,6 +133,7 @@
             box-shadow: var(--shadow-soft); 
             border: 1px solid var(--border-color); 
             cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            margin-bottom: 20px; /* 增加底部間距 */
         }
         .agenda-card:active { transform: translateY(2px) scale(0.99); box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fafafa; }
         .agenda-header { 
@@ -144,53 +144,52 @@
         .agenda-date { font-size: 16px; font-weight: 800; color: var(--text-main); }
         .agenda-count { font-size: 13px; font-weight: 700; color: var(--primary-dark); background: var(--primary-light); padding: 4px 10px; border-radius: 12px; }
         
-        .agenda-list { display: flex; flex-direction: column; gap: 12px; max-height: 150px; overflow-y: auto; padding-right: 4px; }
+        /* 縮小列表間距 */
+        .agenda-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding-right: 4px; }
         .agenda-list::-webkit-scrollbar { width: 4px; }
         .agenda-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
-        .agenda-item { display: flex; align-items: center; gap: 12px; background: var(--bg-body); padding: 10px 12px; border-radius: 12px; }
-        .agenda-time { font-size: 13px; font-weight: 800; color: var(--text-sub); min-width: 75px; text-align: left; letter-spacing: -0.5px; }
+        .agenda-item { display: flex; align-items: center; gap: 10px; background: var(--bg-body); padding: 8px 10px; border-radius: 12px; }
+        .agenda-time { font-size: 13px; font-weight: 800; color: var(--text-sub); min-width: 70px; text-align: left; letter-spacing: -0.5px; }
         .agenda-divider { width: 3px; height: 16px; background: var(--primary); border-radius: 2px; }
-        .agenda-title { flex: 1; font-weight: 700; font-size: 15px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .agenda-title { flex: 1; font-weight: 700; font-size: 14px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .agenda-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0; }
-        .agenda-empty { text-align: center; font-size: 15px; font-weight: 600; color: var(--text-sub); padding: 20px 0; }
+        .agenda-empty { text-align: center; font-size: 15px; font-weight: 600; color: var(--text-sub); padding: 16px 0; }
 
-        /* === 2. 聊天室 Hero Card 樣式 === */
+        /* === 2. 聊天室 卡片樣式 (改為與主頁一致風格) === */
         .card-hero { 
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-            color: white; 
-            padding: 24px; 
+            background: var(--bg-card); /* 改回白色背景 */
+            color: var(--text-main); /* 調整文字顏色 */
+            padding: 20px; 
             border-radius: var(--radius-lg); 
             display: flex; flex-direction: row; align-items: center; justify-content: space-between; 
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); /* 使用主色調的陰影 */
-            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: var(--shadow-soft); 
+            border: 1px solid var(--border-color);
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
             position: relative; overflow: hidden;
+            margin-bottom: 20px;
         }
-        /* 增加卡片背景裝飾 */
-        .card-hero::before {
-            content: ''; position: absolute; top: -20px; right: -20px; width: 100px; height: 100px;
-            background: rgba(255,255,255,0.1); border-radius: 50%;
-        }
-        .card-hero:active { transform: translateY(2px) scale(0.98); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .card-hero:active { transform: translateY(2px) scale(0.99); box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fafafa; }
+        
         .card-hero .dash-icon { 
-            background: rgba(255,255,255,0.2); 
-            width: 60px; height: 60px; 
-            border-radius: 20px; font-size: 30px; 
+            background: var(--primary-light); 
+            width: 56px; height: 56px; 
+            border-radius: 16px; font-size: 28px; 
             display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(4px);
+            color: var(--primary-dark);
         }
         
         /* 聊天室未讀紅點 */
         .notification-badge { 
-            display: none; position: absolute; top: 16px; right: 16px; 
+            display: none; position: absolute; top: 12px; left: 12px; /* 移到左上角，或者跟著設計調整 */
             background-color: var(--danger); color: white; 
-            font-size: 13px; font-weight: 800; height: 24px; min-width: 24px; line-height: 24px; 
-            border-radius: 12px; padding: 0 8px; text-align: center; 
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5); border: 2px solid #059669;
-            z-index: 10; /* 加入這一行，強制把未讀提示拉到最上層 */
+            font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; 
+            border-radius: 11px; padding: 0 6px; text-align: center; 
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4); border: 2px solid white;
+            z-index: 10;
         }
 
         /* === 3. Photo Dump 輪播樣式 === */
-        .photo-carousel-section { margin-top: 8px; }
+        .photo-carousel-section { margin-top: 0px; }
         .carousel-container { 
             display: flex; overflow-x: auto; scroll-snap-type: x mandatory; 
             gap: 16px; padding-bottom: 12px; padding-top: 4px;
@@ -199,17 +198,17 @@
         .carousel-container::-webkit-scrollbar { display: none; }
         
         .carousel-item { 
-            flex: 0 0 88%; /* 稍微露出下一張的一邊，暗示可滑動 */
+            flex: 0 0 88%; 
             scroll-snap-align: center; 
             background: var(--bg-card); 
             border-radius: var(--radius-lg); 
             overflow: hidden; 
             box-shadow: var(--shadow-soft); 
-            position: relative; /* 為了讓 info 疊上去 */
+            position: relative; 
             border: 1px solid var(--border-color);
         }
         .carousel-img { 
-            width: 100%; height: 260px; /* 增加高度 */
+            width: 100%; height: 260px;
             object-fit: cover; cursor: pointer; display: block; 
             background: var(--bg-body); transition: transform 0.3s ease;
         }
@@ -222,14 +221,13 @@
             display: flex; justify-content: space-between; align-items: flex-end; 
             background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
             color: white;
-            pointer-events: none; /* 避免擋住圖片點擊 */
+            pointer-events: none; 
         }
         .carousel-author { display: flex; align-items: center; gap: 10px; }
         .carousel-author-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.8); }
         .carousel-author-name { font-size: 15px; font-weight: 800; color: white; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .carousel-date { font-size: 12px; color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.3); margin-top: 2px; }
         
-        /* 點讚按鈕區域，恢復 pointer-events 以便點擊 */
         .carousel-actions { pointer-events: auto; }
         .like-btn { 
             background: rgba(255,255,255,0.2); backdrop-filter: blur(4px);
@@ -354,22 +352,13 @@
         </div>
 
         <!-- 1. 行事曆卡片區塊 -->
-        <div class="section-header">
-            <div class="section-title">行事曆安排</div>
-        </div>
         <div id="todayAgendaContainer"></div>
         
         <!-- 2. 聊天室卡片區塊 -->
-        <div class="section-header" style="margin-top: 32px;">
-            <div class="section-title">即時互動</div>
-        </div>
         <div id="chatMainCardContainer"></div>
         
         <!-- 3. Photo Dump 照片輪播區 -->
         <div id="photoCarouselSection" class="photo-carousel-section" style="display: none;">
-            <div class="section-header" style="margin-top: 32px;">
-                <div class="section-title">Photo Dump</div>
-            </div>
             <div class="carousel-container" id="photoCarouselContainer">
                 <!-- 動態載入照片 -->
             </div>
@@ -731,14 +720,14 @@
                 sideList.innerHTML += `<div class="sidebar-item" onclick="window.location.href='admin.html'" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
             }
 
-            // 單獨渲染主頁的「聊天室」卡片 (如果權限允許)
+            // 🌟 修改：聊天室卡片改為與主頁一致風格
             if (allowedMenus.includes('chat') && modules.chat !== false) {
                 chatContainer.innerHTML = `
                     <div class="card-hero" onclick="window.location.href='chat.html'">
                         <div class="notification-badge" id="chatBadge">0</div>
                         <div>
-                            <div style="font-size: 22px; font-weight: 800; margin-bottom: 6px; letter-spacing: 1px;">群組聊天室</div>
-                            <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">隨時隨地與家人保持聯絡</div>
+                            <div style="font-size: 18px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;">聊天室</div>
+                            <div style="font-size: 13px; color: var(--text-sub); font-weight: 500;">隨時隨地與家人保持聯絡</div>
                         </div>
                         <div class="dash-icon">💬</div>
                     </div>
@@ -812,24 +801,39 @@
 
                     snapshot.forEach(docSnap => {
                         const evt = docSnap.data();
+                        
+                        // 確保只有今天的事件
                         if ((evt.visibility === 'public' || evt.operator === user.name) && evt.date === todayStr) {
-                            todayEventsList.push(evt);
-
+                            
                             let start = new Date(now);
                             let end = new Date(now);
+                            let isExpired = false;
+
                             if (evt.isAllDay !== false) { 
                                 start.setHours(0,0,0,0);
                                 end.setHours(23,59,59,999);
                             } else {
                                 if(evt.startTime) { const [sh, sm] = evt.startTime.split(':'); start.setHours(sh, sm, 0, 0); }
-                                if(evt.endTime) { const [eh, em] = evt.endTime.split(':'); end.setHours(eh, em, 0, 0); }
+                                if(evt.endTime) { 
+                                    const [eh, em] = evt.endTime.split(':'); 
+                                    end.setHours(eh, em, 0, 0); 
+                                    // 🌟 檢查：如果已經超過結束時間，則標記為過期
+                                    if (now > end) {
+                                        isExpired = true;
+                                    }
+                                }
                             }
 
-                            let triggerTime = new Date(start);
-                            if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
-                            else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
+                            // 🌟 條件：如果沒有過期，才加進今日列表中
+                            if (!isExpired) {
+                                todayEventsList.push(evt);
 
-                            if (now >= triggerTime && now <= end) activeIcons.push(categoryIcons[evt.category] || '📌');
+                                let triggerTime = new Date(start);
+                                if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
+                                else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
+
+                                if (now >= triggerTime && now <= end) activeIcons.push(categoryIcons[evt.category] || '📌');
+                            }
                         }
                     });
 
@@ -889,7 +893,6 @@
             } catch (e) { console.error("檢查行事曆提醒失敗", e); }
         };
 
-        // 🌟 修改：正確相容多圖 (imageUrls) 與單圖 (imageUrl) 格式
         window.fetchAndRenderPhotoCarousel = function(user) {
             const q = query(collection(db, "photos"), orderBy("timestamp", "desc"), limit(5));
             onSnapshot(q, (snapshot) => {
@@ -911,12 +914,10 @@
                     const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
                     const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
                     
-                    // 👉 這裡修正了讀取邏輯：優先抓取 imageUrls 陣列的第一張圖，若無則降級讀取舊版 imageUrl
                     let displayImageUrl = '';
                     if (photo.imageUrls && Array.isArray(photo.imageUrls) && photo.imageUrls.length > 0) {
-                        displayImageUrl = photo.imageUrls[0]; // 取陣列第一張當封面
+                        displayImageUrl = photo.imageUrls[0]; 
                     } else {
-                        // 相容舊版資料
                         displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
                     }
                     
@@ -924,7 +925,6 @@
                     const isLiked = likes.includes(user.name);
                     const likeCount = likes.length;
 
-                    // 只有當確實抓得到圖片網址時，才渲染這張卡片
                     if (displayImageUrl) {
                         html += `
                             <div class="carousel-item">
