@@ -57,7 +57,13 @@
         .upload-time { font-size: 11px; color: var(--text-sub); margin-top: 2px; font-weight: 600; }
         .btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 6px; }
 
+        /* 多圖輪播 (Carousel) */
+        .photo-carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .photo-carousel::-webkit-scrollbar { display: none; }
+        .carousel-item-wrapper { flex: 0 0 100%; scroll-snap-align: start; position: relative; }
         .card-image { width: 100%; max-height: 450px; object-fit: cover; display: block; cursor: pointer; background: #f1f5f9; }
+        .img-counter { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; pointer-events: none; backdrop-filter: blur(4px); }
+
         .card-caption { padding: 14px 18px; font-size: 15px; line-height: 1.5; color: var(--text-main); font-weight: 500; }
 
         .interaction-bar { padding: 0 18px 12px 18px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #f1f5f9; }
@@ -65,15 +71,27 @@
         .btn-like.liked { color: #e11d48; }
         .likes-count { font-size: 13px; font-weight: 700; color: var(--text-sub); }
 
+        /* 留言區塊 */
         .comments-section { background: #f8fafc; padding: 14px 18px; }
-        .comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 250px; overflow-y: auto; }
-        .comment-item { font-size: 14px; line-height: 1.4; background: white; padding: 10px 14px; border-radius: 14px; border: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 300px; overflow-y: auto; }
+        .comment-item { font-size: 14px; line-height: 1.4; background: white; padding: 10px 14px; border-radius: 14px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .comment-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .comment-sender { font-weight: 800; color: var(--primary-dark); }
+        .comment-time { font-size: 10px; color: var(--text-sub); font-weight: 600; }
+        
+        .comment-content-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .comment-content { flex: 1; word-break: break-all; }
-        .comment-sender { font-weight: 800; color: var(--primary-dark); margin-right: 6px; }
-        .comment-time { font-size: 10px; color: var(--text-sub); margin-left: 6px; font-weight: 600; }
-        .btn-del-comment { background: none; border: none; color: var(--danger); font-size: 12px; cursor: pointer; padding: 0 0 0 8px; flex-shrink: 0; }
+        .reply-tag { color: var(--primary); font-weight: 800; margin-right: 6px; font-size: 13px; background: var(--primary-light); padding: 2px 6px; border-radius: 6px; }
+        
+        .comment-actions { display: flex; gap: 8px; flex-shrink: 0; margin-left: 10px; }
+        .btn-action-sm { background: none; border: none; font-size: 12px; cursor: pointer; padding: 0; font-weight: 700; }
+        .btn-reply { color: var(--primary); }
+        .btn-del-comment { color: var(--danger); }
 
-        .comment-input-area { display: flex; gap: 8px; }
+        /* 留言輸入區與回覆提示 */
+        .reply-indicator { background: #e2e8f0; color: var(--text-main); font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px 8px 0 0; display: none; justify-content: space-between; align-items: center; margin-bottom: -5px; z-index: 1; position: relative; }
+        .btn-cancel-reply { background: none; border: none; color: var(--text-sub); font-weight: 800; cursor: pointer; padding: 0 4px; }
+        .comment-input-area { display: flex; gap: 8px; position: relative; z-index: 2; }
         .comment-input { flex: 1; padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 20px; outline: none; font-size: 14px; background: white; font-family: inherit; }
         .comment-input:focus { border-color: var(--primary); }
         .btn-comment { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 800; cursor: pointer; font-size: 14px; box-shadow: 0 2px 6px rgba(16,185,129,0.2); }
@@ -82,11 +100,16 @@
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: var(--shadow-lg); }
         .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; }
-        .preview-upload-img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 12px; background: #f1f5f9; margin-bottom: 16px; border: 1px solid #e5e7eb; }
+        
+        /* 多圖預覽區塊 */
+        .preview-upload-container { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 16px; padding-bottom: 8px; }
+        .preview-item { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid #e5e7eb; flex-shrink: 0; background: #f1f5f9; }
+        
         .upload-caption-input { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 14px; box-sizing: border-box; margin-bottom: 20px; resize: none; background: #f8fafc; font-family: inherit; outline: none; }
         .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
         .btn-cancel { background: #f1f5f9; color: var(--text-main); border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; }
         .btn-confirm { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
+        .btn-confirm:disabled { background: var(--text-sub); cursor: not-allowed; box-shadow: none; }
 
         /* 照片全螢幕預覽 */
         .photo-viewer { display: none; position: fixed; z-index: 4000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.95); flex-direction: column; justify-content: center; align-items: center; touch-action: none; overflow: hidden; }
@@ -99,7 +122,6 @@
 
         /* ================= 塗鴉牆 (Drawing Board) 樣式 ================= */
         .drawing-board-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8fafc; z-index: 5000; flex-direction: column; }
-        
         .draw-header { padding: 15px 20px; background: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; box-shadow: var(--shadow-sm); z-index: 10; }
         .draw-btn-text { background: none; border: none; font-size: 16px; font-weight: 700; color: var(--text-main); cursor: pointer; }
         .draw-btn-primary { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 15px; font-weight: 800; cursor: pointer; }
@@ -108,24 +130,18 @@
         #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
         #stickerLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
         
-        /* 可拖曳貼圖 */
         .sticker-item { position: absolute; font-size: 45px; pointer-events: auto; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
         .sticker-item:active { transform: translate(-50%, -50%) scale(1.1) !important; }
         
-        /* 工具列 */
         .draw-toolbar { background: white; padding: 15px 20px 25px 20px; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.03); z-index: 10; }
         .toolbar-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        
         .color-btn { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #e5e7eb; cursor: pointer; transition: transform 0.1s; }
         .color-btn.active { border-color: var(--text-main); transform: scale(1.15); box-shadow: 0 0 0 2px white inset; }
-        
         .size-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; cursor: pointer; border: 2px solid transparent; }
         .size-btn.active { border-color: var(--primary); background: var(--primary-light); }
         .size-dot { background: var(--text-main); border-radius: 50%; }
-
         .tool-btn { background: #f1f5f9; border: 2px solid transparent; padding: 8px 14px; border-radius: 16px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-sub); }
         .tool-btn.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); }
-
         .sticker-palette { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; flex: 1; }
         .sticker-btn { font-size: 26px; cursor: pointer; background: none; border: none; transition: transform 0.1s; flex-shrink: 0; }
         .sticker-btn:active { transform: scale(1.2); }
@@ -141,7 +157,6 @@
         <div style="width: 80px;"></div>
     </div>
 
-    <!-- 排序控制列 -->
     <div class="sort-bar">
         <span>排序方式：</span>
         <select id="sortSelect" class="sort-select" onchange="changeSortMethod(this.value)">
@@ -154,11 +169,12 @@
     <!-- FAB 主按鈕與選單 -->
     <div class="fab-container">
         <div class="fab-menu" id="fabMenu">
-            <button class="fab-menu-btn" onclick="triggerFileInput()">📷 上傳照片或拍照</button>
+            <button class="fab-menu-btn" onclick="triggerFileInput()">📷 上傳照片 (最多5張)</button>
             <button class="fab-menu-btn" onclick="openDrawingBoard()">🎨 開啟塗鴉牆</button>
         </div>
         <button class="btn-upload-fab" id="btnToggleFab" title="新增內容">➕</button>
-        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <!-- 新增 multiple 屬性，支援多選 -->
+        <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
     </div>
 
     <div class="feed-container" id="feedContainer">
@@ -169,7 +185,9 @@
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <h3 class="modal-title">發佈新照片 / 塗鴉</h3>
-            <img id="uploadPreviewImg" class="preview-upload-img" src="" alt="預覽圖片">
+            <div id="uploadPreviewContainer" class="preview-upload-container">
+                <!-- 預覽縮圖將注入於此 -->
+            </div>
             <textarea id="uploadCaption" class="upload-caption-input" rows="3" placeholder="寫些什麼來記錄這一刻吧..."></textarea>
             <div class="modal-btns">
                 <button class="btn-cancel" id="btnCancelUpload">取消</button>
@@ -178,7 +196,7 @@
         </div>
     </div>
 
-    <!-- 塗鴉牆 Modal -->
+    <!-- 塗鴉牆 Modal (維持原樣) -->
     <div class="drawing-board-modal" id="drawingBoardModal">
         <div class="draw-header">
             <button class="draw-btn-text" onclick="closeDrawingBoard()">取消</button>
@@ -188,15 +206,11 @@
             </div>
             <button class="draw-btn-primary" onclick="saveDraw()">完成</button>
         </div>
-        
         <div class="draw-canvas-container" id="canvasContainer">
             <canvas id="drawCanvas"></canvas>
-            <!-- 貼圖層 -->
             <div id="stickerLayer"></div>
         </div>
-        
         <div class="draw-toolbar">
-            <!-- 顏色與工具 -->
             <div class="toolbar-row">
                 <div style="display:flex; gap:12px;">
                     <button class="tool-btn active" id="toolPen" onclick="setTool('pen')">✏️ 畫筆</button>
@@ -210,15 +224,12 @@
                     <div class="color-btn" style="background: #ffffff;" onclick="setColor('#ffffff', this)"></div>
                 </div>
             </div>
-            
-            <!-- 筆刷粗細與貼圖 (擴充多種圓臉) -->
             <div class="toolbar-row" style="margin-top: 5px;">
                 <div style="display:flex; gap:10px; border-right: 1px solid #e5e7eb; padding-right: 15px;">
                     <div class="size-btn" onclick="setSize(3, this)"><div class="size-dot" style="width: 4px; height: 4px;"></div></div>
                     <div class="size-btn active" onclick="setSize(8, this)"><div class="size-dot" style="width: 10px; height: 10px;"></div></div>
                     <div class="size-btn" onclick="setSize(16, this)"><div class="size-dot" style="width: 20px; height: 20px;"></div></div>
                 </div>
-                <!-- 貼圖列 -->
                 <div class="sticker-palette">
                     <button class="sticker-btn" onclick="addSticker('😊')">😊</button>
                     <button class="sticker-btn" onclick="addSticker('😂')">😂</button>
@@ -273,11 +284,18 @@
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-        let pendingUploadBase64 = null;
+        // 支援多圖上傳的陣列
+        let pendingUploadBase64Array = []; 
         let allPhotosData = [];
         let currentSort = 'latest';
+        
+        // 全域照片檢視器佇列
+        window.viewerQueue = []; 
         let currentViewerIndex = 0; 
         let isZoomed = false;       
+
+        // 留言回覆狀態紀錄 { photoId: '回覆的對象名稱' }
+        window.replyState = {};
 
         const feedContainer = document.getElementById('feedContainer');
         const unreadBadge = document.getElementById('unreadBadge');
@@ -339,6 +357,9 @@
 
         function renderFeed() {
             feedContainer.innerHTML = '';
+            window.viewerQueue = []; // 重置全域檢視器佇列
+            let globalImageIndex = 0;
+
             let sortedList = [...allPhotosData];
 
             if (currentSort === 'likes') {
@@ -361,10 +382,18 @@
                 });
             }
 
-            sortedList.forEach((photo, index) => renderPhotoCard(photo.id, photo, index));
+            sortedList.forEach((photo) => {
+                renderPhotoCard(photo.id, photo, globalImageIndex);
+                // 處理相容性：新版是 imageUrls (陣列)，舊版是 imageUrl (單張)
+                const images = photo.imageUrls || (photo.imageUrl ? [photo.imageUrl] : []);
+                images.forEach(img => {
+                    window.viewerQueue.push(img);
+                    globalImageIndex++;
+                });
+            });
         }
 
-        function renderPhotoCard(photoId, data, index) {
+        function renderPhotoCard(photoId, data, startGlobalIndex) {
             let timeStr = "剛才";
             if (data.timestamp && data.timestamp.toDate) {
                 const d = data.timestamp.toDate();
@@ -378,22 +407,48 @@
             const hasLiked = likesArray.includes(currentUser.name);
             const likesCount = likesArray.length;
 
+            // 處理多圖顯示 (Carousel)
+            const images = data.imageUrls || (data.imageUrl ? [data.imageUrl] : []);
+            let imagesHtml = `<div class="photo-carousel">`;
+            images.forEach((imgUrl, i) => {
+                const currentImgIndex = startGlobalIndex + i;
+                const counterHtml = images.length > 1 ? `<div class="img-counter">${i + 1} / ${images.length}</div>` : '';
+                imagesHtml += `
+                    <div class="carousel-item-wrapper">
+                        <img src="${imgUrl}" class="card-image" onclick="window.openPhotoViewer(${currentImgIndex})">
+                        ${counterHtml}
+                    </div>
+                `;
+            });
+            imagesHtml += `</div>`;
+
+            // 處理留言區塊
             let commentsHtml = '';
             if (data.comments && data.comments.length > 0) {
                 data.comments.forEach((c, cIndex) => {
                     const cTime = new Date(c.timestamp);
                     const cTimeStr = `${String(cTime.getMonth()+1).padStart(2,'0')}/${String(cTime.getDate()).padStart(2,'0')} ${String(cTime.getHours()).padStart(2,'0')}:${String(cTime.getMinutes()).padStart(2,'0')}`;
                     const canDeleteComment = (c.sender === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
-                    const delCommentBtn = canDeleteComment ? `<button class="btn-del-comment" onclick="window.deleteComment('${photoId}', ${cIndex})" title="刪除留言">刪除</button>` : '';
+                    
+                    const delCommentBtn = canDeleteComment ? `<button class="btn-action-sm btn-del-comment" onclick="window.deleteComment('${photoId}', ${cIndex})" title="刪除留言">刪除</button>` : '';
+                    const replyBtn = `<button class="btn-action-sm btn-reply" onclick="window.setupReply('${photoId}', '${c.sender}')">回覆</button>`;
+                    const replyTagHtml = c.replyTo ? `<span class="reply-tag">回覆 @${c.replyTo}</span>` : '';
 
                     commentsHtml += `
                         <div class="comment-item">
-                            <div class="comment-content">
+                            <div class="comment-header-row">
                                 <span class="comment-sender">${c.sender}</span>
-                                <span>${c.text}</span>
                                 <span class="comment-time">${cTimeStr}</span>
                             </div>
-                            ${delCommentBtn}
+                            <div class="comment-content-row">
+                                <div class="comment-content">
+                                    ${replyTagHtml}${c.text}
+                                </div>
+                                <div class="comment-actions">
+                                    ${replyBtn}
+                                    ${delCommentBtn}
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
@@ -414,7 +469,7 @@
                     </div>
                     ${delBtnHtml}
                 </div>
-                <img src="${data.imageUrl}" class="card-image" onclick="window.openPhotoViewer(${index})">
+                ${imagesHtml}
                 ${data.caption ? `<div class="card-caption">${data.caption}</div>` : ''}
                 
                 <div class="interaction-bar">
@@ -427,6 +482,13 @@
                     <div class="comments-list">
                         ${commentsHtml}
                     </div>
+                    
+                    <!-- 回覆提示區塊 -->
+                    <div class="reply-indicator" id="reply-indicator-${photoId}">
+                        <span>回覆給 <span style="color:var(--primary); font-weight:800;">@<span id="reply-target-${photoId}"></span></span></span>
+                        <button class="btn-cancel-reply" onclick="window.cancelReply('${photoId}')">✖</button>
+                    </div>
+                    
                     <div class="comment-input-area">
                         <input type="text" id="input-${photoId}" class="comment-input" placeholder="留個言吧..." autocomplete="off">
                         <button class="btn-comment" onclick="window.submitComment('${photoId}')">留言</button>
@@ -439,6 +501,19 @@
                 if (e.key === 'Enter') window.submitComment(photoId);
             });
         }
+
+        // --- 回覆相關邏輯 ---
+        window.setupReply = function(photoId, targetName) {
+            window.replyState[photoId] = targetName;
+            document.getElementById(`reply-target-${photoId}`).innerText = targetName;
+            document.getElementById(`reply-indicator-${photoId}`).style.display = 'flex';
+            document.getElementById(`input-${photoId}`).focus();
+        };
+
+        window.cancelReply = function(photoId) {
+            window.replyState[photoId] = null;
+            document.getElementById(`reply-indicator-${photoId}`).style.display = 'none';
+        };
 
         window.toggleLike = async function(photoId, hasLiked) {
             try {
@@ -458,12 +533,21 @@
             const inputField = document.getElementById(`input-${photoId}`);
             const text = inputField.value.trim();
             if (!text) return;
+            
+            const replyTarget = window.replyState[photoId] || null;
             inputField.value = '';
+            
             try {
                 const photoRef = doc(db, "photos", photoId);
                 await updateDoc(photoRef, {
-                    comments: arrayUnion({ sender: currentUser.name, text: text, timestamp: Date.now() })
+                    comments: arrayUnion({ 
+                        sender: currentUser.name, 
+                        text: text, 
+                        replyTo: replyTarget, // 紀錄回覆對象
+                        timestamp: Date.now() 
+                    })
                 });
+                window.cancelReply(photoId); // 送出後重置狀態
                 await recordLog('相簿互動', '在相簿照片中發表了一則留言');
             } catch (e) {
                 alert("留言失敗，請檢查網路！");
@@ -524,43 +608,80 @@
             document.getElementById('fileInput').click();
         };
 
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        // 支援多選檔案的處理邏輯
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            if (files.length > 5) {
+                alert('一次最多只能上傳 5 張照片！');
+                e.target.value = '';
+                return;
+            }
 
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    const maxSize = 1000;
-                    let width = img.width, height = img.height;
-                    if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
-                    else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
-                    
-                    canvas.width = width; canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    pendingUploadBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                    document.getElementById('uploadPreviewImg').src = pendingUploadBase64;
-                    document.getElementById('uploadCaption').value = '';
-                    document.getElementById('uploadModal').style.display = 'flex';
-                };
-                img.src = evt.target.result;
-            };
-            reader.readAsDataURL(file);
+            pendingUploadBase64Array = [];
+            const previewContainer = document.getElementById('uploadPreviewContainer');
+            previewContainer.innerHTML = '<div style="color:var(--text-sub); padding:20px;">圖片處理中...</div>';
+            document.getElementById('uploadModal').style.display = 'flex';
+
+            const processedImages = [];
+            for (const file of files) {
+                try {
+                    const base64 = await processImageFile(file);
+                    processedImages.push(base64);
+                } catch (err) {
+                    console.error("圖片處理失敗", err);
+                }
+            }
+
+            pendingUploadBase64Array = processedImages;
+            previewContainer.innerHTML = '';
+            
+            pendingUploadBase64Array.forEach(base64 => {
+                const img = document.createElement('img');
+                img.src = base64;
+                img.className = 'preview-item';
+                previewContainer.appendChild(img);
+            });
+
+            document.getElementById('uploadCaption').value = '';
         });
+
+        // 獨立壓縮單張圖片的 Promise 函式
+        function processImageFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        const maxSize = 1200; // 稍微提升畫質支援
+                        let width = img.width, height = img.height;
+                        if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+                        else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                        
+                        canvas.width = width; canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = reject;
+                    img.src = evt.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
 
         document.getElementById('btnCancelUpload').addEventListener('click', () => {
             document.getElementById('uploadModal').style.display = 'none';
             document.getElementById('fileInput').value = '';
-            pendingUploadBase64 = null;
+            pendingUploadBase64Array = [];
         });
 
         document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
-            if (!pendingUploadBase64) return;
+            if (pendingUploadBase64Array.length === 0) return;
             const caption = document.getElementById('uploadCaption').value.trim();
             const btnConfirm = document.getElementById('btnConfirmUpload');
 
@@ -569,7 +690,7 @@
 
             try {
                 await addDoc(collection(db, "photos"), {
-                    imageUrl: pendingUploadBase64,
+                    imageUrls: pendingUploadBase64Array, // 儲存為陣列支援多圖
                     caption: caption,
                     uploader: currentUser.name,
                     uploaderAvatar: currentUser.avatar || null,
@@ -578,10 +699,10 @@
                     likes: []
                 });
 
-                await recordLog('相簿管理', '上傳了一張新照片/塗鴉至 Photo Dump');
+                await recordLog('相簿管理', `上傳了 ${pendingUploadBase64Array.length} 張相片/塗鴉至 Photo Dump`);
                 document.getElementById('uploadModal').style.display = 'none';
                 document.getElementById('fileInput').value = '';
-                pendingUploadBase64 = null;
+                pendingUploadBase64Array = [];
                 localStorage.setItem('homebase_photodump_last_read', Date.now().toString());
             } catch (e) {
                 console.error("發佈失敗：", e);
@@ -593,7 +714,7 @@
         });
 
 
-        // ================= 全新：塗鴉牆 (Drawing Board) 邏輯 =================
+        // ================= 塗鴉牆 (Drawing Board) 邏輯 =================
         const drawModal = document.getElementById('drawingBoardModal');
         const drawCanvas = document.getElementById('drawCanvas');
         const ctx = drawCanvas.getContext('2d', { willReadFrequently: true });
@@ -749,16 +870,14 @@
             wrapper.appendChild(textSpan);
             stickerLayer.appendChild(wrapper);
 
-            // 拖曳與雙擊刪除邏輯
             let isDraggingSticker = false, startX, startY, initialLeft, initialTop;
-            let lastTapTime = 0; // 用於偵測雙擊
+            let lastTapTime = 0; 
             
             function onDragStart(e) {
-                // 雙擊刪除判斷 (間隔小於 300 毫秒)
                 const now = Date.now();
                 if (now - lastTapTime < 300) {
                     wrapper.remove();
-                    return; // 終止拖曳
+                    return; 
                 }
                 lastTapTime = now;
 
@@ -769,7 +888,6 @@
                 initialTop = wrapper.offsetTop;
                 wrapper.style.zIndex = 1000;
                 
-                // 取消預設的點擊以防止觸發畫布下層事件，但不影響 touchend
                 if(e.cancelable) e.preventDefault();
             }
             
@@ -819,10 +937,13 @@
                 tCtx.fillText(span.innerText, cx, cy);
             });
 
-            pendingUploadBase64 = tempCanvas.toDataURL('image/jpeg', 0.9);
-            document.getElementById('uploadPreviewImg').src = pendingUploadBase64;
-            document.getElementById('uploadCaption').value = '';
+            // 塗鴉固定為單張陣列
+            pendingUploadBase64Array = [tempCanvas.toDataURL('image/jpeg', 0.9)];
             
+            const previewContainer = document.getElementById('uploadPreviewContainer');
+            previewContainer.innerHTML = `<img src="${pendingUploadBase64Array[0]}" class="preview-item">`;
+            
+            document.getElementById('uploadCaption').value = '';
             drawModal.style.display = 'none';
             document.getElementById('uploadModal').style.display = 'flex';
         };
@@ -832,8 +953,8 @@
         const viewerImage = document.getElementById('viewerImage');
         const viewerCounter = document.getElementById('viewerCounter');
 
-        window.openPhotoViewer = function(index) {
-            currentViewerIndex = index;
+        window.openPhotoViewer = function(globalIndex) {
+            currentViewerIndex = globalIndex;
             isZoomed = false;
             viewerImage.style.transform = 'scale(1)';
             updateViewerContent();
@@ -848,12 +969,12 @@
         };
 
         function updateViewerContent() {
-            if (allPhotosData.length === 0) return;
-            if (currentViewerIndex < 0) currentViewerIndex = allPhotosData.length - 1;
-            if (currentViewerIndex >= allPhotosData.length) currentViewerIndex = 0;
+            if (window.viewerQueue.length === 0) return;
+            if (currentViewerIndex < 0) currentViewerIndex = window.viewerQueue.length - 1;
+            if (currentViewerIndex >= window.viewerQueue.length) currentViewerIndex = 0;
 
-            viewerImage.src = allPhotosData[currentViewerIndex].imageUrl;
-            viewerCounter.innerText = `${currentViewerIndex + 1} / ${allPhotosData.length}`;
+            viewerImage.src = window.viewerQueue[currentViewerIndex];
+            viewerCounter.innerText = `${currentViewerIndex + 1} / ${window.viewerQueue.length}`;
         }
 
         window.prevPhoto = function(e) {
@@ -872,16 +993,16 @@
             updateViewerContent();
         };
 
-        let lastTapTime = 0;
+        let lastViewerTapTime = 0;
         viewerImage.addEventListener('click', (e) => {
             e.stopPropagation();
             const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTapTime;
+            const tapLength = currentTime - lastViewerTapTime;
             if (tapLength < 300 && tapLength > 0) {
                 isZoomed = !isZoomed;
                 viewerImage.style.transform = isZoomed ? 'scale(2.5)' : 'scale(1)';
             }
-            lastTapTime = currentTime;
+            lastViewerTapTime = currentTime;
         });
 
         let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
