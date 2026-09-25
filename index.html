@@ -179,7 +179,7 @@
             backdrop-filter: blur(4px);
         }
         
-/* 聊天室未讀紅點 */
+        /* 聊天室未讀紅點 */
         .notification-badge { 
             display: none; position: absolute; top: 16px; right: 16px; 
             background-color: var(--danger); color: white; 
@@ -889,7 +889,7 @@
             } catch (e) { console.error("檢查行事曆提醒失敗", e); }
         };
 
-        // 3. 載入並渲染 Photo Dump 照片輪播
+        // 🌟 修改：正確相容多圖 (imageUrls) 與單圖 (imageUrl) 格式
         window.fetchAndRenderPhotoCarousel = function(user) {
             const q = query(collection(db, "photos"), orderBy("timestamp", "desc"), limit(5));
             onSnapshot(q, (snapshot) => {
@@ -911,32 +911,42 @@
                     const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
                     const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
                     
-                    const imageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
+                    // 👉 這裡修正了讀取邏輯：優先抓取 imageUrls 陣列的第一張圖，若無則降級讀取舊版 imageUrl
+                    let displayImageUrl = '';
+                    if (photo.imageUrls && Array.isArray(photo.imageUrls) && photo.imageUrls.length > 0) {
+                        displayImageUrl = photo.imageUrls[0]; // 取陣列第一張當封面
+                    } else {
+                        // 相容舊版資料
+                        displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
+                    }
                     
                     const likes = photo.likes || [];
                     const isLiked = likes.includes(user.name);
                     const likeCount = likes.length;
 
-                    html += `
-                        <div class="carousel-item">
-                            <!-- 點擊照片進入 gallery.html -->
-                            <img class="carousel-img" src="${imageUrl}" onerror="this.style.display='none';" onclick="window.location.href='gallery.html'">
-                            <div class="carousel-info">
-                                <div class="carousel-author">
-                                    <img class="carousel-author-img" src="${uploaderAvatar}">
-                                    <div>
-                                        <div class="carousel-author-name">${photo.uploader}</div>
-                                        <div class="carousel-date">${dateStr}</div>
+                    // 只有當確實抓得到圖片網址時，才渲染這張卡片
+                    if (displayImageUrl) {
+                        html += `
+                            <div class="carousel-item">
+                                <!-- 點擊照片進入 gallery.html -->
+                                <img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="window.location.href='gallery.html'">
+                                <div class="carousel-info">
+                                    <div class="carousel-author">
+                                        <img class="carousel-author-img" src="${uploaderAvatar}">
+                                        <div>
+                                            <div class="carousel-author-name">${photo.uploader}</div>
+                                            <div class="carousel-date">${dateStr}</div>
+                                        </div>
+                                    </div>
+                                    <div class="carousel-actions">
+                                        <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">
+                                            ${isLiked ? '❤️' : '♡'} <span class="like-count" style="color: ${isLiked ? 'var(--danger-light)' : 'white'}">${likeCount > 0 ? likeCount : '讚'}</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="carousel-actions">
-                                    <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">
-                                        ${isLiked ? '❤️' : '♡'} <span class="like-count" style="color: ${isLiked ? 'var(--danger-light)' : 'white'}">${likeCount > 0 ? likeCount : '讚'}</span>
-                                    </button>
-                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 });
                 container.innerHTML = html;
             });
