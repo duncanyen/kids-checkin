@@ -184,6 +184,7 @@
 </head>
 <body>
 
+    <!-- 系統載入中遮罩 (避免未載入完成的畫面閃爍) -->
     <div class="loading-overlay" id="loadingView"><span>處理中，請稍候...</span></div>
 
     <!-- 隱藏的檔案上傳元件 -->
@@ -436,7 +437,8 @@
         window.userAvatarMap = {};
         window.groupMembers = []; // 當前群組的成員清單
 
-        window.onload = async function() {
+        // 將啟動流程包裝成獨立函式
+        async function initializeAppFlow() {
             // 檢查 URL 網址是否帶有邀請碼 ?code=XXXXXX
             const urlParams = new URLSearchParams(window.location.search);
             const inviteCode = urlParams.get('code');
@@ -458,25 +460,29 @@
                     if (snap.empty) {
                         alert("此帳號已失效或被刪除，請重新登入。");
                         sessionStorage.removeItem('familyCheckInUser');
-                        document.getElementById('loadingView').style.display = 'none';
                         window.showAuthSection();
                     } else {
                         const latestUser = snap.docs[0].data();
                         latestUser.docId = snap.docs[0].id;
                         sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
                         
-                        document.getElementById('loadingView').style.display = 'none';
                         await window.evaluateUserGroups(latestUser); // 判斷群組動向
                     }
                 } catch (e) {
-                    document.getElementById('loadingView').style.display = 'none';
                     window.showAuthSection();
                 }
             } else {
                 // 未登入狀態，顯示登入/註冊畫面
                 window.showAuthSection();
             }
-        };
+        }
+
+        // 確保 DOM 已完全準備好再執行初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAppFlow);
+        } else {
+            initializeAppFlow();
+        }
 
         // --- 畫面切換控制 ---
         function hideAllSections() {
@@ -485,6 +491,9 @@
         }
 
         window.showAuthSection = function() {
+            // [修正點]: 關閉載入中遮罩
+            document.getElementById('loadingView').style.display = 'none';
+            
             hideAllSections();
             document.getElementById('authSection').classList.add('active');
             
@@ -544,7 +553,6 @@
                 const loggedUser = { docId: userDoc.id, ...userData };
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
                 
-                document.getElementById('loadingView').style.display = 'none';
                 await window.evaluateUserGroups(loggedUser);
 
             } catch (e) {
@@ -599,8 +607,6 @@
                 const loggedUser = { docId: userRef.id, accountId: regId, email: regEmail, name: regName, password: pwd, avatar, role: "member" };
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
                 
-                document.getElementById('loadingView').style.display = 'none';
-                
                 // 註冊後，判斷去向
                 await window.evaluateUserGroups(loggedUser);
 
@@ -622,6 +628,7 @@
                 let userGroups = [];
                 snap.forEach(docSnap => userGroups.push({ id: docSnap.id, ...docSnap.data() }));
 
+                // 判斷邏輯完畢，關閉遮罩
                 document.getElementById('loadingView').style.display = 'none';
                 
                 // 如果有未處理的邀請碼，強制進入「動向頁-加入群組」
