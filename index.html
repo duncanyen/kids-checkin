@@ -437,7 +437,6 @@
         window.userAvatarMap = {};
         window.groupMembers = []; // 當前群組的成員清單
 
-        // 將所有 Function 都先定義好（提升 Hoisting）
         window.showAuthSection = function() {
             document.getElementById('loadingView').style.display = 'none';
             hideAllSections();
@@ -640,6 +639,7 @@
             await renderDynamicModules(user);
             fetchAndRenderGroupMembers();
             
+            // 這些抓取資料的方法現在都會自動根據 window.currentGroup.id 進行篩選
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
@@ -672,9 +672,17 @@
 
         async function recordLog(operatorName, actionType, detailsText) {
             try {
+                // 修改：紀錄 Log 時也把 groupId 記錄進去
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: operatorName, actionType, details: detailsText, timestamp: serverTimestamp() });
+                await addDoc(collection(db, "logs"), { 
+                    groupId: window.currentGroup ? window.currentGroup.id : null, 
+                    datetime: datetimeStr, 
+                    operator: operatorName, 
+                    actionType, 
+                    details: detailsText, 
+                    timestamp: serverTimestamp() 
+                });
             } catch (e) {}
         }
 
@@ -806,9 +814,15 @@
             }
         }
 
+        // 修改：讀取訊息狀態只抓取當前群組
         window.checkUnreadMessages = function(user) {
             try {
-                const q = query(collection(db, "rooms"), where("participants", "array-contains", user.name));
+                if (!window.currentGroup) return;
+                const q = query(
+                    collection(db, "rooms"), 
+                    where("groupId", "==", window.currentGroup.id),
+                    where("participants", "array-contains", user.name)
+                );
                 unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
                     let totalUnreadMessages = 0;
                     querySnapshot.forEach(docSnap => {
@@ -828,9 +842,15 @@
             } catch (e) {}
         };
 
+        // 修改：讀取相片未讀數只抓取當前群組
         window.checkGalleryUnreads = function(user) {
             try {
-                galleryUnsubscribe = onSnapshot(collection(db, "photos"), (snapshot) => {
+                if (!window.currentGroup) return;
+                const q = query(
+                    collection(db, "photos"), 
+                    where("groupId", "==", window.currentGroup.id)
+                );
+                galleryUnsubscribe = onSnapshot(q, (snapshot) => {
                     const lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
                     let unreadCount = 0;
                     snapshot.forEach(docSnap => {
@@ -844,13 +864,19 @@
             } catch (e) {}
         };
 
+        // 修改：讀取行事曆只抓取當前群組
         window.checkCalendarAlerts = async function(user) {
+            if (!window.currentGroup) return;
             if (Object.keys(window.userAvatarMap).length === 0) {
                 try { const usersSnap = await getDocs(collection(db, "users")); usersSnap.forEach(d => { window.userAvatarMap[d.data().name] = d.data().avatar; }); } catch(e) {}
             }
             const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
             try {
-                calendarUnsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
+                const q = query(
+                    collection(db, "events"), 
+                    where("groupId", "==", window.currentGroup.id)
+                );
+                calendarUnsubscribe = onSnapshot(q, (snapshot) => {
                     const now = new Date();
                     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
                     let activeIcons = [], todayEventsList = [];
@@ -894,8 +920,15 @@
             } catch (e) { }
         };
 
+        // 修改：首頁相簿縮圖只抓取當前群組
         window.fetchAndRenderPhotoCarousel = function(user) {
-            const q = query(collection(db, "photos"), orderBy("timestamp", "desc"), limit(5));
+            if (!window.currentGroup) return;
+            const q = query(
+                collection(db, "photos"), 
+                where("groupId", "==", window.currentGroup.id), 
+                orderBy("timestamp", "desc"), 
+                limit(5)
+            );
             onSnapshot(q, (snapshot) => {
                 const section = document.getElementById('photoCarouselSection');
                 const container = document.getElementById('photoCarouselContainer');
