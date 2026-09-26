@@ -87,7 +87,6 @@
         .mention-item { padding: 10px 14px; font-size: 14px; font-weight: 700; color: var(--text-main); cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
         .mention-item:hover, .mention-item:active { background: var(--primary-light); color: var(--primary-dark); }
         
-        /* 新增：@人員 高亮樣式 */
         .mention-highlight { color: var(--primary-dark); font-weight: 800; background: var(--primary-light); padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
         .msg-mine .mention-highlight { color: #fff; background: rgba(255, 255, 255, 0.25); }
 
@@ -371,9 +370,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // 取得當前使用者與目前群組 ID (預設防呆支援)
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
+
+        // groupId 控管：若尚未設定則自動導向預設家庭群組
+        const currentGroupId = localStorage.getItem('lastGroupId') || 'default_family';
 
         let allUsers = [];
         let activeRoomId = null;
@@ -408,16 +411,22 @@
             } catch (error) {}
         }
 
-        // ================= 1. 群組列表邏輯 =================
+        // ================= 1. 群組列表邏輯 (加入 groupId 篩選) =================
         function listenToRooms() {
             const roomsRef = collection(db, "rooms");
-            const q = query(roomsRef, where("participants", "array-contains", currentUser.name), orderBy("lastMessageTime", "desc"));
+            // 嚴格比對目前選定群組的 groupId
+            const q = query(
+                roomsRef, 
+                where("groupId", "==", currentGroupId), 
+                where("participants", "array-contains", currentUser.name), 
+                orderBy("lastMessageTime", "desc")
+            );
 
             roomsUnsubscribe = onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('roomListContainer');
                 container.innerHTML = '';
                 if (snapshot.empty) {
-                    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-sub); font-weight:600;">尚未加入任何群組，點擊上方建立一個吧！</div>';
+                    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-sub); font-weight:600;">此群組尚未有聊天室，點擊上方建立一個吧！</div>';
                     return;
                 }
                 snapshot.forEach(docSnap => {
@@ -513,10 +522,16 @@
             document.getElementById('viewRoomList').style.display = 'flex';
         });
 
-        // ================= 2. 聊天訊息邏輯 =================
+        // ================= 2. 聊天訊息邏輯 (加入 groupId 篩選) =================
         function listenToMessages(roomId) {
             const msgContainer = document.getElementById('chatMessages');
-            const q = query(collection(db, "messages"), where("roomId", "==", roomId), orderBy("timestamp", "asc"));
+            // 讀取訊息時加上 groupId 查詢條件
+            const q = query(
+                collection(db, "messages"), 
+                where("groupId", "==", currentGroupId),
+                where("roomId", "==", roomId), 
+                orderBy("timestamp", "asc")
+            );
             messagesUnsubscribe = onSnapshot(q, (snapshot) => {
                 currentMessagesList = []; 
                 if (!snapshot.empty) {
@@ -600,16 +615,13 @@
             }
 
             let displayText = msg.text || '';
-            // 基礎 HTML 跳脫避免安全問題
             displayText = displayText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
             
-            // @人員 高亮替換機制
             const allNames = [currentUser.name, ...allUsers.map(u => u.name)];
             allNames.forEach(pName => {
                 displayText = displayText.split(`@${pName}`).join(`<span class="mention-highlight">@${pName}</span>`);
             });
 
-            // 修復：在圖片加入 onclick="event.stopPropagation();"，避免觸發父層氣泡框呼出功能選單
             let contentHtml = msg.imageUrl 
                 ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="event.stopPropagation(); window.openPhotoViewer(this.src);" onload="if(window._isChatJustLoaded) window.lockScrollPosition();">` 
                 : `<div>${displayText}</div>`;
@@ -634,7 +646,7 @@
         window.openPhotoViewer = function(src) { document.getElementById('viewerImage').src = src; document.getElementById('photoViewerModal').style.display = 'flex'; };
         window.closePhotoViewer = function() { document.getElementById('photoViewerModal').style.display = 'none'; document.getElementById('viewerImage').src = ''; };
 
-        // ================= 3. 傳送訊息與回覆 / @ 標註功能 =================
+        // ================= 3. 傳送訊息與回覆 / @ 標註功能 (寫入時夾帶 groupId) =================
         const chatInput = document.getElementById('chatInput');
         const mentionDropdown = document.getElementById('mentionDropdown');
 
@@ -646,7 +658,6 @@
 
             if (atIndex !== -1 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === ' ' || textBeforeCursor[atIndex - 1] === '\n')) {
                 const queryStr = textBeforeCursor.substring(atIndex + 1);
-                // 找出符合的成員（包含群組成員或所有家人）
                 const members = activeRoomData && activeRoomData.participants ? activeRoomData.participants : [];
                 const matched = members.filter(m => m !== currentUser.name && m.toLowerCase().includes(queryStr.toLowerCase()));
 
@@ -675,6 +686,7 @@
             chatInput.focus();
         };
 
+        // 發送文字訊息：寫入 groupId
         document.getElementById('btnSend').addEventListener('click', async () => {
             const text = chatInput.value.trim();
             if (!text) return;
@@ -682,7 +694,13 @@
             mentionDropdown.style.display = 'none';
 
             try {
-                const msgData = { roomId: activeRoomId, sender: currentUser.name, text: text, timestamp: serverTimestamp() };
+                const msgData = { 
+                    groupId: currentGroupId, // 寫入群組代號
+                    roomId: activeRoomId, 
+                    sender: currentUser.name, 
+                    text: text, 
+                    timestamp: serverTimestamp() 
+                };
                 if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
                 await addDoc(collection(db, "messages"), msgData);
 
@@ -701,6 +719,8 @@
 
         const chatPhotoInput = document.getElementById('chatPhotoInput');
         document.getElementById('btnTriggerPhoto').addEventListener('click', () => chatPhotoInput.click());
+        
+        // 傳送圖片訊息：寫入 groupId
         chatPhotoInput.addEventListener('change', async (e) => {
             const file = e.target.files[0]; if (!file || !activeRoomId) return;
             document.getElementById('btnSend').disabled = true; document.getElementById('btnTriggerPhoto').disabled = true;
@@ -715,7 +735,14 @@
                     const base64Img = canvas.toDataURL('image/jpeg', 0.8); 
 
                     try {
-                        const msgData = { roomId: activeRoomId, sender: currentUser.name, text: "傳送了圖片", imageUrl: base64Img, timestamp: serverTimestamp() };
+                        const msgData = { 
+                            groupId: currentGroupId, // 寫入群組代號
+                            roomId: activeRoomId, 
+                            sender: currentUser.name, 
+                            text: "傳送了圖片", 
+                            imageUrl: base64Img, 
+                            timestamp: serverTimestamp() 
+                        };
                         if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
                         await addDoc(collection(db, "messages"), msgData);
 
@@ -754,8 +781,6 @@
             if (!confirm("確定要收回此訊息嗎？")) return;
             try {
                 await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null });
-                
-                // 修復：檢查如果收回的訊息是這個群組最新的一則訊息，就同步更新房間狀態的 lastMessage，以免外層清單仍看到舊文字
                 if (currentMessagesList.length > 0 && currentMessagesList[currentMessagesList.length - 1].id === selectedMsgForAction.id) {
                     await updateDoc(doc(db, "rooms", activeRoomId), { lastMessage: `${currentUser.name} 收回了一則訊息` });
                 }
@@ -763,12 +788,11 @@
             document.getElementById('msgActionModal').style.display = 'none';
         };
 
-        // ================= 4. 群組設定與功能 =================
+        // ================= 4. 群組設定與功能 (建立群組時寫入 groupId) =================
         window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; }
         window.openSubModal = function(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
         window.backToSettings = function(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
 
-        // [建立群組]
         function getCheckboxesHtml(containerId, selected = []) {
             let html = '';
             allUsers.forEach(u => {
@@ -784,17 +808,25 @@
             document.getElementById('createGroupModal').style.display = 'flex';
         });
 
+        // 建立群組：寫入時夾帶 groupId
         document.getElementById('btnConfirmCreate').addEventListener('click', async () => {
             const name = document.getElementById('createGroupName').value.trim(); if (!name) return alert('請輸入群組名稱！');
             const checkboxes = document.querySelectorAll('#createMemberList input[type="checkbox"]:checked');
             const participants = [currentUser.name, ...Array.from(checkboxes).map(cb => cb.value)];
             try {
-                await addDoc(collection(db, "rooms"), { name, avatar: uploadedAvatarBase64_Create || '', participants, creator: currentUser.name, lastMessage: `${currentUser.name} 建立了群組`, lastMessageTime: serverTimestamp() });
+                await addDoc(collection(db, "rooms"), { 
+                    groupId: currentGroupId, // 寫入所屬群組代號
+                    name, 
+                    avatar: uploadedAvatarBase64_Create || '', 
+                    participants, 
+                    creator: currentUser.name, 
+                    lastMessage: `${currentUser.name} 建立了群組`, 
+                    lastMessageTime: serverTimestamp() 
+                });
                 closeModal('createGroupModal');
             } catch (e) { alert("建立失敗！"); }
         });
 
-        // [LINE 風格群組設定主選單]
         document.getElementById('btnOpenSettingsMenu').addEventListener('click', () => {
             document.getElementById('editGroupName').value = activeRoomData.name;
             uploadedAvatarBase64_Edit = activeRoomData.avatar || null;
@@ -901,7 +933,6 @@
                 photos.forEach(m => {
                     const img = document.createElement('img');
                     img.src = m.imageUrl; img.className = 'gallery-item';
-                    // 加上 stopPropagation 避免觸發底層點擊事件
                     img.onclick = (e) => {
                         e.stopPropagation();
                         window.openPhotoViewer(m.imageUrl);
