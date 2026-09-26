@@ -184,7 +184,7 @@
 </head>
 <body>
 
-    <!-- 系統載入中遮罩 (避免未載入完成的畫面閃爍) -->
+    <!-- 系統載入中遮罩 -->
     <div class="loading-overlay" id="loadingView"><span>處理中，請稍候...</span></div>
 
     <!-- 隱藏的檔案上傳元件 -->
@@ -437,67 +437,12 @@
         window.userAvatarMap = {};
         window.groupMembers = []; // 當前群組的成員清單
 
-        // 將啟動流程包裝成獨立函式
-        async function initializeAppFlow() {
-            // 檢查 URL 網址是否帶有邀請碼 ?code=XXXXXX
-            const urlParams = new URLSearchParams(window.location.search);
-            const inviteCode = urlParams.get('code');
-            if (inviteCode) {
-                localStorage.setItem('pendingInviteCode', inviteCode);
-                window.history.replaceState({}, document.title, window.location.pathname); // 洗除網址參數
-            }
-
-            const savedUserStr = sessionStorage.getItem('familyCheckInUser');
-            if (savedUserStr) {
-                // 已登入狀態，檢查使用者並進入
-                document.getElementById('loadingView').style.display = 'flex';
-                try {
-                    const savedUser = JSON.parse(savedUserStr);
-                    // 為了相容，用暱稱查回最新狀態
-                    const q = query(collection(db, "users"), where("name", "==", savedUser.name));
-                    const snap = await getDocs(q);
-                    
-                    if (snap.empty) {
-                        alert("此帳號已失效或被刪除，請重新登入。");
-                        sessionStorage.removeItem('familyCheckInUser');
-                        window.showAuthSection();
-                    } else {
-                        const latestUser = snap.docs[0].data();
-                        latestUser.docId = snap.docs[0].id;
-                        sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
-                        
-                        await window.evaluateUserGroups(latestUser); // 判斷群組動向
-                    }
-                } catch (e) {
-                    window.showAuthSection();
-                }
-            } else {
-                // 未登入狀態，顯示登入/註冊畫面
-                window.showAuthSection();
-            }
-        }
-
-        // 確保 DOM 已完全準備好再執行初始化
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeAppFlow);
-        } else {
-            initializeAppFlow();
-        }
-
-        // --- 畫面切換控制 ---
-        function hideAllSections() {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById('dashboardView').style.display = 'none';
-        }
-
+        // 將所有 Function 都先定義好（提升 Hoisting）
         window.showAuthSection = function() {
-            // [修正點]: 關閉載入中遮罩
             document.getElementById('loadingView').style.display = 'none';
-            
             hideAllSections();
             document.getElementById('authSection').classList.add('active');
             
-            // 如果帶有邀請碼，提示註冊
             if (localStorage.getItem('pendingInviteCode')) {
                 window.toggleAuth('register');
                 alert("您有受邀加入群組的邀請，請先登入或註冊帳號！");
@@ -505,6 +450,11 @@
                 window.toggleAuth('login');
             }
         };
+
+        function hideAllSections() {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('dashboardView').style.display = 'none';
+        }
 
         window.toggleAuth = function(type) {
             document.querySelectorAll('.auth-form-container').forEach(el => el.classList.remove('active'));
@@ -515,123 +465,16 @@
             }
         };
 
-        // --- 登入與註冊邏輯 ---
-        window.processLogin = async function() {
-            const loginId = document.getElementById('loginId').value.trim();
-            const loginPwd = document.getElementById('loginPassword').value.trim();
-
-            if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
-
-            document.getElementById('loadingView').style.display = 'flex';
-            try {
-                // 1. 先用 accountId 搜尋 (新標準)
-                let q = query(collection(db, "users"), where("accountId", "==", loginId));
-                let snap = await getDocs(q);
-                
-                // 2. 向下相容：如果找不到，用 name (暱稱) 搜尋 (舊戶)
-                if(snap.empty) {
-                    q = query(collection(db, "users"), where("name", "==", loginId));
-                    snap = await getDocs(q);
-                }
-
-                if (snap.empty) {
-                    alert('找不到此帳號，請確認輸入正確。');
-                    document.getElementById('loadingView').style.display = 'none';
-                    return;
-                }
-
-                const userDoc = snap.docs[0];
-                const userData = userDoc.data();
-                
-                // 驗證密碼：比對新密碼欄位 或 舊 pin 欄位
-                if (userData.password !== loginPwd && userData.pin !== loginPwd) {
-                    alert('密碼錯誤，請重新輸入！');
-                    document.getElementById('loadingView').style.display = 'none';
-                    return;
-                }
-
-                const loggedUser = { docId: userDoc.id, ...userData };
-                sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
-                
-                await window.evaluateUserGroups(loggedUser);
-
-            } catch (e) {
-                console.error(e);
-                alert("登入失敗，請檢查網路連線。");
-                document.getElementById('loadingView').style.display = 'none';
-            }
-        };
-
-        window.processRegistration = async function() {
-            const regId = document.getElementById('regId').value.trim();
-            const regEmail = document.getElementById('regEmail').value.trim();
-            const regName = document.getElementById('regName').value.trim();
-            const pwd = document.getElementById('regPassword').value.trim();
-            const pwdConfirm = document.getElementById('regConfirmPassword').value.trim();
-
-            if(!regId || !regEmail || !regName || !pwd) { alert('請填寫完整註冊資訊！'); return; }
-            if(pwd.length < 6) { alert('密碼長度必須至少 6 碼！'); return; }
-            if(pwd !== pwdConfirm) { alert('兩次輸入的密碼不一致！'); return; }
-
-            document.getElementById('loadingView').style.display = 'flex';
-            try {
-                // 檢查 ID 是否重複
-                let qId = query(collection(db, "users"), where("accountId", "==", regId));
-                if (!(await getDocs(qId)).empty) {
-                    alert('此登入帳號 ID 已被使用，請換一個！');
-                    document.getElementById('loadingView').style.display = 'none';
-                    return;
-                }
-                
-                // 檢查暱稱是否重複 (確保舊系統設計下不會錯亂)
-                let qName = query(collection(db, "users"), where("name", "==", regName));
-                if (!(await getDocs(qName)).empty) {
-                    alert('此群組暱稱已被使用，請換一個！');
-                    document.getElementById('loadingView').style.display = 'none';
-                    return;
-                }
-
-                // 建立新使用者
-                const avatar = `https://ui-avatars.com/api/?name=${regName}&background=10b981&color=fff`;
-                const userRef = await addDoc(collection(db, "users"), {
-                    accountId: regId,
-                    email: regEmail,
-                    name: regName,
-                    password: pwd,
-                    pin: pwd, // 備用相容舊系統
-                    avatar: avatar,
-                    role: "member",
-                    createdAt: serverTimestamp()
-                });
-                
-                const loggedUser = { docId: userRef.id, accountId: regId, email: regEmail, name: regName, password: pwd, avatar, role: "member" };
-                sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
-                
-                // 註冊後，判斷去向
-                await window.evaluateUserGroups(loggedUser);
-
-            } catch (e) {
-                console.error(e);
-                alert("註冊失敗，請檢查網路。");
-                document.getElementById('loadingView').style.display = 'none';
-            }
-        };
-
-        // --- 登入後的動向判斷 (核心分流邏輯) ---
         window.evaluateUserGroups = async function(userObj) {
             document.getElementById('loadingView').style.display = 'flex';
             try {
-                // 找出此使用者所屬的群組 (利用 name 陣列判斷)
                 const q = query(collection(db, "groups"), where("members", "array-contains", userObj.name));
                 const snap = await getDocs(q);
-                
                 let userGroups = [];
                 snap.forEach(docSnap => userGroups.push({ id: docSnap.id, ...docSnap.data() }));
 
-                // 判斷邏輯完畢，關閉遮罩
                 document.getElementById('loadingView').style.display = 'none';
                 
-                // 如果有未處理的邀請碼，強制進入「動向頁-加入群組」
                 const pendingCode = localStorage.getItem('pendingInviteCode');
                 if (pendingCode) {
                     window.showActionSection();
@@ -641,23 +484,18 @@
                 }
 
                 if (userGroups.length === 0) {
-                    // 完全沒有群組 -> 顯示建立或加入頁面
                     window.showActionSection();
                 } else if (userGroups.length === 1) {
-                    // 只有一個群組 -> 直接進入
                     window.enterGroup(userGroups[0]);
                 } else {
-                    // 有多個群組 -> 顯示群組列表選擇
                     window.showGroupSelectionList(userGroups);
                 }
-
             } catch(e) {
                 console.error(e);
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
 
-        // 顯示無群組時的選項 (建立/加入)
         window.showActionSection = function() {
             hideAllSections();
             document.getElementById('actionSection').classList.add('active');
@@ -675,7 +513,6 @@
             window.selectedPresetIcon = iconChar;
         };
 
-        // 建立群組
         window.processCreateGroup = async function() {
             const groupName = document.getElementById('obGroupName').value.trim();
             if (!groupName) { alert("請為群組取個名稱！"); return; }
@@ -684,7 +521,6 @@
             document.getElementById('loadingView').style.display = 'flex';
             
             try {
-                // 建群者設為 admin
                 await updateDoc(doc(db, "users", user.docId), { role: 'admin' });
                 user.role = 'admin';
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
@@ -701,15 +537,13 @@
                 const newGroup = { id: groupRef.id, ...newGroupData };
                 
                 document.getElementById('loadingView').style.display = 'none';
-                window.enterGroup(newGroup); // 建立後進入
-                
+                window.enterGroup(newGroup); 
             } catch(e) {
                 alert("群組建立失敗。");
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
 
-        // 加入群組
         window.processJoinGroup = async function() {
             const code = document.getElementById('obInviteCode').value.trim().toUpperCase();
             if (!code) { alert("請輸入邀請碼！"); return; }
@@ -756,7 +590,6 @@
             return result;
         };
 
-        // 顯示擁有的群組列表 (選單切換或多群組進入)
         window.showGroupSelectionList = function(userGroups) {
             hideAllSections();
             const container = document.getElementById('groupListContainer');
@@ -771,33 +604,26 @@
                 if (g.icon && g.icon.startsWith('data:image')) {
                     iconHtml = `<img src="${g.icon}" class="group-icon-img">`;
                 }
-                
                 card.innerHTML = `${iconHtml}<div class="group-name">${g.name}</div>`;
                 container.appendChild(card);
             });
-            
             document.getElementById('groupSelectionSection').classList.add('active');
         };
         
-        // 側邊欄呼叫用
         window.switchToGroupSelection = async function() {
             toggleSidebar();
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            await window.evaluateUserGroups(user); // 重新評估並顯示
+            await window.evaluateUserGroups(user);
         };
 
-        // 正式進入某個群組並渲染 Dashboard
         window.enterGroup = async function(groupObj) {
             window.currentGroup = groupObj;
             localStorage.setItem('lastGroupId', groupObj.id);
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            
             await recordLog(user.name, '進入群組', `進入了群組: ${groupObj.name}`);
-            
             window.showDashboard();
         };
 
-        // --- 儀表板 Dashboard ---
         window.showDashboard = async function() {
             hideAllSections();
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
@@ -822,7 +648,6 @@
             if (allowedMenus.includes('photodump')) window.fetchAndRenderPhotoCarousel(user);
         };
 
-        // --- 邀請功能 (LINE 分享) ---
         window.openInviteModal = async function() {
             if (!window.currentGroup) { alert("無法取得群組資訊！"); return; }
             document.getElementById('sidebar').classList.remove('active');
@@ -834,7 +659,6 @@
                 window.currentGroup.inviteCode = code;
                 await updateDoc(doc(db, "groups", window.currentGroup.id), { inviteCode: code });
             }
-            
             document.getElementById('displayInviteCode').innerText = code;
             document.getElementById('inviteModal').style.display = 'flex';
         };
@@ -846,7 +670,6 @@
             window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, '_blank');
         };
 
-        // --- 其他原有功能函數 (保持不變，配合架構) ---
         async function recordLog(operatorName, actionType, detailsText) {
             try {
                 const now = new Date();
@@ -1031,7 +854,6 @@
                     const now = new Date();
                     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
                     let activeIcons = [], todayEventsList = [];
-
                     snapshot.forEach(docSnap => {
                         const evt = docSnap.data();
                         if ((evt.visibility === 'public' || evt.operator === user.name) && evt.date === todayStr) {
@@ -1050,7 +872,6 @@
                             }
                         }
                     });
-
                     const agendaContainer = document.getElementById('todayAgendaContainer');
                     const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
                     const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
@@ -1067,7 +888,6 @@
                             return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${avatar}"></div>`;
                         }).join('');
                     } else listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
-
                     agendaContainer.innerHTML = `<div class="section-header"><div class="section-title">Calendar</div></div><div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';"><div class="agenda-header"><div class="agenda-date">${dateTitle}</div><div style="display:flex; gap:8px; align-items:center;"><div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div><div class="agenda-count">${todayEventsList.length > 0 ? `今天有 ${todayEventsList.length} 個行程` : '自由日'}</div></div></div><div class="agenda-list">${listHtml}</div></div>`;
                 });
                 setInterval(() => { if (calendarUnsubscribe) { calendarUnsubscribe(); window.checkCalendarAlerts(user); } }, 60000);
@@ -1110,6 +930,111 @@
                 }
             } catch(e) {}
         };
+
+        // --- 註冊與登入功能 (依賴 Firebase 的部分) ---
+        window.processLogin = async function() {
+            const loginId = document.getElementById('loginId').value.trim();
+            const loginPwd = document.getElementById('loginPassword').value.trim();
+            if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
+
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                let q = query(collection(db, "users"), where("accountId", "==", loginId));
+                let snap = await getDocs(q);
+                if(snap.empty) {
+                    q = query(collection(db, "users"), where("name", "==", loginId));
+                    snap = await getDocs(q);
+                }
+
+                if (snap.empty) {
+                    alert('找不到此帳號，請確認輸入正確。');
+                    document.getElementById('loadingView').style.display = 'none';
+                    return;
+                }
+                const userDoc = snap.docs[0];
+                const userData = userDoc.data();
+                if (userData.password !== loginPwd && userData.pin !== loginPwd) {
+                    alert('密碼錯誤，請重新輸入！');
+                    document.getElementById('loadingView').style.display = 'none';
+                    return;
+                }
+                const loggedUser = { docId: userDoc.id, ...userData };
+                sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
+                await window.evaluateUserGroups(loggedUser);
+            } catch (e) {
+                console.error(e);
+                alert("登入失敗，請檢查網路連線。");
+                document.getElementById('loadingView').style.display = 'none';
+            }
+        };
+
+        window.processRegistration = async function() {
+            const regId = document.getElementById('regId').value.trim();
+            const regEmail = document.getElementById('regEmail').value.trim();
+            const regName = document.getElementById('regName').value.trim();
+            const pwd = document.getElementById('regPassword').value.trim();
+            const pwdConfirm = document.getElementById('regConfirmPassword').value.trim();
+            if(!regId || !regEmail || !regName || !pwd) { alert('請填寫完整註冊資訊！'); return; }
+            if(pwd.length < 6) { alert('密碼長度必須至少 6 碼！'); return; }
+            if(pwd !== pwdConfirm) { alert('兩次輸入的密碼不一致！'); return; }
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                let qId = query(collection(db, "users"), where("accountId", "==", regId));
+                if (!(await getDocs(qId)).empty) { alert('此登入帳號 ID 已被使用，請換一個！'); document.getElementById('loadingView').style.display = 'none'; return; }
+                let qName = query(collection(db, "users"), where("name", "==", regName));
+                if (!(await getDocs(qName)).empty) { alert('此群組暱稱已被使用，請換一個！'); document.getElementById('loadingView').style.display = 'none'; return; }
+                const avatar = `https://ui-avatars.com/api/?name=${regName}&background=10b981&color=fff`;
+                const userRef = await addDoc(collection(db, "users"), { accountId: regId, email: regEmail, name: regName, password: pwd, pin: pwd, avatar: avatar, role: "member", createdAt: serverTimestamp() });
+                const loggedUser = { docId: userRef.id, accountId: regId, email: regEmail, name: regName, password: pwd, avatar, role: "member" };
+                sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
+                await window.evaluateUserGroups(loggedUser);
+            } catch (e) {
+                alert("註冊失敗，請檢查網路。");
+                document.getElementById('loadingView').style.display = 'none';
+            }
+        };
+
+        // --- 核心啟動流程 ---
+        async function initializeAppFlow() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteCode = urlParams.get('code');
+            if (inviteCode) {
+                localStorage.setItem('pendingInviteCode', inviteCode);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            const savedUserStr = sessionStorage.getItem('familyCheckInUser');
+            if (savedUserStr) {
+                document.getElementById('loadingView').style.display = 'flex';
+                try {
+                    const savedUser = JSON.parse(savedUserStr);
+                    const q = query(collection(db, "users"), where("name", "==", savedUser.name));
+                    const snap = await getDocs(q);
+                    
+                    if (snap.empty) {
+                        alert("此帳號已失效或被刪除，請重新登入。");
+                        sessionStorage.removeItem('familyCheckInUser');
+                        window.showAuthSection();
+                    } else {
+                        const latestUser = snap.docs[0].data();
+                        latestUser.docId = snap.docs[0].id;
+                        sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
+                        await window.evaluateUserGroups(latestUser); 
+                    }
+                } catch (e) {
+                    window.showAuthSection();
+                }
+            } else {
+                window.showAuthSection();
+            }
+        }
+
+        // ▼ 最後，確保所有 Function 都在記憶體中後，才觸發啟動流程
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeAppFlow);
+        } else {
+            initializeAppFlow();
+        }
     </script>
 </body>
 </html>
