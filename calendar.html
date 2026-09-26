@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase - 家庭行事曆</title>
-    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
-    <link rel="apple-touch-icon" href="homebase_icon.jpg">
-    <meta name="apple-mobile-web-app-title" content="HomeBase">
+    <title>Nexus - 家庭行事曆</title>
+    <link rel="icon" href="Nexus.png" type="image/jpeg">
+    <link rel="apple-touch-icon" href="Nexus.png">
+    <meta name="apple-mobile-web-app-title" content="Nexus">
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
@@ -41,7 +41,7 @@
         /* 主要容器 */
         .view-container { max-width: 600px; width: 100%; margin: 0 auto; background: white; border-radius: 22px; flex: 1; overflow-y: auto; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 12px; }
         
-        /* 月曆區塊標題（已移除按鈕，僅保留月份文字置中） */
+        /* 月曆區塊標題 */
         .calendar-header { display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; }
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: 1; }
@@ -57,7 +57,6 @@
         .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
         .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); margin-left: 2px; }
         
-        /* 週六、週日與國定假日統一步調使用紅色 */
         .day-cell.is-weekend .date-num, .day-cell.is-holiday .date-num { color: var(--weekend-color); }
 
         /* 國定假日小標籤 */
@@ -222,7 +221,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
-            onSnapshot, serverTimestamp 
+            onSnapshot, serverTimestamp, query, where 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -238,6 +237,7 @@
         const db = getFirestore(app);
 
         let currentUser = null;
+        let currentGroupId = localStorage.getItem('lastGroupId');
         let viewDate = new Date();
         let selectedDateKey = '';
         let allFetchedEvents = [];
@@ -255,8 +255,8 @@
         };
 
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-        if (!savedUserStr) {
-            alert('請先登入！'); window.location.href = 'index.html';
+        if (!savedUserStr || !currentGroupId) {
+            alert('找不到登入狀態或群組資訊，請重新登入！'); window.location.href = 'index.html';
         } else {
             currentUser = JSON.parse(savedUserStr);
             document.getElementById('calUserAvatar').src = currentUser.avatar || 'https://ui-avatars.com/api/?name='+currentUser.name+'&background=ecfdf5&color=059669';
@@ -270,13 +270,26 @@
             try {
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
+                await addDoc(collection(db, "logs"), { 
+                    groupId: currentGroupId, 
+                    datetime: datetimeStr, 
+                    operator: currentUser.name, 
+                    actionType, 
+                    details: detailsText, 
+                    timestamp: serverTimestamp() 
+                });
             } catch (e) { console.error("寫入 Log 失敗:", e); }
         }
         window.onload = async function() { await recordLog('功能瀏覽', '進入〈家庭行事曆〉'); };
 
         function listenToEvents() {
-            onSnapshot(collection(db, "events"), (snapshot) => {
+            // 🚨 新增：加入 where("groupId", "==", currentGroupId) 來隔離群組
+            const q = query(
+                collection(db, "events"), 
+                where("groupId", "==", currentGroupId)
+            );
+
+            onSnapshot(q, (snapshot) => {
                 allFetchedEvents = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
@@ -302,7 +315,6 @@
         }
 
         function initCalendar() {
-            // 左右滑動切換月份手勢設定
             const swipeContainer = document.getElementById('calendarSwipeContainer');
             let touchStartX = 0;
             let touchEndX = 0;
@@ -319,11 +331,9 @@
             function handleSwipeGesture() {
                 const threshold = 50; 
                 if (touchEndX - touchStartX > threshold) {
-                    // 向右滑 -> 上個月
                     viewDate.setMonth(viewDate.getMonth() - 1);
                     renderCalendar();
                 } else if (touchStartX - touchEndX > threshold) {
-                    // 向左滑 -> 下個月
                     viewDate.setMonth(viewDate.getMonth() + 1);
                     renderCalendar();
                 }
@@ -440,7 +450,6 @@
             }
         }
 
-        // ================= Modal 控制邏輯 =================
         function openEventModal(dateKey) {
             selectedDateKey = dateKey;
             document.getElementById('modalDateTitle').innerText = `${dateKey} 行程`;
@@ -552,7 +561,6 @@
             });
         }
 
-        // ================= 表單操作 =================
         const evIsAllDay = document.getElementById('evIsAllDay');
         const timeInputsGroup = document.getElementById('timeInputsGroup');
         const evReminderUnit = document.getElementById('evReminderUnit');
@@ -593,6 +601,7 @@
             if (!isAllDay && startTime >= endTime) return alert('結束時間必須晚於開始時間！');
 
             const evtData = {
+                groupId: currentGroupId, // 🚨 新增：綁定當前群組 ID
                 date: selectedDateKey,
                 title: title,
                 desc: document.getElementById('evDesc').value.trim(),
