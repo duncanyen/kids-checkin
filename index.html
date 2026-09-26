@@ -48,8 +48,24 @@
         .section-title { font-size: 15px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px; position: relative; }
         .section-title::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 24px; height: 3px; background: var(--primary); border-radius: 2px; }
 
-        /* === 群組列表與選擇畫面 === */
-        #groupSelectionSection, #onboardingSection { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.5s ease-out forwards; padding-bottom: 40px;}
+        /* === 視圖共用設定 === */
+        .view-section { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.5s ease-out forwards; padding-bottom: 40px; }
+        .view-section.active { display: flex; }
+
+        /* === 認證 (登入/註冊) 畫面 === */
+        .auth-card { background: white; padding: 32px 24px; border-radius: var(--radius-lg); width: 100%; max-width: 400px; box-shadow: var(--shadow-hover); text-align: left; position: relative; }
+        .auth-logo { width: 70px; border-radius: 18px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto; box-shadow: var(--shadow-soft); }
+        .auth-title { font-size: 24px; font-weight: 900; margin-bottom: 8px; text-align: center; }
+        .auth-sub { font-size: 14px; color: var(--text-sub); text-align: center; margin-bottom: 24px; }
+        
+        .auth-toggle { text-align: center; margin-top: 20px; font-size: 14px; font-weight: 600; color: var(--text-sub); }
+        .auth-toggle span { color: var(--primary); cursor: pointer; font-weight: 800; margin-left: 4px; }
+        .auth-toggle span:hover { text-decoration: underline; }
+
+        .auth-form-container { display: none; animation: fadeIn 0.3s; }
+        .auth-form-container.active { display: block; }
+
+        /* === 動向與群組選擇 === */
         .group-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 400px; width: 100%; margin-bottom: 30px;}
         .group-card { cursor: pointer; background: white; padding: 24px 16px; border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); border: 2px solid transparent; transition: 0.3s; }
         .group-card:active { transform: scale(0.96); }
@@ -57,49 +73,21 @@
         .group-icon { font-size: 48px; margin-bottom: 12px; display: inline-block; }
         .group-icon-img { width: 64px; height: 64px; border-radius: 20px; object-fit: cover; margin-bottom: 12px; }
         .group-name { font-size: 18px; font-weight: 800; color: var(--text-main); }
-        .btn-register-new { background: var(--primary); color: white; padding: 16px 32px; border-radius: 30px; font-size: 16px; font-weight: 800; border: none; box-shadow: 0 8px 20px rgba(16,185,129,0.3); cursor: pointer; transition: 0.2s; width: 100%; max-width: 300px; }
-        .btn-register-new:active { transform: scale(0.96); }
-
-        /* === 註冊與建立流程 === */
-        .onboarding-card { background: white; padding: 32px 24px; border-radius: var(--radius-lg); width: 100%; max-width: 400px; box-shadow: var(--shadow-hover); text-align: left; }
-        .onboarding-title { font-size: 24px; font-weight: 900; margin-bottom: 8px; text-align: center; }
-        .onboarding-sub { font-size: 14px; color: var(--text-sub); text-align: center; margin-bottom: 24px; }
-        .step-container { display: none; animation: fadeIn 0.3s; }
-        .step-container.active { display: block; }
         
         .preset-icons-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
         .preset-icon { font-size: 28px; background: var(--bg-body); padding: 10px; border-radius: 12px; cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; }
         .preset-icon.selected { border-color: var(--primary); background: var(--primary-light); }
 
-        /* === 登入畫面 === */
-        #loginSection { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; text-align: center; animation: fadeIn 0.5s ease-out forwards; }
-        .login-logo-wrapper { width: 80px; height: 80px; background: white; border-radius: 24px; box-shadow: var(--shadow-soft); display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 16px; }
-        .custom-logo { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
-        .login-title { color: var(--text-main); font-size: 28px; font-weight: 900; margin-bottom: 8px; }
-        .login-subtitle { color: var(--text-sub); font-size: 15px; margin-bottom: 16px; font-weight: 500; }
-        .back-to-groups { background: var(--bg-body); color: var(--text-sub); border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer; margin-bottom: 32px; transition: 0.2s; }
-        .back-to-groups:active { background: #e5e7eb; }
-        
-        .user-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 400px; width: 100%; }
-        .user-card { cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); text-align: center; background: white; padding: 24px 16px; border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); }
-        .user-card:active { transform: translateY(4px) scale(0.98); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .avatar-img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-light); margin-bottom: 12px; transition: 0.3s; }
-        .user-card:active .avatar-img { border-color: var(--primary); }
-        .user-name-title { font-size: 16px; font-weight: 800; color: var(--text-main); }
-
-        /* === 密碼彈窗 === */
+        /* === 邀請碼彈窗與共用 Modal 樣式 === */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(8px); z-index: 5000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 32px 28px; border-radius: var(--radius-lg); width: 90%; max-width: 360px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; animation: slideUp 0.3s ease-out; }
         .modal-content.text-center { text-align: center; }
-        .pin-input { font-size: 32px; letter-spacing: 16px; text-align: center; width: 100%; padding: 16px; margin: 24px 0; border: 2px solid var(--border-color); border-radius: var(--radius-md); outline: none; background: var(--bg-body); font-weight: 700; color: var(--primary-dark); transition: 0.2s; }
-        .pin-input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px var(--primary-light); }
         .modal-btns { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
         .modal-btns button { flex: 1; padding: 14px; border-radius: var(--radius-md); font-size: 16px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
         .modal-btns button:first-child { background: var(--bg-body); color: var(--text-sub); }
         .modal-btns button:last-child { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
         .modal-btns button:active { transform: scale(0.96); }
-
-        /* === 邀請碼彈窗樣式 === */
+        
         .invite-code-display { font-size: 40px; font-weight: 900; color: var(--primary-dark); letter-spacing: 4px; text-align: center; margin: 20px 0; background: var(--primary-light); padding: 16px; border-radius: 16px; border: 2px dashed var(--primary); }
         .btn-line-share { background: #06C755; color: white; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; margin-top: 16px; }
         .btn-line-share:active { background: #05a746; }
@@ -115,7 +103,7 @@
         .mini-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
         .user-badge-name { font-size: 14px; font-weight: 800; color: var(--text-main); }
 
-        /* === 卡片樣式 (行事曆、聊天室) === */
+        /* === 卡片樣式 === */
         .agenda-card, .card-hero { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 20px; }
         .agenda-card:active, .card-hero:active { transform: translateY(2px) scale(0.99); box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fafafa; }
         
@@ -148,7 +136,6 @@
         .carousel-date { font-size: 12px; color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.3); margin-top: 2px; }
         .carousel-actions { pointer-events: auto; }
         .like-btn { background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 6px 12px; font-size: 18px; cursor: pointer; color: white; display: flex; align-items: center; gap: 6px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .like-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.3); }
         .like-btn.liked { background: rgba(255,255,255,0.9); border-color: white; }
         .like-count { font-size: 14px; font-weight: 800; color: white; }
         .like-btn.liked .like-count { color: var(--danger); }
@@ -202,56 +189,79 @@
     <!-- 隱藏的檔案上傳元件 -->
     <input type="file" id="avatarUploadInput" accept="image/*" style="display:none;">
 
-    <!-- 1. 群組列表畫面 (首次進入或登出後) -->
-    <div id="groupSelectionSection">
-        <img src="Nexus.png" alt="Nexus Logo" style="width: 80px; border-radius: 20px; margin-bottom: 16px; box-shadow: var(--shadow-soft);">
-        <h2 style="margin-top: 0; font-size: 24px; font-weight: 900;">選擇要進入的家</h2>
-        <p style="color: var(--text-sub); margin-bottom: 30px;">多個群組，一鍵切換</p>
-        <div class="group-grid" id="groupListContainer">
-            <!-- 動態載入群組 -->
+    <!-- 1. 統一登入/註冊入口區塊 -->
+    <div id="authSection" class="view-section">
+        <div class="auth-card">
+            <img src="Nexus.png" alt="Nexus Logo" class="auth-logo">
+            
+            <!-- 登入表單 -->
+            <div id="loginFormContainer" class="auth-form-container active">
+                <div class="auth-title">登入 Nexus</div>
+                <div class="auth-sub">歡迎回來！請輸入您的帳號資訊。</div>
+                <div class="form-group">
+                    <label class="form-label">帳號 ID (舊用戶可輸入暱稱)</label>
+                    <input type="text" id="loginId" class="form-control" placeholder="請輸入帳號或暱稱">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密碼 (舊用戶輸入4碼PIN)</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼">
+                </div>
+                <button class="btn-full" onclick="processLogin()">登入</button>
+                <div class="auth-toggle">還沒有帳號？<span onclick="toggleAuth('register')">立即註冊</span></div>
+            </div>
+
+            <!-- 註冊表單 -->
+            <div id="registerFormContainer" class="auth-form-container">
+                <div class="auth-title">建立新帳號</div>
+                <div class="auth-sub">只需幾個簡單步驟，開啟專屬群組互動！</div>
+                <div class="form-group">
+                    <label class="form-label">登入帳號 ID (不可重複)</label>
+                    <input type="text" id="regId" class="form-control" placeholder="設定登入用的帳號，限英數">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">電子郵件 Email</label>
+                    <input type="email" id="regEmail" class="form-control" placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">顯示暱稱 (例如：爸爸、媽咪)</label>
+                    <input type="text" id="regName" class="form-control" placeholder="在群組內顯示的稱呼">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">設定密碼 (至少 6 碼)</label>
+                    <input type="password" id="regPassword" class="form-control" placeholder="請設定 6 碼以上密碼" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">確認密碼</label>
+                    <input type="password" id="regConfirmPassword" class="form-control" placeholder="請再次輸入密碼">
+                </div>
+                <button class="btn-full" onclick="processRegistration()">註冊並登入</button>
+                <div class="auth-toggle">已經有帳號了？<span onclick="toggleAuth('login')">返回登入</span></div>
+            </div>
         </div>
-        <button class="btn-register-new" onclick="startOnboarding()">➕ 註冊 / 建立新群組</button>
     </div>
 
-    <!-- 2. 註冊與建立/加入群組流程 -->
-    <div id="onboardingSection">
-        <div class="onboarding-card">
-            
-            <!-- 步驟 1: 註冊使用者 -->
-            <div id="obStep1" class="step-container active">
-                <div class="onboarding-title">歡迎來到 Nexus</div>
-                <div class="onboarding-sub">先建立您的個人資料，稍後加入群組</div>
-                <div class="form-group">
-                    <label class="form-label">您的稱呼 (必填)</label>
-                    <input type="text" id="obUserName" class="form-control" placeholder="例如：爸爸、媽咪、Leo">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">設定 4 位數專屬密碼 (必填)</label>
-                    <input type="password" id="obUserPin" class="form-control" placeholder="請輸入4位數字" maxlength="4" pattern="[0-9]*" inputmode="numeric">
-                </div>
-                <button class="btn-full" onclick="processRegistration()">下一步</button>
-                <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="cancelOnboarding()">返回</button>
+    <!-- 2. 動向選擇 (剛註冊 或 登入後無任何群組時) -->
+    <div id="actionSection" class="view-section">
+        <div class="auth-card">
+            <!-- 步驟 1: 選擇動向 -->
+            <div id="obStepAction" class="auth-form-container active">
+                <div class="auth-title">歡迎來到 Nexus 🎉</div>
+                <div class="auth-sub">目前您尚未加入任何群組，接下來您想要...</div>
+                <button class="btn-full" style="margin-bottom: 16px; padding: 20px;" onclick="goToActionStep('obStepCreate')">🏠 建立全新的群組</button>
+                <button class="btn-full btn-outline" style="padding: 20px;" onclick="goToActionStep('obStepJoin')">🔗 輸入邀請碼加入現有群組</button>
             </div>
 
-            <!-- 步驟 2: 選擇動向 -->
-            <div id="obStep2" class="step-container">
-                <div class="onboarding-title">註冊成功！🎉</div>
-                <div class="onboarding-sub">接下來，您想要...</div>
-                <button class="btn-full" style="margin-bottom: 16px; padding: 20px;" onclick="goToStep('obStepCreate')">🏠 建立全新的群組</button>
-                <button class="btn-full btn-outline" style="padding: 20px;" onclick="goToStep('obStepJoin')">🔗 輸入邀請碼加入現有群組</button>
-            </div>
-
-            <!-- 步驟 2A: 建立群組 -->
-            <div id="obStepCreate" class="step-container">
-                <div class="onboarding-title">建立新群組</div>
-                <div class="onboarding-sub">為你們的空間取個好名字</div>
+            <!-- 步驟 1A: 建立群組 -->
+            <div id="obStepCreate" class="auth-form-container">
+                <div class="auth-title">建立新群組</div>
+                <div class="auth-sub">為你們的空間取個好名字</div>
                 <div class="form-group">
                     <label class="form-label">群組名稱</label>
                     <input type="text" id="obGroupName" class="form-control" placeholder="例如：我們這一家、閨蜜群">
                 </div>
                 <div class="form-group">
                     <label class="form-label">選擇群組圖示</label>
-                    <div class="preset-icons-grid" id="presetIconsGrid">
+                    <div class="preset-icons-grid">
                         <div class="preset-icon selected" onclick="selectPresetIcon(this, '🏠')">🏠</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🌟')">🌟</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🍎')">🍎</div>
@@ -265,46 +275,32 @@
                     </div>
                 </div>
                 <button class="btn-full" onclick="processCreateGroup()">完成建立</button>
-                <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="goToStep('obStep2')">返回上一步</button>
+                <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="goToActionStep('obStepAction')">返回</button>
             </div>
 
-            <!-- 步驟 2B: 加入群組 -->
-            <div id="obStepJoin" class="step-container">
-                <div class="onboarding-title">加入群組</div>
-                <div class="onboarding-sub">請輸入家人或朋友分享給您的邀請碼</div>
+            <!-- 步驟 1B: 加入群組 -->
+            <div id="obStepJoin" class="auth-form-container">
+                <div class="auth-title">加入群組</div>
+                <div class="auth-sub">請輸入家人或朋友分享給您的邀請碼</div>
                 <div class="form-group">
                     <label class="form-label">邀請碼 (6碼)</label>
                     <input type="text" id="obInviteCode" class="form-control" placeholder="請輸入邀請碼" style="text-transform: uppercase; text-align: center; font-size: 24px; letter-spacing: 4px;" maxlength="6">
                 </div>
                 <button class="btn-full" onclick="processJoinGroup()">確認加入</button>
-                <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="goToStep('obStep2')">返回上一步</button>
+                <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="goToActionStep('obStepAction')">返回</button>
             </div>
-
         </div>
     </div>
 
-    <!-- 3. 使用者登入畫面 (指定群組下的成員) -->
-    <div id="loginSection">
-        <button class="back-to-groups" onclick="showGroupSelection()">❮ 返回群組列表</button>
-        <div class="login-logo-wrapper" id="loginGroupIconWrapper">
-            <!-- 動態放入圖示 -->
+    <!-- 3. 群組選擇列表 (登入後有多個群組時，或從側邊欄切換) -->
+    <div id="groupSelectionSection" class="view-section">
+        <img src="Nexus.png" alt="Nexus Logo" style="width: 80px; border-radius: 20px; margin-bottom: 16px; box-shadow: var(--shadow-soft);">
+        <h2 style="margin-top: 0; font-size: 24px; font-weight: 900;">選擇要進入的家</h2>
+        <p style="color: var(--text-sub); margin-bottom: 30px;">點選群組直接進入，或新增群組</p>
+        <div class="group-grid" id="groupListContainer">
+            <!-- 動態載入群組 -->
         </div>
-        <div class="login-title" id="loginGroupTitle">Nexus</div>
-        <div class="login-subtitle">點選您的頭像以登入</div>
-        <div class="user-selection" id="userSelectionContainer"></div>
-    </div>
-
-    <!-- 密碼與功能彈窗區 -->
-    <div class="modal" id="pinModal">
-        <div class="modal-content text-center">
-            <h3 id="modalUserTitle" style="margin-top:0; font-size:22px; font-weight:800; color:var(--text-main);">請輸入密碼</h3>
-            <p style="font-size:14px; color:var(--text-sub); margin-top:-10px; margin-bottom:10px;">驗證身分以繼續使用</p>
-            <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" onkeypress="handlePinKeyPress(event)">
-            <div class="modal-btns">
-                <button onclick="closePinModal()">取消</button>
-                <button onclick="verifyPin()">確認</button>
-            </div>
-        </div>
+        <button class="btn-full btn-outline" style="max-width: 300px; padding: 14px;" onclick="showActionSection()">➕ 建立或加入新群組</button>
     </div>
 
     <!-- 邀請加入彈窗 -->
@@ -326,6 +322,7 @@
         </div>
     </div>
 
+    <!-- 聯絡我們彈窗 -->
     <div class="modal" id="contactModal">
         <div class="modal-content">
             <h3 style="margin-top:0; font-size:22px; font-weight:800; border-bottom:2px solid var(--border-color); padding-bottom:16px; margin-bottom:20px;">聯絡 Nexus</h3>
@@ -389,6 +386,10 @@
         <div class="sidebar-section">
             <div class="sidebar-title">功能導覽</div>
             <div id="sideMenuFeatureList"></div>
+            <!-- 切換群組按鈕 -->
+            <div class="sidebar-item" onclick="switchToGroupSelection()" style="color: #6366f1;">
+                <span class="sidebar-icon">🔄</span>切換 / 管理群組
+            </div>
         </div>
 
         <div class="sidebar-section">
@@ -430,12 +431,8 @@
         let galleryUnsubscribe = null;
         let calendarUnsubscribe = null;
         
-        window.allSystemGroups = [];
         window.currentGroup = null; // 當前選擇的群組
-        window.tempRegisteredUser = null; // 註冊中暫存的使用者資料
         window.selectedPresetIcon = '🏠';
-        
-        window.selectedUserObj = null;
         window.userAvatarMap = {};
         window.groupMembers = []; // 當前群組的成員清單
 
@@ -445,16 +442,16 @@
             const inviteCode = urlParams.get('code');
             if (inviteCode) {
                 localStorage.setItem('pendingInviteCode', inviteCode);
-                // 為了避免帶著參數亂跑，把網址洗乾淨
-                window.history.replaceState({}, document.title, window.location.pathname);
+                window.history.replaceState({}, document.title, window.location.pathname); // 洗除網址參數
             }
 
             const savedUserStr = sessionStorage.getItem('familyCheckInUser');
             if (savedUserStr) {
-                // 已登入狀態，檢查使用者並進入主畫面
+                // 已登入狀態，檢查使用者並進入
                 document.getElementById('loadingView').style.display = 'flex';
                 try {
                     const savedUser = JSON.parse(savedUserStr);
+                    // 為了相容，用暱稱查回最新狀態
                     const q = query(collection(db, "users"), where("name", "==", savedUser.name));
                     const snap = await getDocs(q);
                     
@@ -462,204 +459,206 @@
                         alert("此帳號已失效或被刪除，請重新登入。");
                         sessionStorage.removeItem('familyCheckInUser');
                         document.getElementById('loadingView').style.display = 'none';
-                        window.initAppFlow();
+                        window.showAuthSection();
                     } else {
                         const latestUser = snap.docs[0].data();
                         latestUser.docId = snap.docs[0].id;
                         sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
                         
-                        // 恢復群組狀態
-                        const lastGroupId = localStorage.getItem('lastGroupId');
-                        if (lastGroupId) {
-                            const groupDoc = await getDoc(doc(db, "groups", lastGroupId));
-                            if (groupDoc.exists()) {
-                                window.currentGroup = { id: groupDoc.id, ...groupDoc.data() };
-                            }
-                        }
-                        
                         document.getElementById('loadingView').style.display = 'none';
-                        window.showDashboard();
-                        
-                        // 如果登入狀態下點了邀請連結，直接觸發加入
-                        const pendingCode = localStorage.getItem('pendingInviteCode');
-                        if (pendingCode) {
-                            window.processJoinGroupWithCode(pendingCode, latestUser);
-                        }
+                        await window.evaluateUserGroups(latestUser); // 判斷群組動向
                     }
                 } catch (e) {
                     document.getElementById('loadingView').style.display = 'none';
-                    window.showDashboard();
+                    window.showAuthSection();
                 }
             } else {
-                // 未登入狀態，初始化檢查
-                window.initAppFlow();
-            }
-        };
-
-        window.initAppFlow = async function() {
-            document.getElementById('loadingView').style.display = 'flex';
-            try {
-                // 1. 取得所有群組
-                const groupsSnap = await getDocs(collection(db, "groups"));
-                window.allSystemGroups = [];
-                groupsSnap.forEach(docSnap => {
-                    window.allSystemGroups.push({ id: docSnap.id, ...docSnap.data() });
-                });
-
-                // 2. 舊資料無縫相容處理 (如果完全沒有群組，但有舊的 users)
-                if (window.allSystemGroups.length === 0) {
-                    const usersSnap = await getDocs(collection(db, "users"));
-                    if (!usersSnap.empty) {
-                        let memberNames = [];
-                        usersSnap.forEach(u => memberNames.push(u.data().name));
-                        // 自動生成預設群組
-                        const defaultGroupRef = await addDoc(collection(db, "groups"), {
-                            name: "我們的家",
-                            icon: "🏠",
-                            members: memberNames,
-                            inviteCode: generateInviteCode(),
-                            createdAt: serverTimestamp()
-                        });
-                        window.allSystemGroups.push({
-                            id: defaultGroupRef.id, name: "我們的家", icon: "🏠", members: memberNames
-                        });
-                    }
-                }
-
-                document.getElementById('loadingView').style.display = 'none';
-
-                // 3. 判斷要進入哪一個畫面
-                const pendingCode = localStorage.getItem('pendingInviteCode');
-                const lastGroupId = localStorage.getItem('lastGroupId');
-
-                if (pendingCode) {
-                    // 若有邀請碼且未登入，強迫進入註冊/登入首頁 (群組選擇)
-                    window.showGroupSelection();
-                } else if (lastGroupId) {
-                    // 若有記憶上次群組，直接進入該群組的人員選擇
-                    const targetGroup = window.allSystemGroups.find(g => g.id === lastGroupId);
-                    if (targetGroup) {
-                        window.showUserSelectionForGroup(targetGroup);
-                    } else {
-                        window.showGroupSelection();
-                    }
-                } else {
-                    // 預設進入群組列表
-                    window.showGroupSelection();
-                }
-
-            } catch (e) {
-                console.error("初始化失敗:", e);
-                document.getElementById('loadingView').style.display = 'none';
+                // 未登入狀態，顯示登入/註冊畫面
+                window.showAuthSection();
             }
         };
 
         // --- 畫面切換控制 ---
         function hideAllSections() {
-            document.getElementById('groupSelectionSection').style.display = 'none';
-            document.getElementById('onboardingSection').style.display = 'none';
-            document.getElementById('loginSection').style.display = 'none';
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById('dashboardView').style.display = 'none';
         }
 
-        window.showGroupSelection = function() {
+        window.showAuthSection = function() {
             hideAllSections();
-            const container = document.getElementById('groupListContainer');
-            container.innerHTML = '';
+            document.getElementById('authSection').classList.add('active');
             
-            if (window.allSystemGroups.length > 0) {
-                window.allSystemGroups.forEach(g => {
-                    const card = document.createElement('div'); 
-                    card.className = 'group-card';
-                    card.onclick = () => window.showUserSelectionForGroup(g);
-                    
-                    let iconHtml = `<div class="group-icon">${g.icon || '🏠'}</div>`;
-                    if (g.icon && g.icon.startsWith('data:image')) {
-                        iconHtml = `<img src="${g.icon}" class="group-icon-img">`;
-                    }
-                    
-                    card.innerHTML = `${iconHtml}<div class="group-name">${g.name}</div>`;
-                    container.appendChild(card);
-                });
+            // 如果帶有邀請碼，提示註冊
+            if (localStorage.getItem('pendingInviteCode')) {
+                window.toggleAuth('register');
+                alert("您有受邀加入群組的邀請，請先登入或註冊帳號！");
             } else {
-                container.innerHTML = '<p style="grid-column: span 2; color: var(--text-sub);">目前尚無群組，請點擊下方建立！</p>';
+                window.toggleAuth('login');
             }
-            
-            document.getElementById('groupSelectionSection').style.display = 'flex';
         };
 
-        window.showUserSelectionForGroup = async function(group) {
-            window.currentGroup = group;
-            localStorage.setItem('lastGroupId', group.id); // 記住選擇的群組
-            
-            hideAllSections();
+        window.toggleAuth = function(type) {
+            document.querySelectorAll('.auth-form-container').forEach(el => el.classList.remove('active'));
+            if(type === 'login') {
+                document.getElementById('loginFormContainer').classList.add('active');
+            } else {
+                document.getElementById('registerFormContainer').classList.add('active');
+            }
+        };
+
+        // --- 登入與註冊邏輯 ---
+        window.processLogin = async function() {
+            const loginId = document.getElementById('loginId').value.trim();
+            const loginPwd = document.getElementById('loginPassword').value.trim();
+
+            if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
+
             document.getElementById('loadingView').style.display = 'flex';
-            
             try {
-                // 設定群組標題與圖示
-                document.getElementById('loginGroupTitle').innerText = group.name;
-                const iconWrapper = document.getElementById('loginGroupIconWrapper');
-                if (group.icon && group.icon.startsWith('data:image')) {
-                    iconWrapper.innerHTML = `<img src="${group.icon}" class="custom-logo">`;
-                } else {
-                    iconWrapper.innerHTML = group.icon || '🏠';
+                // 1. 先用 accountId 搜尋 (新標準)
+                let q = query(collection(db, "users"), where("accountId", "==", loginId));
+                let snap = await getDocs(q);
+                
+                // 2. 向下相容：如果找不到，用 name (暱稱) 搜尋 (舊戶)
+                if(snap.empty) {
+                    q = query(collection(db, "users"), where("name", "==", loginId));
+                    snap = await getDocs(q);
                 }
 
-                // 獲取該群組的成員
-                const memberNames = group.members || [];
-                const container = document.getElementById('userSelectionContainer');
-                container.innerHTML = '';
-                
-                if (memberNames.length === 0) {
-                    container.innerHTML = '<p style="grid-column: span 2; color: var(--text-sub);">群組內尚無成員</p>';
-                } else {
-                    // 分批或直接用 where IN 查詢 (Firestore IN 限制10個，此處為了簡單，抓全部 users 在本地 filter)
-                    const usersSnap = await getDocs(collection(db, "users"));
-                    let groupUsers = [];
-                    usersSnap.forEach(docSnap => {
-                        let u = docSnap.data();
-                        if (memberNames.includes(u.name)) {
-                            u.docId = docSnap.id;
-                            groupUsers.push(u);
-                        }
-                    });
-                    
-                    groupUsers.forEach(u => {
-                        const card = document.createElement('div'); card.className = 'user-card'; 
-                        card.onclick = () => window.openPinModal(u);
-                        card.innerHTML = `<img class="avatar-img" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff&size=150'"><div class="user-name-title">${u.name}</div>`;
-                        container.appendChild(card);
-                    });
+                if (snap.empty) {
+                    alert('找不到此帳號，請確認輸入正確。');
+                    document.getElementById('loadingView').style.display = 'none';
+                    return;
                 }
+
+                const userDoc = snap.docs[0];
+                const userData = userDoc.data();
+                
+                // 驗證密碼：比對新密碼欄位 或 舊 pin 欄位
+                if (userData.password !== loginPwd && userData.pin !== loginPwd) {
+                    alert('密碼錯誤，請重新輸入！');
+                    document.getElementById('loadingView').style.display = 'none';
+                    return;
+                }
+
+                const loggedUser = { docId: userDoc.id, ...userData };
+                sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
                 
                 document.getElementById('loadingView').style.display = 'none';
-                document.getElementById('loginSection').style.display = 'flex';
-                
+                await window.evaluateUserGroups(loggedUser);
+
             } catch (e) {
-                console.error("載入群組成員失敗", e);
+                console.error(e);
+                alert("登入失敗，請檢查網路連線。");
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
 
-        // --- 註冊與群組建立流程 ---
-        window.startOnboarding = function() {
-            hideAllSections();
-            document.getElementById('onboardingSection').style.display = 'flex';
-            window.goToStep('obStep1');
-            
-            const pendingCode = localStorage.getItem('pendingInviteCode');
-            if (pendingCode) {
-                // 如果是帶邀請碼來的，自動填寫邀請碼欄位
-                document.getElementById('obInviteCode').value = pendingCode;
+        window.processRegistration = async function() {
+            const regId = document.getElementById('regId').value.trim();
+            const regEmail = document.getElementById('regEmail').value.trim();
+            const regName = document.getElementById('regName').value.trim();
+            const pwd = document.getElementById('regPassword').value.trim();
+            const pwdConfirm = document.getElementById('regConfirmPassword').value.trim();
+
+            if(!regId || !regEmail || !regName || !pwd) { alert('請填寫完整註冊資訊！'); return; }
+            if(pwd.length < 6) { alert('密碼長度必須至少 6 碼！'); return; }
+            if(pwd !== pwdConfirm) { alert('兩次輸入的密碼不一致！'); return; }
+
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                // 檢查 ID 是否重複
+                let qId = query(collection(db, "users"), where("accountId", "==", regId));
+                if (!(await getDocs(qId)).empty) {
+                    alert('此登入帳號 ID 已被使用，請換一個！');
+                    document.getElementById('loadingView').style.display = 'none';
+                    return;
+                }
+                
+                // 檢查暱稱是否重複 (確保舊系統設計下不會錯亂)
+                let qName = query(collection(db, "users"), where("name", "==", regName));
+                if (!(await getDocs(qName)).empty) {
+                    alert('此群組暱稱已被使用，請換一個！');
+                    document.getElementById('loadingView').style.display = 'none';
+                    return;
+                }
+
+                // 建立新使用者
+                const avatar = `https://ui-avatars.com/api/?name=${regName}&background=10b981&color=fff`;
+                const userRef = await addDoc(collection(db, "users"), {
+                    accountId: regId,
+                    email: regEmail,
+                    name: regName,
+                    password: pwd,
+                    pin: pwd, // 備用相容舊系統
+                    avatar: avatar,
+                    role: "member",
+                    createdAt: serverTimestamp()
+                });
+                
+                const loggedUser = { docId: userRef.id, accountId: regId, email: regEmail, name: regName, password: pwd, avatar, role: "member" };
+                sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
+                
+                document.getElementById('loadingView').style.display = 'none';
+                
+                // 註冊後，判斷去向
+                await window.evaluateUserGroups(loggedUser);
+
+            } catch (e) {
+                console.error(e);
+                alert("註冊失敗，請檢查網路。");
+                document.getElementById('loadingView').style.display = 'none';
             }
         };
-        
-        window.cancelOnboarding = function() {
-            window.showGroupSelection();
+
+        // --- 登入後的動向判斷 (核心分流邏輯) ---
+        window.evaluateUserGroups = async function(userObj) {
+            document.getElementById('loadingView').style.display = 'flex';
+            try {
+                // 找出此使用者所屬的群組 (利用 name 陣列判斷)
+                const q = query(collection(db, "groups"), where("members", "array-contains", userObj.name));
+                const snap = await getDocs(q);
+                
+                let userGroups = [];
+                snap.forEach(docSnap => userGroups.push({ id: docSnap.id, ...docSnap.data() }));
+
+                document.getElementById('loadingView').style.display = 'none';
+                
+                // 如果有未處理的邀請碼，強制進入「動向頁-加入群組」
+                const pendingCode = localStorage.getItem('pendingInviteCode');
+                if (pendingCode) {
+                    window.showActionSection();
+                    window.goToActionStep('obStepJoin');
+                    document.getElementById('obInviteCode').value = pendingCode;
+                    return;
+                }
+
+                if (userGroups.length === 0) {
+                    // 完全沒有群組 -> 顯示建立或加入頁面
+                    window.showActionSection();
+                } else if (userGroups.length === 1) {
+                    // 只有一個群組 -> 直接進入
+                    window.enterGroup(userGroups[0]);
+                } else {
+                    // 有多個群組 -> 顯示群組列表選擇
+                    window.showGroupSelectionList(userGroups);
+                }
+
+            } catch(e) {
+                console.error(e);
+                document.getElementById('loadingView').style.display = 'none';
+            }
         };
 
-        window.goToStep = function(stepId) {
-            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+        // 顯示無群組時的選項 (建立/加入)
+        window.showActionSection = function() {
+            hideAllSections();
+            document.getElementById('actionSection').classList.add('active');
+            window.goToActionStep('obStepAction');
+        };
+
+        window.goToActionStep = function(stepId) {
+            document.getElementById('actionSection').querySelectorAll('.auth-form-container').forEach(el => el.classList.remove('active'));
             document.getElementById(stepId).classList.add('active');
         };
 
@@ -669,67 +668,24 @@
             window.selectedPresetIcon = iconChar;
         };
 
-        window.processRegistration = async function() {
-            const name = document.getElementById('obUserName').value.trim();
-            const pin = document.getElementById('obUserPin').value.trim();
-            
-            if (!name || pin.length !== 4) {
-                alert("請填寫稱呼，並設定 4 位數字密碼！");
-                return;
-            }
-
-            document.getElementById('loadingView').style.display = 'flex';
-            try {
-                // 檢查是否已存在同名使用者 (簡化版邏輯，實務上可用 Email 或 UUID)
-                const q = query(collection(db, "users"), where("name", "==", name));
-                const snap = await getDocs(q);
-                
-                if (!snap.empty) {
-                    // 已存在同名，視為舊戶登入並加入新群組的行為
-                    window.tempRegisteredUser = { docId: snap.docs[0].id, ...snap.docs[0].data() };
-                } else {
-                    // 建立新使用者
-                    const avatar = `https://ui-avatars.com/api/?name=${name}&background=10b981&color=fff`;
-                    const userRef = await addDoc(collection(db, "users"), {
-                        name: name,
-                        pin: pin,
-                        avatar: avatar,
-                        role: "member", // 預設一般成員，建立群組的人後續可提權
-                        createdAt: serverTimestamp()
-                    });
-                    window.tempRegisteredUser = { docId: userRef.id, name, pin, avatar, role: "member" };
-                }
-                
-                document.getElementById('loadingView').style.display = 'none';
-                
-                // 檢查是否有未處理的邀請碼，有則直接跳轉加入
-                if (localStorage.getItem('pendingInviteCode')) {
-                    window.goToStep('obStepJoin');
-                } else {
-                    window.goToStep('obStep2');
-                }
-            } catch (e) {
-                console.error(e);
-                alert("註冊處理失敗，請檢查網路。");
-                document.getElementById('loadingView').style.display = 'none';
-            }
-        };
-
+        // 建立群組
         window.processCreateGroup = async function() {
             const groupName = document.getElementById('obGroupName').value.trim();
             if (!groupName) { alert("請為群組取個名稱！"); return; }
-            if (!window.tempRegisteredUser) { alert("使用者資料遺失，請重新操作。"); window.cancelOnboarding(); return; }
-
+            
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('loadingView').style.display = 'flex';
+            
             try {
                 // 建群者設為 admin
-                await updateDoc(doc(db, "users", window.tempRegisteredUser.docId), { role: 'admin' });
-                window.tempRegisteredUser.role = 'admin';
+                await updateDoc(doc(db, "users", user.docId), { role: 'admin' });
+                user.role = 'admin';
+                sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
 
                 const newGroupData = {
                     name: groupName,
                     icon: window.selectedPresetIcon,
-                    members: [window.tempRegisteredUser.name],
+                    members: [user.name],
                     inviteCode: window.generateInviteCode(),
                     createdAt: serverTimestamp()
                 };
@@ -737,12 +693,8 @@
                 const groupRef = await addDoc(collection(db, "groups"), newGroupData);
                 const newGroup = { id: groupRef.id, ...newGroupData };
                 
-                window.allSystemGroups.push(newGroup);
-                
-                // 設定並登入
-                window.currentGroup = newGroup;
-                localStorage.setItem('lastGroupId', newGroup.id);
-                window.login(window.tempRegisteredUser);
+                document.getElementById('loadingView').style.display = 'none';
+                window.enterGroup(newGroup); // 建立後進入
                 
             } catch(e) {
                 alert("群組建立失敗。");
@@ -750,17 +702,14 @@
             }
         };
 
+        // 加入群組
         window.processJoinGroup = async function() {
             const code = document.getElementById('obInviteCode').value.trim().toUpperCase();
             if (!code) { alert("請輸入邀請碼！"); return; }
-            if (!window.tempRegisteredUser) { alert("使用者資料遺失，請重新操作。"); window.cancelOnboarding(); return; }
             
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('loadingView').style.display = 'flex';
-            await window.processJoinGroupWithCode(code, window.tempRegisteredUser);
-        };
-        
-        // 核心加入群組邏輯 (可供註冊後或已登入者使用)
-        window.processJoinGroupWithCode = async function(code, userObj) {
+            
             try {
                 const q = query(collection(db, "groups"), where("inviteCode", "==", code));
                 const snap = await getDocs(q);
@@ -775,65 +724,68 @@
                 const groupData = groupDoc.data();
                 let members = groupData.members || [];
                 
-                if (!members.includes(userObj.name)) {
-                    members.push(userObj.name);
+                if (!members.includes(user.name)) {
+                    members.push(user.name);
                     await updateDoc(doc(db, "groups", groupDoc.id), { members: members });
                 }
                 
                 alert(`成功加入群組「${groupData.name}」！`);
-                localStorage.removeItem('pendingInviteCode'); // 清除邀請碼記憶
+                localStorage.removeItem('pendingInviteCode');
                 
                 const joinedGroup = { id: groupDoc.id, ...groupData, members };
-                window.currentGroup = joinedGroup;
-                localStorage.setItem('lastGroupId', joinedGroup.id);
-                
                 document.getElementById('loadingView').style.display = 'none';
-                window.login(userObj); // 進入首頁
+                window.enterGroup(joinedGroup);
                 
             } catch(e) {
-                console.error(e);
                 alert("加入群組失敗，請檢查網路。");
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
 
         window.generateInviteCode = function() {
-            // 生成隨機 6 碼大寫英數
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let result = '';
-            for (let i = 0; i < 6; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
+            for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
             return result;
         };
 
-        // --- 密碼驗證與登入 ---
-        window.openPinModal = function(user) {
-            window.selectedUserObj = user;
-            document.getElementById('modalUserTitle').innerText = `${user.name}，請輸入密碼`;
-            document.getElementById('pinInput').value = '';
-            document.getElementById('pinModal').style.display = 'flex';
-            setTimeout(() => document.getElementById('pinInput').focus(), 100);
+        // 顯示擁有的群組列表 (選單切換或多群組進入)
+        window.showGroupSelectionList = function(userGroups) {
+            hideAllSections();
+            const container = document.getElementById('groupListContainer');
+            container.innerHTML = '';
+            
+            userGroups.forEach(g => {
+                const card = document.createElement('div'); 
+                card.className = 'group-card';
+                card.onclick = () => window.enterGroup(g);
+                
+                let iconHtml = `<div class="group-icon">${g.icon || '🏠'}</div>`;
+                if (g.icon && g.icon.startsWith('data:image')) {
+                    iconHtml = `<img src="${g.icon}" class="group-icon-img">`;
+                }
+                
+                card.innerHTML = `${iconHtml}<div class="group-name">${g.name}</div>`;
+                container.appendChild(card);
+            });
+            
+            document.getElementById('groupSelectionSection').classList.add('active');
         };
-        window.closePinModal = function() { document.getElementById('pinModal').style.display = 'none'; };
-        window.handlePinKeyPress = function(e) { if (e.key === 'Enter') window.verifyPin(); };
-
-        window.verifyPin = function() {
-            const pin = document.getElementById('pinInput').value.trim();
-            if (pin === window.selectedUserObj.pin) {
-                window.closePinModal(); 
-                window.login(window.selectedUserObj);
-            } else { 
-                alert('密碼錯誤！'); document.getElementById('pinInput').value = ''; document.getElementById('pinInput').focus(); 
-            }
+        
+        // 側邊欄呼叫用
+        window.switchToGroupSelection = async function() {
+            toggleSidebar();
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+            await window.evaluateUserGroups(user); // 重新評估並顯示
         };
 
-        window.login = async function(userObj) {
-            sessionStorage.setItem('familyCheckInUser', JSON.stringify(userObj));
-            // 寫入 Log 時附加群組資訊
-            let logMsg = '使用者成功登入系統';
-            if (window.currentGroup) logMsg += ` (群組: ${window.currentGroup.name})`;
-            await recordLog(userObj.name, '登入', logMsg);
+        // 正式進入某個群組並渲染 Dashboard
+        window.enterGroup = async function(groupObj) {
+            window.currentGroup = groupObj;
+            localStorage.setItem('lastGroupId', groupObj.id);
+            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+            
+            await recordLog(user.name, '進入群組', `進入了群組: ${groupObj.name}`);
             
             window.showDashboard();
         };
@@ -844,10 +796,7 @@
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('dashboardView').style.display = 'block';
             
-            // 更新首頁群組名稱
-            if (window.currentGroup) {
-                document.getElementById('headerGroupName').innerText = window.currentGroup.name;
-            }
+            if (window.currentGroup) document.getElementById('headerGroupName').innerText = window.currentGroup.name;
             
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
@@ -863,18 +812,16 @@
             window.checkCalendarAlerts(user); 
             
             const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone'];
-            if (allowedMenus.includes('photodump')) {
-                window.fetchAndRenderPhotoCarousel(user);
-            }
+            if (allowedMenus.includes('photodump')) window.fetchAndRenderPhotoCarousel(user);
         };
 
         // --- 邀請功能 (LINE 分享) ---
         window.openInviteModal = async function() {
             if (!window.currentGroup) { alert("無法取得群組資訊！"); return; }
-            toggleSidebar();
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
             
             let code = window.currentGroup.inviteCode;
-            // 若舊群組沒有邀請碼，補產生並存回資料庫
             if (!code) {
                 code = window.generateInviteCode();
                 window.currentGroup.inviteCode = code;
@@ -889,12 +836,10 @@
             const code = window.currentGroup.inviteCode;
             const link = `${window.location.origin}${window.location.pathname}?code=${code}`;
             const text = `一起用Nexus連結彼此的日常，讓我們更靠近!\n點連結加入同一個家，可以免費開始使用。\n\n邀請碼：${code}\n連結：${link}`;
-            
-            const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
-            window.open(lineUrl, '_blank');
+            window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, '_blank');
         };
 
-        // --- 其他原有功能函數 (保持不變) ---
+        // --- 其他原有功能函數 (保持不變，配合架構) ---
         async function recordLog(operatorName, actionType, detailsText) {
             try {
                 const now = new Date();
@@ -904,44 +849,33 @@
         }
 
         window.toggleSidebar = function() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
         };
 
         window.triggerAvatarUpload = function() { document.getElementById('avatarUploadInput').click(); };
-
         document.getElementById('avatarUploadInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             document.getElementById('loadingView').style.display = 'flex';
             const reader = new FileReader();
-            
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = async function() {
                     const canvas = document.createElement('canvas');
                     const MAX_SIZE = 300; 
                     let width = img.width, height = img.height;
-
                     if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
                     else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
-                    
                     canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    
                     try {
                         const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-                        let docRefId = user.docId;
-                        if (docRefId) {
-                            await updateDoc(doc(db, "users", docRefId), { avatar: dataUrl });
+                        if (user.docId) {
+                            await updateDoc(doc(db, "users", user.docId), { avatar: dataUrl });
                             user.avatar = dataUrl;
                             sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
-                            
                             document.getElementById('dashUserAvatar').src = user.avatar;
                             document.getElementById('sideAvatar').src = user.avatar;
                             alert("頭像更新成功！");
@@ -959,7 +893,6 @@
             try {
                 if (!window.currentGroup) return;
                 const memberNames = window.currentGroup.members || [];
-                
                 const snap = await getDocs(collection(db, "users"));
                 window.groupMembers = [];
                 snap.forEach(doc => {
@@ -967,9 +900,7 @@
                     window.userAvatarMap[u.name] = u.avatar;
                     if (memberNames.includes(u.name)) window.groupMembers.push(u);
                 });
-                
-                const container = document.getElementById('sideMembersList');
-                container.innerHTML = window.groupMembers.map(u => `
+                document.getElementById('sideMembersList').innerHTML = window.groupMembers.map(u => `
                     <div class="member-avatar-container">
                         <img class="member-avatar" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff'">
                         <div class="member-name">${u.name}</div>
@@ -978,44 +909,37 @@
             } catch (e) {}
         }
 
-        window.openContactModal = function() { toggleSidebar(); document.getElementById('contactEmail').value = ''; document.getElementById('contactContent').value = ''; document.getElementById('contactModal').style.display = 'flex'; };
+        window.openContactModal = function() { toggleSidebar(); document.getElementById('contactModal').style.display = 'flex'; };
         window.closeContactModal = function() { document.getElementById('contactModal').style.display = 'none'; };
         window.submitContact = async function() {
             const type = document.getElementById('contactType').value;
             const email = document.getElementById('contactEmail').value.trim();
             const content = document.getElementById('contactContent').value.trim();
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            if (!email || !content) { alert("請完整填寫信箱與內容！"); return; }
-
+            if (!email || !content) { alert("請完整填寫資訊！"); return; }
             document.getElementById('loadingView').style.display = 'flex';
             try {
                 await addDoc(collection(db, "feedbacks"), { userName: user.name, type: type, email: email, content: content, timestamp: serverTimestamp() });
-                alert("感謝您的回饋！我們已收到您的訊息，會盡快處理。");
-                closeContactModal();
-            } catch (e) { alert("送出失敗，請檢查網路連線。"); }
+                alert("感謝您的回饋！"); closeContactModal();
+            } catch (e) { alert("送出失敗。"); }
             document.getElementById('loadingView').style.display = 'none';
         };
-        window.rateApp = function() { toggleSidebar(); alert("感謝您的支持！您的五星好評是 Nexus 持續進步的動力。"); };
+        window.rateApp = function() { toggleSidebar(); alert("感謝您的支持！"); };
         window.shareApp = async function() {
             toggleSidebar();
-            const shareData = { title: 'Nexus - 串聯生活每一刻', text: '這是一款超讚的群組互動 App，快來看看！', url: window.location.href };
             try {
-                if (navigator.share) await navigator.share(shareData);
-                else { await navigator.clipboard.writeText(shareData.url); alert("已複製 Nexus 連結！趕快貼給親朋好友吧。"); }
+                if (navigator.share) await navigator.share({ title: 'Nexus', url: window.location.href });
+                else { await navigator.clipboard.writeText(window.location.href); alert("已複製連結！"); }
             } catch (err) {}
         };
 
         async function renderDynamicModules(user) {
             const sideList = document.getElementById('sideMenuFeatureList');
             const chatContainer = document.getElementById('chatMainCardContainer');
-            
-            sideList.innerHTML = '';
-            chatContainer.innerHTML = '';
-            
+            sideList.innerHTML = ''; chatContainer.innerHTML = '';
             const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone']; 
             const allowedMenus = user.menus || defaultAllowed;
             let modules = {}, order = [];
-
             try {
                 const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
                 if (userConfigDoc.exists()) {
@@ -1035,17 +959,8 @@
                 wishlist: `<div class="sidebar-item" onclick="window.location.href='wishwall.html'"><span class="sidebar-icon">✨</span>許願牆</div>`,
                 finance: `<div class="sidebar-item" onclick="window.location.href='expense.html'"><span class="sidebar-icon">💰</span>記帳本</div>`
             };
-
-            order.forEach(modKey => { 
-                if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) {
-                    sideList.innerHTML += sideMenuTemplates[modKey];
-                }
-            });
-
-            if (user.role === 'admin' || user.role === 'parent') {
-                sideList.innerHTML += `<div class="sidebar-item" onclick="window.location.href='admin.html'" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
-            }
-
+            order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
+            if (user.role === 'admin' || user.role === 'parent') sideList.innerHTML += `<div class="sidebar-item" onclick="window.location.href='admin.html'" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
             if (allowedMenus.includes('chat') && modules.chat !== false) {
                 chatContainer.innerHTML = `
                     <div class="section-header"><div class="section-title">Chat</div></div>
@@ -1068,9 +983,8 @@
                     let totalUnreadMessages = 0;
                     querySnapshot.forEach(docSnap => {
                         const room = docSnap.data();
-                        if (room.unreadCount && room.unreadCount[user.name]) {
-                            totalUnreadMessages += room.unreadCount[user.name];
-                        } else {
+                        if (room.unreadCount && room.unreadCount[user.name]) totalUnreadMessages += room.unreadCount[user.name];
+                        else {
                             let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
                             let myReadTime = room.readTimestamps?.[user.name] || 0;
                             const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
@@ -1079,10 +993,7 @@
                         }
                     });
                     const badge = document.getElementById('chatBadge');
-                    if (badge) {
-                        if (totalUnreadMessages > 0) { badge.style.display = 'block'; badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages; } 
-                        else { badge.style.display = 'none'; }
-                    }
+                    if (badge) { if (totalUnreadMessages > 0) { badge.style.display = 'block'; badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages; } else badge.style.display = 'none'; }
                 });
             } catch (e) {}
         };
@@ -1098,44 +1009,30 @@
                         if (photoTime > lastReadTime && photo.uploader !== user.name) unreadCount++;
                     });
                     const sideBadge = document.getElementById('sideGalleryBadge');
-                    if (unreadCount > 0) {
-                        if (sideBadge) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${unreadCount}`; }
-                    } else {
-                        if (sideBadge) sideBadge.style.display = 'none';
-                    }
+                    if (sideBadge) { if (unreadCount > 0) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${unreadCount}`; } else sideBadge.style.display = 'none'; }
                 });
             } catch (e) {}
         };
 
         window.checkCalendarAlerts = async function(user) {
             if (Object.keys(window.userAvatarMap).length === 0) {
-                try {
-                    const usersSnap = await getDocs(collection(db, "users"));
-                    usersSnap.forEach(d => { window.userAvatarMap[d.data().name] = d.data().avatar; });
-                } catch(e) {}
+                try { const usersSnap = await getDocs(collection(db, "users")); usersSnap.forEach(d => { window.userAvatarMap[d.data().name] = d.data().avatar; }); } catch(e) {}
             }
-
             const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
             try {
                 calendarUnsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
                     const now = new Date();
                     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-                    let activeIcons = [];
-                    let todayEventsList = [];
+                    let activeIcons = [], todayEventsList = [];
 
                     snapshot.forEach(docSnap => {
                         const evt = docSnap.data();
                         if ((evt.visibility === 'public' || evt.operator === user.name) && evt.date === todayStr) {
                             let start = new Date(now), end = new Date(now), isExpired = false;
-                            if (evt.isAllDay !== false) { 
-                                start.setHours(0,0,0,0); end.setHours(23,59,59,999);
-                            } else {
+                            if (evt.isAllDay !== false) { start.setHours(0,0,0,0); end.setHours(23,59,59,999); } 
+                            else {
                                 if(evt.startTime) { const [sh, sm] = evt.startTime.split(':'); start.setHours(sh, sm, 0, 0); }
-                                if(evt.endTime) { 
-                                    const [eh, em] = evt.endTime.split(':'); 
-                                    end.setHours(eh, em, 0, 0); 
-                                    if (now > end) isExpired = true;
-                                }
+                                if(evt.endTime) { const [eh, em] = evt.endTime.split(':'); end.setHours(eh, em, 0, 0); if (now > end) isExpired = true; }
                             }
                             if (!isExpired) {
                                 todayEventsList.push(evt);
@@ -1154,49 +1051,19 @@
                     let listHtml = '';
                     if (todayEventsList.length > 0) {
                         todayEventsList.sort((a, b) => {
-                            if (a.isAllDay && !b.isAllDay) return -1;
-                            if (!a.isAllDay && b.isAllDay) return 1;
-                            if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
-                            return 0;
+                            if (a.isAllDay && !b.isAllDay) return -1; if (!a.isAllDay && b.isAllDay) return 1;
+                            if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime); return 0;
                         });
                         listHtml = todayEventsList.map(evt => {
                             let timeStr = (evt.isAllDay !== false) ? '全天' : `${evt.startTime} - ${evt.endTime}`;
                             const avatar = window.userAvatarMap[evt.operator] || `https://ui-avatars.com/api/?name=${evt.operator}&background=e5e7eb`;
-                            return `
-                                <div class="agenda-item">
-                                    <div class="agenda-time">${timeStr}</div>
-                                    <div class="agenda-divider"></div>
-                                    <div class="agenda-title">${evt.title}</div>
-                                    <img class="agenda-avatar" src="${avatar}" alt="${evt.operator}">
-                                </div>
-                            `;
+                            return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${avatar}"></div>`;
                         }).join('');
-                    } else {
-                        listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
-                    }
+                    } else listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
 
-                    agendaContainer.innerHTML = `
-                        <div class="section-header"><div class="section-title">Calendar</div></div>
-                        <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';">
-                            <div class="agenda-header">
-                                <div class="agenda-date">${dateTitle}</div>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
-                                    <div class="agenda-count">${todayEventsList.length > 0 ? `今天有 ${todayEventsList.length} 個行程` : '自由日'}</div>
-                                </div>
-                            </div>
-                            <div class="agenda-list">${listHtml}</div>
-                        </div>
-                    `;
+                    agendaContainer.innerHTML = `<div class="section-header"><div class="section-title">Calendar</div></div><div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.location.href='calendar.html';"><div class="agenda-header"><div class="agenda-date">${dateTitle}</div><div style="display:flex; gap:8px; align-items:center;"><div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div><div class="agenda-count">${todayEventsList.length > 0 ? `今天有 ${todayEventsList.length} 個行程` : '自由日'}</div></div></div><div class="agenda-list">${listHtml}</div></div>`;
                 });
-                
-                setInterval(() => {
-                    if (calendarUnsubscribe) {
-                        calendarUnsubscribe();
-                        window.checkCalendarAlerts(user);
-                    }
-                }, 60000);
-
+                setInterval(() => { if (calendarUnsubscribe) { calendarUnsubscribe(); window.checkCalendarAlerts(user); } }, 60000);
             } catch (e) { }
         };
 
@@ -1205,46 +1072,19 @@
             onSnapshot(q, (snapshot) => {
                 const section = document.getElementById('photoCarouselSection');
                 const container = document.getElementById('photoCarouselContainer');
-                
                 if (snapshot.empty) { section.style.display = 'none'; return; }
-                section.style.display = 'block';
-                let html = '';
-                
+                section.style.display = 'block'; let html = '';
                 snapshot.forEach(docSnap => {
-                    const photo = docSnap.data();
-                    const photoId = docSnap.id;
+                    const photo = docSnap.data(); const photoId = docSnap.id;
                     const dateObj = photo.timestamp ? photo.timestamp.toDate() : new Date();
                     const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
                     const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
-                    
                     let displayImageUrl = '';
                     if (photo.imageUrls && Array.isArray(photo.imageUrls) && photo.imageUrls.length > 0) displayImageUrl = photo.imageUrls[0]; 
                     else displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
-                    
-                    const likes = photo.likes || [];
-                    const isLiked = likes.includes(user.name);
-                    const likeCount = likes.length;
-
+                    const likes = photo.likes || []; const isLiked = likes.includes(user.name); const likeCount = likes.length;
                     if (displayImageUrl) {
-                        html += `
-                            <div class="carousel-item">
-                                <img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="window.location.href='gallery.html'">
-                                <div class="carousel-info">
-                                    <div class="carousel-author">
-                                        <img class="carousel-author-img" src="${uploaderAvatar}">
-                                        <div>
-                                            <div class="carousel-author-name">${photo.uploader}</div>
-                                            <div class="carousel-date">${dateStr}</div>
-                                        </div>
-                                    </div>
-                                    <div class="carousel-actions">
-                                        <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">
-                                            ${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        html += `<div class="carousel-item"><img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="window.location.href='gallery.html'"><div class="carousel-info"><div class="carousel-author"><img class="carousel-author-img" src="${uploaderAvatar}"><div><div class="carousel-author-name">${photo.uploader}</div><div class="carousel-date">${dateStr}</div></div></div><div class="carousel-actions"><button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span></button></div></div></div>`;
                     }
                 });
                 container.innerHTML = html;
@@ -1258,8 +1098,7 @@
                 const photoSnap = await getDoc(photoRef);
                 if (photoSnap.exists()) {
                     let likes = photoSnap.data().likes || [];
-                    if (likes.includes(user.name)) likes = likes.filter(n => n !== user.name); 
-                    else likes.push(user.name); 
+                    if (likes.includes(user.name)) likes = likes.filter(n => n !== user.name); else likes.push(user.name); 
                     await updateDoc(photoRef, { likes: likes });
                 }
             } catch(e) {}
