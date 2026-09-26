@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase - Photo Dump</title>
-    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
-    <link rel="apple-touch-icon" href="homebase_icon.jpg">
-    <meta name="apple-mobile-web-app-title" content="HomeBase">
+    <title>Nexus - Photo Dump</title>
+    <link rel="icon" href="Nexus.png" type="image/jpeg">
+    <link rel="apple-touch-icon" href="Nexus.png">
+    <meta name="apple-mobile-web-app-title" content="Nexus">
     <meta name="mobile-web-app-capable" content="yes">
 
     <style>
@@ -253,10 +253,10 @@
     </div>
 
     <script type="module">
-        // 只需要匯入 Firestore，不需匯入 Storage
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        // 🚨 新增：確保導入 where 函數
         import {
-            getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+            getFirestore, collection, addDoc, query, orderBy, onSnapshot, where,
             serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -271,12 +271,19 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 🌟 ImgBB API 設定 (請替換為你的 ImgBB API Key)
+        // 🌟 ImgBB API 設定 
         const IMGBB_API_KEY = "a8dd5d8d055c20807b18a53a514757e0"; 
 
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-        if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
+        
+        // 🚨 取得目前所在的群組 ID
+        const currentGroupId = localStorage.getItem('lastGroupId');
+
+        if (!currentUser || !currentGroupId) { 
+            alert('找不到登入狀態或群組資訊，請重新登入！'); 
+            window.location.href = 'index.html'; 
+        }
 
         let pendingUploadBase64Array = []; 
         let allPhotosData = [];
@@ -294,7 +301,14 @@
             try {
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-                await addDoc(collection(db, "logs"), { datetime: datetimeStr, operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() });
+                await addDoc(collection(db, "logs"), { 
+                    groupId: currentGroupId,  // 🚨 紀錄寫入哪個群組
+                    datetime: datetimeStr, 
+                    operator: currentUser.name, 
+                    actionType, 
+                    details: detailsText, 
+                    timestamp: serverTimestamp() 
+                });
             } catch (e) {}
         }
 
@@ -304,7 +318,14 @@
         };
 
         function listenToGallery() {
-            const q = query(collection(db, "photos"), orderBy("timestamp", "desc"));
+            // 🚨 新增：加入 where("groupId", "==", currentGroupId) 來隔離群組
+            // ⚠️ 注意：儲存後第一次執行，Firebase 會要求您建立複合索引，請留意 Console 的黃底紅字網址並點擊它！
+            const q = query(
+                collection(db, "photos"), 
+                where("groupId", "==", currentGroupId), 
+                orderBy("timestamp", "desc")
+            );
+
             onSnapshot(q, (snapshot) => {
                 allPhotosData = [];
                 if (snapshot.empty) {
@@ -543,15 +564,10 @@
 
         document.getElementById('btnCancelUpload').addEventListener('click', () => { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('fileInput').value = ''; pendingUploadBase64Array = []; });
 
-        // 🌟 新增：透過 ImgBB API 上傳圖片的邏輯
+        // 🌟 透過 ImgBB API 上傳圖片
         document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
             if (pendingUploadBase64Array.length === 0) return;
             
-            if (IMGBB_API_KEY === "YOUR_IMGBB_API_KEY") {
-                alert("請先替換程式碼中的 YOUR_IMGBB_API_KEY 才能上傳圖片！");
-                return;
-            }
-
             const caption = document.getElementById('uploadCaption').value.trim();
             const btnConfirm = document.getElementById('btnConfirmUpload');
 
@@ -583,9 +599,10 @@
                     }
                 }
 
-                // 2. 將取得的圖片網址存入 Firestore
+                // 2. 將取得的圖片網址存入 Firestore，🚨 並標記屬於哪個群組
                 btnConfirm.innerText = '儲存資料中...';
                 await addDoc(collection(db, "photos"), {
+                    groupId: currentGroupId, // 🚨 新增此欄位來綁定群組
                     imageUrls: uploadedUrls,
                     caption: caption,
                     uploader: currentUser.name,
