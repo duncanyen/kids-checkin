@@ -219,34 +219,7 @@
         // groupId 控管：若尚未設定則自動導向預設家庭群組
         const currentGroupId = localStorage.getItem('lastGroupId') || 'wJOpq0uAnXvO4ezZ1IK9';
 
-        // ================= 一次性資料庫遷移函式 (補上 expenses 的 groupId) =================
-        async function migrateExpensesGroupId() {
-            const targetGroupId = "wJOpq0uAnXvO4ezZ1IK9";
-            try {
-                const querySnapshot = await getDocs(collection(db, "expenses"));
-                let count = 0;
-                const batchPromises = [];
-
-                querySnapshot.forEach((documentSnapshot) => {
-                    const data = documentSnapshot.data();
-                    if (!data.groupId) {
-                        const docRef = doc(db, "expenses", documentSnapshot.id);
-                        batchPromises.push(updateDoc(docRef, { groupId: targetGroupId }));
-                        count++;
-                    }
-                });
-
-                await Promise.all(batchPromises);
-                if (count > 0) {
-                    console.log(`記帳本遷移完成！總共更新了 ${count} 筆記帳資料的 groupId。`);
-                }
-            } catch (err) {
-                console.error("記帳本遷移過程中發生錯誤：", err);
-            }
-        }
-
-        // 執行一次性資料庫遷移（未來不需要時可將此行與上方函式刪除）
-        migrateExpensesGroupId();
+       
 
         // ================= 權限判斷邏輯 (已強化與放寬條件) =================
         const roleStr = String(currentUser.role || '').toLowerCase();
