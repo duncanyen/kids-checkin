@@ -397,6 +397,35 @@
         window._isChatJustLoaded = false; 
         let entryReadTimestamp = 0; 
 
+        // 一次性資料庫遷移函式（補上 groupId）
+        async function migrateMessagesGroupId() {
+            const targetGroupId = "wJOpq0uAnXvO4ezZ1IK9";
+            try {
+                const querySnapshot = await getDocs(collection(db, "messages"));
+                let count = 0;
+                const batchPromises = [];
+
+                querySnapshot.forEach((documentSnapshot) => {
+                    const data = documentSnapshot.data();
+                    if (!data.groupId) {
+                        const docRef = doc(db, "messages", documentSnapshot.id);
+                        batchPromises.push(updateDoc(docRef, { groupId: targetGroupId }));
+                        count++;
+                    }
+                });
+
+                await Promise.all(batchPromises);
+                if (count > 0) {
+                    console.log(`遷移完成！總共更新了 ${count} 筆訊息資料的 groupId。`);
+                }
+            } catch (err) {
+                console.error("遷移過程中發生錯誤：", err);
+            }
+        }
+
+        // 執行一次性資料庫遷移
+        migrateMessagesGroupId();
+
         fetchFamilyUsers();
         listenToRooms();
 
