@@ -261,16 +261,16 @@
             currentUser.name === '媽咪'
         );
 
+        // 💡 【修正點】：將 groupId 的宣告移到呼叫 initAdminPage 之前
+        const groupId = currentUser ? (currentUser.groupId || 'default_group') : 'default_group';
+        let lastGroupNameChange = null;
+
         if (!isParentOrAdmin) {
             alert("您沒有權限訪問管理者頁面！");
             window.location.href = 'index.html';
         } else {
             initAdminPage();
         }
-
-        // 取得 groupId
-        const groupId = currentUser.groupId || 'default_group';
-        let lastGroupNameChange = null;
 
         async function initAdminPage() {
             renderMenuCheckboxes('newMenusContainer', false); 
