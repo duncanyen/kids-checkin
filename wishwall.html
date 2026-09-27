@@ -12,6 +12,7 @@
             --accent-color: #ff9800;
             --bg-color: #f4f9f4;
             --cancel-color: #e53935;
+            --reject-color: #d32f2f;
             --admin-color: #5e35b1;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
@@ -27,7 +28,7 @@
         
         .section-title { font-size: 16px; font-weight: bold; color: #444; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
         
-        /* 表單與設定區樣式 */
+        /* 表單樣式 */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-group { margin-bottom: 12px; }
         .form-group.full-width { grid-column: span 2; }
@@ -37,7 +38,7 @@
         .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 5px; }
         .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
         .btn-admin { background: var(--admin-color); }
-        .btn-small { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        .btn-small { padding: 8px 12px; font-size: 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; }
 
         /* 禮物卡片區 */
         .gift-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -49,7 +50,7 @@
         .btn-exchange:disabled { background: #ccc; cursor: not-allowed; }
 
         /* 紀錄清單 */
-        .list-container { max-height: 250px; overflow-y: auto; background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
+        .list-container { max-height: 350px; overflow-y: auto; background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
         .list-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
         .list-item-details { flex: 1; }
         .list-item-meta { font-size: 12px; color: #888; margin-top: 4px; }
@@ -60,14 +61,24 @@
         .status-processing { background: #2196F3; }
         .status-done { background: #4caf50; }
         .status-cancelled { background: #9e9e9e; }
+        .status-rejected { background: var(--reject-color); }
 
         .admin-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; width: 100%; }
-        .btn-action { font-size: 12px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; }
+        .btn-action { font-size: 12px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; min-width: 60px; }
         
         .setting-box { border: 1px dashed #bbb; padding: 10px; border-radius: 8px; margin-bottom: 15px; background: #fafafa; }
-        .setting-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-        .setting-row input, .setting-row select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .setting-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .setting-row > * { flex: 1; min-width: 80px; }
+        .setting-row input, .setting-row select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .member-score-badge { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin: 5px; border: 1px solid #bbdefb;}
+
+        /* RWD 響應式手機版面設定 */
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; } /* 表單改為單行 */
+            .form-group.full-width { grid-column: auto; }
+            .setting-row { flex-direction: column; align-items: stretch; gap: 6px; } /* 設定欄位垂直排列 */
+            .setting-row > * { width: 100%; flex: none; }
+        }
     </style>
 </head>
 <body>
@@ -177,11 +188,12 @@
             
             <!-- 考試規則設定 -->
             <div class="setting-box">
-                <h3 class="section-title">📚 考試給分規則設定</h3>
+                <h3 class="section-title">📚 考試給分規則設定 (含累積次數)</h3>
                 <div class="setting-row">
-                    <select id="setExamType" style="flex:1"><option value="小考">小考</option><option value="大考">大考</option></select>
-                    <input type="number" id="setExamMinScore" placeholder="最低分數 (如90)" style="flex:2">
-                    <input type="number" id="setExamPoints" placeholder="給予積分 (如1)" style="flex:2">
+                    <select id="setExamType"><option value="小考">小考</option><option value="大考">大考</option></select>
+                    <input type="number" id="setExamMinScore" placeholder="最低分數(如90)">
+                    <input type="number" id="setExamReqCount" placeholder="需滿次數(如3)">
+                    <input type="number" id="setExamPoints" placeholder="給予積分(如1)">
                     <button class="btn-small btn-admin" onclick="addSetting('examRules')">新增</button>
                 </div>
                 <div id="examRulesList" style="margin-top:10px;"></div>
@@ -202,7 +214,6 @@
             <div class="setting-box">
                 <h3 class="section-title">🎁 許願池獎品設定</h3>
                 <div class="setting-row">
-                    <input type="text" id="setGiftIcon" placeholder="圖示(Emoji如🎮)" style="flex:1">
                     <input type="text" id="setGiftName" placeholder="獎品名稱" style="flex:2">
                     <input type="number" id="setGiftPoints" placeholder="花費積分" style="flex:1">
                     <button class="btn-small btn-admin" onclick="addSetting('gifts')">新增</button>
@@ -233,7 +244,6 @@
             query, orderBy, onSnapshot, serverTimestamp, setDoc
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        // 1. Firebase 初始化
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
             authDomain: "homebasedb.firebaseapp.com",
@@ -246,7 +256,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. 使用者與群組狀態
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
@@ -255,7 +264,6 @@
             window.location.href = 'index.html';
         }
         
-        // 確保群組隔離 (若無則給預設值)
         const groupId = currentUser.groupId || 'default_group';
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent');
 
@@ -264,7 +272,6 @@
             document.getElementById('examDate').value = new Date().toISOString().split('T')[0];
         }
 
-        // 介面顯示切換
         if (isAdmin) {
             document.getElementById('adminView').style.display = 'block';
             document.getElementById('adminNotice').innerText = "(管理者模式：顯示全家紀錄)";
@@ -272,40 +279,33 @@
             document.getElementById('childView').style.display = 'block';
         }
 
-        // 全域資料儲存
         let globalData = { scores: [], redeems: [], settings: { examRules: [], choreRules: [], gifts: [] } };
 
-        // 3. 即時監聽 Firestore (透過子集合進行群組隔離)
         function initRealtimeListeners() {
-            // 監聽群組設定
             const settingsRef = doc(db, "groups", groupId, "settings", "wishWall");
             onSnapshot(settingsRef, (docSnap) => {
                 if (docSnap.exists()) {
                     globalData.settings = docSnap.data();
-                    // 確保陣列存在
                     globalData.settings.examRules = globalData.settings.examRules || [];
                     globalData.settings.choreRules = globalData.settings.choreRules || [];
                     globalData.settings.gifts = globalData.settings.gifts || [];
                 } else {
-                    // 若無設定檔，建立預設範例
                     setDoc(settingsRef, {
-                        examRules: [{ id: 'ex1', type: '小考', minScore: 100, points: 1 }, { id: 'ex2', type: '大考', minScore: 100, points: 3 }],
+                        examRules: [{ id: 'ex1', type: '小考', minScore: 100, reqCount: 3, points: 1 }, { id: 'ex2', type: '大考', minScore: 100, reqCount: 1, points: 3 }],
                         choreRules: [{ id: 'ch1', name: '幫忙洗碗', points: 1 }],
-                        gifts: [{ id: 'gf1', icon: '📚', name: '課外讀物乙本', points: 3 }]
+                        gifts: [{ id: 'gf1', icon: '🎁', name: '課外讀物乙本', points: 3 }]
                     });
                 }
                 renderSettings();
-                renderChildDynamicUI();
+                calculatePointsAndRender(); // 設定改變可能影響積分計算
             });
 
-            // 監聽分數紀錄 (此群組下的所有)
             const scoresQuery = query(collection(db, "groups", groupId, "scores"), orderBy("timestamp", "asc"));
             onSnapshot(scoresQuery, (snapshot) => {
                 globalData.scores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 calculatePointsAndRender();
             });
 
-            // 監聽兌換紀錄 (此群組下的所有)
             const redeemsQuery = query(collection(db, "groups", groupId, "redeems"), orderBy("timestamp", "asc"));
             onSnapshot(redeemsQuery, (snapshot) => {
                 globalData.redeems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -313,59 +313,81 @@
             });
         }
 
-        // --- 核心計算與渲染 ---
+        // --- 核心計算與渲染 (包含累積次數的邏輯) ---
         function calculatePointsAndRender() {
-            let memberPoints = {}; // 紀錄全家人積分 { "小明": 10, "媽媽": 5 }
+            let memberPoints = {}; // { "姓名": 總分 }
+            let memberExamProgress = {}; // 追蹤每個人考試規則的次數 { "姓名": { "ruleId": 累積次數 } }
+            let examEarnedPointsMap = {}; // 紀錄每一筆考試紀錄實際獲得的點數 (用於 UI 顯示)
 
-            // 計算得點
+            // 計算得點 (動態結算)
             globalData.scores.forEach(item => {
                 const op = item.operator;
-                if (!memberPoints[op]) memberPoints[op] = 0;
-                memberPoints[op] += (item.points || 0);
+                if (!memberPoints[op]) {
+                    memberPoints[op] = 0;
+                    memberExamProgress[op] = {};
+                }
+
+                if (item.category === 'exam') {
+                    // 找出符合的最高規則 (分數高者優先)
+                    const rules = globalData.settings.examRules
+                        .filter(r => r.type === item.examType && item.score >= r.minScore)
+                        .sort((a, b) => b.minScore - a.minScore);
+                    
+                    let earned = 0;
+                    if (rules.length > 0) {
+                        const rule = rules[0];
+                        if (!memberExamProgress[op][rule.id]) memberExamProgress[op][rule.id] = 0;
+                        
+                        memberExamProgress[op][rule.id]++; // 累積次數+1
+                        const req = rule.reqCount || 1;
+                        
+                        // 若達到規定次數
+                        if (memberExamProgress[op][rule.id] >= req) {
+                            earned = Number(rule.points);
+                            memberExamProgress[op][rule.id] = 0; // 歸零重新計算
+                        }
+                    }
+                    memberPoints[op] += earned;
+                    examEarnedPointsMap[item.id] = earned;
+                } else {
+                    memberPoints[op] += (item.points || 0);
+                }
             });
 
-            // 計算扣點
+            // 計算扣點 (排除已取消、已駁回)
             globalData.redeems.forEach(item => {
-                if (item.status !== '已取消') {
+                if (item.status !== '已取消' && item.status !== '已駁回') {
                     const op = item.operator;
                     if (!memberPoints[op]) memberPoints[op] = 0;
                     memberPoints[op] -= (item.cost || 0);
                 }
             });
 
+            const myPoints = memberPoints[currentUser.name] || 0;
+
             // 小孩介面更新
             if (!isAdmin) {
-                const myPoints = memberPoints[currentUser.name] || 0;
                 document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${myPoints} 點`;
-                
-                // 更新禮物按鈕狀態
-                document.querySelectorAll('.btn-exchange-dynamic').forEach(btn => {
-                    const cost = parseInt(btn.getAttribute('data-cost'));
-                    btn.disabled = myPoints < cost;
-                });
-
+                renderChildDynamicUI(myPoints);
                 const myScores = globalData.scores.filter(item => item.operator === currentUser.name);
-                renderScoreList(myScores, 'scoreListContainer', true); // 自己可刪除自己
+                renderScoreList(myScores, 'scoreListContainer', true, examEarnedPointsMap);
             } 
             // 爸媽介面更新
             else {
-                // 更新戰情室積分徽章
                 const pointsHtml = Object.keys(memberPoints).map(name => 
                     `<div class="member-score-badge">👤 ${name}：${memberPoints[name]} 點</div>`
                 ).join('');
                 document.getElementById('memberPointsContainer').innerHTML = pointsHtml || '<div style="color:#888;">尚無積分紀錄</div>';
                 
-                // 渲染所有人的得分紀錄供審查
-                renderScoreList(globalData.scores, 'adminScoreListContainer', true); // 管理員可刪除所有人
+                renderScoreList(globalData.scores, 'adminScoreListContainer', true, examEarnedPointsMap);
             }
 
-            // 兌換清單渲染
             const displayRedeems = isAdmin ? globalData.redeems : globalData.redeems.filter(item => item.operator === currentUser.name);
             renderRedeemList(displayRedeems);
         }
 
-        // --- 渲染得分清單 (共用) ---
-        function renderScoreList(scoreArray, containerId, canDelete) {
+        // --- 渲染得分清單 (支援顯示 累積中 / 獲得積分) ---
+        function renderScoreList(scoreArray, containerId, canDelete, earnedMap) {
             const container = document.getElementById(containerId);
             if(!container) return;
             container.innerHTML = '';
@@ -379,18 +401,27 @@
                 const isExam = score.category === 'exam';
                 const title = isExam ? `📝 ${score.examType} - ${score.subject} (${score.score}分)` : `🧹 ${score.choreName}`;
                 
+                const earned = isExam ? (earnedMap[score.id] || 0) : score.points;
+                let pointBadge = '';
+                
+                if (isExam) {
+                    if (earned > 0) pointBadge = `<span style="color:var(--primary-color); font-weight:bold;">(+${earned} 點)</span>`;
+                    else pointBadge = `<span style="color:#888; font-size:12px;">(累積中 / 無積分)</span>`;
+                } else {
+                    pointBadge = `<span style="color:var(--primary-color); font-weight:bold;">(+${earned} 點)</span>`;
+                }
+                
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.innerHTML = `
                     <div class="list-item-details">
-                        <b>${title}</b> 
-                        <span style="color:var(--primary-color); font-weight:bold;">(+${score.points} 點)</span>
+                        <b>${title}</b> ${pointBadge}
                         <div class="list-item-meta">
                             ${isAdmin ? `<b>[${score.operator}]</b> ` : ''} 
                             日期: ${score.date}
                         </div>
                     </div>
-                    ${canDelete ? `<button class="btn-delete" data-id="${score.id}">刪除紀錄</button>` : ''}
+                    ${canDelete ? `<button class="btn-delete" data-id="${score.id}">刪除</button>` : ''}
                 `;
                 container.appendChild(div);
             });
@@ -400,7 +431,7 @@
             });
         }
 
-        // --- 渲染兌換清單 (與原版類似，微調) ---
+        // --- 渲染兌換清單 (加入駁回功能) ---
         function renderRedeemList(redeems) {
             const container = document.getElementById('redeemListContainer');
             container.innerHTML = '';
@@ -415,6 +446,7 @@
                 if (req.status === '執行中') statusClass = 'status-processing';
                 if (req.status === '已完成') statusClass = 'status-done';
                 if (req.status === '已取消') statusClass = 'status-cancelled';
+                if (req.status === '已駁回') statusClass = 'status-rejected';
 
                 const div = document.createElement('div');
                 div.className = 'list-item';
@@ -427,22 +459,25 @@
                         <span class="status-badge ${statusClass}">${req.status || '申請中'}</span>
                     </div>
                     <div style="font-size:13px; color:#555;">細節：${req.detail}</div>
-                    ${req.status === '已取消' ? `<div style="font-size:13px; color:var(--cancel-color); font-weight:bold; margin-top:4px;">取消理由：${req.reason || '無'} (積分已退還)</div>` : ''}
+                    ${(req.status === '已取消' || req.status === '已駁回') ? `<div style="font-size:13px; color:var(--cancel-color); font-weight:bold; margin-top:4px;">理由：${req.reason || '無'} (積分已退還)</div>` : ''}
                     <div class="list-item-meta">申請人: ${req.operator} | 日期: ${req.date} | 消耗: ${req.cost}點</div>
                 `;
 
                 html += `<div class="admin-actions">`;
-                // 小孩或管理者可以取消申請中
+                
+                // 所有人可取消「申請中」
                 if (req.status === '申請中' || !req.status) {
-                    html += `<button class="btn-action btn-cancel-act" style="background:var(--cancel-color);" data-id="${req.id}" data-op="${req.operator}">取消申請 (退回積分)</button>`;
+                    html += `<button class="btn-action btn-cancel-act" style="background:var(--cancel-color);" data-id="${req.id}" data-op="${req.operator}">取消申請</button>`;
                 }
-                // 管理者動作
-                if (isAdmin && req.status !== '已取消') {
+                
+                // 管理員動作
+                if (isAdmin && req.status !== '已取消' && req.status !== '已駁回') {
                     if (req.status === '申請中' || !req.status) {
-                        html += `<button class="btn-action btn-status-act" style="background:#2196F3;" data-id="${req.id}" data-status="執行中" data-op="${req.operator}">標記：準備中</button>`;
+                        html += `<button class="btn-action btn-status-act" style="background:#2196F3;" data-id="${req.id}" data-status="執行中" data-op="${req.operator}">準備中</button>`;
+                        html += `<button class="btn-action btn-reject-act" style="background:var(--reject-color);" data-id="${req.id}" data-op="${req.operator}">駁回</button>`;
                     }
                     if (req.status !== '已完成') {
-                        html += `<button class="btn-action btn-status-act" style="background:#4caf50;" data-id="${req.id}" data-status="已完成" data-op="${req.operator}">標記：已發放</button>`;
+                        html += `<button class="btn-action btn-status-act" style="background:#4caf50;" data-id="${req.id}" data-status="已完成" data-op="${req.operator}">已發放</button>`;
                     }
                 }
                 html += `</div>`;
@@ -454,6 +489,9 @@
             container.querySelectorAll('.btn-cancel-act').forEach(btn => {
                 btn.addEventListener('click', () => updateRedeemStatus(btn.getAttribute('data-id'), '已取消', btn.getAttribute('data-op')));
             });
+            container.querySelectorAll('.btn-reject-act').forEach(btn => {
+                btn.addEventListener('click', () => updateRedeemStatus(btn.getAttribute('data-id'), '已駁回', btn.getAttribute('data-op')));
+            });
             container.querySelectorAll('.btn-status-act').forEach(btn => {
                 btn.addEventListener('click', () => updateRedeemStatus(btn.getAttribute('data-id'), btn.getAttribute('data-status'), btn.getAttribute('data-op')));
             });
@@ -461,28 +499,20 @@
 
         // ==================== 小孩操作功能 ====================
 
-        // 渲染小孩介面的動態選項(家事列表、獎品列表)
-        function renderChildDynamicUI() {
+        function renderChildDynamicUI(myPoints) {
             if(isAdmin) return;
             
-            // 1. 家事下拉選單
             const choreSelect = document.getElementById('choreSelect');
             choreSelect.innerHTML = '<option value="">-- 請選擇家事/表現項目 --</option>';
             globalData.settings.choreRules.forEach(chore => {
                 choreSelect.innerHTML += `<option value="${chore.id}">${chore.name} (可獲 ${chore.points} 點)</option>`;
             });
 
-            // 2. 動態獎品庫
             const giftGrid = document.getElementById('giftShopGrid');
             giftGrid.innerHTML = '';
             if(globalData.settings.gifts.length === 0) {
                 giftGrid.innerHTML = '<div style="grid-column: span 2; text-align:center; color:#888;">爸媽尚未設定獎品喔！</div>';
             } else {
-                // 重算目前積分以決定按鈕是否禁用
-                let myPoints = 0;
-                globalData.scores.filter(i => i.operator === currentUser.name).forEach(i => myPoints += (i.points||0));
-                globalData.redeems.filter(i => i.operator === currentUser.name && i.status !== '已取消').forEach(i => myPoints -= (i.cost||0));
-
                 globalData.settings.gifts.forEach(gift => {
                     const disabledStr = myPoints < gift.points ? 'disabled' : '';
                     giftGrid.innerHTML += `
@@ -496,8 +526,6 @@
                         </div>
                     `;
                 });
-
-                // 綁定動態禮物點擊事件
                 document.querySelectorAll('.btn-exchange-dynamic').forEach(btn => {
                     btn.addEventListener('click', () => redeemWish(btn.getAttribute('data-name'), parseInt(btn.getAttribute('data-cost'))));
                 });
@@ -513,21 +541,7 @@
             const btnSubmit = document.getElementById('btnSubmitScore');
 
             if (!date || isNaN(scoreVal) || scoreVal < 0 || scoreVal > 100) {
-                alert('請完整輸入正確的日期與 0-100 之間的分數！');
-                return;
-            }
-
-            // 動態比對家長設定的積分規則
-            let earnedPoints = 0;
-            const rules = globalData.settings.examRules
-                .filter(r => r.type === examType)
-                .sort((a, b) => b.minScore - a.minScore); // 分數高的規則排前面
-            
-            for(let rule of rules) {
-                if(scoreVal >= rule.minScore) {
-                    earnedPoints = Number(rule.points);
-                    break;
-                }
+                alert('請完整輸入正確的日期與 0-100 之間的分數！'); return;
             }
 
             btnSubmit.disabled = true;
@@ -539,34 +553,26 @@
                     examType: examType,
                     subject: subject,
                     score: scoreVal,
-                    points: earnedPoints,
                     timestamp: serverTimestamp()
                 });
-
-                if (earnedPoints > 0) alert(`🎉 恭喜！你的成績符合規則，成功獲得 ${earnedPoints} 點積分！`);
-                else alert(`成績已登記 (${scoreVal}分)。目前的分數區間沒有設定積分，下次繼續加油！`);
-
+                alert(`📝 登記成功！系統將自動依據爸媽設定的規則(含次數)為您結算積分喔！`);
                 document.getElementById('examScore').value = '';
             } catch (error) {
-                console.error("登記失敗：", error);
                 alert("儲存失敗，請再試一次。");
             } finally {
                 btnSubmit.disabled = false;
             }
         });
 
-        // 送出家事表現
+        // 送出家事
         document.getElementById('btnSubmitChore')?.addEventListener('click', async () => {
             const choreId = document.getElementById('choreSelect').value;
-            if(!choreId) {
-                alert("請先選擇一個完成的家事或表現項目！"); return;
-            }
+            if(!choreId) { alert("請先選擇一個完成的家事或表現項目！"); return; }
 
             const choreRule = globalData.settings.choreRules.find(c => c.id === choreId);
             if(!choreRule) return;
 
             const date = new Date().toISOString().split('T')[0];
-            
             try {
                 await addDoc(collection(db, "groups", groupId, "scores"), {
                     category: 'chore',
@@ -584,10 +590,9 @@
         });
 
         // ==================== 共用/資料庫操作 ====================
-
-        // 刪除紀錄
+        
         async function deleteScore(docId) {
-            if (confirm("確定要刪除這筆紀錄嗎？(積分將會被扣回或收回)")) {
+            if (confirm("確定要刪除這筆紀錄嗎？(積分將會依規則重新結算)")) {
                 try {
                     await deleteDoc(doc(db, "groups", groupId, "scores", docId));
                 } catch (error) {
@@ -596,9 +601,8 @@
             }
         }
 
-        // 兌換願望
         async function redeemWish(itemName, cost) {
-            const detail = prompt(`你選擇了兌換【${itemName}】\n請輸入詳細內容 (例如：書名、口味、時間等)：`);
+            const detail = prompt(`你選擇了兌換【${itemName}】\n請輸入詳細內容 (例如：書名、口味等)：`);
             if (detail === null) return; 
             if (detail.trim() === "") {
                 alert("必須填寫詳細內容，爸媽才知道要幫你準備什麼喔！"); return;
@@ -619,7 +623,6 @@
                         timestamp: serverTimestamp()
                     });
 
-                    // 發送訊息至聊天室
                     await addDoc(collection(db, "groups", groupId, "messages"), {
                         sender: "許願小幫手",
                         text: `🎉 ${currentUser.name} 許願兌換了【${itemName}】！\n想要的是：${detail.trim()}`,
@@ -632,18 +635,17 @@
             }
         }
 
-        // 更新兌換狀態
         async function updateRedeemStatus(docId, newStatus, targetOperator) {
             let reason = "";
-            if (newStatus === '已取消') {
-                reason = prompt("請輸入取消的理由：");
+            if (newStatus === '已取消' || newStatus === '已駁回') {
+                reason = prompt(`請輸入${newStatus}的理由：`);
                 if (reason === null) return; 
-                if (reason.trim() === "") { alert("取消必須填寫理由喔！"); return; }
+                if (reason.trim() === "") { alert("必須填寫理由喔！"); return; }
             }
 
-            const confirmMsg = newStatus === '已取消' 
-                ? `確定要取消申請並退還積分給 ${targetOperator} 嗎？` 
-                : `確定要將狀態更改為「${newStatus}」嗎？`;
+            let confirmMsg = `確定要將狀態更改為「${newStatus}」嗎？`;
+            if(newStatus === '已取消') confirmMsg = `確定要取消申請並退還積分嗎？`;
+            if(newStatus === '已駁回') confirmMsg = `確定要駁回此兌換並退還積分給 ${targetOperator} 嗎？`;
 
             if (confirm(confirmMsg)) {
                 try {
@@ -651,10 +653,10 @@
                     if (reason) updateData.reason = reason;
                     await updateDoc(doc(db, "groups", groupId, "redeems", docId), updateData);
 
-                    if (newStatus === '已取消') {
+                    if (newStatus === '已取消' || newStatus === '已駁回') {
                         await addDoc(collection(db, "groups", groupId, "messages"), {
                             sender: "系統通知",
-                            text: `⚠️ 【${targetOperator}】的兌換申請已被取消！\n理由：${reason}\n(積分已自動退還)`,
+                            text: `⚠️ 【${targetOperator}】的兌換申請${newStatus}！\n理由：${reason}\n(積分已自動退還)`,
                             timestamp: serverTimestamp()
                         });
                     }
@@ -664,33 +666,28 @@
             }
         }
 
-
         // ==================== 爸媽設定操作 ====================
         
-        // 渲染設定列表
         function renderSettings() {
             if(!isAdmin) return;
             const st = globalData.settings;
             
-            // 考試規則
             const exList = document.getElementById('examRulesList');
             exList.innerHTML = st.examRules.map(r => 
                 `<div class="list-item" style="padding:8px;">
-                    <div><b>${r.type}</b>: ${r.minScore}分以上 ➔ <span style="color:var(--primary-color)">獲得 ${r.points} 點</span></div>
+                    <div><b>${r.type}</b>: ${r.minScore}分, 滿 ${r.reqCount || 1} 次 ➔ <span style="color:var(--primary-color)">獲 ${r.points} 點</span></div>
                     <button class="btn-delete" onclick="removeSetting('examRules', '${r.id}')">刪除</button>
                 </div>`
             ).join('');
 
-            // 家事規則
             const chList = document.getElementById('choreRulesList');
             chList.innerHTML = st.choreRules.map(r => 
                 `<div class="list-item" style="padding:8px;">
-                    <div><b>${r.name}</b> ➔ <span style="color:var(--primary-color)">獲得 ${r.points} 點</span></div>
+                    <div><b>${r.name}</b> ➔ <span style="color:var(--primary-color)">獲 ${r.points} 點</span></div>
                     <button class="btn-delete" onclick="removeSetting('choreRules', '${r.id}')">刪除</button>
                 </div>`
             ).join('');
 
-            // 獎品設定
             const gfList = document.getElementById('giftsList');
             gfList.innerHTML = st.gifts.map(r => 
                 `<div class="list-item" style="padding:8px;">
@@ -700,7 +697,6 @@
             ).join('');
         }
 
-        // 新增設定 (綁定到 window 讓 inline onclick 可呼叫)
         window.addSetting = async function(type) {
             const st = { ...globalData.settings };
             const newId = Date.now().toString();
@@ -708,10 +704,12 @@
             if (type === 'examRules') {
                 const eType = document.getElementById('setExamType').value;
                 const minScore = parseInt(document.getElementById('setExamMinScore').value);
+                const reqCount = parseInt(document.getElementById('setExamReqCount').value) || 1;
                 const pts = parseFloat(document.getElementById('setExamPoints').value);
                 if(isNaN(minScore) || isNaN(pts)) { alert("請輸入正確數值"); return; }
-                st.examRules.push({ id: newId, type: eType, minScore: minScore, points: pts });
+                st.examRules.push({ id: newId, type: eType, minScore: minScore, reqCount: reqCount, points: pts });
                 document.getElementById('setExamMinScore').value = '';
+                document.getElementById('setExamReqCount').value = '';
                 document.getElementById('setExamPoints').value = '';
             } 
             else if (type === 'choreRules') {
@@ -723,7 +721,7 @@
                 document.getElementById('setChorePoints').value = '';
             }
             else if (type === 'gifts') {
-                const icon = document.getElementById('setGiftIcon').value || '🎁';
+                const icon = '🎁'; // 固定圖示
                 const name = document.getElementById('setGiftName').value;
                 const pts = parseFloat(document.getElementById('setGiftPoints').value);
                 if(!name || isNaN(pts)) { alert("請輸入完整名稱與數值"); return; }
@@ -735,7 +733,6 @@
             await setDoc(doc(db, "groups", groupId, "settings", "wishWall"), st);
         };
 
-        // 刪除設定
         window.removeSetting = async function(type, id) {
             if(confirm('確定要刪除這項設定嗎？')) {
                 const st = { ...globalData.settings };
@@ -744,8 +741,6 @@
             }
         }
 
-        // ==================== 頁面綁定與啟動 ====================
-        
         document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
         
         const scoreListTitle = document.getElementById('scoreListTitle');
@@ -763,7 +758,6 @@
             });
         }
 
-        // 啟動資料監聽
         initRealtimeListeners();
     </script>
 </body>
