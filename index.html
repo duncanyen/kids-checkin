@@ -207,6 +207,13 @@
                     <label class="form-label">密碼</label>
                     <input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼">
                 </div>
+                
+                <!-- 新增：記住帳號 Checkbox -->
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: -10px; margin-bottom: 20px;">
+                    <input type="checkbox" id="rememberMe" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                    <label for="rememberMe" style="font-size: 14px; color: var(--text-sub); cursor: pointer; user-select: none;">記住帳號</label>
+                </div>
+
                 <button class="btn-full" onclick="processLogin()">登入</button>
                 <div class="auth-toggle">還沒有帳號？<span onclick="toggleAuth('register')">立即註冊</span></div>
             </div>
@@ -442,6 +449,13 @@
             hideAllSections();
             document.getElementById('authSection').classList.add('active');
             
+            // ================= 新增：讀取記住的帳號 =================
+            const savedLoginId = localStorage.getItem('savedLoginId');
+            if (savedLoginId) {
+                document.getElementById('loginId').value = savedLoginId;
+                document.getElementById('rememberMe').checked = true; // 將 Checkbox 設為勾選
+            }
+
             if (localStorage.getItem('pendingInviteCode')) {
                 window.toggleAuth('register');
                 alert("您有受邀加入群組的邀請，請先登入或註冊帳號！");
@@ -968,6 +982,8 @@
         window.processLogin = async function() {
             const loginId = document.getElementById('loginId').value.trim();
             const loginPwd = document.getElementById('loginPassword').value.trim();
+            const rememberMe = document.getElementById('rememberMe').checked; // 讀取 Checkbox 狀態
+
             if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
 
             document.getElementById('loadingView').style.display = 'flex';
@@ -991,6 +1007,14 @@
                     document.getElementById('loadingView').style.display = 'none';
                     return;
                 }
+                
+                // ================= 新增：處理記住帳號 =================
+                if (rememberMe) {
+                    localStorage.setItem('savedLoginId', loginId); // 存入本機
+                } else {
+                    localStorage.removeItem('savedLoginId'); // 取消則清除
+                }
+
                 const loggedUser = { docId: userDoc.id, ...userData };
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
                 await window.evaluateUserGroups(loggedUser);
