@@ -22,10 +22,10 @@
             --bg-card: #ffffff;
             --text-main: #111827;     
             --text-sub: #6b7280;
-            --border-color: #f3f4f6;  
+            --border-color: #cbd5e1;  /* 加深邊框顏色 */
             
-            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05); 
-            --shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.08);
+            --shadow-soft: 0 6px 16px rgba(0, 0, 0, 0.08); /* 加深卡片陰影提升立體感 */
+            --shadow-hover: 0 10px 24px rgba(0, 0, 0, 0.12);
             --radius-lg: 24px;
             --radius-md: 16px;
             
@@ -53,7 +53,7 @@
         .view-section.active { display: flex; }
 
         /* === 認證 (登入/註冊) 畫面 === */
-        .auth-card { background: white; padding: 32px 24px; border-radius: var(--radius-lg); width: 100%; max-width: 400px; box-shadow: var(--shadow-hover); text-align: left; position: relative; }
+        .auth-card { background: white; padding: 32px 24px; border-radius: var(--radius-lg); width: 100%; max-width: 400px; box-shadow: var(--shadow-hover); text-align: left; position: relative; border: 1px solid var(--border-color); }
         .auth-logo { width: 70px; border-radius: 18px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto; box-shadow: var(--shadow-soft); }
         .auth-title { font-size: 24px; font-weight: 900; margin-bottom: 8px; text-align: center; }
         .auth-sub { font-size: 14px; color: var(--text-sub); text-align: center; margin-bottom: 24px; }
@@ -80,11 +80,13 @@
 
         /* === 邀請碼彈窗與共用 Modal 樣式 === */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(8px); z-index: 5000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 32px 28px; border-radius: var(--radius-lg); width: 90%; max-width: 360px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; animation: slideUp 0.3s ease-out; }
+        .modal-content { background: white; padding: 32px 28px; border-radius: var(--radius-lg); width: 90%; max-width: 360px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; animation: slideUp 0.3s ease-out; border: 1px solid var(--border-color); }
         .modal-content.text-center { text-align: center; }
         .modal-btns { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
         .modal-btns button { flex: 1; padding: 14px; border-radius: var(--radius-md); font-size: 16px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
-        .modal-btns button:first-child { background: var(--bg-body); color: var(--text-sub); }
+        
+        /* 修改取消/關閉按鈕樣式，確保清晰可見 */
+        .modal-btns button:first-child { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
         .modal-btns button:last-child { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
         .modal-btns button:active { transform: scale(0.96); }
         
@@ -103,7 +105,7 @@
         .mini-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
         .user-badge-name { font-size: 14px; font-weight: 800; color: var(--text-main); }
 
-        /* === 卡片樣式 === */
+        /* === 卡片樣式 (已加深邊框與立體感) === */
         .agenda-card, .card-hero { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 20px; }
         .agenda-card:active, .card-hero:active { transform: translateY(2px) scale(0.99); box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fafafa; }
         
@@ -152,6 +154,11 @@
         .sidebar-edit-btn { position: absolute; bottom: 0; right: 0; background: white; color: var(--primary-dark); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; border: none; }
         .sidebar-username { font-size: 22px; font-weight: 800; }
         .sidebar-role { font-size: 14px; opacity: 0.9; margin-top: 6px; font-weight: 500; }
+        
+        /* 側邊欄快捷按鈕列 (通知、操作方法、設定) */
+        .sidebar-quick-actions { display: flex; justify-content: center; gap: 18px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 16px; }
+        .quick-action-btn { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.3); }
+        .quick-action-btn:active { background: rgba(255,255,255,0.35); transform: scale(0.95); }
 
         .sidebar-section { padding: 16px 0; border-bottom: 1px solid var(--border-color); }
         .sidebar-title { font-size: 12px; font-weight: 800; color: #94a3b8; padding: 0 24px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
@@ -208,7 +215,6 @@
                     <input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼">
                 </div>
                 
-                <!-- 新增：記住帳號 Checkbox -->
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: -10px; margin-bottom: 20px;">
                     <input type="checkbox" id="rememberMe" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
                     <label for="rememberMe" style="font-size: 14px; color: var(--text-sub); cursor: pointer; user-select: none;">記住帳號</label>
@@ -325,7 +331,7 @@
             </button>
             
             <div class="modal-btns" style="margin-top: 16px;">
-                <button onclick="document.getElementById('inviteModal').style.display='none'" style="background: var(--bg-body);">關閉</button>
+                <button onclick="document.getElementById('inviteModal').style.display='none'">關閉</button>
             </div>
         </div>
     </div>
@@ -362,6 +368,7 @@
         <div class="app-header">
             <div class="app-brand">
                 <div class="hamburger-btn" onclick="toggleSidebar()">☰</div>
+                <!-- 此處名稱會自動抓取資料庫更新 -->
                 <span id="headerGroupName">Nexus</span>
             </div>
             <div class="current-user-badge" onclick="window.location.href='settings.html'" title="個人設定">
@@ -389,15 +396,19 @@
             </div>
             <div class="sidebar-username" id="sideUserName"></div>
             <div class="sidebar-role" id="sideUserRole"></div>
+            
+            <!-- 新增快捷按鈕 (通知、操作方法、使用者設定) -->
+            <div class="sidebar-quick-actions">
+                <div class="quick-action-btn" onclick="window.location.href='notifications.html'" title="系統通知">🔔</div>
+                <div class="quick-action-btn" onclick="alert('施工中 🛠️')" title="操作方法">📖</div>
+                <div class="quick-action-btn" onclick="window.location.href='settings.html'" title="使用者設定">⚙️</div>
+            </div>
         </div>
 
         <div class="sidebar-section">
             <div class="sidebar-title">功能導覽</div>
             <div id="sideMenuFeatureList"></div>
-            <!-- 切換群組按鈕 -->
-            <div class="sidebar-item" onclick="switchToGroupSelection()" style="color: #6366f1;">
-                <span class="sidebar-icon">🔄</span>切換 / 管理群組
-            </div>
+            <!-- 切換群組功能已移除 -->
         </div>
 
         <div class="sidebar-section">
@@ -406,10 +417,7 @@
                 <span style="cursor:pointer; color:var(--primary); font-size: 14px; text-transform:none; letter-spacing:0;" onclick="openInviteModal()">➕ 邀請</span>
             </div>
             <div class="sidebar-members" id="sideMembersList"></div>
-            <!-- 邀請按鈕置於成員列下方 -->
-            <div style="padding: 0 24px;">
-                <button class="btn-outline" style="width: 100%; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; border: 1px dashed var(--primary); color: var(--primary); background: var(--primary-light); margin-bottom: 8px;" onclick="openInviteModal()">📩 邀請家人朋友加入</button>
-            </div>
+            <!-- 邀請按鈕已移除 -->
         </div>
 
         <div class="sidebar-section" style="border-bottom: none; margin-bottom: 20px;">
@@ -438,22 +446,22 @@
         let unreadUnsubscribe = null;
         let galleryUnsubscribe = null;
         let calendarUnsubscribe = null;
+        let groupNameUnsubscribe = null; // 新增：用來監聽群組名稱更新
         
-        window.currentGroup = null; // 當前選擇的群組
+        window.currentGroup = null; 
         window.selectedPresetIcon = '🏠';
         window.userAvatarMap = {};
-        window.groupMembers = []; // 當前群組的成員清單
+        window.groupMembers = []; 
 
         window.showAuthSection = function() {
             document.getElementById('loadingView').style.display = 'none';
             hideAllSections();
             document.getElementById('authSection').classList.add('active');
             
-            // ================= 新增：讀取記住的帳號 =================
             const savedLoginId = localStorage.getItem('savedLoginId');
             if (savedLoginId) {
                 document.getElementById('loginId').value = savedLoginId;
-                document.getElementById('rememberMe').checked = true; // 將 Checkbox 設為勾選
+                document.getElementById('rememberMe').checked = true; 
             }
 
             if (localStorage.getItem('pendingInviteCode')) {
@@ -623,12 +631,6 @@
             document.getElementById('groupSelectionSection').classList.add('active');
         };
         
-        window.switchToGroupSelection = async function() {
-            toggleSidebar();
-            const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-            await window.evaluateUserGroups(user);
-        };
-
         window.enterGroup = async function(groupObj) {
             window.currentGroup = groupObj;
             localStorage.setItem('lastGroupId', groupObj.id);
@@ -642,7 +644,19 @@
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             document.getElementById('dashboardView').style.display = 'block';
             
-            if (window.currentGroup) document.getElementById('headerGroupName').innerText = window.currentGroup.name;
+            if (window.currentGroup) {
+                // 1. 設置初始名稱
+                document.getElementById('headerGroupName').innerText = window.currentGroup.name;
+                
+                // 2. 設定動態監聽，如果後台更改名稱，主頁會實時更新
+                if (groupNameUnsubscribe) groupNameUnsubscribe();
+                groupNameUnsubscribe = onSnapshot(doc(db, "groups", window.currentGroup.id), (docSnap) => {
+                    if (docSnap.exists()) {
+                        window.currentGroup = { id: docSnap.id, ...docSnap.data() };
+                        document.getElementById('headerGroupName').innerText = window.currentGroup.name;
+                    }
+                });
+            }
             
             document.getElementById('dashUserAvatar').src = user.avatar;
             document.getElementById('dashUserName').innerText = user.name;
@@ -653,7 +667,6 @@
             await renderDynamicModules(user);
             fetchAndRenderGroupMembers();
             
-            // 這些抓取資料的方法現在都會自動根據 window.currentGroup.id 進行篩選
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
@@ -686,7 +699,6 @@
 
         async function recordLog(operatorName, actionType, detailsText) {
             try {
-                // 修改：紀錄 Log 時也把 groupId 記錄進去
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
                 await addDoc(collection(db, "logs"), { 
@@ -828,7 +840,6 @@
             }
         }
 
-        // 修改：讀取訊息狀態只抓取當前群組
         window.checkUnreadMessages = function(user) {
             try {
                 if (!window.currentGroup) return;
@@ -856,7 +867,6 @@
             } catch (e) {}
         };
 
-        // 修改：讀取相片未讀數只抓取當前群組
         window.checkGalleryUnreads = function(user) {
             try {
                 if (!window.currentGroup) return;
@@ -878,7 +888,6 @@
             } catch (e) {}
         };
 
-        // 修改：讀取行事曆只抓取當前群組
         window.checkCalendarAlerts = async function(user) {
             if (!window.currentGroup) return;
             if (Object.keys(window.userAvatarMap).length === 0) {
@@ -934,7 +943,6 @@
             } catch (e) { }
         };
 
-        // 修改：首頁相簿縮圖只抓取當前群組
         window.fetchAndRenderPhotoCarousel = function(user) {
             if (!window.currentGroup) return;
             const q = query(
@@ -978,11 +986,11 @@
             } catch(e) {}
         };
 
-        // --- 註冊與登入功能 (依賴 Firebase 的部分) ---
+        // --- 註冊與登入功能 ---
         window.processLogin = async function() {
             const loginId = document.getElementById('loginId').value.trim();
             const loginPwd = document.getElementById('loginPassword').value.trim();
-            const rememberMe = document.getElementById('rememberMe').checked; // 讀取 Checkbox 狀態
+            const rememberMe = document.getElementById('rememberMe').checked; 
 
             if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
 
@@ -1008,11 +1016,10 @@
                     return;
                 }
                 
-                // ================= 新增：處理記住帳號 =================
                 if (rememberMe) {
-                    localStorage.setItem('savedLoginId', loginId); // 存入本機
+                    localStorage.setItem('savedLoginId', loginId); 
                 } else {
-                    localStorage.removeItem('savedLoginId'); // 取消則清除
+                    localStorage.removeItem('savedLoginId'); 
                 }
 
                 const loggedUser = { docId: userDoc.id, ...userData };
@@ -1020,7 +1027,7 @@
                 await window.evaluateUserGroups(loggedUser);
             } catch (e) {
                 console.error(e);
-                alert("登入失敗，請檢查網路連線。");
+                alert("登入失敗，請檢查網路連系統。");
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
@@ -1086,7 +1093,6 @@
             }
         }
 
-        // ▼ 最後，確保所有 Function 都在記憶體中後，才觸發啟動流程
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initializeAppFlow);
         } else {
