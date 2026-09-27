@@ -102,6 +102,8 @@
         if (!currentUser) {
             alert("請先登入系統！");
             window.location.href = 'index.html';
+            // 💡 修正 1：加上 return，防止未登入時下方腳本繼續執行報錯
+            throw new Error("User not logged in");
         }
 
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent');
@@ -156,8 +158,10 @@
             }
         }
 
-        // 讀取公告列表
-        const q = query(collection(db, "app_notifications"), orderBy("date", "desc"), orderBy("timestamp", "desc"));
+        // 💡 修正 2：移除雙重 orderBy，避免 Firebase 阻擋查詢要求建立複合索引 (Composite Index)
+        // 改為單純依據發佈的時間戳記 (timestamp) 降冪排序即可
+        const q = query(collection(db, "app_notifications"), orderBy("timestamp", "desc"));
+        
         onSnapshot(q, (snapshot) => {
             const container = document.getElementById('noticeListContainer');
             const emptyState = document.getElementById('emptyState');
@@ -182,6 +186,8 @@
                 `;
                 container.appendChild(card);
             });
+        }, (error) => {
+            console.error("讀取通知失敗:", error);
         });
     </script>
 </body>
