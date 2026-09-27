@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus - 系統通知</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --bg-body: #fbfbfc;
+            --bg-card: #ffffff;
+            --text-main: #111827;
+            --text-sub: #6b7280;
+            --border-color: #cbd5e1;
+            --radius-md: 16px;
+        }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-body); margin: 0; padding: 16px 20px; color: var(--text-main); }
+        .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 20px auto; align-items: center; }
+        .btn-back { background: #e2e8f0; border: none; padding: 10px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; color: #334155; }
+        
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        /* 管理員新增按鈕 */
+        .btn-add-notice { display: none; background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 20px; font-size: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .btn-add-notice:active { transform: scale(0.98); }
+
+        /* 通知卡片 */
+        .notice-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; }
+        .notice-date { font-size: 13px; font-weight: 800; color: var(--primary-dark); background: #d1fae5; display: inline-block; padding: 4px 10px; border-radius: 20px; margin-bottom: 10px; }
+        .notice-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; line-height: 1.4; }
+        .notice-content { font-size: 15px; color: #4b5563; line-height: 1.6; white-space: pre-wrap; }
+        .empty-state { text-align: center; color: var(--text-sub); padding: 40px 0; font-weight: 600; display: none; }
+
+        /* 新增表單區塊 */
+        .form-section { display: none; background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 2px dashed var(--primary); margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; font-family: inherit; }
+        .form-control:focus { outline: none; border-color: var(--primary); }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { flex: 1; padding: 12px; background: #e2e8f0; color: #334155; border: 1px solid var(--border-color); border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .btn-submit { flex: 2; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回首頁</button>
+        <span style="font-weight: 900; font-size: 18px; color: var(--primary-dark);">系統通知 & 改版紀錄</span>
+    </div>
+
+    <div class="container">
+        <!-- 管理員專用新增按鈕 -->
+        <button class="btn-add-notice" id="btnShowAddForm">➕ 發佈新公告</button>
+
+        <!-- 發佈表單 -->
+        <div class="form-section" id="addNoticeForm">
+            <h3 style="margin-top: 0; color: var(--primary-dark);">新增改版公告</h3>
+            <div class="form-group">
+                <label class="form-label">選擇日期</label>
+                <input type="date" id="noticeDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">文件主旨</label>
+                <input type="text" id="noticeTitle" class="form-control" placeholder="例：系統升級 v1.2.0">
+            </div>
+            <div class="form-group">
+                <label class="form-label">文件內容</label>
+                <textarea id="noticeContent" class="form-control" rows="5" placeholder="描述這次改版或通知的詳細內容..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-cancel" onclick="closeForm()">取消</button>
+                <button class="btn-submit" onclick="submitNotice()">發佈</button>
+            </div>
+        </div>
+
+        <!-- 公告列表 -->
+        <div id="noticeListContainer"></div>
+        <div class="empty-state" id="emptyState">目前沒有任何系統通知。</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, query, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
+            authDomain: "homebasedb.firebaseapp.com",
+            projectId: "homebasedb",
+            storageBucket: "homebasedb.firebasestorage.app",
+            messagingSenderId: "476832900272",
+            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 檢查使用者權限
+        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+        const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
+        if (!currentUser) {
+            alert("請先登入系統！");
+            window.location.href = 'index.html';
+        }
+
+        const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent');
+
+        // 如果是管理員，顯示新增按鈕
+        if (isAdmin) {
+            document.getElementById('btnShowAddForm').style.display = 'block';
+            
+            // 預設今天日期
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('noticeDate').value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        document.getElementById('btnShowAddForm').addEventListener('click', () => {
+            document.getElementById('addNoticeForm').style.display = 'block';
+            document.getElementById('btnShowAddForm').style.display = 'none';
+        });
+
+        window.closeForm = function() {
+            document.getElementById('addNoticeForm').style.display = 'none';
+            document.getElementById('btnShowAddForm').style.display = 'block';
+            document.getElementById('noticeTitle').value = '';
+            document.getElementById('noticeContent').value = '';
+        }
+
+        window.submitNotice = async function() {
+            const date = document.getElementById('noticeDate').value;
+            const title = document.getElementById('noticeTitle').value.trim();
+            const content = document.getElementById('noticeContent').value.trim();
+
+            if (!date || !title || !content) {
+                alert("請完整填寫日期、主旨與內容！");
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "app_notifications"), {
+                    date: date,
+                    title: title,
+                    content: content,
+                    author: currentUser.name,
+                    timestamp: serverTimestamp()
+                });
+                alert("公告已成功發佈！");
+                closeForm();
+            } catch (e) {
+                console.error(e);
+                alert("發佈失敗，請檢查網路連線。");
+            }
+        }
+
+        // 讀取公告列表
+        const q = query(collection(db, "app_notifications"), orderBy("date", "desc"), orderBy("timestamp", "desc"));
+        onSnapshot(q, (snapshot) => {
+            const container = document.getElementById('noticeListContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            container.innerHTML = '';
+
+            if (snapshot.empty) {
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const card = document.createElement('div');
+                card.className = 'notice-card';
+                card.innerHTML = `
+                    <div class="notice-date">${data.date}</div>
+                    <div class="notice-title">${data.title}</div>
+                    <div class="notice-content">${data.content}</div>
+                `;
+                container.appendChild(card);
+            });
+        });
+    </script>
+</body>
+</html>
