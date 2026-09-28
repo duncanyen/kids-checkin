@@ -74,9 +74,9 @@
 
         /* RWD 響應式手機版面設定 */
         @media (max-width: 600px) {
-            .form-grid { grid-template-columns: 1fr; } /* 表單改為單行 */
+            .form-grid { grid-template-columns: 1fr; } 
             .form-group.full-width { grid-column: auto; }
-            .setting-row { flex-direction: column; align-items: stretch; gap: 6px; } /* 設定欄位垂直排列 */
+            .setting-row { flex-direction: column; align-items: stretch; gap: 6px; } 
             .setting-row > * { width: 100%; flex: none; }
         }
     </style>
@@ -173,12 +173,15 @@
                 載入中...
             </div>
 
-            <h3 class="section-title">
-                📝 所有人得分紀錄審核 
-                <span style="font-size:12px; font-weight:normal; color:#666;">(若查核不實可刪除)</span>
+            <!-- 📝 加入收合功能的審核區塊 -->
+            <h3 class="section-title" id="adminScoreListTitle" style="cursor: pointer; user-select: none;">
+                <span>📝 所有人得分紀錄審核 <span style="font-size:12px; font-weight:normal; color:#666;">(若查核不實可刪除)</span></span>
+                <span id="adminScoreToggleIcon" style="color:var(--primary-color);">▼ 點此展開</span>
             </h3>
-            <div class="list-container" id="adminScoreListContainer">
-                <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>
+            <div id="adminScoreListWrapper" style="display: none;">
+                <div class="list-container" id="adminScoreListContainer">
+                    <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>
+                </div>
             </div>
         </div>
 
@@ -241,7 +244,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, 
-            query, orderBy, onSnapshot, serverTimestamp, setDoc
+            query, onSnapshot, serverTimestamp, setDoc
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -281,6 +284,16 @@
 
         let globalData = { scores: [], redeems: [], settings: { examRules: [], choreRules: [], gifts: [] } };
 
+        // 💡 修正：為了解決舊資料缺乏 timestamp 而被 orderBy 過濾消失的問題
+        // 改用這個幫助函式在抓到資料後，由 JavaScript 本地端安全排序
+        function sortRecordsSafe(records) {
+            return records.sort((a, b) => {
+                let timeA = (a.timestamp && a.timestamp.toMillis) ? a.timestamp.toMillis() : new Date(a.date || 0).getTime();
+                let timeB = (b.timestamp && b.timestamp.toMillis) ? b.timestamp.toMillis() : new Date(b.date || 0).getTime();
+                return timeA - timeB; // 升序排序 (舊 -> 新)
+            });
+        }
+
         function initRealtimeListeners() {
             const settingsRef = doc(db, "groups", groupId, "settings", "wishWall");
             onSnapshot(settingsRef, (docSnap) => {
@@ -297,18 +310,21 @@
                     });
                 }
                 renderSettings();
-                calculatePointsAndRender(); // 設定改變可能影響積分計算
+                calculatePointsAndRender(); 
             });
 
-            const scoresQuery = query(collection(db, "groups", groupId, "scores"), orderBy("timestamp", "asc"));
+            // 💡 移除原本會導致缺漏的 orderBy，改為抓取所有資料後用 JS 排序
+            const scoresQuery = query(collection(db, "groups", groupId, "scores"));
             onSnapshot(scoresQuery, (snapshot) => {
-                globalData.scores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                let docsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                globalData.scores = sortRecordsSafe(docsData);
                 calculatePointsAndRender();
             });
 
-            const redeemsQuery = query(collection(db, "groups", groupId, "redeems"), orderBy("timestamp", "asc"));
+            const redeemsQuery = query(collection(db, "groups", groupId, "redeems"));
             onSnapshot(redeemsQuery, (snapshot) => {
-                globalData.redeems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                let docsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                globalData.redeems = sortRecordsSafe(docsData);
                 calculatePointsAndRender();
             });
         }
@@ -743,11 +759,28 @@
 
         document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
         
+        // 小孩端的收合紀錄功能
         const scoreListTitle = document.getElementById('scoreListTitle');
         if(scoreListTitle) {
             scoreListTitle.addEventListener('click', () => {
                 const wrapper = document.getElementById('scoreListWrapper');
                 const icon = document.getElementById('scoreToggleIcon');
+                if (wrapper.style.display === 'none') {
+                    wrapper.style.display = 'block';
+                    icon.innerText = '▲ 收合';
+                } else {
+                    wrapper.style.display = 'none';
+                    icon.innerText = '▼ 點此展開';
+                }
+            });
+        }
+
+        // 💡 新增：爸媽管理者端的收合紀錄功能
+        const adminScoreListTitle = document.getElementById('adminScoreListTitle');
+        if (adminScoreListTitle) {
+            adminScoreListTitle.addEventListener('click', () => {
+                const wrapper = document.getElementById('adminScoreListWrapper');
+                const icon = document.getElementById('adminScoreToggleIcon');
                 if (wrapper.style.display === 'none') {
                     wrapper.style.display = 'block';
                     icon.innerText = '▲ 收合';
