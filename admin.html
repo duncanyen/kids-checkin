@@ -35,9 +35,11 @@
         .user-features { font-size: 12px; color: var(--primary-color); font-weight: 600; margin-top: 4px; }
         
         .action-buttons { display: flex; gap: 8px; }
-        .btn-edit, .btn-remove, .btn-add, .btn-save-group { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-edit, .btn-remove, .btn-add, .btn-save-group, .btn-approve, .btn-reject { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .btn-edit { background: var(--primary-color); }
         .btn-remove { background: var(--warning-color); }
+        .btn-approve { background: var(--accent-color); }
+        .btn-reject { background: var(--danger-color); }
         .btn-add, .btn-save-group { background: var(--accent-color); width: 100%; padding: 12px; font-size: 15px;}
         .btn-edit:disabled, .btn-remove:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
 
@@ -85,6 +87,25 @@
                 <input type="text" id="editGroupName" placeholder="例如：我們的家">
             </div>
             <button class="btn-save-group" id="btnSaveGroupName" style="margin-top: 10px;">儲存群組名稱</button>
+        </div>
+    </div>
+
+    <!-- 1.5 新增：入群審核管理專區 -->
+    <div class="panel">
+        <h2 class="system-title">📥 入群審核管理</h2>
+        
+        <button class="toggle-form-btn" id="btnToggleRequests">
+            <span>📋 審核待加入申請</span>
+            <span id="toggleIconRequests">▼</span>
+        </button>
+
+        <div id="requestsSection" style="display: none; margin-top: 10px;">
+            <div style="margin-bottom: 10px;">
+                <button class="btn-query" id="btnRefreshRequests">🔄 重新整理審核清單</button>
+            </div>
+            <div class="user-reset-list" id="requestsContainer">
+                <div style="text-align:center; color:#888; padding: 15px;">點擊上方按鈕載入待審核名單</div>
+            </div>
         </div>
     </div>
 
@@ -247,6 +268,7 @@
 
         let allLogs = [];
         let allUsers = [];
+        let pendingRequests = [];
 
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -272,12 +294,14 @@
             renderMenuCheckboxes('newMenusContainer', false); 
             renderMenuCheckboxes('editMenusContainer', true); 
             
-            // 初始化日期篩選器預設為「今天」
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
             document.getElementById('logDateFilter').value = todayStr;
 
             setupToggle('btnToggleGroupSettings', 'groupSettingsForm', 'toggleIconGroupSettings');
+            setupToggle('btnToggleRequests', 'requestsSection', 'toggleIconRequests', () => {
+                if (pendingRequests.length === 0) fetchPendingRequests();
+            });
             setupToggle('btnToggleAddForm', 'addUserForm', 'toggleIconAdd');
             setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList');
             setupToggle('btnToggleLogs', 'logsSection', 'toggleIconLogs');
@@ -288,19 +312,17 @@
             document.getElementById('btnAddUser').addEventListener('click', addNewUser);
             document.getElementById('btnSaveGroupName').addEventListener('click', saveGroupName);
             document.getElementById('btnQueryLogs').addEventListener('click', fetchLogsByDate);
+            document.getElementById('btnRefreshRequests').addEventListener('click', fetchPendingRequests);
         }
 
-        function setupToggle(btnId, targetId, iconId) {
+        function setupToggle(btnId, targetId, iconId, onOpenCallback) {
             document.getElementById(btnId).addEventListener('click', () => {
                 const el = document.getElementById(targetId);
                 const icon = document.getElementById(iconId);
                 if (el.style.display === 'none' || el.style.display === '') {
                     el.style.display = (targetId === 'addUserForm' || targetId === 'groupSettingsForm') ? 'flex' : 'block';
                     icon.innerText = '▲';
-                    // 當展開操作紀錄時，若目前還沒撈過資料，可以自動幫忙載入一次今天的資料
-                    if (targetId === 'logsSection' && allLogs.length === 0) {
-                        fetchLogsByDate();
-                    }
+                    if (onOpenCallback) onOpenCallback();
                 } else {
                     el.style.display = 'none';
                     icon.innerText = '▼';
@@ -359,13 +381,106 @@
                     lastNameChange: serverTimestamp() 
                 }, { merge: true });
 
-                alert("✅ 群組名稱已更新！ (提醒：返回首頁後即可看見新名稱)");
+                alert("✅ 群組名稱已更新！");
                 lastGroupNameChange = Date.now();
                 await logAction('系統操作', `將群組名稱更改為：${newName}`);
             } catch (error) {
                 alert("更新失敗，請檢查網路連線。");
             }
         }
+
+        // ================= 查詢待審核入群申請 (按需讀取) =================
+        async function fetchPendingRequests() {
+            const container = document.getElementById('requestsContainer');
+            container.innerHTML = '<div style="text-align:center; color:#888; padding: 15px;">載入審核清單中...</div>';
+
+            try {
+                const q = query(
+                    collection(db, "group_requests"), 
+                    where("groupId", "==", groupId),
+                    where("status", "==", "pending")
+                );
+                const snapshot = await getDocs(q);
+                pendingRequests = [];
+
+                snapshot.forEach(docSnap => {
+                    pendingRequests.push({ reqId: docSnap.id, ...docSnap.data() });
+                });
+
+                renderRequests();
+            } catch (error) {
+                console.error("載入審核清單失敗:", error);
+                container.innerHTML = '<div style="text-align:center; color:#e53935; padding: 15px;">載入失敗，請檢查網路或索引設定</div>';
+            }
+        }
+
+        function renderRequests() {
+            const container = document.getElementById('requestsContainer');
+            container.innerHTML = '';
+
+            if (pendingRequests.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888; padding: 15px;">目前沒有待審核的入群申請。</div>';
+                return;
+            }
+
+            pendingRequests.forEach(req => {
+                const typeLabel = req.type === 'code' ? '🔑 透過邀請碼' : '🌐 自行申請';
+                const div = document.createElement('div');
+                div.className = 'user-reset-item';
+                div.innerHTML = `
+                    <div class="user-info">
+                        <img class="user-avatar" src="${req.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${req.userName}'">
+                        <div>
+                            <div class="user-name">${req.userName} <span style="font-size:12px; color:var(--warning-color); font-weight:normal;">(${typeLabel})</span></div>
+                            <div class="user-subtext">帳號 ID: ${req.accountId || '無'}</div>
+                            <div class="user-features" style="color:#666;">申請時間: ${req.requestTime || '剛剛'}</div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-approve" onclick="window.handleRequest('${req.reqId}', 'approved', '${req.userId}', '${req.userName}')">同意</button>
+                        <button class="btn-reject" onclick="window.handleRequest('${req.reqId}', 'rejected', '${req.userId}', '${req.userName}')">駁回</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.handleRequest = async function(reqId, actionStatus, targetUserId, targetUserName) {
+            const actionText = actionStatus === 'approved' ? '同意' : '駁回';
+            if (!confirm(`確定要【${actionText}】成員【${targetUserName}】的入群申請嗎？`)) return;
+
+            try {
+                // 1. 更新請求狀態
+                await updateDoc(doc(db, "group_requests", reqId), {
+                    status: actionStatus,
+                    processedTime: serverTimestamp()
+                });
+
+                // 2. 如果同意，則正式建立或加入使用者到此群組
+                if (actionStatus === 'approved') {
+                    const defaultMenus = systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
+                    const newUserObj = {
+                        groupId: groupId,
+                        accountId: targetUserId,
+                        name: targetUserName,
+                        role: 'member',
+                        menus: defaultMenus,
+                        avatar: `https://ui-avatars.com/api/?name=${targetUserName}&background=random`
+                    };
+                    await addDoc(collection(db, "users"), newUserObj);
+                    await logAction('系統操作', `審核通過：同意成員 ${targetUserName} 加入群組`);
+                } else {
+                    await logAction('系統操作', `審核駁回：婉拒成員 ${targetUserName} 的入群申請`);
+                }
+
+                alert(`已成功${actionText}該申請！`);
+                fetchPendingRequests();
+                loadUsersFromFirebase();
+            } catch (error) {
+                console.error("審核處理失敗:", error);
+                alert("處理失敗，請檢查網路連線。");
+            }
+        };
 
         async function loadUsersFromFirebase() {
             try {
@@ -592,9 +707,8 @@
             });
         }
 
-        // ================= 按下查詢按鈕才撈取資料 =================
         async function fetchLogsByDate() {
-            const selectedDate = document.getElementById('logDateFilter').value; // 格式: YYYY-MM-DD
+            const selectedDate = document.getElementById('logDateFilter').value;
             if (!selectedDate) {
                 alert("請先選擇查詢日期！");
                 return;
@@ -604,7 +718,6 @@
             container.innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">資料載入中...</div>';
 
             try {
-                // 利用 datetime 字串開頭比對，或透過 timestamp 範圍查詢。因為 datetime 格式為 "YYYY-MM-DD HH:mm:ss"，直接用字串開頭過濾非常準確且高效
                 const q = query(
                     collection(db, "logs"), 
                     where("groupId", "==", groupId),
@@ -616,7 +729,6 @@
                 
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    // 檢查 datetime 是否以所選日期開頭 (例如 "2026-09-30")
                     if (data.datetime && data.datetime.startsWith(selectedDate)) {
                         allLogs.push(data);
                     }
