@@ -85,7 +85,7 @@
         .todo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
         .todo-header h2 { margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--text-main); }
         
-        /* 分類按鈕列 (RWD 橫向捲動) */
+        /* 分類按鈕列 (純篩選用，RWD 橫向捲動) */
         .category-bar { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
         .category-bar::-webkit-scrollbar { display: none; }
         
@@ -93,8 +93,6 @@
         .cat-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
         .cat-btn .del-cat { margin-left: 6px; font-size: 0.8rem; color: #9ca3af; border-radius: 50%; padding: 0 4px; }
         .cat-btn .del-cat:hover { background: rgba(0,0,0,0.1); color: var(--danger); }
-        
-        .add-cat-btn { background: var(--primary-light); color: var(--primary-dark); border: 1px dashed var(--primary); padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
 
         /* 區塊標題 */
         .section-sub-title { font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 16px 0 10px 4px; display: flex; align-items: center; gap: 6px; }
@@ -108,7 +106,7 @@
         .badge { background: var(--bg-body); border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; color: var(--text-main); font-weight: 600; }
         .empty-state { text-align: center; color: var(--text-sub); padding: 20px; font-size: 0.9rem; font-weight: 600; background: var(--bg-body); border-radius: var(--radius-md); border: 1px dashed var(--border-color); }
 
-        /* 右下角懸浮新增按鈕 (Floating Action Button) */
+        /* 右下角懸浮新增按鈕 (FAB) */
         .fab-btn { position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); cursor: pointer; border: none; z-index: 1000; transition: 0.2s; }
         .fab-btn:active { transform: scale(0.92); background: var(--primary-dark); }
 
@@ -162,10 +160,10 @@
                 <h2>待辦</h2>
             </div>
 
-            <!-- 分類選擇列 (只保留各類型按鈕與自訂類別＋) -->
+            <!-- 分類選擇列 (純篩選用，無新增按鈕) -->
             <div class="category-bar" id="category-container">
                 <button class="cat-btn active" data-category="all" onclick="NexusTodoApp.filterCategory('all')">全部</button>
-                <button class="add-cat-btn" onclick="NexusTodoApp.promptAddCategory()">+ 自訂類別</button>
+                <!-- 動態載入類別篩選按鈕 -->
             </div>
 
             <!-- 未完成待辦事項區塊 -->
@@ -193,6 +191,14 @@
             <div class="form-group">
                 <label class="form-label">待辦內容 (至少三行高度)</label>
                 <textarea id="new-todo-title" class="form-control" placeholder="輸入待辦內容..."></textarea>
+            </div>
+
+            <!-- 新增時挑選類別 (支援自訂類別) -->
+            <div class="form-group">
+                <label class="form-label">選擇類型</label>
+                <select id="new-todo-category-select" class="form-control" onchange="NexusTodoApp.handleCategorySelectChange(this.value)">
+                    <!-- 動態載入分類選項與 + 新增自訂類別 -->
+                </select>
             </div>
             
             <div class="form-group">
@@ -304,12 +310,10 @@
                     setTimeout(() => statusEl.textContent = "", 1500);
                     
                     this.render();
-                    this.renderAssigneeChips();
                 } catch (error) {
                     console.error("讀取失敗", error);
                     statusEl.textContent = "同步異常";
                     this.render();
-                    this.renderAssigneeChips();
                 }
             },
 
@@ -322,10 +326,12 @@
 
             render() {
                 this.renderCategories();
+                this.renderCategorySelectOptions();
                 this.renderTodoList();
+                this.renderAssigneeChips();
             },
 
-            // 渲染分類按鈕列 (一開始只看到各類型按鈕與自訂類別＋)
+            // 渲染頂端分類篩選列 (一開始只看到「全部」與各類型按鈕，具備刪除功能)
             renderCategories() {
                 const container = document.getElementById('category-container');
                 let html = `<button class="cat-btn ${this.state.currentFilter === 'all' ? 'active' : ''}" onclick="NexusTodoApp.filterCategory('all')">全部</button>`;
@@ -339,8 +345,41 @@
                         </button>
                     `;
                 });
-                html += `<button class="add-cat-btn" onclick="NexusTodoApp.promptAddCategory()">+ 自訂類別</button>`;
                 container.innerHTML = html;
+            },
+
+            // 渲染新增彈窗中的類型下拉選單（支援 + 新增自訂類別選項）
+            renderCategorySelectOptions(selectedCat = '') {
+                const selectEl = document.getElementById('new-todo-category-select');
+                let html = '';
+                this.state.categories.forEach(cat => {
+                    const isSel = (selectedCat === cat || (!selectedCat && cat === this.state.categories[0])) ? 'selected' : '';
+                    html += `<option value="${cat}" ${isSel}>${cat}</option>`;
+                });
+                html += `<option value="__add_new_cat__" style="color:var(--primary); font-weight:700;">+ 新增自訂類別...</option>`;
+                selectEl.innerHTML = html;
+            },
+
+            // 監聽新增視窗中類別下拉選單的選擇
+            handleCategorySelectChange(val) {
+                if (val === '__add_new_cat__') {
+                    const newCat = prompt("請輸入新的類別名稱：");
+                    if (newCat && newCat.trim() !== "") {
+                        const trimmed = newCat.trim();
+                        if (!this.state.categories.includes(trimmed)) {
+                            this.state.categories.push(trimmed);
+                            this.saveState();
+                            this.render();
+                            // 自動選中剛新增的類別
+                            document.getElementById('new-todo-category-select').value = trimmed;
+                        } else {
+                            alert("此類別已存在！");
+                            document.getElementById('new-todo-category-select').value = this.state.categories[0];
+                        }
+                    } else {
+                        document.getElementById('new-todo-category-select').value = this.state.categories[0];
+                    }
+                }
             },
 
             // 渲染指派人員頭像選擇區塊
@@ -437,20 +476,6 @@
                 this.renderTodoList();
             },
 
-            promptAddCategory() {
-                const newCat = prompt("請輸入新的類別名稱：");
-                if (newCat && newCat.trim() !== "") {
-                    const trimmed = newCat.trim();
-                    if (!this.state.categories.includes(trimmed)) {
-                        this.state.categories.push(trimmed);
-                        this.saveState();
-                        this.render();
-                    } else {
-                        alert("此類別已存在！");
-                    }
-                }
-            },
-
             deleteCategory(catName) {
                 if (confirm(`確定要刪除分類「${catName}」嗎？`)) {
                     this.state.categories = this.state.categories.filter(c => c !== catName);
@@ -463,6 +488,7 @@
             },
 
             openAddModal() {
+                this.renderCategorySelectOptions();
                 document.getElementById('addTodoModal').style.display = 'flex';
                 document.getElementById('new-todo-title').focus();
             },
@@ -502,6 +528,7 @@
 
             createTodo() {
                 const titleInput = document.getElementById('new-todo-title');
+                const categorySelect = document.getElementById('new-todo-category-select');
                 const noteInput = document.getElementById('new-todo-note');
                 const title = titleInput.value.trim();
 
@@ -511,10 +538,7 @@
                     return;
                 }
 
-                let targetCategory = this.state.currentFilter;
-                if (targetCategory === 'all') {
-                    targetCategory = this.state.categories[0] || '一般';
-                }
+                const targetCategory = categorySelect.value || this.state.categories[0] || '一般';
 
                 const newTodo = {
                     id: Date.now(),
