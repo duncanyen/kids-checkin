@@ -24,7 +24,6 @@
         .filter-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; background: var(--primary-light); padding: 10px; border-radius: 8px; }
         .filter-group select { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
         
-        /* 統一的卡片清單樣式 (適用於人員與紀錄) */
         .user-reset-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding: 5px;}
         .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; flex-wrap: wrap; gap: 10px;}
         .user-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 150px; }
@@ -36,15 +35,13 @@
         .action-buttons { display: flex; gap: 8px; }
         .btn-edit, .btn-remove, .btn-add, .btn-save-group { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .btn-edit { background: var(--primary-color); }
-        .btn-remove { background: var(--warning-color); } /* 退出群組按鈕使用橘黃警告色 */
+        .btn-remove { background: var(--warning-color); }
         .btn-add, .btn-save-group { background: var(--accent-color); width: 100%; padding: 12px; font-size: 15px;}
         .btn-edit:disabled, .btn-remove:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* 收合按鈕 */
         .toggle-form-btn { background: #e3f2fd; color: var(--primary-color); border: 1px dashed var(--primary-color); padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; transition: background 0.2s;}
         .toggle-form-btn:hover { background: #bbdefb; }
 
-        /* 表單與彈窗通用樣式 */
         .form-group { display: none; flex-direction: column; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; animation: fadeIn 0.3s ease;}
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
@@ -57,7 +54,6 @@
         .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; color: #333;}
         .checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
 
-        /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;}
         .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px; }
@@ -94,13 +90,11 @@
     <div class="panel">
         <h2 class="system-title">👥 家族成員管理</h2>
         
-        <!-- 新增成員收合按鈕 -->
         <button class="toggle-form-btn" id="btnToggleAddForm">
             <span>➕ 新增成員帳號</span>
             <span id="toggleIconAdd">▼</span>
         </button>
 
-        <!-- 新增成員區塊 -->
         <div class="form-group" id="addUserForm">
             <div class="form-row">
                 <label>帳號 ID (唯一值，英文或數字)</label>
@@ -128,21 +122,17 @@
             </div>
             <div class="form-row">
                 <label>主選單功能開放設定 (打勾才允許該成員使用)</label>
-                <div class="checkbox-group" id="newMenusContainer">
-                    <!-- JS 動態生成 Checkbox -->
-                </div>
+                <div class="checkbox-group" id="newMenusContainer"></div>
             </div>
 
             <button class="btn-add" id="btnAddUser" style="margin-top: 10px;">確認新增成員</button>
         </div>
 
-        <!-- 現有成員名單收合按鈕 -->
         <button class="toggle-form-btn" id="btnToggleUserList">
             <span>📋 現有成員名單</span>
             <span id="toggleIconUserList">▼</span>
         </button>
 
-        <!-- 現有成員清單區塊 -->
         <div class="user-reset-list" id="userListContainer" style="display: none;">
             <div style="text-align:center; color:#888;">載入成員名單中...</div>
         </div>
@@ -157,7 +147,6 @@
             <span id="toggleIconLogs">▼</span>
         </button>
         
-        <!-- 操作紀錄區塊 -->
         <div id="logsSection" style="display: none; margin-top: 10px;">
             <div class="filter-group">
                 <label style="font-weight: bold;">篩選人員：</label>
@@ -206,9 +195,7 @@
                 </div>
                 <div class="form-row">
                     <label>主選單功能開放設定 (限制該成員可使用的功能)</label>
-                    <div class="checkbox-group" id="editMenusContainer">
-                        <!-- JS 動態生成 Checkbox -->
-                    </div>
+                    <div class="checkbox-group" id="editMenusContainer"></div>
                 </div>
             </div>
 
@@ -250,7 +237,6 @@
         let allLogs = [];
         let allUsers = [];
 
-        // 2. 驗證訪問權限與群組
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
@@ -261,8 +247,7 @@
             currentUser.name === '媽咪'
         );
 
-        // 💡 【修正點】：將 groupId 的宣告移到呼叫 initAdminPage 之前
-        const groupId = currentUser ? (currentUser.groupId || 'default_group') : 'default_group';
+        const groupId = currentUser ? (currentUser.groupId || localStorage.getItem('lastGroupId') || 'default_group') : 'default_group';
         let lastGroupNameChange = null;
 
         if (!isParentOrAdmin) {
@@ -276,7 +261,6 @@
             renderMenuCheckboxes('newMenusContainer', false); 
             renderMenuCheckboxes('editMenusContainer', true); 
             
-            // 綁定所有收合選單邏輯
             setupToggle('btnToggleGroupSettings', 'groupSettingsForm', 'toggleIconGroupSettings');
             setupToggle('btnToggleAddForm', 'addUserForm', 'toggleIconAdd');
             setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList');
@@ -322,7 +306,6 @@
             return Array.from(checkboxes).map(cb => cb.value);
         }
 
-        // ================= 讀取/設定 群組名稱 =================
         async function loadGroupSettings() {
             try {
                 const groupDoc = await getDoc(doc(db, "groups", groupId));
@@ -342,7 +325,6 @@
             const newName = document.getElementById('editGroupName').value.trim();
             if (!newName) return alert("群組名稱不可為空！");
 
-            // 檢查 24 小時限制
             if (lastGroupNameChange) {
                 const lastTimeMs = lastGroupNameChange.toMillis ? lastGroupNameChange.toMillis() : lastGroupNameChange;
                 const now = Date.now();
@@ -358,17 +340,15 @@
                 }, { merge: true });
 
                 alert("✅ 群組名稱已更新！ (提醒：返回首頁後即可看見新名稱)");
-                lastGroupNameChange = Date.now(); // 暫時寫入本地防呆
-                await logAction('更改群組名稱', `將群組名稱更改為：${newName}`);
+                lastGroupNameChange = Date.now();
+                await logAction('系統操作', `將群組名稱更改為：${newName}`);
             } catch (error) {
                 alert("更新失敗，請檢查網路連線。");
             }
         }
 
-        // ================= 3. 從 Firebase 載入成員資料 (綁定 groupId) =================
         async function loadUsersFromFirebase() {
             try {
-                // 只查詢屬於此 groupId 的人員
                 const q = query(collection(db, "users"), where("groupId", "==", groupId));
                 const querySnapshot = await getDocs(q);
                 
@@ -378,7 +358,6 @@
 
                 querySnapshot.forEach(docSnap => {
                     const uData = docSnap.data();
-                    // 排除已被標記退出的人員 (防呆過濾)
                     if(uData.role !== 'removed') {
                         allUsers.push({ docId: docSnap.id, ...uData });
                         const opt = document.createElement('option');
@@ -410,7 +389,6 @@
                 if (user.role === 'parent') roleDisplay = '家長管理員';
                 
                 const idDisplay = user.accountId ? `帳號: ${user.accountId}` : '<span style="color:#e53935;">(無帳號)</span>';
-
                 const userMenus = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
                 const menuLabels = systemMenuOptions.filter(m => userMenus.includes(m.id)).map(m => m.label).join('、');
 
@@ -434,7 +412,6 @@
             });
         }
 
-        // ================= 新增成員 =================
         async function addNewUser() {
             const idInput = document.getElementById('newUserId').value.trim();
             const nameInput = document.getElementById('newUserName').value.trim();
@@ -457,7 +434,7 @@
                 document.getElementById('btnAddUser').innerText = "處理中...";
 
                 const newUser = {
-                    groupId: groupId, // 綁定群組
+                    groupId: groupId,
                     accountId: idInput,
                     name: nameInput,
                     pin: pinInput,
@@ -468,7 +445,7 @@
                 };
 
                 await addDoc(collection(db, "users"), newUser);
-                await logAction('新增成員', `新增了成員：${nameInput} (${idInput})`);
+                await logAction('系統操作', `新增了成員：${nameInput} (${idInput})`);
                 
                 alert(`成功新增成員：${nameInput}！`);
                 
@@ -490,7 +467,6 @@
             }
         }
 
-        // ================= 編輯成員 =================
         window.openEditModal = function(docId) {
             const user = allUsers.find(u => u.docId === docId);
             if (!user) return;
@@ -542,7 +518,6 @@
                     email: emailInput || null, role: roleInput, menus: selectedMenus
                 });
 
-                // 若編輯的是自己，同步更新本地
                 if (currentUser && currentUser.name === allUsers.find(u => u.docId === docId)?.name) {
                     currentUser.accountId = idInput; currentUser.name = nameInput;
                     currentUser.pin = pinInput; currentUser.role = roleInput;
@@ -551,7 +526,7 @@
                     if (localStorage.getItem('familyCheckInUser')) localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
                 }
 
-                await logAction('編輯成員', `更新了成員資訊：${nameInput}`);
+                await logAction('系統操作', `更新了成員資訊：${nameInput}`);
                 alert("儲存成功！");
                 closeEditModal();
                 await loadUsersFromFirebase();
@@ -561,7 +536,6 @@
             }
         };
 
-        // ================= 將成員退出群組 (不刪除資料) =================
         window.removeUser = async function(docId, targetName) {
             if (targetName === currentUser.name) {
                 return alert("為保護系統安全，您無法將自己退出群組！");
@@ -570,13 +544,12 @@
             const confirmMsg = `⚠️ 確定要將成員【${targetName}】退出群組嗎？\n\n(註：該人員資料與歷史紀錄仍會保留，但無法再存取本群組)`;
             if (confirm(confirmMsg)) {
                 try {
-                    // 更新人員狀態，拔除 groupId
                     await updateDoc(doc(db, "users", docId), { 
                         groupId: null,
                         role: 'removed' 
                     });
                     
-                    await logAction('退出成員', `已將成員退出群組：${targetName}`);
+                    await logAction('系統操作', `已將成員退出群組：${targetName}`);
                     alert(`已成功將【${targetName}】退出群組。`);
                     await loadUsersFromFirebase(); 
                 } catch (error) {
@@ -585,12 +558,13 @@
             }
         };
 
-        // ================= 寫入與監聽 Logs (綁定 groupId) =================
+        // ================= 【關鍵調整】對齊根目錄 logs 結構 =================
         async function logAction(actionType, details) {
             const now = new Date();
-            const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
             
-            await addDoc(collection(db, "groups", groupId, "logs"), {
+            await addDoc(collection(db, "logs"), {
+                groupId: groupId,
                 datetime: datetimeStr,
                 operator: currentUser.name,
                 actionType: actionType,
@@ -600,8 +574,12 @@
         }
 
         function listenToLogs() {
-            // 監聽特定群組下的操作紀錄
-            const q = query(collection(db, "groups", groupId, "logs"), orderBy("timestamp", "desc"));
+            // 改為監聽根目錄的 logs 集合，並用 groupId 過濾
+            const q = query(
+                collection(db, "logs"), 
+                where("groupId", "==", groupId), 
+                orderBy("timestamp", "desc")
+            );
             onSnapshot(q, (snapshot) => {
                 allLogs = snapshot.docs.map(docSnap => docSnap.data());
                 renderLogs();
@@ -620,7 +598,6 @@
                 return;
             }
 
-            // 套用與成員名單一致的卡片樣式
             filteredLogs.forEach(log => {
                 const div = document.createElement('div');
                 div.className = 'user-reset-item';
@@ -629,7 +606,7 @@
                     <div class="user-info">
                         <div class="user-avatar" style="border:none; font-size:24px; background:transparent;">📝</div>
                         <div style="flex:1;">
-                            <div class="user-name" style="color:var(--primary-color);">${log.actionType || '動作'}</div>
+                            <div class="user-name" style="color:var(--primary-color);">${log.actionType || '系統操作'}</div>
                             <div class="user-subtext"><b>操作人員:</b> ${log.operator || '未知'}</div>
                             <div class="user-subtext" style="color:#444;">${log.details || ''}</div>
                             <div class="user-features" style="color:#888; margin-top:6px;">🕒 ${log.datetime || ''}</div>
