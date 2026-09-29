@@ -271,7 +271,7 @@
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🐶')">🐶</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🐱')">🐱</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🚗')">🚗</div>
-                        <div class="preset-icon" onclick="selectPresetIcon(this, '✈️')">✈️</div>
+                        <div class="preset-icon" onclick="selectPresetIcon(this, '✈️')">✈️️</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🚀')">🚀</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '💎')">💎</div>
                         <div class="preset-icon" onclick="selectPresetIcon(this, '🌸')">🌸</div>
@@ -427,21 +427,19 @@
         window.groupMembers = []; 
 
         /* ============================================================== 
-           【優化機制 1】非同步列隊紀錄 (Queue System) 
-           不再顯示煩人的 loading，使用者點擊瞬間就跳轉！
-           系統會在背景把足跡存入 localStorage，等下一次網頁載入時自動送出
+           【絲滑跳轉 + 背景列隊】
+           點擊瞬間跳轉，並將足跡暂存至 localStorage
            ============================================================== */
         window.navTo = function(url, moduleName) {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             
             if (user) {
-                // 將足跡推入背景列隊，不阻擋任何畫面
                 let gId = window.currentGroup ? window.currentGroup.id : localStorage.getItem('lastGroupId');
                 let pendingLogs = JSON.parse(localStorage.getItem('nexus_pending_logs') || '[]');
                 
                 pendingLogs.push({
                     operator: user.name,
-                    actionType: '系統操作', // 【關鍵修正】把名稱改成常見的「系統操作」以符合後台條件
+                    actionType: '系統操作', 
                     details: `進入了 ${moduleName} 模組`,
                     groupId: gId,
                     timestamp: Date.now()
@@ -449,19 +447,17 @@
                 localStorage.setItem('nexus_pending_logs', JSON.stringify(pendingLogs));
             }
             
-            // 瞬間無延遲跳轉 (絲滑體驗)
             window.location.href = url;
         };
 
         /* ============================================================== 
-           【優化機制 2】執行背景補送，並加上「雙重欄位防護」
-           無論你的後台是用 action 還是 actionType 來撈資料，這次全都包含進去！
+           【背景補送足跡】
+           只使用你指定的欄位：actionType, details, groupId
            ============================================================== */
         async function processPendingLogs() {
             let pending = JSON.parse(localStorage.getItem('nexus_pending_logs') || '[]');
             if (pending.length === 0) return;
             
-            // 立刻清空列隊，避免重複送出
             localStorage.removeItem('nexus_pending_logs');
 
             for (let log of pending) {
@@ -469,16 +465,12 @@
                     const d = new Date(log.timestamp);
                     const datetimeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 
-                    // 【關鍵修正】寫好寫滿：同時支援 action/actionType 以及 description/details
                     await addDoc(collection(db, "logs"), {
                         groupId: log.groupId || null,
-                        group_id: log.groupId || null, // 防呆：有些後台命名為 group_id
                         datetime: datetimeStr,
                         operator: log.operator,
                         actionType: log.actionType,
-                        action: log.actionType,        // 防呆：有些後台過濾 action 變數
                         details: log.details,
-                        description: log.details,      // 防呆：有些後台印出的是 description
                         timestamp: serverTimestamp()
                     });
                 } catch(e) {
@@ -487,7 +479,7 @@
             }
         }
 
-        /* 保留給不需要跳轉頁面的動作使用 (例如切換群組) */
+        /* 現場即時寫入使用 (例如進入群組) */
         async function recordLog(operatorName, actionType, detailsText) {
             try {
                 const now = new Date();
@@ -496,13 +488,10 @@
 
                 await addDoc(collection(db, "logs"), { 
                     groupId: gId || null,
-                    group_id: gId || null,
                     datetime: datetimeStr, 
                     operator: operatorName, 
                     actionType: actionType, 
-                    action: actionType, 
                     details: detailsText, 
-                    description: detailsText,
                     timestamp: serverTimestamp() 
                 });
             } catch (e) {
@@ -693,7 +682,6 @@
             localStorage.setItem('lastGroupId', groupObj.id);
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
             
-            // 【修正】確保動作名稱一致
             await recordLog(user.name, '系統操作', `進入了群組: ${groupObj.name}`);
             
             window.showDashboard();
@@ -1121,7 +1109,6 @@
         };
 
         async function initializeAppFlow() {
-            // 【重要】程式一載入就先檢查並補送足跡
             processPendingLogs();
             
             const urlParams = new URLSearchParams(window.location.search);
