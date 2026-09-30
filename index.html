@@ -38,7 +38,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg-body); 
             margin: 0; 
-            padding: 16px 20px 100px 20px; /* 底部預留 100px 空間給固定導覽列 */
+            padding: 16px 20px 80px 20px; /* 底部預留空間給導覽列 */
             color: var(--text-main); 
             -webkit-font-smoothing: antialiased; 
             overflow-x: hidden; 
@@ -94,35 +94,8 @@
         .btn-line-share:active { background: #05a746; }
 
         /* === 主選單 Dashboard 框架 === */
-        #dashboardView { 
-            display: none; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            animation: fadeIn 0.4s ease-out forwards; 
-            opacity: 0; 
-            padding-top: 60px; /* ★ 重要：預留頂部 Fixed Header 的空間 */
-            padding-bottom: 40px; 
-        }
-
-        /* ★ 修改：完全固定頂部導覽列 */
-        .app-header { 
-            position: fixed; 
-            top: 0; 
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 500px; /* 貼齊畫面寬度 */
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 12px 20px; 
-            background: rgba(251, 251, 252, 0.95); /* 半透明背景 */
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px);
-            z-index: 2000; 
-            border-bottom: 1px solid rgba(0,0,0,0.05); /* 底部微加陰影線 */
-        }
-        
+        #dashboardView { display: none; max-width: 500px; margin: 0 auto; animation: fadeIn 0.4s ease-out forwards; opacity: 0; padding-bottom: 40px; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 8px 0; position: sticky; top: 0; background: var(--bg-body); z-index: 100; backdrop-filter: blur(10px); }
         .app-brand { font-size: 24px; font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
         .hamburger-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; color: var(--text-main); background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: 0.2s; border: 1px solid var(--border-color); }
         .hamburger-btn:active { background: var(--border-color); transform: scale(0.95); }
@@ -131,24 +104,9 @@
         .mini-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
         .user-badge-name { font-size: 14px; font-weight: 800; color: var(--text-main); }
 
-        /* ★ 修改：完全固定的底部快捷導覽列 (Floating Dock) */
-        .bottom-dock { 
-            position: fixed; 
-            bottom: max(16px, env(safe-area-inset-bottom)); /* 支援 iPhone 底部安全區 */
-            left: 50%; 
-            transform: translateX(-50%); 
-            background: rgba(255, 255, 255, 0.95); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color); 
-            padding: 10px 16px; 
-            border-radius: 30px; 
-            display: flex; 
-            gap: 12px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
-            z-index: 9999; /* 置於最上層 */
-        }
-        .dock-item { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 50%; cursor: pointer; transition: 0.2s; background: var(--bg-body); border: 1px solid var(--border-color); }
+        /* === 手機版底部快捷導覽列 (Floating Dock) === */
+        .bottom-dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 30px; display: flex; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; }
+        .dock-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; cursor: pointer; transition: 0.2s; background: var(--bg-body); border: 1px solid var(--border-color); }
         .dock-item:active { transform: scale(0.92); background: var(--primary-light); }
 
         /* === 卡片樣式 === */
@@ -409,7 +367,7 @@
             <div class="carousel-container" id="photoCarouselContainer"></div>
         </div>
         
-        <!-- 手機主頁風格底部快捷導覽列 -->
+        <!-- 手機主頁風格底部快捷導覽列 (順序：主頁、日曆、聊天、Photo Dump、待辦、記帳) -->
         <div class="bottom-dock">
             <div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>
             <div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>
@@ -432,7 +390,7 @@
             <div class="sidebar-role" id="sideUserRole"></div>
             <div class="sidebar-quick-actions">
                 <div class="quick-action-btn" onclick="window.navTo('notifications.html', '系統通知')" title="系統通知">🔔</div>
-                <div class="quick-action-btn" onclick="alert('施工中 🛠️️')" title="操作方法">📖</div>
+                <div class="quick-action-btn" onclick="alert('施工中 🛠️')" title="操作方法">📖</div>
                 <div class="quick-action-btn" onclick="window.navTo('settings.html', '使用者設定')" title="使用者設定">⚙️</div>
             </div>
         </div>
@@ -1135,7 +1093,7 @@
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
                 await window.evaluateUserGroups(loggedUser);
             } catch (e) {
-                alert("登入失敗，請檢查網路連線。");
+                alert("登入失敗，請檢查網路連系統。");
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
