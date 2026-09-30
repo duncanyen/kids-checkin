@@ -38,7 +38,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg-body); 
             margin: 0; 
-            padding: 16px 20px 80px 20px; /* 底部預留空間給導覽列 */
+            padding: 16px 20px 80px 20px; 
             color: var(--text-main); 
             -webkit-font-smoothing: antialiased; 
             overflow-x: hidden; 
@@ -110,12 +110,15 @@
         .mini-widget:active { transform: scale(0.96); background: #fafafa; }
         .mini-widget-icon-bg { position: absolute; right: -12px; bottom: -16px; font-size: 64px; opacity: 0.04; z-index: 0; }
         .mini-widget-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; z-index: 1; }
-        .mini-widget-icon { width: 32px; height: 32px; background: var(--primary-light); color: var(--primary-dark); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        
+        /* 調整功能卡圖示底色，改與側邊選單一致 */
+        .mini-widget-icon { width: 32px; height: 32px; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        
         .mini-widget-title { font-size: 14px; font-weight: 800; color: var(--text-main); }
         .mini-widget-value { font-size: 17px; font-weight: 900; color: var(--text-main); z-index: 1; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .mini-widget-sub { font-size: 12px; font-weight: 600; color: var(--text-sub); z-index: 1; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* === 手機版底部快捷導覽列 (Floating Dock) - 調整透明度與模糊效果 === */
+        /* === 手機版底部快捷導覽列 (Floating Dock) === */
         .bottom-dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 8px 12px; border-radius: 30px; display: flex; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 1000; }
         .dock-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; cursor: pointer; transition: 0.2s; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
         .dock-item:active { transform: scale(0.92); background: var(--primary-light); border-color: var(--primary); }
@@ -135,7 +138,7 @@
         .agenda-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
         
         .card-hero { display: flex; flex-direction: row; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
-        .card-hero .dash-icon { background: var(--primary-light); width: 56px; height: 56px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; color: var(--primary-dark); }
+        .card-hero .dash-icon { background: var(--bg-body); border: 1px solid var(--border-color); width: 56px; height: 56px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
         .notification-badge { display: none; position: absolute; top: 12px; left: 12px; background-color: var(--danger); color: white; font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; border: 2px solid white; z-index: 10; }
 
         /* === Photo Dump 輪播樣式 === */
@@ -399,7 +402,7 @@
             <div class="sidebar-role" id="sideUserRole"></div>
             <div class="sidebar-quick-actions">
                 <div class="quick-action-btn" onclick="window.navTo('notifications.html', '系統通知')" title="系統通知">🔔</div>
-                <div class="quick-action-btn" onclick="alert('施工中 🛠️')" title="操作方法">📖</div>
+                <div class="quick-action-btn" onclick="alert('施工中 🛠️️')" title="操作方法">📖</div>
                 <div class="quick-action-btn" onclick="window.navTo('settings.html', '使用者設定')" title="使用者設定">⚙️</div>
             </div>
         </div>
@@ -504,7 +507,6 @@
             }
         }
 
-        /* 現場即時寫入使用 (例如進入群組) */
         async function recordLog(operatorName, actionType, detailsText) {
             try {
                 const now = new Date();
@@ -746,7 +748,7 @@
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
-            window.checkWidgetData(user); // 啟動 Todo 與 Finance 的資料抓取
+            window.checkWidgetData(user); 
             
             const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo'];
             if (allowedMenus.includes('photodump')) window.fetchAndRenderPhotoCarousel(user);
@@ -885,6 +887,7 @@
                 allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
             } catch (e) { order = [...allowedMenus]; }
 
+            // ★ 移除 hardcode，以資料庫動態產生的模組對應定義
             const sideMenuTemplates = {
                 chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">💬</span>聊天室</div>`,
                 checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">📍</span>到家打卡</div>`,
@@ -902,7 +905,7 @@
                 sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
             }
 
-            // ★ 渲染並排的微型工具卡片 (待辦清單 與 記帳本)
+            // 渲染並排的微型工具卡片 (待辦清單 與 記帳本)
             if (miniCardsContainer) {
                 let miniCardsHtml = '';
                 
@@ -942,10 +945,10 @@
                 }
             }
             
+            // ★ 移除聊天室上方的文字 "Chat"
             if (allowedMenus.includes('chat') && modules.chat !== false) {
                 chatContainer.innerHTML = `
-                    <div class="section-header"><div class="section-title">Chat</div></div>
-                    <div class="card-hero" onclick="window.navTo('chat.html', '聊天室')">
+                    <div class="card-hero" onclick="window.navTo('chat.html', '聊天室')" style="margin-top: 12px;">
                         <div class="notification-badge" id="chatBadge">0</div>
                         <div>
                             <div style="font-size: 18px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;">聊天室</div>
@@ -956,7 +959,7 @@
                 `;
             }
 
-            // ★ 渲染動態的底部浮動選單 (Dock)
+            // 渲染動態底部浮動選單 (Dock)
             let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>`;
             const dockMap = {
                 calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>`,
@@ -977,20 +980,26 @@
             dockContainer.innerHTML = dockHtml;
         }
 
-        // ★ 新增：獲取 Widget 的實際動態資料 (Todo 與 Finance)
+        // ★ 修正待辦與記帳資料帶不出問題的強固查詢邏輯
         window.checkWidgetData = function(user) {
             if (!window.currentGroup) return;
             const groupId = window.currentGroup.id;
 
-            // 抓取待辦事項
+            // 抓取待辦事項 (避免未建立複合索引導致抓不到，改為抓取該群組所有項目並在前端安全過濾)
             if (document.getElementById('todoWidgetValue')) {
-                const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId), where("isCompleted", "==", false));
+                const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
                 todoUnsubscribe = onSnapshot(todoQ, (snap) => {
-                    let count = snap.size;
-                    let firstTodo = "";
-                    if (count > 0) {
-                        firstTodo = snap.docs[0].data().title || snap.docs[0].data().text || "未命名任務";
-                    }
+                    let incompleteTodos = [];
+                    snap.forEach(docSnap => {
+                        const d = docSnap.data();
+                        if (d.isCompleted === false || !d.isCompleted) {
+                            incompleteTodos.push(d);
+                        }
+                    });
+                    
+                    let count = incompleteTodos.length;
+                    let firstTodo = count > 0 ? (incompleteTodos[0].title || incompleteTodos[0].text || "未命名任務") : "";
+                    
                     const valEl = document.getElementById('todoWidgetValue');
                     const subEl = document.getElementById('todoWidgetSub');
                     if (valEl) {
@@ -1005,21 +1014,22 @@
                 }, (err) => { console.log("待辦讀取錯誤", err); });
             }
 
-            // 抓取本月記帳總計 (依據常見 schemas，找尋 date/amount/type 等欄位)
+            // 抓取本月記帳總計
             if (document.getElementById('financeWidgetValue')) {
                 const now = new Date();
-                const startOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-                const endOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-31`;
+                const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
                 
-                // 假設資料表記錄在 "records" (或者若為 expenses 則請更改)
-                const expQ = query(collection(db, "records"), where("groupId", "==", groupId), where("date", ">=", startOfMonth), where("date", "<=", endOfMonth));
+                const expQ = query(collection(db, "records"), where("groupId", "==", groupId));
                 financeUnsubscribe = onSnapshot(expQ, (snap) => {
                     let totalExpense = 0;
-                    snap.forEach(doc => {
-                        const data = doc.data();
-                        // 確保只加總支出 (或沒有 type 時預設為支出)
-                        if (data.type === 'expense' || !data.type) { 
-                            totalExpense += Number(data.amount || 0);
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const dateStr = data.date || '';
+                        // 檢查是否屬於本月 (日期字串以本年月開頭，或者沒有設定日期但符合群組)
+                        if (dateStr.startsWith(currentYearMonth) || !dateStr) {
+                            if (data.type === 'expense' || !data.type) { 
+                                totalExpense += Number(data.amount || 0);
+                            }
                         }
                     });
                     const valEl = document.getElementById('financeWidgetValue');
@@ -1146,8 +1156,8 @@
                     return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${avatar}"></div>`;
                 }).join('');
                 
+                // ★ 移除行程卡片上方的文字 "Calendar"
                 agendaContainer.innerHTML = `
-                    <div class="section-header"><div class="section-title">Calendar</div></div>
                     <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
                         <div class="agenda-header">
                             <div class="agenda-date">${dateTitle}</div>
@@ -1159,15 +1169,14 @@
                         <div class="agenda-list">${listHtml}</div>
                     </div>`;
             } else {
-                // ★ 新增：無行程時改用極簡橫式卡片，釋放螢幕高度
+                // ★ 移除無行程卡片上方的文字 "Calendar"
                 agendaContainer.innerHTML = `
-                    <div class="section-header"><div class="section-title">Calendar</div></div>
                     <div class="agenda-card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
                         <div>
                             <div class="agenda-date" style="font-size: 15px;">${dateTitle}</div>
                             <div style="font-size: 13px; color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
                         </div>
-                        <div class="dash-icon" style="background: var(--primary-light); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; color:var(--primary-dark);">📅</div>
+                        <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; color:var(--text-main);">📅</div>
                     </div>`;
             }
         }
@@ -1195,7 +1204,23 @@
                     else displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
                     const likes = photo.likes || []; const isLiked = likes.includes(user.name); const likeCount = likes.length;
                     if (displayImageUrl) {
-                        html += `<div class="carousel-item"><img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="window.navTo('gallery.html', 'Photo Dump')"><div class="carousel-info"><div class="carousel-author"><img class="carousel-author-img" src="${uploaderAvatar}"><div><div class="carousel-author-name">${photo.uploader}</div><div class="carousel-date">${dateStr}</div></div></div><div class="carousel-actions"><button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span></button></div></div></div>`;
+                        // ★ 修正點擊目標照片時，記錄 ID 並導向至 gallery.html 定位該張照片
+                        html += `
+                            <div class="carousel-item">
+                                <img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="localStorage.setItem('target_photo_id', '${photoId}'); window.navTo('gallery.html', 'Photo Dump');">
+                                <div class="carousel-info">
+                                    <div class="carousel-author">
+                                        <img class="carousel-author-img" src="${uploaderAvatar}">
+                                        <div>
+                                            <div class="carousel-author-name">${photo.uploader}</div>
+                                            <div class="carousel-date">${dateStr}</div>
+                                        </div>
+                                    </div>
+                                    <div class="carousel-actions">
+                                        <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span></button>
+                                    </div>
+                                </div>
+                            </div>`;
                     }
                 });
                 container.innerHTML = html;
