@@ -112,13 +112,13 @@
         .mini-widget-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; z-index: 1; }
         .mini-widget-icon { width: 32px; height: 32px; background: var(--primary-light); color: var(--primary-dark); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
         .mini-widget-title { font-size: 14px; font-weight: 800; color: var(--text-main); }
-        .mini-widget-value { font-size: 17px; font-weight: 900; color: var(--text-main); z-index: 1; letter-spacing: 0.5px; }
-        .mini-widget-sub { font-size: 12px; font-weight: 600; color: var(--text-sub); z-index: 1; margin-top: 4px; }
+        .mini-widget-value { font-size: 17px; font-weight: 900; color: var(--text-main); z-index: 1; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .mini-widget-sub { font-size: 12px; font-weight: 600; color: var(--text-sub); z-index: 1; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* === 手機版底部快捷導覽列 (Floating Dock) === */
-        .bottom-dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 30px; display: flex; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; }
-        .dock-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; cursor: pointer; transition: 0.2s; background: var(--bg-body); border: 1px solid var(--border-color); }
-        .dock-item:active { transform: scale(0.92); background: var(--primary-light); }
+        /* === 手機版底部快捷導覽列 (Floating Dock) - 調整透明度與模糊效果 === */
+        .bottom-dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 8px 12px; border-radius: 30px; display: flex; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 1000; }
+        .dock-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; cursor: pointer; transition: 0.2s; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+        .dock-item:active { transform: scale(0.92); background: var(--primary-light); border-color: var(--primary); }
 
         /* === 卡片樣式 === */
         .agenda-card, .card-hero { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 20px; }
@@ -133,8 +133,7 @@
         .agenda-divider { width: 3px; height: 16px; background: var(--primary); border-radius: 2px; }
         .agenda-title { flex: 1; font-weight: 700; font-size: 14px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .agenda-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-        .agenda-empty { text-align: center; font-size: 15px; font-weight: 600; color: var(--text-sub); padding: 16px 0; }
-
+        
         .card-hero { display: flex; flex-direction: row; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
         .card-hero .dash-icon { background: var(--primary-light); width: 56px; height: 56px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; color: var(--primary-dark); }
         .notification-badge { display: none; position: absolute; top: 12px; left: 12px; background-color: var(--danger); color: white; font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; border: 2px solid white; z-index: 10; }
@@ -364,7 +363,6 @@
         <div class="app-header">
             <div class="app-brand">
                 <div class="hamburger-btn" onclick="toggleSidebar()">☰</div>
-                <!-- ★ 修改點：加回 APP Icon 並替換名稱為 Nexus -->
                 <img src="Nexus.png" alt="Nexus Logo" style="width: 32px; height: 32px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <span style="font-size: 20px; font-weight: 900; letter-spacing: 0;">Nexus</span>
             </div>
@@ -376,7 +374,6 @@
         
         <div id="todayAgendaContainer"></div>
         
-        <!-- ★ 修改點：並排的 2-Column 區塊，置於行事曆正下方，容納待辦與記帳本 -->
         <div class="dash-2col" id="miniCardsContainer"></div>
         
         <div id="chatMainCardContainer"></div>
@@ -386,15 +383,8 @@
             <div class="carousel-container" id="photoCarouselContainer"></div>
         </div>
         
-        <!-- 手機主頁風格底部快捷導覽列 -->
-        <div class="bottom-dock">
-            <div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>
-            <div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>
-            <div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">💬</div>
-            <div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">📸</div>
-            <div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">📋</div>
-            <div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">💰</div>
-        </div>
+        <!-- 動態手機底部快捷導覽列容器 -->
+        <div class="bottom-dock" id="bottomDockContainer"></div>
     </div>
 
     <!-- 側邊選單 Sidebar -->
@@ -452,6 +442,9 @@
         let calendarUnsubscribe = null;
         let groupNameUnsubscribe = null; 
         
+        let todoUnsubscribe = null;
+        let financeUnsubscribe = null;
+
         let cachedCalendarEvents = [];
         let calendarUIRenderInterval = null;
         
@@ -462,7 +455,6 @@
 
         /* ============================================================== 
            【絲滑跳轉 + 背景列隊】
-           點擊瞬間跳轉，並將足跡暂存至 localStorage
            ============================================================== */
         window.navTo = function(url, moduleName) {
             const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
@@ -730,9 +722,11 @@
             if (galleryUnsubscribe) { galleryUnsubscribe(); galleryUnsubscribe = null; }
             if (calendarUnsubscribe) { calendarUnsubscribe(); calendarUnsubscribe = null; }
             if (calendarUIRenderInterval) { clearInterval(calendarUIRenderInterval); calendarUIRenderInterval = null; }
+            
+            if (todoUnsubscribe) { todoUnsubscribe(); todoUnsubscribe = null; }
+            if (financeUnsubscribe) { financeUnsubscribe(); financeUnsubscribe = null; }
 
             if (window.currentGroup) {
-                // 背景保持監聽資料變更，但不覆蓋顯示的標題
                 groupNameUnsubscribe = onSnapshot(doc(db, "groups", window.currentGroup.id), (docSnap) => {
                     if (docSnap.exists()) {
                         window.currentGroup = { id: docSnap.id, ...docSnap.data() };
@@ -752,6 +746,7 @@
             window.checkUnreadMessages(user);
             window.checkGalleryUnreads(user);
             window.checkCalendarAlerts(user); 
+            window.checkWidgetData(user); // 啟動 Todo 與 Finance 的資料抓取
             
             const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo'];
             if (allowedMenus.includes('photodump')) window.fetchAndRenderPhotoCarousel(user);
@@ -871,7 +866,8 @@
         async function renderDynamicModules(user) {
             const sideList = document.getElementById('sideMenuFeatureList');
             const chatContainer = document.getElementById('chatMainCardContainer');
-            const miniCardsContainer = document.getElementById('miniCardsContainer'); // ★ 抓取新建立的兩欄式容器
+            const miniCardsContainer = document.getElementById('miniCardsContainer'); 
+            const dockContainer = document.getElementById('bottomDockContainer');
             
             sideList.innerHTML = ''; 
             chatContainer.innerHTML = '';
@@ -918,8 +914,8 @@
                                 <div class="mini-widget-icon">📋</div>
                                 <div class="mini-widget-title">待辦清單</div>
                             </div>
-                            <div class="mini-widget-value">生活任務</div>
-                            <div class="mini-widget-sub">隨時記錄待辦</div>
+                            <div class="mini-widget-value" id="todoWidgetValue">載入中...</div>
+                            <div class="mini-widget-sub" id="todoWidgetSub">連線取得中</div>
                         </div>
                     `;
                 }
@@ -932,8 +928,8 @@
                                 <div class="mini-widget-icon">💰</div>
                                 <div class="mini-widget-title">記帳本</div>
                             </div>
-                            <div class="mini-widget-value">月支出</div>
-                            <div class="mini-widget-sub">點擊查看帳目</div>
+                            <div class="mini-widget-value" id="financeWidgetValue">載入中...</div>
+                            <div class="mini-widget-sub" id="financeWidgetSub">連線取得中</div>
                         </div>
                     `;
                 }
@@ -959,7 +955,82 @@
                     </div>
                 `;
             }
+
+            // ★ 渲染動態的底部浮動選單 (Dock)
+            let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>`;
+            const dockMap = {
+                calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>`,
+                chat: `<div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">💬</div>`,
+                photodump: `<div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">📸</div>`,
+                todo: `<div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">📋</div>`,
+                finance: `<div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">💰</div>`,
+                checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">📍</div>`,
+                gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">🎮</div>`,
+                wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">⭐</div>`
+            };
+            
+            order.forEach(modKey => {
+                if (allowedMenus.includes(modKey) && dockMap[modKey]) {
+                    dockHtml += dockMap[modKey];
+                }
+            });
+            dockContainer.innerHTML = dockHtml;
         }
+
+        // ★ 新增：獲取 Widget 的實際動態資料 (Todo 與 Finance)
+        window.checkWidgetData = function(user) {
+            if (!window.currentGroup) return;
+            const groupId = window.currentGroup.id;
+
+            // 抓取待辦事項
+            if (document.getElementById('todoWidgetValue')) {
+                const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId), where("isCompleted", "==", false));
+                todoUnsubscribe = onSnapshot(todoQ, (snap) => {
+                    let count = snap.size;
+                    let firstTodo = "";
+                    if (count > 0) {
+                        firstTodo = snap.docs[0].data().title || snap.docs[0].data().text || "未命名任務";
+                    }
+                    const valEl = document.getElementById('todoWidgetValue');
+                    const subEl = document.getElementById('todoWidgetSub');
+                    if (valEl) {
+                        if (count > 0) {
+                            valEl.innerText = `${count} 項待辦`;
+                            subEl.innerText = `${firstTodo}`;
+                        } else {
+                            valEl.innerText = `太棒了！`;
+                            subEl.innerText = `目前無待辦事項`;
+                        }
+                    }
+                }, (err) => { console.log("待辦讀取錯誤", err); });
+            }
+
+            // 抓取本月記帳總計 (依據常見 schemas，找尋 date/amount/type 等欄位)
+            if (document.getElementById('financeWidgetValue')) {
+                const now = new Date();
+                const startOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+                const endOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-31`;
+                
+                // 假設資料表記錄在 "records" (或者若為 expenses 則請更改)
+                const expQ = query(collection(db, "records"), where("groupId", "==", groupId), where("date", ">=", startOfMonth), where("date", "<=", endOfMonth));
+                financeUnsubscribe = onSnapshot(expQ, (snap) => {
+                    let totalExpense = 0;
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        // 確保只加總支出 (或沒有 type 時預設為支出)
+                        if (data.type === 'expense' || !data.type) { 
+                            totalExpense += Number(data.amount || 0);
+                        }
+                    });
+                    const valEl = document.getElementById('financeWidgetValue');
+                    const subEl = document.getElementById('financeWidgetSub');
+                    if (valEl) {
+                        valEl.innerText = `$${totalExpense.toLocaleString()}`;
+                        subEl.innerText = `本月累計支出`;
+                    }
+                }, (err) => { console.log("記帳讀取錯誤", err); });
+            }
+        };
 
         window.checkUnreadMessages = function(user) {
             try {
@@ -1060,6 +1131,9 @@
                 }
             });
 
+            const agendaContainer = document.getElementById('todayAgendaContainer');
+            if (!agendaContainer) return;
+
             let listHtml = '';
             if (validEvents.length > 0) {
                 validEvents.sort((a, b) => {
@@ -1071,13 +1145,30 @@
                     const avatar = window.userAvatarMap[evt.operator] || `https://ui-avatars.com/api/?name=${evt.operator}&background=e5e7eb`;
                     return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${avatar}"></div>`;
                 }).join('');
+                
+                agendaContainer.innerHTML = `
+                    <div class="section-header"><div class="section-title">Calendar</div></div>
+                    <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
+                        <div class="agenda-header">
+                            <div class="agenda-date">${dateTitle}</div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
+                                <div class="agenda-count">今天有 ${validEvents.length} 個行程</div>
+                            </div>
+                        </div>
+                        <div class="agenda-list">${listHtml}</div>
+                    </div>`;
             } else {
-                listHtml = `<div class="agenda-empty">今日無行程安排 ☕</div>`;
-            }
-            
-            const agendaContainer = document.getElementById('todayAgendaContainer');
-            if (agendaContainer) {
-                agendaContainer.innerHTML = `<div class="section-header"><div class="section-title">Calendar</div></div><div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');"><div class="agenda-header"><div class="agenda-date">${dateTitle}</div><div style="display:flex; gap:8px; align-items:center;"><div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div><div class="agenda-count">${validEvents.length > 0 ? `今天有 ${validEvents.length} 個行程` : '自由日'}</div></div></div><div class="agenda-list">${listHtml}</div></div>`;
+                // ★ 新增：無行程時改用極簡橫式卡片，釋放螢幕高度
+                agendaContainer.innerHTML = `
+                    <div class="section-header"><div class="section-title">Calendar</div></div>
+                    <div class="agenda-card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
+                        <div>
+                            <div class="agenda-date" style="font-size: 15px;">${dateTitle}</div>
+                            <div style="font-size: 13px; color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
+                        </div>
+                        <div class="dash-icon" style="background: var(--primary-light); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; color:var(--primary-dark);">📅</div>
+                    </div>`;
             }
         }
 
