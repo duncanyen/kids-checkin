@@ -36,7 +36,8 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg-body); 
             margin: 0; 
-            padding: 16px 16px 90px 16px; 
+            /* 預留底部空間，避免內容被固定導覽列遮擋 */
+            padding: 16px 16px 100px 16px; 
             color: var(--text-main); 
             -webkit-font-smoothing: antialiased; 
             overflow-x: hidden; 
@@ -106,8 +107,46 @@
         .badge { background: var(--bg-body); border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; color: var(--text-main); font-weight: 600; }
         .empty-state { text-align: center; color: var(--text-sub); padding: 20px; font-size: 0.9rem; font-weight: 600; background: var(--bg-body); border-radius: var(--radius-md); border: 1px dashed var(--border-color); }
 
-        /* 右下角懸浮新增按鈕 (FAB) */
-        .fab-btn { position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); cursor: pointer; border: none; z-index: 1000; transition: 0.2s; }
+        /* === 底部固定懸浮導覽列 (Fixed Bottom Bar / FAB) === */
+        .fixed-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .fab-btn-container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .fab-btn { 
+            width: 54px; 
+            height: 54px; 
+            background: var(--primary); 
+            color: white; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 28px; 
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); 
+            cursor: pointer; 
+            border: none; 
+            transition: 0.2s; 
+        }
         .fab-btn:active { transform: scale(0.92); background: var(--primary-dark); }
 
         /* Modal 彈跳視窗 (新增待辦用) */
@@ -180,8 +219,12 @@
         </div>
     </div>
 
-    <!-- 右下角懸浮新增按鈕 (FAB) -->
-    <button class="fab-btn" onclick="NexusTodoApp.openAddModal()" title="新增待辦">＋</button>
+    <!-- 底部固定懸浮導覽列 (Fixed Bottom Bar) -->
+    <div class="fixed-bottom-bar">
+        <div class="fab-btn-container">
+            <button class="fab-btn" onclick="NexusTodoApp.openAddModal()" title="新增待辦">＋</button>
+        </div>
+    </div>
 
     <!-- 新增待辦彈跳視窗 Modal -->
     <div class="modal" id="addTodoModal">
@@ -233,7 +276,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -265,13 +308,13 @@
                 await this.fetchGroupMembersAndDataOnce(groupId);
             },
 
-            // 關鍵效能優化：單次批次載入 (Single Fetch) 群組資料與成員清單，避免重複讀取
+            // 關鍵效能優化：單次批次載入 (Single Fetch) 群組資料與 Firestore 共享待辦資料，控制 Read 數為 1
             async fetchGroupMembersAndDataOnce(groupId) {
                 const statusEl = document.getElementById('todo-loading-status');
                 statusEl.textContent = "同步中...";
                 
                 try {
-                    // 1. 取得群組成員
+                    // 1. 取得群組成員清單
                     const groupDocRef = doc(db, "groups", groupId);
                     const groupSnap = await getDoc(groupDocRef);
                     if (groupSnap.exists()) {
@@ -293,18 +336,39 @@
                         this.groupMembers = [{ name: "小明", avatar: "" }, { name: "小華", avatar: "" }];
                     }
 
-                    // 2. 載入待辦資料
-                    const cachedData = localStorage.getItem(`nexus_todo_${groupId}`);
-                    if (cachedData) {
-                        const parsed = JSON.parse(cachedData);
-                        this.state.categories = parsed.categories || ["工作", "生活", "採買"];
-                        this.state.todos = parsed.todos || [];
+                    // 2. 核心修復：從 Firestore 雲端資料庫讀取該群組共享的待辦清單 (僅消耗 1 次 Read)
+                    const todoDocRef = doc(db, "todos", groupId);
+                    const todoSnap = await getDoc(todoDocRef);
+
+                    if (todoSnap.exists()) {
+                        const data = todoSnap.data();
+                        this.state.categories = data.categories || ["工作", "生活", "採買"];
+                        this.state.todos = data.todos || [];
                     } else {
-                        this.state.todos = [
-                            { id: 1, title: "採買週末露營食材", category: "採買", deadline: "今天", assignees: ["小明", "小華"], note: "記得買無糖豆漿與肉片", completed: false },
-                            { id: 2, title: "整理客廳雜物", category: "生活", deadline: "明天", assignees: ["所有人員"], note: "", completed: true }
-                        ];
+                        // 首次建立該群組的雲端待辦檔，帶入預設範例或本地快取
+                        const cachedData = localStorage.getItem(`nexus_todo_${groupId}`);
+                        if (cachedData) {
+                            const parsed = JSON.parse(cachedData);
+                            this.state.categories = parsed.categories || ["工作", "生活", "採買"];
+                            this.state.todos = parsed.todos || [];
+                        } else {
+                            this.state.todos = [
+                                { id: 1, title: "採買週末露營食材", category: "採買", deadline: "今天", assignees: ["小明", "小華"], note: "記得買無糖豆漿與肉片", completed: false },
+                                { id: 2, title: "整理客廳雜物", category: "生活", deadline: "明天", assignees: ["所有人員"], note: "", completed: true }
+                            ];
+                        }
+                        // 初始化寫入雲端 Firestore
+                        await setDoc(todoDocRef, {
+                            categories: this.state.categories,
+                            todos: this.state.todos
+                        });
                     }
+
+                    // 同步快取至本地 localStorage
+                    localStorage.setItem(`nexus_todo_${groupId}`, JSON.stringify({
+                        categories: this.state.categories,
+                        todos: this.state.todos
+                    }));
 
                     statusEl.textContent = "已同步";
                     setTimeout(() => statusEl.textContent = "", 1500);
@@ -317,11 +381,24 @@
                 }
             },
 
-            saveState() {
+            // 核心修復：狀態儲存時，同步更新 LocalStorage 與 Firestore 雲端資料庫
+            async saveState() {
+                // 1. 本地 LocalStorage 快取 (實現零延遲體驗)
                 localStorage.setItem(`nexus_todo_${this.currentGroupId}`, JSON.stringify({
                     categories: this.state.categories,
                     todos: this.state.todos
                 }));
+
+                // 2. 異步同步至雲端 Firestore (全群組成員共享)
+                try {
+                    const todoDocRef = doc(db, "todos", this.currentGroupId);
+                    await setDoc(todoDocRef, {
+                        categories: this.state.categories,
+                        todos: this.state.todos
+                    }, { merge: true });
+                } catch (err) {
+                    console.error("雲端儲存失敗：", err);
+                }
             },
 
             render() {
@@ -331,7 +408,6 @@
                 this.renderAssigneeChips();
             },
 
-            // 渲染頂端分類篩選列 (一開始只看到「全部」與各類型按鈕，具備刪除功能)
             renderCategories() {
                 const container = document.getElementById('category-container');
                 let html = `<button class="cat-btn ${this.state.currentFilter === 'all' ? 'active' : ''}" onclick="NexusTodoApp.filterCategory('all')">全部</button>`;
@@ -348,7 +424,6 @@
                 container.innerHTML = html;
             },
 
-            // 渲染新增彈窗中的類型下拉選單（支援 + 新增自訂類別選項）
             renderCategorySelectOptions(selectedCat = '') {
                 const selectEl = document.getElementById('new-todo-category-select');
                 let html = '';
@@ -360,7 +435,6 @@
                 selectEl.innerHTML = html;
             },
 
-            // 監聽新增視窗中類別下拉選單的選擇
             handleCategorySelectChange(val) {
                 if (val === '__add_new_cat__') {
                     const newCat = prompt("請輸入新的類別名稱：");
@@ -370,7 +444,6 @@
                             this.state.categories.push(trimmed);
                             this.saveState();
                             this.render();
-                            // 自動選中剛新增的類別
                             document.getElementById('new-todo-category-select').value = trimmed;
                         } else {
                             alert("此類別已存在！");
@@ -382,7 +455,6 @@
                 }
             },
 
-            // 渲染指派人員頭像選擇區塊
             renderAssigneeChips() {
                 const container = document.getElementById('assigneeAvatarContainer');
                 let html = `
@@ -423,7 +495,6 @@
                 this.renderAssigneeChips();
             },
 
-            // 分別渲染未完成清單與已完成清單
             renderTodoList() {
                 const filtered = this.state.currentFilter === 'all' 
                     ? this.state.todos 
@@ -432,7 +503,6 @@
                 const activeTodos = filtered.filter(t => !t.completed);
                 const completedTodos = filtered.filter(t => t.completed);
 
-                // 未完成區塊
                 const activeContainer = document.getElementById('todo-list-container');
                 if (activeTodos.length === 0) {
                     activeContainer.innerHTML = `<div class="empty-state">目前尚無未完成待辦</div>`;
@@ -440,7 +510,6 @@
                     activeContainer.innerHTML = activeTodos.map(item => this.renderTodoItemHTML(item)).join('');
                 }
 
-                // 已完成區塊
                 const completedContainer = document.getElementById('completed-list-container');
                 if (completedTodos.length === 0) {
                     completedContainer.innerHTML = `<div class="empty-state">目前尚無已完成項目</div>`;
