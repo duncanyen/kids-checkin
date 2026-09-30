@@ -145,7 +145,9 @@
             </div>
             <div class="form-row">
                 <label>主選單功能開放設定 (打勾才允許該成員使用)</label>
-                <div class="checkbox-group" id="newMenusContainer"></div>
+                <div class="checkbox-group" id="newMenusContainer">
+                    <div style="color:#888; font-size:12px; grid-column: 1 / -1;">載入選單中...</div>
+                </div>
             </div>
 
             <button class="btn-add" id="btnAddUser" style="margin-top: 10px;">確認新增成員</button>
@@ -256,15 +258,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const systemMenuOptions = [
-            { id: 'chat', label: '💬 聊天室', isDefault: true, group: 'all' },
-            { id: 'calendar', label: '📅 行事曆', isDefault: true, group: 'all' },
-            { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all' },
-            { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all' },
-            { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all' },
-            { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family' }, 
-            { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family' }
-        ];
+        // 將選單改為空陣列，準備從資料庫讀取
+        let systemMenuOptions = [];
 
         let allLogs = [];
         let allUsers = [];
@@ -290,7 +285,46 @@
             initAdminPage();
         }
 
+        // ================= 新增：從資料庫讀取系統選單 (單次讀取) =================
+        async function loadSystemMenus() {
+            try {
+                const q = query(collection(db, "system_menus"), orderBy("order", "asc"));
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) {
+                    console.log("資料庫無功能卡設定，自動初始化預設清單...");
+                    // 包含新增的「待辦事項」
+                    const defaultMenus = [
+                        { id: 'chat', label: '💬 聊天室', isDefault: true, group: 'all', order: 1 },
+                        { id: 'calendar', label: '📅 行事曆', isDefault: true, group: 'all', order: 2 },
+                        { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all', order: 3 },
+                        { id: 'todo', label: '📝 待辦事項', isDefault: true, group: 'all', order: 4 }, // 新增的待辦功能
+                        { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all', order: 5 },
+                        { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all', order: 6 },
+                        { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family', order: 7 }, 
+                        { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family', order: 8 }
+                    ];
+
+                    for (const menu of defaultMenus) {
+                        await setDoc(doc(db, "system_menus", menu.id), menu);
+                    }
+                    systemMenuOptions = defaultMenus;
+                } else {
+                    systemMenuOptions = [];
+                    snapshot.forEach(docSnap => {
+                        systemMenuOptions.push(docSnap.data());
+                    });
+                }
+            } catch (error) {
+                console.error("無法讀取選單設定，請檢查索引或連線:", error);
+            }
+        }
+
         async function initAdminPage() {
+            // 先從資料庫載入選單（這只會在這裡消耗 1 次讀取）
+            await loadSystemMenus();
+
+            // 載入完成後才繪製 Checkboxes
             renderMenuCheckboxes('newMenusContainer', false); 
             renderMenuCheckboxes('editMenusContainer', true); 
             
@@ -333,6 +367,12 @@
         function renderMenuCheckboxes(containerId, isEdit) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
+            
+            if (systemMenuOptions.length === 0) {
+                container.innerHTML = '<div style="color:#e53935; font-size:12px; grid-column: 1 / -1;">無法載入選單，請重新整理網頁。</div>';
+                return;
+            }
+
             systemMenuOptions.forEach(menu => {
                 const label = document.createElement('label');
                 label.className = 'checkbox-label';
@@ -524,6 +564,8 @@
                 if (user.role === 'parent') roleDisplay = '家長管理員';
                 
                 const idDisplay = user.accountId ? `帳號: ${user.accountId}` : '<span style="color:#e53935;">(無帳號)</span>';
+                
+                // 比對資料庫拉出的 systemMenuOptions 來顯示正確的中文 Label
                 const userMenus = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
                 const menuLabels = systemMenuOptions.filter(m => userMenus.includes(m.id)).map(m => m.label).join('、');
 
