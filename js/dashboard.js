@@ -57,7 +57,7 @@ window.renderDynamicModules = async function(user) {
     const dockContainer = document.getElementById('bottomDockContainer');
     
     sideList.innerHTML = ''; 
-    chatContainer.innerHTML = ''; // 清空原本的巨型聊天室，改為單欄 Widget
+    chatContainer.innerHTML = ''; 
     
     const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo']; 
     const allowedMenus = user.menus || defaultAllowed;
@@ -92,7 +92,6 @@ window.renderDynamicModules = async function(user) {
     if (miniCardsContainer) {
         let miniCardsHtml = '';
         
-        // 1. 待辦清單：橫跨雙欄 (grid-column: 1 / -1)
         if (allowedMenus.includes('todo')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 16px;">
@@ -108,7 +107,6 @@ window.renderDynamicModules = async function(user) {
             `;
         }
         
-        // 2. 記帳本：單欄顯示
         if (allowedMenus.includes('finance')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('expense.html', '記帳本')">
@@ -123,7 +121,6 @@ window.renderDynamicModules = async function(user) {
             `;
         }
         
-        // 3. 聊天室：單欄顯示 (與記帳本並排)
         if (allowedMenus.includes('chat') && modules.chat !== false) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('chat.html', '聊天室')">
@@ -171,7 +168,7 @@ window.checkWidgetData = function(user) {
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
-    // 1. 抓取待辦事項並以列表顯示 (針對陣列結構進行修正)
+    // 1. 待辦清單優化版 (頭像堆疊、字數截斷、今天判斷)
     if (document.getElementById('todoWidgetContent')) {
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
         
@@ -180,8 +177,6 @@ window.checkWidgetData = function(user) {
             
             snap.forEach(docSnap => {
                 const docData = docSnap.data();
-                
-                // 【關鍵修正】資料庫結構中，真正的待辦清單是包在一個名為 `todos` 的陣列裡
                 if (docData.todos && Array.isArray(docData.todos)) {
                     docData.todos.forEach(t => {
                         const isDone = (t.completed === true || t.isCompleted === true || String(t.completed) === "true");
@@ -193,11 +188,12 @@ window.checkWidgetData = function(user) {
             });
 
             const now = new Date();
+            const todayYMD = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
             now.setHours(0,0,0,0);
             
             const getWeight = (dl) => {
                 if (!dl) return 9999999999999;
-                if (dl === '今天') return now.getTime();
+                if (dl === '今天' || dl === todayYMD) return now.getTime();
                 if (dl === '明天') return now.getTime() + 86400000;
                 if (dl === '週末') {
                     let d = new Date(now);
@@ -212,37 +208,66 @@ window.checkWidgetData = function(user) {
 
             const container = document.getElementById('todoWidgetContent');
             if (incompleteTodos.length > 0) {
-                // 依照日期由近至遠排序
                 incompleteTodos.sort((a, b) => getWeight(a.deadline || a.dealline) - getWeight(b.deadline || b.dealline));
                 
                 let html = '';
                 incompleteTodos.forEach(t => {
-                    let dateStr = t.deadline || t.dealline || '無期限';
+                    let rawDate = t.deadline || t.dealline || '無期限';
+                    let displayDate = rawDate;
+                    let isToday = false;
                     
-                    if (dateStr.includes('-')) {
-                        const parts = dateStr.split('-');
-                        if (parts.length === 3) dateStr = `${parts[1]}/${parts[2]}`;
+                    // 判斷是否為今天
+                    if (rawDate === todayYMD || rawDate === '今天') {
+                        displayDate = '今天';
+                        isToday = true;
+                    } else if (rawDate === '明天') {
+                        displayDate = '明天';
+                    } else if (rawDate.includes('-')) {
+                        const parts = rawDate.split('-');
+                        if (parts.length === 3) displayDate = `${parts[1]}/${parts[2]}`;
                     }
                     
+                    // 判斷字數並截斷超過10個字的內容
                     let title = t.title || t.text || t.task || "未命名任務";
+                    if (title.length > 10) {
+                        title = title.substring(0, 10) + '...';
+                    }
                     
-                    let assigneesStr = '未指派';
+                    // 處理人員陣列
+                    let assigneesArray = [];
                     if (t.assignees) {
                         if (Array.isArray(t.assignees)) {
-                            assigneesStr = t.assignees.length > 0 ? t.assignees.join(', ') : '未指派';
+                            assigneesArray = t.assignees;
                         } else {
-                            assigneesStr = String(t.assignees);
+                            assigneesArray = [String(t.assignees)];
                         }
                     }
-                    if (assigneesStr === '所有人員') assigneesStr = '所有人';
+                    if (assigneesArray.length === 0) assigneesArray = ['未指派'];
+                    
+                    // 產生堆疊頭像 HTML (Facepile)
+                    let avatarsHtml = assigneesArray.map((name, index) => {
+                        let actualName = (name === '所有人員' || name === '所有人') ? '所有人' : name;
+                        // 若無設定頭像則給予預設圖示
+                        let avatarUrl = window.userAvatarMap[actualName] || `https://ui-avatars.com/api/?name=${actualName}&background=e5e7eb`;
+                        // 第二個人以後往左推 8px 做出重疊效果
+                        let marginLeft = index === 0 ? '0' : '-8px'; 
+                        return `<img src="${avatarUrl}" title="${actualName}" style="width:24px; height:24px; border-radius:50%; border:2px solid #fff; margin-left:${marginLeft}; object-fit:cover; background:var(--bg-body); box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
+                    }).join('');
+
+                    // 若是今天，給予醒目的橘紅色小標籤
+                    let badgeStyle = isToday 
+                        ? 'color: var(--danger); background: var(--danger-light);'
+                        : 'color: var(--primary-dark); background: var(--primary-light);';
 
                     html += `
                         <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:10px 12px; border-radius:12px; border:1px solid var(--border-color);">
                             <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
-                                <span style="font-size:11px; font-weight:800; color:var(--primary-dark); background:var(--primary-light); padding:3px 8px; border-radius:8px; white-space:nowrap;">${dateStr}</span>
-                                <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</span>
+                                <span style="font-size:11px; font-weight:800; ${badgeStyle} padding:3px 8px; border-radius:8px; white-space:nowrap;">${displayDate}</span>
+                                <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap;">${title}</span>
                             </div>
-                            <span style="font-size:12px; font-weight:700; color:var(--text-sub); white-space:nowrap; flex-shrink:0; margin-left:8px;">👤 ${assigneesStr}</span>
+                            <div style="display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
+                                ${avatarsHtml}
+                            </div>
                         </div>
                     `;
                 });
