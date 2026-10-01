@@ -36,7 +36,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg-body); 
             margin: 0; 
-            /* 預留底部空間，避免內容被固定導覽列遮擋 */
             padding: 16px 16px 100px 16px; 
             color: var(--text-main); 
             -webkit-font-smoothing: antialiased; 
@@ -86,7 +85,6 @@
         .todo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
         .todo-header h2 { margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--text-main); }
         
-        /* 分類按鈕列 (純篩選用，RWD 橫向捲動) */
         .category-bar { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
         .category-bar::-webkit-scrollbar { display: none; }
         
@@ -95,10 +93,8 @@
         .cat-btn .del-cat { margin-left: 6px; font-size: 0.8rem; color: #9ca3af; border-radius: 50%; padding: 0 4px; }
         .cat-btn .del-cat:hover { background: rgba(0,0,0,0.1); color: var(--danger); }
 
-        /* 區塊標題 */
         .section-sub-title { font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 16px 0 10px 4px; display: flex; align-items: center; gap: 6px; }
 
-        /* 待辦列表與已完成列表 */
         .todo-list { display: flex; flex-direction: column; gap: 10px; }
         .todo-item { background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; display: flex; align-items: flex-start; justify-content: space-between; transition: 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
         .todo-item.completed { background: #f8fafc; opacity: 0.65; text-decoration: line-through; }
@@ -107,49 +103,19 @@
         .badge { background: var(--bg-body); border: 1px solid var(--border-color); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; color: var(--text-main); font-weight: 600; }
         .empty-state { text-align: center; color: var(--text-sub); padding: 20px; font-size: 0.9rem; font-weight: 600; background: var(--bg-body); border-radius: var(--radius-md); border: 1px dashed var(--border-color); }
 
-        /* === 底部固定懸浮導覽列 (Fixed Bottom Bar / FAB) === */
-        .fixed-bottom-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-top: 1px solid var(--border-color);
-            padding: 12px 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
-        }
+        /* 列表操作按鈕 (編輯/刪除) */
+        .todo-actions { display: flex; gap: 4px; align-items: center; }
+        .action-btn { background: none; border: none; cursor: pointer; transition: 0.2s; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .action-btn:hover { background: var(--bg-body); }
+        .action-btn.edit { font-size: 1.1rem; }
+        .action-btn.delete { font-size: 1.4rem; color: var(--text-sub); line-height: 1; }
+        .action-btn.delete:hover { color: var(--danger); }
 
-        .fab-btn-container {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        .fab-btn { 
-            width: 54px; 
-            height: 54px; 
-            background: var(--primary); 
-            color: white; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 28px; 
-            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); 
-            cursor: pointer; 
-            border: none; 
-            transition: 0.2s; 
-        }
+        .fixed-bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border-color); padding: 12px 20px; display: flex; justify-content: center; align-items: center; z-index: 1000; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05); }
+        .fab-btn-container { width: 100%; max-width: 500px; display: flex; justify-content: flex-end; }
+        .fab-btn { width: 54px; height: 54px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); cursor: pointer; border: none; transition: 0.2s; }
         .fab-btn:active { transform: scale(0.92); background: var(--primary-dark); }
 
-        /* Modal 彈跳視窗 (新增待辦用) */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(5px); z-index: 5000; justify-content: center; align-items: center; padding: 20px; }
         .modal-content { background: white; padding: 24px; border-radius: var(--radius-lg); width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; animation: slideUp 0.3s ease-out; border: 1px solid var(--border-color); max-height: 90vh; overflow-y: auto; }
         
@@ -157,22 +123,18 @@
         .form-label { display: block; font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
         .form-control { width: 100%; padding: 12px 14px; border: 2px solid var(--border-color); border-radius: var(--radius-md); font-size: 15px; font-family: inherit; transition: 0.2s; background: white; }
         .form-control:focus { outline: none; border-color: var(--primary); }
-        
-        textarea.form-control { resize: vertical; min-height: 84px; line-height: 1.5; } /* 至少 3 行中文高度 */
+        textarea.form-control { resize: vertical; min-height: 84px; line-height: 1.5; }
 
-        /* 類型按鈕群組 */
         .category-options { display: flex; flex-wrap: wrap; gap: 8px; }
         .category-btn { background: white; border: 2px solid var(--border-color); padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub); cursor: pointer; text-align: center; transition: 0.2s; white-space: nowrap; }
         .category-btn.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); }
         .category-btn-add { background: #f8fafc; color: var(--primary); border: 2px dashed var(--border-color); }
         .category-btn-add:active { transform: scale(0.96); }
 
-        /* 期限按鈕群組 */
         .deadline-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         .deadline-btn { background: white; border: 2px solid var(--border-color); padding: 10px 4px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub); cursor: pointer; text-align: center; transition: 0.2s; }
         .deadline-btn.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); }
 
-        /* 成員頭像多選清單 */
         .assignee-avatar-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 140px; overflow-y: auto; padding: 4px; }
         .assignee-chip { display: flex; align-items: center; gap: 6px; background: var(--bg-body); border: 2px solid var(--border-color); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: 0.2s; user-select: none; }
         .assignee-chip.selected { background: var(--primary-light); border-color: var(--primary); color: var(--primary-dark); font-weight: 700; }
@@ -206,10 +168,8 @@
                 <h2>待辦</h2>
             </div>
 
-            <!-- 分類選擇列 (純篩選用，無新增按鈕) -->
             <div class="category-bar" id="category-container">
                 <button class="cat-btn active" data-category="all" onclick="NexusTodoApp.filterCategory('all')">全部</button>
-                <!-- 動態載入類別篩選按鈕 -->
             </div>
 
             <!-- 未完成待辦事項區塊 -->
@@ -226,24 +186,23 @@
         </div>
     </div>
 
-    <!-- 底部固定懸浮導覽列 (Fixed Bottom Bar) -->
+    <!-- 底部固定懸浮導覽列 -->
     <div class="fixed-bottom-bar">
         <div class="fab-btn-container">
             <button class="fab-btn" onclick="NexusTodoApp.openAddModal()" title="新增待辦">＋</button>
         </div>
     </div>
 
-    <!-- 新增待辦彈跳視窗 Modal -->
+    <!-- 新增/編輯 待辦彈跳視窗 Modal -->
     <div class="modal" id="addTodoModal">
         <div class="modal-content">
-            <h3 style="margin-top:0; font-size:20px; font-weight:900; margin-bottom:16px;">新增待辦事項</h3>
+            <h3 id="modal-title" style="margin-top:0; font-size:20px; font-weight:900; margin-bottom:16px;">新增待辦事項</h3>
             
             <div class="form-group">
                 <label class="form-label">待辦內容 (至少三行高度)</label>
                 <textarea id="new-todo-title" class="form-control" placeholder="輸入待辦內容..."></textarea>
             </div>
 
-            <!-- 新增時挑選類別 (按鈕群組) -->
             <div class="form-group">
                 <label class="form-label">選擇類型</label>
                 <div class="category-options" id="new-todo-category-container">
@@ -276,7 +235,7 @@
 
             <div class="modal-btns">
                 <button onclick="NexusTodoApp.closeAddModal()">取消</button>
-                <button onclick="NexusTodoApp.createTodo()">確認新增</button>
+                <button id="modal-submit-btn" onclick="NexusTodoApp.saveTodo()">確認新增</button>
             </div>
         </div>
     </div>
@@ -300,12 +259,13 @@
             currentGroupId: null,
             groupMembers: [],
             selectedAssignees: ["所有人員"],
+            editingTodoId: null, // 用來標記目前是否處於編輯模式
             state: {
                 categories: ["工作", "生活", "採買"],
                 todos: [],
                 currentFilter: "all",
                 selectedDeadline: "今天",
-                selectedNewTodoCategory: "" // 用於新增 Modal 的當前選擇分類
+                selectedNewTodoCategory: ""
             },
 
             async init(groupId) {
@@ -423,11 +383,9 @@
                 container.innerHTML = html;
             },
 
-            // 取代舊的下拉選單，改為渲染按鈕
             renderCategoryButtons() {
                 const container = document.getElementById('new-todo-category-container');
                 
-                // 確認目前選中的類別是否存在，若無則預設選第一個
                 if (!this.state.selectedNewTodoCategory || !this.state.categories.includes(this.state.selectedNewTodoCategory)) {
                     this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
                 }
@@ -438,7 +396,6 @@
                     html += `<button type="button" class="category-btn ${isActive}" onclick="NexusTodoApp.selectNewTodoCategory('${cat}')">${cat}</button>`;
                 });
                 
-                // 加入「新增自訂類別」按鈕
                 html += `<button type="button" class="category-btn category-btn-add" onclick="NexusTodoApp.handleAddCustomCategory()">+ 新增自訂類別</button>`;
                 
                 if (container) {
@@ -446,25 +403,23 @@
                 }
             },
 
-            // 處理 Modal 內選擇類別的點擊事件
             selectNewTodoCategory(cat) {
                 this.state.selectedNewTodoCategory = cat;
                 this.renderCategoryButtons();
             },
 
-            // 處理 Modal 內點擊「新增自訂類別」
             handleAddCustomCategory() {
                 const newCat = prompt("請輸入新的類別名稱：");
                 if (newCat && newCat.trim() !== "") {
                     const trimmed = newCat.trim();
                     if (!this.state.categories.includes(trimmed)) {
                         this.state.categories.push(trimmed);
-                        this.state.selectedNewTodoCategory = trimmed; // 自動選取新建的類別
+                        this.state.selectedNewTodoCategory = trimmed;
                         this.saveState();
-                        this.render(); // 重新渲染包含主畫面的分類條與 Modal 的按鈕
+                        this.render(); 
                     } else {
                         alert("此類別已存在！");
-                        this.selectNewTodoCategory(trimmed); // 存在就切換過去
+                        this.selectNewTodoCategory(trimmed); 
                     }
                 }
             },
@@ -548,7 +503,10 @@
                                 ${item.completedAt ? `<div style="font-size: 0.75rem; color: var(--primary); margin-top: 4px; font-weight:600;">✓ 於 ${item.completedAt} 完成</div>` : ''}
                             </div>
                         </div>
-                        <button onclick="NexusTodoApp.deleteTodo(${item.id})" style="background:none; border:none; color:var(--text-sub); cursor:pointer; font-size:1.2rem; padding: 0 4px;" title="刪除">×</button>
+                        <div class="todo-actions">
+                            <button class="action-btn edit" onclick="NexusTodoApp.openEditModal(${item.id})" title="編輯">✏️</button>
+                            <button class="action-btn delete" onclick="NexusTodoApp.deleteTodo(${item.id})" title="刪除">×</button>
+                        </div>
                     </div>
                 `;
             },
@@ -565,7 +523,6 @@
                     if (this.state.currentFilter === catName) {
                         this.state.currentFilter = 'all';
                     }
-                    // 同步更新 Modal 裡選擇的類別
                     if (this.state.selectedNewTodoCategory === catName) {
                         this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
                     }
@@ -575,10 +532,45 @@
             },
 
             openAddModal() {
-                // 開啟時重設選取的類別為第一個
+                this.editingTodoId = null; // 確保是新增模式
+                document.getElementById('modal-title').textContent = '新增待辦事項';
+                document.getElementById('modal-submit-btn').textContent = '確認新增';
+
                 this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
                 this.renderCategoryButtons();
                 
+                this.setDeadlineUI('今天');
+                
+                document.getElementById('new-todo-title').value = '';
+                document.getElementById('new-todo-note').value = '';
+                this.selectedAssignees = ['所有人員'];
+                this.renderAssigneeChips();
+
+                document.getElementById('addTodoModal').style.display = 'flex';
+                document.getElementById('new-todo-title').focus();
+            },
+
+            // 開啟編輯視窗
+            openEditModal(id) {
+                const todo = this.state.todos.find(t => t.id === id);
+                if (!todo) return;
+
+                this.editingTodoId = id; // 設定為編輯模式
+                document.getElementById('modal-title').textContent = '編輯待辦事項';
+                document.getElementById('modal-submit-btn').textContent = '儲存修改';
+
+                // 填入既有資料
+                document.getElementById('new-todo-title').value = todo.title;
+                document.getElementById('new-todo-note').value = todo.note || '';
+
+                this.state.selectedNewTodoCategory = todo.category;
+                this.renderCategoryButtons();
+
+                this.setDeadlineUI(todo.deadline);
+
+                this.selectedAssignees = [...todo.assignees];
+                this.renderAssigneeChips();
+
                 document.getElementById('addTodoModal').style.display = 'flex';
                 document.getElementById('new-todo-title').focus();
             },
@@ -587,16 +579,32 @@
                 document.getElementById('addTodoModal').style.display = 'none';
                 document.getElementById('new-todo-title').value = '';
                 document.getElementById('new-todo-note').value = '';
+                document.getElementById('dl-custom').innerText = '日期'; // 重置自訂日期按鈕文字
+                this.editingTodoId = null;
                 this.selectedAssignees = ['所有人員'];
                 this.renderAssigneeChips();
             },
 
-            selectDeadline(type, label) {
+            // 負責更新 UI 按鈕狀態的統一方法
+            setDeadlineUI(label) {
                 this.state.selectedDeadline = label;
                 document.querySelectorAll('.deadline-btn').forEach(btn => btn.classList.remove('active'));
-                if (type === 'today') document.getElementById('dl-today').classList.add('active');
-                if (type === 'tomorrow') document.getElementById('dl-tomorrow').classList.add('active');
-                if (type === 'weekend') document.getElementById('dl-weekend').classList.add('active');
+                
+                if (label === '今天') {
+                    document.getElementById('dl-today').classList.add('active');
+                } else if (label === '明天') {
+                    document.getElementById('dl-tomorrow').classList.add('active');
+                } else if (label === '週末') {
+                    document.getElementById('dl-weekend').classList.add('active');
+                } else {
+                    const customBtn = document.getElementById('dl-custom');
+                    customBtn.innerText = label; // 顯示自訂日期
+                    customBtn.classList.add('active');
+                }
+            },
+
+            selectDeadline(type, label) {
+                this.setDeadlineUI(label);
             },
 
             triggerCustomDate() {
@@ -607,16 +615,13 @@
 
             handleCustomDateChange(dateVal) {
                 if (dateVal) {
-                    this.state.selectedDeadline = dateVal;
-                    const customBtn = document.getElementById('dl-custom');
-                    customBtn.innerText = dateVal;
-                    document.querySelectorAll('.deadline-btn').forEach(btn => btn.classList.remove('active'));
-                    customBtn.classList.add('active');
+                    this.setDeadlineUI(dateVal);
                 }
                 document.getElementById('hidden-date-picker').style.display = 'none';
             },
 
-            createTodo() {
+            // 統一處理新增或編輯儲存
+            saveTodo() {
                 const titleInput = document.getElementById('new-todo-title');
                 const noteInput = document.getElementById('new-todo-note');
                 const title = titleInput.value.trim();
@@ -627,21 +632,33 @@
                     return;
                 }
 
-                // 直接從 state 取得目前點選的類別
                 const targetCategory = this.state.selectedNewTodoCategory || '一般';
 
-                const newTodo = {
-                    id: Date.now(),
-                    title: title,
-                    category: targetCategory,
-                    deadline: this.state.selectedDeadline,
-                    assignees: this.selectedAssignees,
-                    note: noteInput.value.trim(),
-                    completed: false,
-                    completedAt: null
-                };
+                if (this.editingTodoId) {
+                    // 編輯現有項目
+                    const index = this.state.todos.findIndex(t => t.id === this.editingTodoId);
+                    if (index !== -1) {
+                        this.state.todos[index].title = title;
+                        this.state.todos[index].category = targetCategory;
+                        this.state.todos[index].deadline = this.state.selectedDeadline;
+                        this.state.todos[index].assignees = [...this.selectedAssignees];
+                        this.state.todos[index].note = noteInput.value.trim();
+                    }
+                } else {
+                    // 新增項目
+                    const newTodo = {
+                        id: Date.now(),
+                        title: title,
+                        category: targetCategory,
+                        deadline: this.state.selectedDeadline,
+                        assignees: [...this.selectedAssignees],
+                        note: noteInput.value.trim(),
+                        completed: false,
+                        completedAt: null
+                    };
+                    this.state.todos.unshift(newTodo);
+                }
 
-                this.state.todos.unshift(newTodo);
                 this.saveState();
                 this.render();
                 this.closeAddModal();
