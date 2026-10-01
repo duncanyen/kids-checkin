@@ -160,6 +160,13 @@
         
         textarea.form-control { resize: vertical; min-height: 84px; line-height: 1.5; } /* 至少 3 行中文高度 */
 
+        /* 類型按鈕群組 */
+        .category-options { display: flex; flex-wrap: wrap; gap: 8px; }
+        .category-btn { background: white; border: 2px solid var(--border-color); padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub); cursor: pointer; text-align: center; transition: 0.2s; white-space: nowrap; }
+        .category-btn.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); }
+        .category-btn-add { background: #f8fafc; color: var(--primary); border: 2px dashed var(--border-color); }
+        .category-btn-add:active { transform: scale(0.96); }
+
         /* 期限按鈕群組 */
         .deadline-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         .deadline-btn { background: white; border: 2px solid var(--border-color); padding: 10px 4px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub); cursor: pointer; text-align: center; transition: 0.2s; }
@@ -236,12 +243,12 @@
                 <textarea id="new-todo-title" class="form-control" placeholder="輸入待辦內容..."></textarea>
             </div>
 
-            <!-- 新增時挑選類別 (支援自訂類別) -->
+            <!-- 新增時挑選類別 (按鈕群組) -->
             <div class="form-group">
                 <label class="form-label">選擇類型</label>
-                <select id="new-todo-category-select" class="form-control" onchange="NexusTodoApp.handleCategorySelectChange(this.value)">
-                    <!-- 動態載入分類選項與 + 新增自訂類別 -->
-                </select>
+                <div class="category-options" id="new-todo-category-container">
+                    <!-- 動態載入分類按鈕與 + 新增自訂類別按鈕 -->
+                </div>
             </div>
             
             <div class="form-group">
@@ -297,7 +304,8 @@
                 categories: ["工作", "生活", "採買"],
                 todos: [],
                 currentFilter: "all",
-                selectedDeadline: "今天"
+                selectedDeadline: "今天",
+                selectedNewTodoCategory: "" // 用於新增 Modal 的當前選擇分類
             },
 
             async init(groupId) {
@@ -308,13 +316,11 @@
                 await this.fetchGroupMembersAndDataOnce(groupId);
             },
 
-            // 關鍵效能優化：單次批次載入 (Single Fetch) 群組資料與 Firestore 共享待辦資料，控制 Read 數為 1
             async fetchGroupMembersAndDataOnce(groupId) {
                 const statusEl = document.getElementById('todo-loading-status');
                 statusEl.textContent = "同步中...";
                 
                 try {
-                    // 1. 取得群組成員清單
                     const groupDocRef = doc(db, "groups", groupId);
                     const groupSnap = await getDoc(groupDocRef);
                     if (groupSnap.exists()) {
@@ -336,7 +342,6 @@
                         this.groupMembers = [{ name: "小明", avatar: "" }, { name: "小華", avatar: "" }];
                     }
 
-                    // 2. 核心修復：從 Firestore 雲端資料庫讀取該群組共享的待辦清單 (僅消耗 1 次 Read)
                     const todoDocRef = doc(db, "todos", groupId);
                     const todoSnap = await getDoc(todoDocRef);
 
@@ -345,7 +350,6 @@
                         this.state.categories = data.categories || ["工作", "生活", "採買"];
                         this.state.todos = data.todos || [];
                     } else {
-                        // 首次建立該群組的雲端待辦檔，帶入預設範例或本地快取
                         const cachedData = localStorage.getItem(`nexus_todo_${groupId}`);
                         if (cachedData) {
                             const parsed = JSON.parse(cachedData);
@@ -357,14 +361,12 @@
                                 { id: 2, title: "整理客廳雜物", category: "生活", deadline: "明天", assignees: ["所有人員"], note: "", completed: true }
                             ];
                         }
-                        // 初始化寫入雲端 Firestore
                         await setDoc(todoDocRef, {
                             categories: this.state.categories,
                             todos: this.state.todos
                         });
                     }
 
-                    // 同步快取至本地 localStorage
                     localStorage.setItem(`nexus_todo_${groupId}`, JSON.stringify({
                         categories: this.state.categories,
                         todos: this.state.todos
@@ -381,15 +383,12 @@
                 }
             },
 
-            // 核心修復：狀態儲存時，同步更新 LocalStorage 與 Firestore 雲端資料庫
             async saveState() {
-                // 1. 本地 LocalStorage 快取 (實現零延遲體驗)
                 localStorage.setItem(`nexus_todo_${this.currentGroupId}`, JSON.stringify({
                     categories: this.state.categories,
                     todos: this.state.todos
                 }));
 
-                // 2. 異步同步至雲端 Firestore (全群組成員共享)
                 try {
                     const todoDocRef = doc(db, "todos", this.currentGroupId);
                     await setDoc(todoDocRef, {
@@ -403,7 +402,7 @@
 
             render() {
                 this.renderCategories();
-                this.renderCategorySelectOptions();
+                this.renderCategoryButtons();
                 this.renderTodoList();
                 this.renderAssigneeChips();
             },
@@ -424,33 +423,48 @@
                 container.innerHTML = html;
             },
 
-            renderCategorySelectOptions(selectedCat = '') {
-                const selectEl = document.getElementById('new-todo-category-select');
+            // 取代舊的下拉選單，改為渲染按鈕
+            renderCategoryButtons() {
+                const container = document.getElementById('new-todo-category-container');
+                
+                // 確認目前選中的類別是否存在，若無則預設選第一個
+                if (!this.state.selectedNewTodoCategory || !this.state.categories.includes(this.state.selectedNewTodoCategory)) {
+                    this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
+                }
+
                 let html = '';
                 this.state.categories.forEach(cat => {
-                    const isSel = (selectedCat === cat || (!selectedCat && cat === this.state.categories[0])) ? 'selected' : '';
-                    html += `<option value="${cat}" ${isSel}>${cat}</option>`;
+                    const isActive = this.state.selectedNewTodoCategory === cat ? 'active' : '';
+                    html += `<button type="button" class="category-btn ${isActive}" onclick="NexusTodoApp.selectNewTodoCategory('${cat}')">${cat}</button>`;
                 });
-                html += `<option value="__add_new_cat__" style="color:var(--primary); font-weight:700;">+ 新增自訂類別...</option>`;
-                selectEl.innerHTML = html;
+                
+                // 加入「新增自訂類別」按鈕
+                html += `<button type="button" class="category-btn category-btn-add" onclick="NexusTodoApp.handleAddCustomCategory()">+ 新增自訂類別</button>`;
+                
+                if (container) {
+                    container.innerHTML = html;
+                }
             },
 
-            handleCategorySelectChange(val) {
-                if (val === '__add_new_cat__') {
-                    const newCat = prompt("請輸入新的類別名稱：");
-                    if (newCat && newCat.trim() !== "") {
-                        const trimmed = newCat.trim();
-                        if (!this.state.categories.includes(trimmed)) {
-                            this.state.categories.push(trimmed);
-                            this.saveState();
-                            this.render();
-                            document.getElementById('new-todo-category-select').value = trimmed;
-                        } else {
-                            alert("此類別已存在！");
-                            document.getElementById('new-todo-category-select').value = this.state.categories[0];
-                        }
+            // 處理 Modal 內選擇類別的點擊事件
+            selectNewTodoCategory(cat) {
+                this.state.selectedNewTodoCategory = cat;
+                this.renderCategoryButtons();
+            },
+
+            // 處理 Modal 內點擊「新增自訂類別」
+            handleAddCustomCategory() {
+                const newCat = prompt("請輸入新的類別名稱：");
+                if (newCat && newCat.trim() !== "") {
+                    const trimmed = newCat.trim();
+                    if (!this.state.categories.includes(trimmed)) {
+                        this.state.categories.push(trimmed);
+                        this.state.selectedNewTodoCategory = trimmed; // 自動選取新建的類別
+                        this.saveState();
+                        this.render(); // 重新渲染包含主畫面的分類條與 Modal 的按鈕
                     } else {
-                        document.getElementById('new-todo-category-select').value = this.state.categories[0];
+                        alert("此類別已存在！");
+                        this.selectNewTodoCategory(trimmed); // 存在就切換過去
                     }
                 }
             },
@@ -551,13 +565,20 @@
                     if (this.state.currentFilter === catName) {
                         this.state.currentFilter = 'all';
                     }
+                    // 同步更新 Modal 裡選擇的類別
+                    if (this.state.selectedNewTodoCategory === catName) {
+                        this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
+                    }
                     this.saveState();
                     this.render();
                 }
             },
 
             openAddModal() {
-                this.renderCategorySelectOptions();
+                // 開啟時重設選取的類別為第一個
+                this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
+                this.renderCategoryButtons();
+                
                 document.getElementById('addTodoModal').style.display = 'flex';
                 document.getElementById('new-todo-title').focus();
             },
@@ -597,7 +618,6 @@
 
             createTodo() {
                 const titleInput = document.getElementById('new-todo-title');
-                const categorySelect = document.getElementById('new-todo-category-select');
                 const noteInput = document.getElementById('new-todo-note');
                 const title = titleInput.value.trim();
 
@@ -607,7 +627,8 @@
                     return;
                 }
 
-                const targetCategory = categorySelect.value || this.state.categories[0] || '一般';
+                // 直接從 state 取得目前點選的類別
+                const targetCategory = this.state.selectedNewTodoCategory || '一般';
 
                 const newTodo = {
                     id: Date.now(),
