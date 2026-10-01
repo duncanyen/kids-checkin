@@ -91,16 +91,19 @@ window.renderDynamicModules = async function(user) {
 
     if (miniCardsContainer) {
         let miniCardsHtml = '';
+        
+        // 【UI 優化】將待辦清單改為橫跨雙欄 (grid-column: 1 / -1) 並且準備裝載列表
         if (allowedMenus.includes('todo')) {
             miniCardsHtml += `
-                <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')">
+                <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 16px;">
                     <div class="mini-widget-icon-bg">📋</div>
-                    <div class="mini-widget-header">
+                    <div class="mini-widget-header" style="margin-bottom: 12px;">
                         <div class="mini-widget-icon">📋</div>
                         <div class="mini-widget-title">待辦清單</div>
                     </div>
-                    <div class="mini-widget-value" id="todoWidgetValue">載入中...</div>
-                    <div class="mini-widget-sub" id="todoWidgetSub">連線取得中</div>
+                    <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; padding-right:4px;">
+                        <div style="font-size: 13px; color: var(--text-sub);">載入中...</div>
+                    </div>
                 </div>
             `;
         }
@@ -162,8 +165,8 @@ window.checkWidgetData = function(user) {
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
-    // 1. 抓取待辦事項
-    if (document.getElementById('todoWidgetValue')) {
+    // 1. 抓取待辦事項並以列表顯示 (由近至遠排序)
+    if (document.getElementById('todoWidgetContent')) {
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
         todoUnsubscribe = onSnapshot(todoQ, (snap) => {
             let incompleteTodos = [];
@@ -172,44 +175,98 @@ window.checkWidgetData = function(user) {
                 const isDone = (d.isCompleted === true || d.completed === true);
                 if (!isDone) incompleteTodos.push(d);
             });
-            let count = incompleteTodos.length;
-            let firstTodo = count > 0 ? (incompleteTodos[0].title || incompleteTodos[0].text || incompleteTodos[0].task || "未命名任務") : "";
+
+            // 幫助排序的權重函數 (把日期字串轉為時間戳記比大小)
+            const now = new Date();
+            now.setHours(0,0,0,0);
             
-            const valEl = document.getElementById('todoWidgetValue');
-            const subEl = document.getElementById('todoWidgetSub');
-            if (valEl) {
-                if (count > 0) {
-                    valEl.innerText = `${count} 項待辦`;
-                    subEl.innerText = `${firstTodo}`;
-                } else {
-                    valEl.innerText = `太棒了！`;
-                    subEl.innerText = `目前無待辦事項`;
+            const getWeight = (dl) => {
+                if (!dl) return 9999999999999;
+                if (dl === '今天') return now.getTime();
+                if (dl === '明天') return now.getTime() + 86400000;
+                if (dl === '週末') {
+                    let d = new Date(now);
+                    let day = d.getDay();
+                    let diff = day <= 5 ? 6 - day : 0; // 下個週六
+                    return d.getTime() + (diff * 86400000);
                 }
+                // 自訂日期 "YYYY-MM-DD"
+                let parsed = new Date(dl);
+                if (!isNaN(parsed.getTime())) return parsed.getTime();
+                return 9999999999999; // 兜底
+            };
+
+            // 依照日期由近至遠排序
+            incompleteTodos.sort((a, b) => getWeight(a.deadline) - getWeight(b.deadline));
+            
+            const container = document.getElementById('todoWidgetContent');
+            if (incompleteTodos.length > 0) {
+                let html = '';
+                incompleteTodos.forEach(t => {
+                    let dateStr = t.deadline || '無期限';
+                    
+                    // 如果是自訂日期，簡化顯示為 MM/DD (例如 2026-10-02 -> 10/02)
+                    if (dateStr.includes('-')) {
+                        const parts = dateStr.split('-');
+                        if (parts.length === 3) dateStr = `${parts[1]}/${parts[2]}`;
+                    }
+                    
+                    let title = t.title || t.text || t.task || "未命名任務";
+                    let assignees = (t.assignees && t.assignees.length > 0) ? t.assignees.join(', ') : '未指派';
+                    if (assignees === '所有人員') assignees = '所有人';
+
+                    html += `
+                        <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:10px 12px; border-radius:12px; border:1px solid var(--border-color);">
+                            <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                                <span style="font-size:11px; font-weight:800; color:var(--primary-dark); background:var(--primary-light); padding:3px 8px; border-radius:8px; white-space:nowrap;">${dateStr}</span>
+                                <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</span>
+                            </div>
+                            <span style="font-size:12px; font-weight:700; color:var(--text-sub); white-space:nowrap; flex-shrink:0; margin-left:8px;">👤 ${assignees}</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:center; padding:20px; color:var(--text-sub); font-size:13px; font-weight:700; background:var(--bg-body); border-radius:12px; border:1px dashed var(--border-color);">
+                        ✨ 目前無待辦事項，太棒了！
+                    </div>
+                `;
             }
-        }, (err) => { console.log("待辦讀取錯誤", err); });
+        }, (err) => { console.error("待辦讀取錯誤", err); });
     }
 
-    // 2. 抓取本月記帳總計 (修正為 expenses)
+    // 2. 抓取本月記帳總計
     if (document.getElementById('financeWidgetValue')) {
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
         
-        // 修正：從 "records" 改為 "expenses"
         const expQ = query(collection(db, "expenses"), where("groupId", "==", groupId));
         
         financeUnsubscribe = onSnapshot(expQ, (snap) => {
             let totalExpense = 0;
+            
             snap.forEach(docSnap => {
                 const data = docSnap.data();
-                const dateStr = String(data.date || data.createdAt || '');
-                const typeVal = String(data.type || 'expense');
                 
+                let dateStr = '';
+                if (data.date && typeof data.date.toDate === 'function') {
+                    const d = data.date.toDate();
+                    dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                } else if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                    const d = data.createdAt.toDate();
+                    dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                } else {
+                    dateStr = String(data.date || data.createdAt || '');
+                }
+
+                const typeVal = String(data.type || 'expense');
+                const amount = Number(data.amount || data.price || 0);
                 const isThisMonth = dateStr.includes(currentYearMonth) || !dateStr;
+
                 if (isThisMonth) {
-                    // 只統計支出項目
-                    if (typeVal === 'expense' || typeVal === '支出' || !data.type) {
-                        // 修正：以 data.amount 為主，如果有其他命名也可相容
-                        totalExpense += Number(data.amount || data.price || 0);
+                    if (typeVal === 'expense' || typeVal === '支出' || typeVal === 'undefined' || !data.type) {
+                        totalExpense += amount;
                     }
                 }
             });
@@ -221,7 +278,9 @@ window.checkWidgetData = function(user) {
                 valEl.innerText = `$${totalExpense.toLocaleString()}`;
                 subEl.innerText = `本月累計支出`;
             }
-        }, (err) => { console.log("記帳讀取錯誤", err); });
+        }, (err) => { 
+            console.error("【記帳本 Debug】讀取錯誤: ", err); 
+        });
     }
 };
 
