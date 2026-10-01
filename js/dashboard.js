@@ -57,6 +57,7 @@ window.renderDynamicModules = async function(user) {
     const dockContainer = document.getElementById('bottomDockContainer');
     
     sideList.innerHTML = ''; 
+    // 清空原本雙欄的大聊天室容器，因為我們要把它移進小工具網格中
     chatContainer.innerHTML = '';
     
     const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo']; 
@@ -92,7 +93,7 @@ window.renderDynamicModules = async function(user) {
     if (miniCardsContainer) {
         let miniCardsHtml = '';
         
-        // 【UI 優化】將待辦清單改為橫跨雙欄 (grid-column: 1 / -1) 並且準備裝載列表
+        // 1. 待辦清單：設定 grid-column: 1 / -1 讓它橫跨雙欄 (在第一排)
         if (allowedMenus.includes('todo')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 16px;">
@@ -102,11 +103,13 @@ window.renderDynamicModules = async function(user) {
                         <div class="mini-widget-title">待辦清單</div>
                     </div>
                     <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; padding-right:4px;">
-                        <div style="font-size: 13px; color: var(--text-sub);">載入中...</div>
+                        <div style="font-size: 13px; color: var(--text-sub);">連線取得中...</div>
                     </div>
                 </div>
             `;
         }
+        
+        // 2. 記帳本：單欄顯示 (在第二排 左側)
         if (allowedMenus.includes('finance')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('expense.html', '記帳本')">
@@ -120,25 +123,29 @@ window.renderDynamicModules = async function(user) {
                 </div>
             `;
         }
+        
+        // 3. 聊天室：單欄顯示 (在第二排 右側)，並帶有通知紅點
+        if (allowedMenus.includes('chat') && modules.chat !== false) {
+            miniCardsHtml += `
+                <div class="mini-widget" onclick="window.navTo('chat.html', '聊天室')">
+                    <div class="mini-widget-icon-bg">💬</div>
+                    <div class="mini-widget-header">
+                        <div class="mini-widget-icon">💬</div>
+                        <div class="mini-widget-title">聊天室</div>
+                        <div class="notification-badge" id="chatBadge" style="position:absolute; top:12px; right:12px; left:auto; display:none;">0</div>
+                    </div>
+                    <div class="mini-widget-value">群組交流</div>
+                    <div class="mini-widget-sub">與成員保持聯繫</div>
+                </div>
+            `;
+        }
+
         if (miniCardsHtml) {
             miniCardsContainer.innerHTML = miniCardsHtml;
             miniCardsContainer.style.display = 'grid';
         } else {
             miniCardsContainer.style.display = 'none';
         }
-    }
-    
-    if (allowedMenus.includes('chat') && modules.chat !== false) {
-        chatContainer.innerHTML = `
-            <div class="card-hero" onclick="window.navTo('chat.html', '聊天室')" style="margin-top: 12px;">
-                <div class="notification-badge" id="chatBadge">0</div>
-                <div>
-                    <div style="font-size: 18px; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.5px;">聊天室</div>
-                    <div style="font-size: 13px; color: var(--text-sub); font-weight: 500;">隨時隨地與群組保持聯絡</div>
-                </div>
-                <div class="dash-icon">💬</div>
-            </div>
-        `;
     }
 
     let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>`;
@@ -167,13 +174,22 @@ window.checkWidgetData = function(user) {
 
     // 1. 抓取待辦事項並以列表顯示 (由近至遠排序)
     if (document.getElementById('todoWidgetContent')) {
+        console.log(`【待辦 Debug】開始向群組 ${groupId} 請求資料`);
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
+        
         todoUnsubscribe = onSnapshot(todoQ, (snap) => {
+            console.log(`【待辦 Debug】成功接收資料，共 ${snap.size} 筆`);
             let incompleteTodos = [];
+            
             snap.forEach(docSnap => {
                 const d = docSnap.data();
-                const isDone = (d.isCompleted === true || d.completed === true);
-                if (!isDone) incompleteTodos.push(d);
+                console.log(`【待辦 Debug】原始資料檢查:`, d);
+                // 容錯判斷：有些完成狀態可能是字串 "true" 或是 boolean true
+                const isDone = (d.isCompleted === true || d.completed === true || String(d.isCompleted) === "true");
+                
+                if (!isDone) {
+                    incompleteTodos.push(d);
+                }
             });
 
             // 幫助排序的權重函數 (把日期字串轉為時間戳記比大小)
@@ -187,33 +203,42 @@ window.checkWidgetData = function(user) {
                 if (dl === '週末') {
                     let d = new Date(now);
                     let day = d.getDay();
-                    let diff = day <= 5 ? 6 - day : 0; // 下個週六
+                    let diff = day <= 5 ? 6 - day : 0; 
                     return d.getTime() + (diff * 86400000);
                 }
-                // 自訂日期 "YYYY-MM-DD"
                 let parsed = new Date(dl);
                 if (!isNaN(parsed.getTime())) return parsed.getTime();
-                return 9999999999999; // 兜底
+                return 9999999999999; 
             };
 
-            // 依照日期由近至遠排序
-            incompleteTodos.sort((a, b) => getWeight(a.deadline) - getWeight(b.deadline));
-            
             const container = document.getElementById('todoWidgetContent');
             if (incompleteTodos.length > 0) {
+                // 依照日期由近至遠排序
+                incompleteTodos.sort((a, b) => getWeight(a.deadline || a.dealline) - getWeight(b.deadline || b.dealline));
+                
                 let html = '';
                 incompleteTodos.forEach(t => {
-                    let dateStr = t.deadline || '無期限';
+                    // 相容 deadline 或是拼寫錯誤的 dealline
+                    let dateStr = t.deadline || t.dealline || '無期限';
                     
-                    // 如果是自訂日期，簡化顯示為 MM/DD (例如 2026-10-02 -> 10/02)
                     if (dateStr.includes('-')) {
                         const parts = dateStr.split('-');
                         if (parts.length === 3) dateStr = `${parts[1]}/${parts[2]}`;
                     }
                     
+                    // 精準抓取 title，若無則防呆
                     let title = t.title || t.text || t.task || "未命名任務";
-                    let assignees = (t.assignees && t.assignees.length > 0) ? t.assignees.join(', ') : '未指派';
-                    if (assignees === '所有人員') assignees = '所有人';
+                    
+                    // 防呆：如果 assignees 是字串，就不使用 join()，避免報錯
+                    let assigneesStr = '未指派';
+                    if (t.assignees) {
+                        if (Array.isArray(t.assignees)) {
+                            assigneesStr = t.assignees.length > 0 ? t.assignees.join(', ') : '未指派';
+                        } else {
+                            assigneesStr = String(t.assignees); // 如果存成了純字串
+                        }
+                    }
+                    if (assigneesStr === '所有人員') assigneesStr = '所有人';
 
                     html += `
                         <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:10px 12px; border-radius:12px; border:1px solid var(--border-color);">
@@ -221,7 +246,7 @@ window.checkWidgetData = function(user) {
                                 <span style="font-size:11px; font-weight:800; color:var(--primary-dark); background:var(--primary-light); padding:3px 8px; border-radius:8px; white-space:nowrap;">${dateStr}</span>
                                 <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</span>
                             </div>
-                            <span style="font-size:12px; font-weight:700; color:var(--text-sub); white-space:nowrap; flex-shrink:0; margin-left:8px;">👤 ${assignees}</span>
+                            <span style="font-size:12px; font-weight:700; color:var(--text-sub); white-space:nowrap; flex-shrink:0; margin-left:8px;">👤 ${assigneesStr}</span>
                         </div>
                     `;
                 });
@@ -233,22 +258,22 @@ window.checkWidgetData = function(user) {
                     </div>
                 `;
             }
-        }, (err) => { console.error("待辦讀取錯誤", err); });
+        }, (err) => { 
+            console.error("【待辦 Debug】讀取錯誤:", err); 
+            document.getElementById('todoWidgetContent').innerHTML = `<div style="color:var(--danger); font-size:13px;">讀取失敗，請確認權限</div>`;
+        });
     }
 
     // 2. 抓取本月記帳總計
     if (document.getElementById('financeWidgetValue')) {
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        
         const expQ = query(collection(db, "expenses"), where("groupId", "==", groupId));
         
         financeUnsubscribe = onSnapshot(expQ, (snap) => {
             let totalExpense = 0;
-            
             snap.forEach(docSnap => {
                 const data = docSnap.data();
-                
                 let dateStr = '';
                 if (data.date && typeof data.date.toDate === 'function') {
                     const d = data.date.toDate();
@@ -273,14 +298,11 @@ window.checkWidgetData = function(user) {
             
             const valEl = document.getElementById('financeWidgetValue');
             const subEl = document.getElementById('financeWidgetSub');
-            
             if (valEl) {
                 valEl.innerText = `$${totalExpense.toLocaleString()}`;
                 subEl.innerText = `本月累計支出`;
             }
-        }, (err) => { 
-            console.error("【記帳本 Debug】讀取錯誤: ", err); 
-        });
+        }, (err) => { console.error("記帳本讀取錯誤: ", err); });
     }
 };
 
