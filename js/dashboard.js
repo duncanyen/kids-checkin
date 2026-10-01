@@ -57,8 +57,7 @@ window.renderDynamicModules = async function(user) {
     const dockContainer = document.getElementById('bottomDockContainer');
     
     sideList.innerHTML = ''; 
-    // 清空原本雙欄的大聊天室容器，因為我們要把它移進小工具網格中
-    chatContainer.innerHTML = '';
+    chatContainer.innerHTML = ''; // 清空原本的巨型聊天室，改為單欄 Widget
     
     const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo']; 
     const allowedMenus = user.menus || defaultAllowed;
@@ -93,7 +92,7 @@ window.renderDynamicModules = async function(user) {
     if (miniCardsContainer) {
         let miniCardsHtml = '';
         
-        // 1. 待辦清單：設定 grid-column: 1 / -1 讓它橫跨雙欄 (在第一排)
+        // 1. 待辦清單：橫跨雙欄 (grid-column: 1 / -1)
         if (allowedMenus.includes('todo')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 16px;">
@@ -102,14 +101,14 @@ window.renderDynamicModules = async function(user) {
                         <div class="mini-widget-icon">📋</div>
                         <div class="mini-widget-title">待辦清單</div>
                     </div>
-                    <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; padding-right:4px;">
+                    <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding-right:4px;">
                         <div style="font-size: 13px; color: var(--text-sub);">連線取得中...</div>
                     </div>
                 </div>
             `;
         }
         
-        // 2. 記帳本：單欄顯示 (在第二排 左側)
+        // 2. 記帳本：單欄顯示
         if (allowedMenus.includes('finance')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('expense.html', '記帳本')">
@@ -124,7 +123,7 @@ window.renderDynamicModules = async function(user) {
             `;
         }
         
-        // 3. 聊天室：單欄顯示 (在第二排 右側)，並帶有通知紅點
+        // 3. 聊天室：單欄顯示 (與記帳本並排)
         if (allowedMenus.includes('chat') && modules.chat !== false) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('chat.html', '聊天室')">
@@ -134,7 +133,7 @@ window.renderDynamicModules = async function(user) {
                         <div class="mini-widget-title">聊天室</div>
                         <div class="notification-badge" id="chatBadge" style="position:absolute; top:12px; right:12px; left:auto; display:none;">0</div>
                     </div>
-                    <div class="mini-widget-value">群組交流</div>
+                    <div class="mini-widget-value">進入群聊</div>
                     <div class="mini-widget-sub">與成員保持聯繫</div>
                 </div>
             `;
@@ -172,27 +171,27 @@ window.checkWidgetData = function(user) {
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
-    // 1. 抓取待辦事項並以列表顯示 (由近至遠排序)
+    // 1. 抓取待辦事項並以列表顯示 (針對陣列結構進行修正)
     if (document.getElementById('todoWidgetContent')) {
-        console.log(`【待辦 Debug】開始向群組 ${groupId} 請求資料`);
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
         
         todoUnsubscribe = onSnapshot(todoQ, (snap) => {
-            console.log(`【待辦 Debug】成功接收資料，共 ${snap.size} 筆`);
             let incompleteTodos = [];
             
             snap.forEach(docSnap => {
-                const d = docSnap.data();
-                console.log(`【待辦 Debug】原始資料檢查:`, d);
-                // 容錯判斷：有些完成狀態可能是字串 "true" 或是 boolean true
-                const isDone = (d.isCompleted === true || d.completed === true || String(d.isCompleted) === "true");
+                const docData = docSnap.data();
                 
-                if (!isDone) {
-                    incompleteTodos.push(d);
+                // 【關鍵修正】資料庫結構中，真正的待辦清單是包在一個名為 `todos` 的陣列裡
+                if (docData.todos && Array.isArray(docData.todos)) {
+                    docData.todos.forEach(t => {
+                        const isDone = (t.completed === true || t.isCompleted === true || String(t.completed) === "true");
+                        if (!isDone) {
+                            incompleteTodos.push(t);
+                        }
+                    });
                 }
             });
 
-            // 幫助排序的權重函數 (把日期字串轉為時間戳記比大小)
             const now = new Date();
             now.setHours(0,0,0,0);
             
@@ -218,7 +217,6 @@ window.checkWidgetData = function(user) {
                 
                 let html = '';
                 incompleteTodos.forEach(t => {
-                    // 相容 deadline 或是拼寫錯誤的 dealline
                     let dateStr = t.deadline || t.dealline || '無期限';
                     
                     if (dateStr.includes('-')) {
@@ -226,16 +224,14 @@ window.checkWidgetData = function(user) {
                         if (parts.length === 3) dateStr = `${parts[1]}/${parts[2]}`;
                     }
                     
-                    // 精準抓取 title，若無則防呆
                     let title = t.title || t.text || t.task || "未命名任務";
                     
-                    // 防呆：如果 assignees 是字串，就不使用 join()，避免報錯
                     let assigneesStr = '未指派';
                     if (t.assignees) {
                         if (Array.isArray(t.assignees)) {
                             assigneesStr = t.assignees.length > 0 ? t.assignees.join(', ') : '未指派';
                         } else {
-                            assigneesStr = String(t.assignees); // 如果存成了純字串
+                            assigneesStr = String(t.assignees);
                         }
                     }
                     if (assigneesStr === '所有人員') assigneesStr = '所有人';
