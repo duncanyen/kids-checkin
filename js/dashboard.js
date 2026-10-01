@@ -162,6 +162,7 @@ window.checkWidgetData = function(user) {
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
+    // 1. 抓取待辦事項
     if (document.getElementById('todoWidgetValue')) {
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
         todoUnsubscribe = onSnapshot(todoQ, (snap) => {
@@ -188,10 +189,14 @@ window.checkWidgetData = function(user) {
         }, (err) => { console.log("待辦讀取錯誤", err); });
     }
 
+    // 2. 抓取本月記帳總計 (修正為 expenses)
     if (document.getElementById('financeWidgetValue')) {
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        const expQ = query(collection(db, "records"), where("groupId", "==", groupId));
+        
+        // 修正：從 "records" 改為 "expenses"
+        const expQ = query(collection(db, "expenses"), where("groupId", "==", groupId));
+        
         financeUnsubscribe = onSnapshot(expQ, (snap) => {
             let totalExpense = 0;
             snap.forEach(docSnap => {
@@ -201,13 +206,17 @@ window.checkWidgetData = function(user) {
                 
                 const isThisMonth = dateStr.includes(currentYearMonth) || !dateStr;
                 if (isThisMonth) {
+                    // 只統計支出項目
                     if (typeVal === 'expense' || typeVal === '支出' || !data.type) {
+                        // 修正：以 data.amount 為主，如果有其他命名也可相容
                         totalExpense += Number(data.amount || data.price || 0);
                     }
                 }
             });
+            
             const valEl = document.getElementById('financeWidgetValue');
             const subEl = document.getElementById('financeWidgetSub');
+            
             if (valEl) {
                 valEl.innerText = `$${totalExpense.toLocaleString()}`;
                 subEl.innerText = `本月累計支出`;
