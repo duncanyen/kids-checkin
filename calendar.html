@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus - 家庭行事曆</title>
+    <title>Nexus - 行事曆</title>
     <link rel="icon" href="Nexus.png" type="image/jpeg">
     <link rel="apple-touch-icon" href="Nexus.png">
     <meta name="apple-mobile-web-app-title" content="Nexus">
@@ -15,7 +15,7 @@
             --primary-dark: #059669;
             --primary-light: #ecfdf5;
             --danger: #ef4444;
-            --weekend-color: #ef4444; /* 週休假日統一紅字 */
+            --weekend-color: #ef4444;
             --text-main: #1f2937;
             --text-sub: #6b7280;
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -35,26 +35,33 @@
         /* 導覽列 */
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; max-width: 600px; width: 100%; margin-left: auto; margin-right: auto; flex-shrink: 0; }
         .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
-        .current-user-badge { background: white; padding: 6px 14px; border-radius: 30px; box-shadow: var(--shadow-sm); border: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; color: var(--primary-dark); }
-        .mini-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
+        
+        /* 右上角功能區 */
+        .nav-actions { display: flex; gap: 10px; }
+        .btn-icon-nav { background: white; border: 1px solid #e5e7eb; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: var(--shadow-sm); font-size: 18px; }
 
         /* 主要容器 */
-        .view-container { max-width: 600px; width: 100%; margin: 0 auto; background: white; border-radius: 22px; flex: 1; overflow-y: auto; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 12px; }
+        .view-container { max-width: 600px; width: 100%; margin: 0 auto; background: white; border-radius: 22px; flex: 1; overflow-y: auto; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 12px; position: relative;}
         
         /* 月曆區塊標題 */
-        .calendar-header { display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; }
+        .calendar-header { display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; flex-shrink: 0;}
         
+        /* Grid 共用設定 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: 1; }
         .weekday { font-weight: 700; background-color: #f8fafc; padding: 8px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
         .weekday.weekend { color: var(--weekend-color); }
 
-        /* 格子放大設定，讓文字清楚呈現 */
+        /* 月視圖格子 */
         .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; min-height: 0; height: 100%; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
         .day-cell::-webkit-scrollbar { width: 2px; }
         .day-cell::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
         .day-cell:active { background-color: #f8fafc; border-color: var(--primary); }
         
-        .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+        /* 週視圖特製格子 (置中) */
+        .week-day-cell { align-items: center; }
+        .week-day-cell .event-badge { text-align: center; width: 90%; }
+
+        .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; width: 100%; }
         .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); margin-left: 2px; }
         
         .day-cell.is-weekend .date-num, .day-cell.is-holiday .date-num { color: var(--weekend-color); }
@@ -72,10 +79,24 @@
         .event-badge.private { background-color: var(--private-event); }
         .event-badge.expired { opacity: 0.5; filter: grayscale(100%); }
 
-        /* +N 更多標籤 */
         .more-badge { font-size: 9px; color: var(--text-sub); font-weight: 800; text-align: right; margin-top: auto; padding-right: 2px; }
 
-        /* 彈窗 Modal (BottomSheet) */
+        /* 視圖容器切換 */
+        #monthViewContainer, #weekViewContainer, #dayViewContainer { display: none; flex: 1; flex-direction: column; height: 100%; }
+
+        /* 日視圖樣式 */
+        .day-timeline-container { position: relative; flex: 1; overflow-y: auto; padding-top: 10px; }
+        .time-slot { display: flex; border-bottom: 1px solid #f1f5f9; min-height: 60px; position: relative; }
+        .time-label { width: 50px; font-size: 12px; color: var(--text-sub); text-align: right; padding-right: 8px; transform: translateY(-50%); font-weight: 600; }
+        .time-content { flex: 1; border-left: 1px solid #e5e7eb; position: relative; padding: 2px 8px; }
+        
+        .current-time-line { position: absolute; left: 50px; right: 0; height: 2px; background-color: var(--danger); z-index: 10; display: flex; align-items: center; pointer-events: none; }
+        .current-time-line::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background-color: var(--danger); position: absolute; left: -4px; }
+        
+        .day-view-event { background-color: var(--public-event); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 600; margin-bottom: 4px; display: inline-block; width: 100%; }
+        .day-view-event.private { background-color: var(--private-event); }
+
+        /* 彈窗 Modal */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: flex-end; }
         .modal-content { background: white; padding: 24px 20px; border-radius: 24px 24px 0 0; text-align: left; width: 100%; max-width: 600px; box-shadow: var(--shadow-lg); max-height: 85vh; display: flex; flex-direction: column; animation: slideUp 0.3s ease-out; margin: 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -83,7 +104,6 @@
         .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
         .modal-body { overflow-y: auto; flex: 1; padding-right: 5px; }
 
-        /* 列表模式 */
         .day-event-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
         .event-item { background: #f8fafc; padding: 14px; border-radius: 12px; border-left: 4px solid var(--public-event); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .event-item.private { border-left-color: var(--private-event); }
@@ -96,7 +116,6 @@
 
         .btn-add-new { background: var(--primary-light); color: var(--primary-dark); border: none; padding: 12px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; }
 
-        /* 表單模式 */
         .form-group { margin-bottom: 14px; }
         .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
         .form-group input[type="text"], .form-group textarea, .form-group select, .form-group input[type="time"], .form-group input[type="number"] { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 14px; background: #f8fafc; font-family: inherit; }
@@ -104,7 +123,7 @@
         
         .row-group { display: flex; gap: 10px; align-items: center; }
         .row-group .form-group { flex: 1; margin-bottom: 0; }
-        .checkbox-label { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--text-main); cursor: pointer; }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--text-main); cursor: pointer; margin-bottom: 10px;}
         .checkbox-label input { width: 18px; height: 18px; accent-color: var(--primary); }
 
         .modal-btns { display: flex; gap: 10px; margin-top: 20px; flex-shrink: 0; }
@@ -115,18 +134,51 @@
 <body>
     <div class="top-nav">
         <button class="btn-back" id="btnBack">❮ 返回</button>
-        <div class="current-user-badge" id="btnLogout">
-            <img id="calUserAvatar" class="mini-avatar" src="" alt="">
-            <span id="calUserName">載入中...</span>
+        <div class="nav-actions">
+            <button class="btn-icon-nav" id="btnToggleView" title="切換視圖">📅</button>
+            <button class="btn-icon-nav" id="btnSettings" title="視圖設定">⚙️</button>
         </div>
     </div>
 
-    <!-- 支援左右滑動切換月份的容器 -->
+    <!-- 支援左右滑動切換的容器 -->
     <div class="view-container" id="calendarSwipeContainer">
         <div class="calendar-header">
             <span id="calendarTitle">載入中...</span>
         </div>
-        <div class="calendar-grid" id="calendarGrid"></div>
+
+        <!-- 月視圖區塊 -->
+        <div id="monthViewContainer">
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <!-- 週視圖區塊 -->
+        <div id="weekViewContainer">
+            <div class="calendar-grid" id="weekGrid"></div>
+        </div>
+
+        <!-- 日視圖區塊 -->
+        <div id="dayViewContainer">
+            <div class="day-timeline-container" id="dayTimeline">
+                <!-- 時間線動態生成 -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 視圖設定 Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content" style="max-height: 50vh;">
+            <h3 class="modal-title">日曆視圖設定</h3>
+            <div class="modal-body">
+                <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 15px;">請勾選希望啟用的視圖模式：</p>
+                <label class="checkbox-label"><input type="checkbox" id="settingViewMonth" checked> 顯示 月視圖</label>
+                <label class="checkbox-label"><input type="checkbox" id="settingViewWeek" checked> 顯示 週視圖</label>
+                <label class="checkbox-label"><input type="checkbox" id="settingViewDay" checked> 顯示 日視圖</label>
+            </div>
+            <div class="modal-btns">
+                <button class="btn-save" id="btnSaveSettings">確定</button>
+            </div>
+        </div>
     </div>
 
     <!-- 共用 Modal (BottomSheet) -->
@@ -238,7 +290,12 @@
 
         let currentUser = null;
         let currentGroupId = localStorage.getItem('lastGroupId');
-        let viewDate = new Date();
+        
+        // 視圖狀態管理
+        let currentView = 'month'; // 'month', 'week', 'day'
+        let enabledViews = ['month', 'week', 'day']; // 儲存設定中啟用的視圖
+        
+        let viewDate = new Date(); // 用於月、週、日視圖的基準時間
         let selectedDateKey = '';
         let allFetchedEvents = [];
         let editingEventId = null;
@@ -246,12 +303,8 @@
         const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
 
         const publicHolidays = {
-            "01-01": "元旦",
-            "02-28": "和平紀念日",
-            "04-04": "兒童節",
-            "04-05": "清明節",
-            "05-01": "勞動節",
-            "10-10": "國慶日"
+            "01-01": "元旦", "02-28": "和平紀念日", "04-04": "兒童節", 
+            "04-05": "清明節", "05-01": "勞動節", "10-10": "國慶日"
         };
 
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
@@ -259,9 +312,6 @@
             alert('找不到登入狀態或群組資訊，請重新登入！'); window.location.href = 'index.html';
         } else {
             currentUser = JSON.parse(savedUserStr);
-            document.getElementById('calUserAvatar').src = currentUser.avatar || 'https://ui-avatars.com/api/?name='+currentUser.name+'&background=ecfdf5&color=059669';
-            document.getElementById('calUserName').innerText = currentUser.name || '';
-            
             initCalendar();
             listenToEvents();
         }
@@ -271,24 +321,20 @@
                 const now = new Date();
                 const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
                 await addDoc(collection(db, "logs"), { 
-                    groupId: currentGroupId, 
-                    datetime: datetimeStr, 
-                    operator: currentUser.name, 
-                    actionType, 
-                    details: detailsText, 
-                    timestamp: serverTimestamp() 
+                    groupId: currentGroupId, datetime: datetimeStr, 
+                    operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() 
                 });
             } catch (e) { console.error("寫入 Log 失敗:", e); }
         }
         window.onload = async function() { await recordLog('功能瀏覽', '進入〈家庭行事曆〉'); };
 
         function listenToEvents() {
-            // 🚨 新增：加入 where("groupId", "==", currentGroupId) 來隔離群組
             const q = query(
                 collection(db, "events"), 
                 where("groupId", "==", currentGroupId)
             );
 
+            // 當資料庫有更新時觸發
             onSnapshot(q, (snapshot) => {
                 allFetchedEvents = [];
                 snapshot.forEach(docSnap => {
@@ -297,14 +343,17 @@
                         allFetchedEvents.push({ id: docSnap.id, ...data });
                     }
                 });
-                renderCalendar();
+                
+                // 資料更新後，重新渲染當前視圖，不改變 viewDate
+                renderCurrentView();
 
                 const targetDate = localStorage.getItem('calendar_target_date');
                 if (targetDate) {
                     localStorage.removeItem('calendar_target_date');
                     const [tYear, tMonth] = targetDate.split('-');
                     viewDate = new Date(parseInt(tYear), parseInt(tMonth) - 1, 1);
-                    renderCalendar();
+                    currentView = 'month'; // 導向過去通常以月視圖為主
+                    renderCurrentView();
                     openEventModal(targetDate);
                 }
 
@@ -314,6 +363,7 @@
             });
         }
 
+        // 初始化與滑動事件
         function initCalendar() {
             const swipeContainer = document.getElementById('calendarSwipeContainer');
             let touchStartX = 0;
@@ -331,122 +381,315 @@
             function handleSwipeGesture() {
                 const threshold = 50; 
                 if (touchEndX - touchStartX > threshold) {
-                    viewDate.setMonth(viewDate.getMonth() - 1);
-                    renderCalendar();
+                    // 向右滑 (前一個)
+                    if(currentView === 'month') viewDate.setMonth(viewDate.getMonth() - 1);
+                    if(currentView === 'week') viewDate.setDate(viewDate.getDate() - 7);
+                    if(currentView === 'day') viewDate.setDate(viewDate.getDate() - 1);
+                    renderCurrentView();
                 } else if (touchStartX - touchEndX > threshold) {
-                    viewDate.setMonth(viewDate.getMonth() + 1);
-                    renderCalendar();
+                    // 向左滑 (下一個)
+                    if(currentView === 'month') viewDate.setMonth(viewDate.getMonth() + 1);
+                    if(currentView === 'week') viewDate.setDate(viewDate.getDate() + 7);
+                    if(currentView === 'day') viewDate.setDate(viewDate.getDate() + 1);
+                    renderCurrentView();
                 }
             }
+            
+            // 載入儲存的視圖設定
+            loadSettings();
+            renderCurrentView();
+        }
 
-            renderCalendar();
+        // 依據目前設定渲染畫面 (統一入口，避免多餘撈資料)
+        function renderCurrentView() {
+            document.getElementById('monthViewContainer').style.display = 'none';
+            document.getElementById('weekViewContainer').style.display = 'none';
+            document.getElementById('dayViewContainer').style.display = 'none';
+
+            const year = viewDate.getFullYear();
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+
+            if (currentView === 'month') {
+                document.getElementById('calendarTitle').innerText = `${year} 年 ${monthNames[viewDate.getMonth()]}`;
+                document.getElementById('monthViewContainer').style.display = 'flex';
+                renderMonthView();
+            } else if (currentView === 'week') {
+                // 週視圖標題以 viewDate 的月份為主
+                document.getElementById('calendarTitle').innerText = `${year} 年 ${monthNames[viewDate.getMonth()]}`;
+                document.getElementById('weekViewContainer').style.display = 'flex';
+                renderWeekView();
+            } else if (currentView === 'day') {
+                const dayStr = `${year}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(viewDate.getDate()).padStart(2, '0')}`;
+                document.getElementById('calendarTitle').innerText = dayStr;
+                document.getElementById('dayViewContainer').style.display = 'flex';
+                renderDayView();
+            }
+        }
+
+        /* ----- 1. 月視圖 ----- */
+        function renderMonthView() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const weekdays = [
+                { name: '週日', className: 'weekend' }, { name: '週一', className: '' },
+                { name: '週二', className: '' }, { name: '週三', className: '' },
+                { name: '週四', className: '' }, { name: '週五', className: '' },
+                { name: '週六', className: 'weekend' }
+            ];
+            weekdays.forEach(w => {
+                const div = document.createElement('div'); 
+                div.className = `weekday ${w.className}`; div.innerText = w.name; grid.appendChild(div);
+            });
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            const todayStr = getFormattedDate(new Date());
+
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const cell = createDayCell(dateKey, year, month, day, todayStr);
+                grid.appendChild(cell);
+            }
+        }
+
+        /* ----- 2. 週視圖 ----- */
+        function renderWeekView() {
+            const grid = document.getElementById('weekGrid');
+            grid.innerHTML = '';
+            
+            // 找出本週的週日
+            const currentDay = viewDate.getDay(); 
+            const startOfWeek = new Date(viewDate);
+            startOfWeek.setDate(viewDate.getDate() - currentDay);
+            
+            const todayStr = getFormattedDate(new Date());
+
+            const weekdays = [
+                { name: '週日', className: 'weekend' }, { name: '週一', className: '' },
+                { name: '週二', className: '' }, { name: '週三', className: '' },
+                { name: '週四', className: '' }, { name: '週五', className: '' },
+                { name: '週六', className: 'weekend' }
+            ];
+            weekdays.forEach(w => {
+                const div = document.createElement('div'); 
+                div.className = `weekday ${w.className}`; div.innerText = w.name; grid.appendChild(div);
+            });
+
+            // 產出7天
+            for (let i = 0; i < 7; i++) {
+                const cellDate = new Date(startOfWeek);
+                cellDate.setDate(startOfWeek.getDate() + i);
+                const year = cellDate.getFullYear();
+                const month = cellDate.getMonth();
+                const day = cellDate.getDate();
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                const cell = createDayCell(dateKey, year, month, day, todayStr);
+                cell.classList.add('week-day-cell'); // 套用置中樣式
+                grid.appendChild(cell);
+            }
+        }
+
+        /* ----- 產生格子的共用邏輯 (移除圖示只留字) ----- */
+        function createDayCell(dateKey, year, month, day, todayStr) {
+            const dayCell = document.createElement('div');
+            dayCell.className = 'day-cell';
+            
+            const cellDate = new Date(year, month, day);
+            const dayOfWeek = cellDate.getDay(); 
+            const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const holidayName = publicHolidays[mmdd];
+
+            if (dayOfWeek === 0 || dayOfWeek === 6) dayCell.classList.add('is-weekend');
+            if (holidayName) dayCell.classList.add('is-holiday');
+            if (dateKey === todayStr) dayCell.classList.add('today');
+            else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
+
+            const headerRow = document.createElement('div');
+            headerRow.className = 'day-header-row';
+
+            const numSpan = document.createElement('span');
+            numSpan.className = 'date-num'; numSpan.innerText = day;
+            headerRow.appendChild(numSpan);
+
+            if (holidayName) {
+                const tag = document.createElement('span');
+                tag.className = 'holiday-tag'; tag.innerText = holidayName; headerRow.appendChild(tag);
+            }
+
+            dayCell.appendChild(headerRow);
+
+            const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
+            
+            // 需求：只保留字，移除分類圖示
+            dayEvts.slice(0, 3).forEach(evt => {
+                const badge = document.createElement('span');
+                const isExpired = isEventExpired(evt, dateKey);
+                badge.className = `event-badge ${evt.visibility || 'public'} ${isExpired ? 'expired' : ''}`;
+                // 這裡只放入 title
+                badge.innerText = `${evt.title}`;
+                dayCell.appendChild(badge);
+            });
+
+            if (dayEvts.length > 3) {
+                const moreBadge = document.createElement('div');
+                moreBadge.className = 'more-badge';
+                moreBadge.innerText = `+${dayEvts.length - 3}`;
+                dayCell.appendChild(moreBadge);
+            }
+
+            dayCell.addEventListener('click', () => openEventModal(dateKey));
+            return dayCell;
+        }
+
+        /* ----- 3. 日視圖 ----- */
+        function renderDayView() {
+            const timeline = document.getElementById('dayTimeline');
+            timeline.innerHTML = '';
+            
+            const dateKey = getFormattedDate(viewDate);
+            const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
+
+            // 產生 0 到 23 時的時間軸
+            for (let i = 0; i < 24; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'time-slot';
+                
+                const label = document.createElement('div');
+                label.className = 'time-label';
+                label.innerText = `${i === 0 ? '12 AM' : i < 12 ? i + ' AM' : i === 12 ? '12 PM' : (i - 12) + ' PM'}`;
+                
+                const content = document.createElement('div');
+                content.className = 'time-content';
+                
+                // 填入行程 (非全天且在此小時，或全天行程放頂部)
+                dayEvts.forEach(evt => {
+                    if (evt.isAllDay !== false && i === 0) {
+                        // 全天行程放在 0點
+                        const evDiv = document.createElement('div');
+                        evDiv.className = `day-view-event ${evt.visibility || 'public'}`;
+                        evDiv.innerText = `[全天] ${evt.title}`;
+                        evDiv.onclick = () => openEventModal(dateKey);
+                        content.appendChild(evDiv);
+                    } else if (evt.isAllDay === false && evt.startTime) {
+                        const evtHour = parseInt(evt.startTime.split(':')[0]);
+                        if (evtHour === i) {
+                            const evDiv = document.createElement('div');
+                            evDiv.className = `day-view-event ${evt.visibility || 'public'}`;
+                            evDiv.innerText = `${evt.startTime} ${evt.title}`;
+                            evDiv.onclick = () => openEventModal(dateKey);
+                            content.appendChild(evDiv);
+                        }
+                    }
+                });
+
+                slot.appendChild(label);
+                slot.appendChild(content);
+                timeline.appendChild(slot);
+            }
+
+            // 檢查是否為「今天」，是的話畫紅線並捲動
+            if (dateKey === getFormattedDate(new Date())) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMin = now.getMinutes();
+                
+                // 每個 slot 假設高度為 60px (對應CSS .time-slot min-height)
+                const topPos = (currentHour * 60) + currentMin; 
+                
+                const line = document.createElement('div');
+                line.className = 'current-time-line';
+                line.style.top = `${topPos}px`;
+                timeline.appendChild(line);
+
+                // 自動捲動到現在時間附近 (置中對齊)
+                setTimeout(() => {
+                    timeline.scrollTop = topPos - (timeline.clientHeight / 2);
+                }, 100);
+            } else {
+                 timeline.scrollTop = 0;
+            }
+        }
+
+        /* --- 視圖切換邏輯 --- */
+        document.getElementById('btnToggleView').addEventListener('click', () => {
+            if (enabledViews.length === 0) {
+                alert('請至設定勾選至少一種視圖'); return;
+            }
+            
+            // 找下一個有啟用的視圖
+            const order = ['month', 'week', 'day'];
+            let currentIndex = order.indexOf(currentView);
+            
+            let found = false;
+            for(let i = 1; i <= 3; i++) {
+                let nextIndex = (currentIndex + i) % 3;
+                if (enabledViews.includes(order[nextIndex])) {
+                    currentView = order[nextIndex];
+                    found = true;
+                    break;
+                }
+            }
+            
+            if(found) renderCurrentView();
+        });
+
+        /* --- 視圖設定邏輯 --- */
+        function loadSettings() {
+            const saved = localStorage.getItem('calendar_views');
+            if (saved) {
+                enabledViews = JSON.parse(saved);
+                document.getElementById('settingViewMonth').checked = enabledViews.includes('month');
+                document.getElementById('settingViewWeek').checked = enabledViews.includes('week');
+                document.getElementById('settingViewDay').checked = enabledViews.includes('day');
+            }
+        }
+
+        document.getElementById('btnSettings').addEventListener('click', () => {
+            document.getElementById('settingsModal').style.display = 'flex';
+        });
+
+        document.getElementById('btnSaveSettings').addEventListener('click', () => {
+            enabledViews = [];
+            if(document.getElementById('settingViewMonth').checked) enabledViews.push('month');
+            if(document.getElementById('settingViewWeek').checked) enabledViews.push('week');
+            if(document.getElementById('settingViewDay').checked) enabledViews.push('day');
+            
+            if (enabledViews.length === 0) {
+                alert('請至少保留一個視圖模式！');
+                return;
+            }
+            
+            localStorage.setItem('calendar_views', JSON.stringify(enabledViews));
+            document.getElementById('settingsModal').style.display = 'none';
+            
+            // 若當前視圖被取消勾選，則切換到陣列第一個啟用的視圖
+            if (!enabledViews.includes(currentView)) {
+                currentView = enabledViews[0];
+            }
+            renderCurrentView();
+        });
+
+
+        /* --- 其他輔助與原本的方法 --- */
+        function getFormattedDate(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
         function isEventExpired(evt, dateKey) {
             const now = new Date();
             const evtDate = new Date(dateKey);
             if (evt.isAllDay !== false) { 
-                evtDate.setHours(23, 59, 59);
-                return now > evtDate;
+                evtDate.setHours(23, 59, 59); return now > evtDate;
             } else {
                 if(!evt.endTime) return false;
                 const [h, m] = evt.endTime.split(':');
-                evtDate.setHours(h, m, 0);
-                return now > evtDate;
-            }
-        }
-
-        function renderCalendar() {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth();
-            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-            document.getElementById('calendarTitle').innerText = `${year} 年 ${monthNames[month]}`;
-
-            const grid = document.getElementById('calendarGrid');
-            grid.innerHTML = '';
-
-            const weekdays = [
-                { name: '週日', className: 'weekend' },
-                { name: '週一', className: '' },
-                { name: '週二', className: '' },
-                { name: '週三', className: '' },
-                { name: '週四', className: '' },
-                { name: '週五', className: '' },
-                { name: '週六', className: 'weekend' }
-            ];
-            weekdays.forEach(w => {
-                const div = document.createElement('div'); 
-                div.className = `weekday ${w.className}`; 
-                div.innerText = w.name; 
-                grid.appendChild(div);
-            });
-
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const totalDays = new Date(year, month + 1, 0).getDate();
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
-
-            for (let day = 1; day <= totalDays; day++) {
-                const dayCell = document.createElement('div');
-                dayCell.className = 'day-cell';
-                
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const cellDate = new Date(year, month, day);
-                const dayOfWeek = cellDate.getDay(); 
-                
-                const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const holidayName = publicHolidays[mmdd];
-
-                if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    dayCell.classList.add('is-weekend');
-                }
-                if (holidayName) {
-                    dayCell.classList.add('is-holiday');
-                }
-
-                if (dateKey === todayStr) dayCell.classList.add('today');
-                else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
-
-                const headerRow = document.createElement('div');
-                headerRow.className = 'day-header-row';
-
-                const numSpan = document.createElement('span');
-                numSpan.className = 'date-num'; 
-                numSpan.innerText = day;
-                headerRow.appendChild(numSpan);
-
-                if (holidayName) {
-                    const tag = document.createElement('span');
-                    tag.className = 'holiday-tag';
-                    tag.innerText = holidayName;
-                    headerRow.appendChild(tag);
-                }
-
-                dayCell.appendChild(headerRow);
-
-                const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
-                
-                dayEvts.slice(0, 3).forEach(evt => {
-                    const badge = document.createElement('span');
-                    const isExpired = isEventExpired(evt, dateKey);
-                    badge.className = `event-badge ${evt.visibility || 'public'} ${isExpired ? 'expired' : ''}`;
-                    
-                    const icon = categoryIcons[evt.category] || '📌';
-                    badge.innerText = `${icon} ${evt.title}`;
-                    dayCell.appendChild(badge);
-                });
-
-                if (dayEvts.length > 3) {
-                    const moreBadge = document.createElement('div');
-                    moreBadge.className = 'more-badge';
-                    moreBadge.innerText = `+${dayEvts.length - 3}`;
-                    dayCell.appendChild(moreBadge);
-                }
-
-                dayCell.addEventListener('click', () => openEventModal(dateKey));
-                grid.appendChild(dayCell);
+                evtDate.setHours(h, m, 0); return now > evtDate;
             }
         }
 
@@ -566,15 +809,12 @@
         const evReminderUnit = document.getElementById('evReminderUnit');
         const evReminderVal = document.getElementById('evReminderVal');
 
-        function toggleTimeInputs() {
-            timeInputsGroup.style.display = evIsAllDay.checked ? 'none' : 'flex';
-        }
+        function toggleTimeInputs() { timeInputsGroup.style.display = evIsAllDay.checked ? 'none' : 'flex'; }
         evIsAllDay.addEventListener('change', toggleTimeInputs);
 
         evReminderUnit.addEventListener('change', (e) => {
             if (e.target.value === 'none') {
-                evReminderVal.disabled = true;
-                evReminderVal.value = '';
+                evReminderVal.disabled = true; evReminderVal.value = '';
             } else {
                 evReminderVal.disabled = false;
                 if (!evReminderVal.value) evReminderVal.value = '30';
@@ -585,8 +825,10 @@
         document.getElementById('btnCancelForm').addEventListener('click', showListView);
         
         window.addEventListener('click', (e) => {
-            const modal = document.getElementById('eventModal');
-            if (e.target === modal) modal.style.display = 'none';
+            const eventModal = document.getElementById('eventModal');
+            const settingsModal = document.getElementById('settingsModal');
+            if (e.target === eventModal) eventModal.style.display = 'none';
+            if (e.target === settingsModal) settingsModal.style.display = 'none';
         });
         document.getElementById('btnCloseModal').addEventListener('click', () => { document.getElementById('eventModal').style.display = 'none'; });
 
@@ -601,7 +843,7 @@
             if (!isAllDay && startTime >= endTime) return alert('結束時間必須晚於開始時間！');
 
             const evtData = {
-                groupId: currentGroupId, // 🚨 新增：綁定當前群組 ID
+                groupId: currentGroupId,
                 date: selectedDateKey,
                 title: title,
                 desc: document.getElementById('evDesc').value.trim(),
@@ -640,9 +882,6 @@
         }
 
         document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
-        document.getElementById('btnLogout').addEventListener('click', () => {
-            sessionStorage.removeItem('familyCheckInUser'); localStorage.removeItem('familyCheckInUser'); window.location.href = 'index.html';
-        });
     </script>
 </body>
 </html>
