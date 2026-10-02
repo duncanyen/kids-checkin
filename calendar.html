@@ -24,6 +24,7 @@
             --today-bg: #fffbeb;
             --public-event: #3b82f6;
             --private-event: #8b5cf6;
+            --border-color: #e5e7eb;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
@@ -46,16 +47,36 @@
         /* 月曆區塊標題 */
         .calendar-header { display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; flex-shrink: 0;}
         
-        /* Grid 共用設定 */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: 1; }
-        .weekday { font-weight: 700; background-color: #f8fafc; padding: 8px 0; border-radius: 8px; color: var(--text-sub); font-size: 13px; text-align: center; }
+        /* Grid 共用設定 - 移除間距(gap)，設定外框線 */
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 0; 
+            border-top: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+        }
+        /* 讓內容由上往下排，如果有多的空間才延展 */
+        #monthViewContainer, #weekViewContainer { flex: 0 0 auto; }
+        
+        .weekday { font-weight: 700; background-color: #f8fafc; padding: 8px 0; color: var(--text-sub); font-size: 13px; text-align: center; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);}
         .weekday.weekend { color: var(--weekend-color); }
 
-        /* 月視圖格子 */
-        .day-cell { border: 1px solid #f1f5f9; border-radius: 10px; min-height: 0; height: 100%; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #fff; cursor: pointer; transition: 0.2s; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-        .day-cell::-webkit-scrollbar { width: 2px; }
-        .day-cell::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
-        .day-cell:active { background-color: #f8fafc; border-color: var(--primary); }
+        /* 月視圖格子 - 移除 height: 100%，改用 min-height 讓內容撐開 */
+        .day-cell { 
+            border-right: 1px solid var(--border-color); 
+            border-bottom: 1px solid var(--border-color); 
+            min-height: 80px; 
+            padding: 4px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-start; 
+            align-items: stretch; 
+            background-color: #fff; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            position: relative; 
+        }
+        .day-cell:active { background-color: #f8fafc; }
         
         /* 週視圖特製格子 (置中) */
         .week-day-cell { align-items: center; }
@@ -69,12 +90,13 @@
         /* 國定假日小標籤 */
         .holiday-tag { font-size: 8px; background: #fee2e2; color: #dc2626; padding: 1px 3px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
 
-        .day-cell.today { border: 2px solid var(--primary); background-color: var(--today-bg); }
+        /* 今天的邊框效果要蓋過原本的 border */
+        .day-cell.today { box-shadow: inset 0 0 0 2px var(--primary); background-color: var(--today-bg); }
         .day-cell.today .date-num { color: var(--primary-dark); }
         .day-cell.past-day { opacity: 0.6; background-color: #fafafa; }
 
         /* 行程標籤條 */
-        .event-badge { font-size: 10px; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; line-height: 1.3; font-weight: 600; display: block; }
+        .event-badge { font-size: 10px; border-radius: 4px; padding: 3px 4px; margin-bottom: 3px; text-align: left; white-space: normal; word-break: break-all; color: white; line-height: 1.3; font-weight: 600; display: block; }
         .event-badge.public { background-color: var(--public-event); }
         .event-badge.private { background-color: var(--private-event); }
         .event-badge.expired { opacity: 0.5; filter: grayscale(100%); }
@@ -82,7 +104,8 @@
         .more-badge { font-size: 9px; color: var(--text-sub); font-weight: 800; text-align: right; margin-top: auto; padding-right: 2px; }
 
         /* 視圖容器切換 */
-        #monthViewContainer, #weekViewContainer, #dayViewContainer { display: none; flex: 1; flex-direction: column; height: 100%; }
+        #monthViewContainer, #weekViewContainer, #dayViewContainer { display: none; flex-direction: column; }
+        #dayViewContainer { flex: 1; height: 100%; }
 
         /* 日視圖樣式 */
         .day-timeline-container { position: relative; flex: 1; overflow-y: auto; padding-top: 10px; }
@@ -135,7 +158,8 @@
     <div class="top-nav">
         <button class="btn-back" id="btnBack">❮ 返回</button>
         <div class="nav-actions">
-            <button class="btn-icon-nav" id="btnToggleView" title="切換視圖">📅</button>
+            <!-- 將圖示改為旋轉切換圖示 -->
+            <button class="btn-icon-nav" id="btnToggleView" title="切換視圖">🔄</button>
             <button class="btn-icon-nav" id="btnSettings" title="視圖設定">⚙️</button>
         </div>
     </div>
@@ -448,7 +472,13 @@
             const totalDays = new Date(year, month + 1, 0).getDate();
             const todayStr = getFormattedDate(new Date());
 
-            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
+            for (let i = 0; i < firstDayIndex; i++) {
+                const div = document.createElement('div');
+                // 補齊前方的空白格子邊框，維持整體美觀
+                div.style.borderRight = "1px solid var(--border-color)";
+                div.style.borderBottom = "1px solid var(--border-color)";
+                grid.appendChild(div);
+            }
 
             for (let day = 1; day <= totalDays; day++) {
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
