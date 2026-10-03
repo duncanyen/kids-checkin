@@ -1,6 +1,8 @@
 import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-// 從 chat-core.js 引入共用狀態
-import { db, currentUser, currentGroupId, allUsers, chatState } from "./chat-core.js";
+// 1. 直接從 firebase-config.js 引入 db
+import { db } from "./firebase-config.js";
+// 2. 從 chat-core.js 引入共用狀態 (把 db 拿掉)
+import { currentUser, currentGroupId, allUsers, chatState } from "./chat-core.js";
 
 let uploadedAvatarBase64_Create = null; 
 let uploadedAvatarBase64_Edit = null; 
