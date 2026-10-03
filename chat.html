@@ -355,7 +355,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
-            getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, // [優化] 新增 limit
+            getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, limitToLast, 
             onSnapshot, serverTimestamp, doc, updateDoc, arrayRemove, increment 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -400,7 +400,7 @@
 
         async function fetchFamilyUsers() {
             try {
-                // [優化] 限制只抓取同 groupId 的使用者，防止資料庫大暴走
+                // 限制只抓取同 groupId 的使用者
                 const q = query(collection(db, "users"), where("groupId", "==", currentGroupId));
                 const querySnapshot = await getDocs(q);
                 allUsers = [];
@@ -412,28 +412,31 @@
         }
 
         function listenToRooms() {
-            if (roomsUnsubscribe) roomsUnsubscribe(); // [優化] 清除潛在的幽靈監聽器
+            if (roomsUnsubscribe) roomsUnsubscribe(); 
             
+            // [修正] 移除 Firestore 的 groupId 查詢條件，避免要求複合索引，改在前端程式過濾
             const roomsRef = collection(db, "rooms");
             const q = query(
                 roomsRef, 
-                where("groupId", "==", currentGroupId), 
                 where("participants", "array-contains", currentUser.name), 
                 orderBy("lastMessageTime", "desc"),
-                limit(30) // [優化] 加上限制，避免使用者加幾十個群組時造成的負擔
+                limit(30)
             );
 
             roomsUnsubscribe = onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('roomListContainer');
                 container.innerHTML = '';
-                if (snapshot.empty) {
-                    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-sub); font-weight:600;">此群組尚未有聊天室，點擊上方建立一個吧！</div>';
-                    return;
-                }
+                let hasRooms = false;
+
                 snapshot.forEach(docSnap => {
                     const room = docSnap.data();
                     const roomId = docSnap.id;
                     
+                    // [修正] 在前端過濾：舊群組沒有 groupId 欄位時，視為 default_family
+                    const roomGroupId = room.groupId || 'default_family';
+                    if (roomGroupId !== currentGroupId && roomGroupId !== 'default_family') return;
+                    
+                    hasRooms = true;
                     if (!room.participants) room.participants = [currentUser.name];
 
                     let timeStr = "";
@@ -466,6 +469,10 @@
                     `;
                     container.appendChild(div);
                 });
+
+                if (!hasRooms) {
+                    container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-sub); font-weight:600;">此群組尚未有聊天室，點擊上方建立一個吧！</div>';
+                }
             });
         }
 
@@ -486,7 +493,6 @@
             document.getElementById('activeRoomName').innerText = roomData.name;
             document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=ecfdf5&color=059669`;
             
-            // 進入房間時更新一次已讀
             if ((activeRoomData.unreadCount && activeRoomData.unreadCount[currentUser.name] > 0) || !activeRoomData.readTimestamps) {
                 updateMyReadTimestamp(roomId);
             }
@@ -513,7 +519,6 @@
                 updateData[`readTimestamps.${currentUser.name}`] = Date.now();
                 updateData[`unreadCount.${currentUser.name}`] = 0; 
                 
-                // 本地預先更新，避免等伺服器回應才消掉紅點的延遲感
                 if (activeRoomData) {
                     if (!activeRoomData.readTimestamps) activeRoomData.readTimestamps = {};
                     if (!activeRoomData.unreadCount) activeRoomData.unreadCount = {};
@@ -536,27 +541,26 @@
         });
 
         function listenToMessages(roomId) {
-            if (messagesUnsubscribe) messagesUnsubscribe(); // [優化] 清除幽靈監聽器
+            if (messagesUnsubscribe) messagesUnsubscribe();
 
-            // [優化] 改用 desc 排序並限制 50 筆，避免讀取所有歷史訊息
+            // [核心修正]：
+            // 1. 移除 where groupId，因為舊訊息沒有 groupId 欄位會被消失。
+            // 2. 恢復 asc 並搭配 limitToLast(50)，利用既有索引完美抓取「最新 50 筆」。
             const q = query(
                 collection(db, "messages"), 
-                where("groupId", "==", currentGroupId),
                 where("roomId", "==", roomId), 
-                orderBy("timestamp", "desc"),
-                limit(50) 
+                orderBy("timestamp", "asc"),
+                limitToLast(50) 
             );
             
             messagesUnsubscribe = onSnapshot(q, (snapshot) => {
                 currentMessagesList = []; 
                 if (!snapshot.empty) {
                     snapshot.forEach((docSnap) => currentMessagesList.push({ id: docSnap.id, ...docSnap.data() }));
-                    currentMessagesList.reverse(); // [優化] 因為用 desc 抓最新的，渲染前需反轉回正確順序
                 }
                 
                 renderAllMessages(); 
                 
-                // [優化] 只有當自己真的有未讀訊息時才戳資料庫，中斷無意義的 updateDoc 迴圈
                 if (activeRoomData && activeRoomData.unreadCount && activeRoomData.unreadCount[currentUser.name] > 0) {
                     updateMyReadTimestamp(roomId);
                 }
