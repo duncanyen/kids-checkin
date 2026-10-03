@@ -355,7 +355,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
-            getFirestore, collection, addDoc, getDocs, query, where, orderBy, 
+            getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, // [優化] 新增 limit
             onSnapshot, serverTimestamp, doc, updateDoc, arrayRemove, increment 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -370,12 +370,10 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 取得當前使用者與目前群組 ID (預設防呆支援)
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-        // groupId 控管：若尚未設定則自動導向預設家庭群組
         const currentGroupId = localStorage.getItem('lastGroupId') || 'default_family';
 
         let allUsers = [];
@@ -402,7 +400,9 @@
 
         async function fetchFamilyUsers() {
             try {
-                const querySnapshot = await getDocs(collection(db, "users"));
+                // [優化] 限制只抓取同 groupId 的使用者，防止資料庫大暴走
+                const q = query(collection(db, "users"), where("groupId", "==", currentGroupId));
+                const querySnapshot = await getDocs(q);
                 allUsers = [];
                 querySnapshot.forEach(docSnap => {
                     const uData = docSnap.data();
@@ -411,15 +411,16 @@
             } catch (error) {}
         }
 
-        // ================= 1. 群組列表邏輯 (加入 groupId 篩選) =================
         function listenToRooms() {
+            if (roomsUnsubscribe) roomsUnsubscribe(); // [優化] 清除潛在的幽靈監聽器
+            
             const roomsRef = collection(db, "rooms");
-            // 嚴格比對目前選定群組的 groupId
             const q = query(
                 roomsRef, 
                 where("groupId", "==", currentGroupId), 
                 where("participants", "array-contains", currentUser.name), 
-                orderBy("lastMessageTime", "desc")
+                orderBy("lastMessageTime", "desc"),
+                limit(30) // [優化] 加上限制，避免使用者加幾十個群組時造成的負擔
             );
 
             roomsUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -485,7 +486,11 @@
             document.getElementById('activeRoomName').innerText = roomData.name;
             document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=ecfdf5&color=059669`;
             
-            updateMyReadTimestamp(roomId);
+            // 進入房間時更新一次已讀
+            if ((activeRoomData.unreadCount && activeRoomData.unreadCount[currentUser.name] > 0) || !activeRoomData.readTimestamps) {
+                updateMyReadTimestamp(roomId);
+            }
+            
             listenToMessages(roomId);
             listenToActiveRoom(roomId); 
         }
@@ -507,14 +512,22 @@
                 const updateData = {};
                 updateData[`readTimestamps.${currentUser.name}`] = Date.now();
                 updateData[`unreadCount.${currentUser.name}`] = 0; 
+                
+                // 本地預先更新，避免等伺服器回應才消掉紅點的延遲感
+                if (activeRoomData) {
+                    if (!activeRoomData.readTimestamps) activeRoomData.readTimestamps = {};
+                    if (!activeRoomData.unreadCount) activeRoomData.unreadCount = {};
+                    activeRoomData.readTimestamps[currentUser.name] = updateData[`readTimestamps.${currentUser.name}`];
+                    activeRoomData.unreadCount[currentUser.name] = 0;
+                }
                 await updateDoc(doc(db, "rooms", roomId), updateData);
             } catch (e) {}
         }
 
         document.getElementById('btnBackToList').addEventListener('click', () => {
             updateMyReadTimestamp(activeRoomId);
-            if (messagesUnsubscribe) messagesUnsubscribe();
-            if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
+            if (messagesUnsubscribe) { messagesUnsubscribe(); messagesUnsubscribe = null; }
+            if (singleRoomUnsubscribe) { singleRoomUnsubscribe(); singleRoomUnsubscribe = null; } 
             
             activeRoomId = null; activeRoomData = null; currentMessagesList = [];
             document.getElementById('mainTopNav').style.display = 'flex';
@@ -522,23 +535,31 @@
             document.getElementById('viewRoomList').style.display = 'flex';
         });
 
-        // ================= 2. 聊天訊息邏輯 (加入 groupId 篩選) =================
         function listenToMessages(roomId) {
-            const msgContainer = document.getElementById('chatMessages');
-            // 讀取訊息時加上 groupId 查詢條件
+            if (messagesUnsubscribe) messagesUnsubscribe(); // [優化] 清除幽靈監聽器
+
+            // [優化] 改用 desc 排序並限制 50 筆，避免讀取所有歷史訊息
             const q = query(
                 collection(db, "messages"), 
                 where("groupId", "==", currentGroupId),
                 where("roomId", "==", roomId), 
-                orderBy("timestamp", "asc")
+                orderBy("timestamp", "desc"),
+                limit(50) 
             );
+            
             messagesUnsubscribe = onSnapshot(q, (snapshot) => {
                 currentMessagesList = []; 
                 if (!snapshot.empty) {
                     snapshot.forEach((docSnap) => currentMessagesList.push({ id: docSnap.id, ...docSnap.data() }));
+                    currentMessagesList.reverse(); // [優化] 因為用 desc 抓最新的，渲染前需反轉回正確順序
                 }
+                
                 renderAllMessages(); 
-                updateMyReadTimestamp(roomId);
+                
+                // [優化] 只有當自己真的有未讀訊息時才戳資料庫，中斷無意義的 updateDoc 迴圈
+                if (activeRoomData && activeRoomData.unreadCount && activeRoomData.unreadCount[currentUser.name] > 0) {
+                    updateMyReadTimestamp(roomId);
+                }
             });
         }
 
@@ -646,7 +667,6 @@
         window.openPhotoViewer = function(src) { document.getElementById('viewerImage').src = src; document.getElementById('photoViewerModal').style.display = 'flex'; };
         window.closePhotoViewer = function() { document.getElementById('photoViewerModal').style.display = 'none'; document.getElementById('viewerImage').src = ''; };
 
-        // ================= 3. 傳送訊息與回覆 / @ 標註功能 (寫入時夾帶 groupId) =================
         const chatInput = document.getElementById('chatInput');
         const mentionDropdown = document.getElementById('mentionDropdown');
 
@@ -686,7 +706,6 @@
             chatInput.focus();
         };
 
-        // 發送文字訊息：寫入 groupId
         document.getElementById('btnSend').addEventListener('click', async () => {
             const text = chatInput.value.trim();
             if (!text) return;
@@ -695,7 +714,7 @@
 
             try {
                 const msgData = { 
-                    groupId: currentGroupId, // 寫入群組代號
+                    groupId: currentGroupId,
                     roomId: activeRoomId, 
                     sender: currentUser.name, 
                     text: text, 
@@ -720,7 +739,6 @@
         const chatPhotoInput = document.getElementById('chatPhotoInput');
         document.getElementById('btnTriggerPhoto').addEventListener('click', () => chatPhotoInput.click());
         
-        // 傳送圖片訊息：寫入 groupId
         chatPhotoInput.addEventListener('change', async (e) => {
             const file = e.target.files[0]; if (!file || !activeRoomId) return;
             document.getElementById('btnSend').disabled = true; document.getElementById('btnTriggerPhoto').disabled = true;
@@ -736,7 +754,7 @@
 
                     try {
                         const msgData = { 
-                            groupId: currentGroupId, // 寫入群組代號
+                            groupId: currentGroupId,
                             roomId: activeRoomId, 
                             sender: currentUser.name, 
                             text: "傳送了圖片", 
@@ -788,7 +806,6 @@
             document.getElementById('msgActionModal').style.display = 'none';
         };
 
-        // ================= 4. 群組設定與功能 (建立群組時寫入 groupId) =================
         window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; }
         window.openSubModal = function(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
         window.backToSettings = function(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
@@ -808,14 +825,13 @@
             document.getElementById('createGroupModal').style.display = 'flex';
         });
 
-        // 建立群組：寫入時夾帶 groupId
         document.getElementById('btnConfirmCreate').addEventListener('click', async () => {
             const name = document.getElementById('createGroupName').value.trim(); if (!name) return alert('請輸入群組名稱！');
             const checkboxes = document.querySelectorAll('#createMemberList input[type="checkbox"]:checked');
             const participants = [currentUser.name, ...Array.from(checkboxes).map(cb => cb.value)];
             try {
                 await addDoc(collection(db, "rooms"), { 
-                    groupId: currentGroupId, // 寫入所屬群組代號
+                    groupId: currentGroupId,
                     name, 
                     avatar: uploadedAvatarBase64_Create || '', 
                     participants, 
