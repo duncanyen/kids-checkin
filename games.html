@@ -262,10 +262,9 @@
         const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         
-        // --- 核心：加入 groupId 概念 ---
         let userGroupId = 'default_group';
         let userDocId = '';
-        let myPermissions = { rps: true, g2048: true }; // 預設全部允許
+        let myPermissions = { rps: true, g2048: true };
 
         if (!currentUser) {
             alert('請先選擇使用者登入！');
@@ -282,7 +281,6 @@
             listenMyPermissions();
         }
 
-        // 監聽自己的遊戲權限
         function listenMyPermissions() {
             onSnapshot(doc(db, "game_permissions", userDocId), (docSnap) => {
                 if (docSnap.exists()) {
@@ -295,7 +293,7 @@
             if (isParent) {
                 document.getElementById('modeSwitchContainer').style.display = 'flex';
                 switchParentView('admin');
-                listenParentAdminData();
+                loadParentAdminData();
             } else {
                 document.getElementById('modeSwitchContainer').style.display = 'none';
                 document.getElementById('gameZoneTitle').innerText = "🎮 遊戲區";
@@ -317,6 +315,7 @@
                 document.getElementById('gameLobby').style.display = 'none';
                 document.getElementById('kidGameContainer').style.display = 'none';
                 document.getElementById('g2048Container').style.display = 'none';
+                loadParentAdminData();
             } else {
                 btnPlay.classList.add('active');
                 btnAdmin.classList.remove('active');
@@ -328,7 +327,6 @@
             }
         }
 
-        // 導航到指定遊戲 (加入阻擋邏輯)
         window.selectGame = function(gameType) {
             if (gameType === 'rps' && myPermissions.rps === false) {
                 alert('🚫 您已被管理員禁止進入【剪刀石頭布對決】，請洽管理人員設定！');
@@ -373,61 +371,90 @@
             };
         }
 
-        // ================= 家長管理邏輯 (權限控制) =================
+        // ================= 動態讀取當前群組成員的權限管理 =================
+        let groupMembers = [];
         let kidsPermissions = {};
-        function listenParentAdminData() {
-            const kids = ['俊俊', '程寶']; // 若有更多成員，可在此擴充陣列
-            kids.forEach(kidName => {
-                const targetDocId = `${userGroupId}_${kidName}`;
-                onSnapshot(doc(db, "game_permissions", targetDocId), (docSnap) => {
-                    if (docSnap.exists()) {
-                        kidsPermissions[kidName] = docSnap.data();
-                    } else {
-                        kidsPermissions[kidName] = { rps: true, g2048: true };
+
+        async function loadParentAdminData() {
+            const container = document.getElementById('adminKidList');
+            container.innerHTML = '<div class="lb-loading">載入群組成員中...</div>';
+
+            try {
+                // 從 users 集合抓取同 groupId 的成員名單
+                const q = query(collection(db, "users"), where("groupId", "==", userGroupId));
+                const querySnapshot = await getDocs(q);
+                
+                groupMembers = [];
+                querySnapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    if (userData.name) {
+                        groupMembers.push(userData.name);
                     }
-                    renderAdminKidList();
                 });
-            });
+
+                // 確保目前登入者自己也在名單內（若 users 集合沒登錄到自己）
+                if (!groupMembers.includes(currentUser.name)) {
+                    groupMembers.push(currentUser.name);
+                }
+
+                // 針對每位成員即時監聽其遊戲權限
+                groupMembers.forEach(memberName => {
+                    const targetDocId = `${userGroupId}_${memberName}`;
+                    onSnapshot(doc(db, "game_permissions", targetDocId), (docSnap) => {
+                        if (docSnap.exists()) {
+                            kidsPermissions[memberName] = docSnap.data();
+                        } else {
+                            kidsPermissions[memberName] = { rps: true, g2048: true };
+                        }
+                        renderAdminKidList();
+                    });
+                });
+
+                if (groupMembers.length === 0) {
+                    container.innerHTML = '<div class="lb-loading">目前群組尚無其他成員</div>';
+                }
+
+            } catch (error) {
+                console.error("載入群組成員失敗：", error);
+                container.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗，請檢查網路連線</div>';
+            }
         }
 
         function renderAdminKidList() {
             const container = document.getElementById('adminKidList');
             container.innerHTML = '';
-            const kids = ['俊俊', '程寶'];
 
-            kids.forEach(kidName => {
-                const perms = kidsPermissions[kidName] || { rps: true, g2048: true };
+            groupMembers.forEach(memberName => {
+                const perms = kidsPermissions[memberName] || { rps: true, g2048: true };
                 const row = document.createElement('div');
                 row.className = 'kid-row';
                 
-                // RPS 狀態按鈕
                 const rpsBtnClass = perms.rps ? 'btn-allow' : 'btn-ban';
                 const rpsBtnText = perms.rps ? '🟢 允許' : '🔴 禁止';
                 
-                // 2048 狀態按鈕
                 const g2048BtnClass = perms.g2048 ? 'btn-allow' : 'btn-ban';
                 const g2048BtnText = perms.g2048 ? '🟢 允許' : '🔴 禁止';
 
                 row.innerHTML = `
-                    <div class="kid-info"><font>${kidName}</font></div>
+                    <div class="kid-info"><font>${memberName}</font></div>
                     <div class="admin-controls">
                         <span>✊ 剪刀石頭布</span>
-                        <button class="btn-toggle ${rpsBtnClass}" onclick="togglePermission('${kidName}', 'rps', ${!perms.rps})">${rpsBtnText}</button>
+                        <button class="btn-toggle ${rpsBtnClass}" onclick="togglePermission('${memberName}', 'rps', ${!perms.rps})">${rpsBtnText}</button>
                     </div>
                     <div class="admin-controls">
                         <span>🔢 2048遊戲</span>
-                        <button class="btn-toggle ${g2048BtnClass}" onclick="togglePermission('${kidName}', 'g2048', ${!perms.g2048})">${g2048BtnText}</button>
+                        <button class="btn-toggle ${g2048BtnClass}" onclick="togglePermission('${memberName}', 'g2048', ${!perms.g2048})">${g2048BtnText}</button>
                     </div>
                 `;
                 container.appendChild(row);
             });
         }
 
-        window.togglePermission = async function(kidName, gameType, allow) {
+        window.togglePermission = async function(memberName, gameType, allow) {
             try {
-                const targetDocId = `${userGroupId}_${kidName}`;
+                const targetDocId = `${userGroupId}_${memberName}`;
                 const docRef = doc(db, "game_permissions", targetDocId);
-                const currentPerms = kidsPermissions[kidName] || { rps: true, g2048: true };
+                const currentPerms = kidsPermissions[memberName] || { rps: true, g2048: true };
                 currentPerms[gameType] = allow;
                 await setDoc(docRef, currentPerms, { merge: true });
             } catch (error) {
@@ -616,7 +643,6 @@
             } catch(e) {}
         }
 
-        // 2048 滑動邏輯
         function slideRow(row) {
             let arr = row.filter(val => val !== 0);
             for(let i=0; i<arr.length-1; i++) {
@@ -688,13 +714,13 @@
             }
         }
 
-        // ================= 排行榜邏輯 (On-Demand 讀取) =================
+        // ================= 排行榜邏輯 =================
         let currentLbGame = '';
         let currentLbTab = 'group';
 
         window.openLeaderboard = function(gameType) {
             currentLbGame = gameType;
-            currentLbTab = 'group'; // 預設打開群組內
+            currentLbTab = 'group';
             document.getElementById('lbTitle').innerText = gameType === 'rps' ? '🏆 猜拳 排行榜' : '🏆 2048 排行榜';
             document.getElementById('leaderboardModal').style.display = 'flex';
             loadLeaderboard('group');
@@ -717,10 +743,8 @@
                 let q;
 
                 if (tabType === 'group') {
-                    // 群組排名：抓取同 groupId 數據後，在前端排序 (避免要求設定複合索引)
                     q = query(collection(db, colName), where("groupId", "==", userGroupId));
                 } else {
-                    // 全體排名：全域依照分數排序，取前 100 名
                     const orderField = currentLbGame === 'rps' ? 'totalScore' : 'bestScore';
                     q = query(collection(db, colName), orderBy(orderField, "desc"), limit(100));
                 }
@@ -731,7 +755,6 @@
                     dataList.push(doc.data());
                 });
 
-                // 若為群組內排名，前端執行排序
                 if (tabType === 'group') {
                     if (currentLbGame === 'rps') {
                         dataList.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
@@ -776,7 +799,6 @@
             }
         };
 
-        // 鍵盤與觸控事件監聽
         window.addEventListener('keydown', (e) => {
             if(document.getElementById('g2048Container').style.display === 'block') {
                 if(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", " "].includes(e.key)) { e.preventDefault(); }
