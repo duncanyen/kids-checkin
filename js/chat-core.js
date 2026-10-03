@@ -1,21 +1,9 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+// 1. 改為從 firebase-config.js 引入 db (請確保 firebase-config.js 有匯出 db)
+import { db } from './firebase-config.js'; 
 import { 
-    getFirestore, collection, addDoc, getDocs, query, where, orderBy, 
+    collection, addDoc, getDocs, query, where, orderBy, limit, // 新增 limit
     onSnapshot, serverTimestamp, doc, updateDoc, increment 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-// ====== Firebase 初始化 (如果已抽離至 firebase-config.js，請改為 import) ======
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-// =========================================================================
 
 // --- 共用全域變數 ---
 export const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
@@ -53,7 +41,9 @@ async function fetchFamilyUsers() {
             const uData = docSnap.data();
             if (uData.name !== currentUser.name) allUsers.push(uData);
         });
-    } catch (error) {}
+    } catch (error) {
+        console.error("讀取使用者失敗:", error);
+    }
 }
 
 function listenToRooms() {
@@ -65,6 +55,7 @@ function listenToRooms() {
         orderBy("lastMessageTime", "desc")
     );
 
+    // 加入錯誤處理，萬一缺少複合索引，可以在 Console 看到點擊連結
     roomsUnsubscribe = onSnapshot(q, (snapshot) => {
         const container = document.getElementById('roomListContainer');
         container.innerHTML = '';
@@ -108,6 +99,8 @@ function listenToRooms() {
             `;
             container.appendChild(div);
         });
+    }, (error) => {
+        console.error("【索引錯誤】讀取群組清單失敗！請點擊下方程式碼產生的連結，在 Firebase 自動建立索引:", error.message);
     });
 }
 
@@ -165,22 +158,34 @@ document.getElementById('btnBackToList').addEventListener('click', () => {
     document.getElementById('viewRoomList').style.display = 'flex';
 });
 
+// =================【讀取優化核心修改區】=================
 function listenToMessages(roomId) {
     const q = query(
         collection(db, "messages"), 
-        where("groupId", "==", currentGroupId),
+        // 1. 移除 redundant 的 groupId 查詢，避免 Firebase 需要更複雜的三層複合索引
         where("roomId", "==", roomId), 
-        orderBy("timestamp", "asc")
+        // 2. 改為 desc，從最新訊息開始抓
+        orderBy("timestamp", "desc"), 
+        // 3. 限制只讀取最新的 50 筆訊息，節省龐大讀取量
+        limit(50)
     );
+    
     messagesUnsubscribe = onSnapshot(q, (snapshot) => {
-        chatState.currentMessagesList = []; 
+        let tempMsgs = []; 
         if (!snapshot.empty) {
-            snapshot.forEach((docSnap) => chatState.currentMessagesList.push({ id: docSnap.id, ...docSnap.data() }));
+            snapshot.forEach((docSnap) => tempMsgs.push({ id: docSnap.id, ...docSnap.data() }));
         }
+        // 4. 因為是從新到舊抓取，為了 UI 呈現正序，必須反轉陣列
+        chatState.currentMessagesList = tempMsgs.reverse(); 
+        
         renderAllMessages(); 
         updateMyReadTimestamp(roomId);
+    }, (error) => {
+        // 若因 where + orderBy 依然缺少索引，這裡會印出點擊連結
+        console.error("【索引錯誤】讀取聊天訊息失敗！請點擊下方連結建立索引:", error.message);
     });
 }
+// =========================================================
 
 function lockScrollPosition() {
     const msgContainer = document.getElementById('chatMessages');
