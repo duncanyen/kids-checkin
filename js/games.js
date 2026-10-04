@@ -1,8 +1,7 @@
-// 1. 改為從 firebase-config.js 引入 db (請確保 firebase-config.js 有匯出 db)
+// 1. 從 firebase-config.js 引入共用 db
 import { db } from './firebase-config.js'; 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
-    getFirestore, doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, 
+    doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, 
     getDocs, query, where, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -15,6 +14,7 @@ let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
 let userGroupId = 'default_group';
 let userDocId = '';
+// 預設權限預先給予 true，避免非同步載入時發生時間差被誤卡住
 let myPermissions = { rps: true, g2048: true };
 
 if (!currentUser) {
@@ -54,7 +54,7 @@ function setupView() {
     } else {
         document.getElementById('modeSwitchContainer').style.display = 'none';
         document.getElementById('gameZoneTitle').innerText = "🎮 遊戲區";
-        returnToLobby();
+        returnToLobby(); // 現在這裡可以正常呼叫了
         listenKidGameData(userDocId);
         listen2048UserData(userDocId);
     }
@@ -84,7 +84,9 @@ function switchParentView(mode) {
     }
 }
 
-window.selectGame = function(gameType) {
+// ============== 將原本寫 window.xxx = function() 的地方改為標準函數宣告 ==============
+
+function selectGame(gameType) {
     if (gameType === 'rps' && myPermissions.rps === false) {
         alert('🚫 您已被管理員禁止進入【剪刀石頭布對決】，請洽管理人員設定！');
         return;
@@ -103,14 +105,14 @@ window.selectGame = function(gameType) {
         document.getElementById('g2048Container').style.display = 'block';
         init2048Game();
     }
-};
+}
 
-window.returnToLobby = function() {
+function returnToLobby() {
     document.getElementById('kidGameContainer').style.display = 'none';
     document.getElementById('g2048Container').style.display = 'none';
     document.getElementById('gameLobby').style.display = 'flex';
     document.getElementById('gameZoneTitle').innerText = isParent && document.getElementById('btnModePlay').classList.contains('active') ? "🎮 遊戲區 (親自遊玩)" : "🎮 遊戲區";
-};
+}
 
 function getTodayStr() {
     const d = new Date();
@@ -200,7 +202,7 @@ function renderMemberChips() {
     }
 }
 
-window.selectMemberToManage = function(memberName) {
+function selectMemberToManage(memberName) {
     selectedMember = memberName;
     document.getElementById('selectedMemberTitle').innerText = `管理 ${memberName} 的遊戲權限`;
     document.getElementById('memberPermissionSection').style.display = 'block';
@@ -210,7 +212,7 @@ window.selectMemberToManage = function(memberName) {
     });
 
     renderMemberPermissionDetails();
-};
+}
 
 function renderMemberPermissionDetails() {
     if (!selectedMember) return;
@@ -227,7 +229,7 @@ function renderMemberPermissionDetails() {
     btn2048Ban.className = `btn-perm ${perms.g2048 === false ? 'ban-active' : ''}`;
 }
 
-window.setMemberPermission = async function(gameType, allow) {
+async function setMemberPermission(gameType, allow) {
     if (!selectedMember) return;
     try {
         const targetDocId = `${userGroupId}_${selectedMember}`;
@@ -239,7 +241,7 @@ window.setMemberPermission = async function(gameType, allow) {
         console.error("更新權限失敗：", error);
         alert("更新權限失敗，請檢查網路。");
     }
-};
+}
 
 let currentKidStats = getInitialRpsStats();
 
@@ -365,7 +367,7 @@ function listen2048UserData(docId) {
     });
 }
 
-window.init2048Game = function() {
+function init2048Game() {
     g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
     g2048Score = 0;
     g2048GameOver = false;
@@ -373,7 +375,7 @@ window.init2048Game = function() {
     document.getElementById('g2048Status').innerText = "";
     addNewTile(); addNewTile();
     render2048Board();
-};
+}
 
 function addNewTile() {
     let emptyCells = [];
@@ -493,19 +495,19 @@ function checkGameOver() {
 let currentLbGame = '';
 let currentLbTab = 'group';
 
-window.openLeaderboard = function(gameType) {
+function openLeaderboard(gameType) {
     currentLbGame = gameType;
     currentLbTab = 'group';
     document.getElementById('lbTitle').innerText = gameType === 'rps' ? '🏆 猜拳 排行榜' : '🏆 2048 排行榜';
     document.getElementById('leaderboardModal').style.display = 'flex';
     loadLeaderboard('group');
-};
+}
 
-window.closeLeaderboard = function() {
+function closeLeaderboard() {
     document.getElementById('leaderboardModal').style.display = 'none';
-};
+}
 
-window.loadLeaderboard = async function(tabType) {
+async function loadLeaderboard(tabType) {
     currentLbTab = tabType;
     document.getElementById('tabGroup').classList.toggle('active', tabType === 'group');
     document.getElementById('tabGlobal').classList.toggle('active', tabType === 'global');
@@ -534,7 +536,7 @@ window.loadLeaderboard = async function(tabType) {
             if (currentLbGame === 'rps') {
                 dataList.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
             } else {
-                dataList.sort((a, b) => (b.bestScore || 0) - (a.bestScore || 0));
+                dataList.sort((a, b) => (b.bestScore || 0) - (a.bestScore || 0)); 
             }
         }
 
@@ -572,8 +574,20 @@ window.loadLeaderboard = async function(tabType) {
         console.error("載入排行榜失敗:", error);
         listEl.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗，請稍後再試</div>';
     }
-};
+}
 
+// 2. 將需要讓 HTML 使用 onclick 呼叫的函數，通通掛載到 window 全域物件上
+window.selectGame = selectGame;
+window.returnToLobby = returnToLobby;
+window.selectMemberToManage = selectMemberToManage;
+window.setMemberPermission = setMemberPermission;
+window.init2048Game = init2048Game;
+window.openLeaderboard = openLeaderboard;
+window.closeLeaderboard = closeLeaderboard;
+window.loadLeaderboard = loadLeaderboard;
+
+
+// === 事件監聽器區 ===
 window.addEventListener('keydown', (e) => {
     if(document.getElementById('g2048Container').style.display === 'block') {
         if(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", " "].includes(e.key)) { e.preventDefault(); }
