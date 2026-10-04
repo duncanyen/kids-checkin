@@ -99,7 +99,7 @@ window.renderDynamicModules = async function(user) {
     }
 
     // 【新增修改】在功能導覽最後面，加上「切換群組」的按鈕
-    sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b;"><span class="sidebar-icon">🔄</span>切換群組</div>`;
+    sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">🔄</span>切換群組</div>`;
 
     if (miniCardsContainer) {
         let miniCardsHtml = '';
@@ -176,11 +176,341 @@ window.renderDynamicModules = async function(user) {
     dockContainer.innerHTML = dockHtml;
 };
 
-// ... 底下包含您原來的 checkWidgetData, checkUnreadMessages, checkGalleryUnreads 等所有函數均無需更改 ...
-window.checkWidgetData = function(user) { /* ... 原本的程式碼 ... */ };
-window.checkUnreadMessages = function(user) { /* ... 原本的程式碼 ... */ };
-window.checkGalleryUnreads = function(user) { /* ... 原本的程式碼 ... */ };
-window.checkCalendarAlerts = function(user) { /* ... 原本的程式碼 ... */ };
-window.renderAgendaUI = function() { /* ... 原本的程式碼 ... */ };
-window.fetchAndRenderPhotoCarousel = function(user) { /* ... 原本的程式碼 ... */ };
-window.togglePhotoLike = async function(photoId) { /* ... 原本的程式碼 ... */ };
+window.checkWidgetData = function(user) {
+    if (!window.currentGroup) return;
+    const groupId = window.currentGroup.id;
+
+    // 1. 待辦清單優化版 (頭像堆疊、字數截斷、今天判斷)
+    if (document.getElementById('todoWidgetContent')) {
+        const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
+        
+        todoUnsubscribe = onSnapshot(todoQ, (snap) => {
+            let incompleteTodos = [];
+            
+            snap.forEach(docSnap => {
+                const docData = docSnap.data();
+                if (docData.todos && Array.isArray(docData.todos)) {
+                    docData.todos.forEach(t => {
+                        const isDone = (t.completed === true || t.isCompleted === true || String(t.completed) === "true");
+                        if (!isDone) {
+                            incompleteTodos.push(t);
+                        }
+                    });
+                }
+            });
+
+            const now = new Date();
+            const todayYMD = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            now.setHours(0,0,0,0);
+            
+            const getWeight = (dl) => {
+                if (!dl) return 9999999999999;
+                if (dl === '今天' || dl === todayYMD) return now.getTime();
+                if (dl === '明天') return now.getTime() + 86400000;
+                if (dl === '週末') {
+                    let d = new Date(now);
+                    let day = d.getDay();
+                    let diff = day <= 5 ? 6 - day : 0; 
+                    return d.getTime() + (diff * 86400000);
+                }
+                let parsed = new Date(dl);
+                if (!isNaN(parsed.getTime())) return parsed.getTime();
+                return 9999999999999; 
+            };
+
+            const container = document.getElementById('todoWidgetContent');
+            if (incompleteTodos.length > 0) {
+                incompleteTodos.sort((a, b) => getWeight(a.deadline || a.dealline) - getWeight(b.deadline || b.dealline));
+                
+                let html = '';
+                incompleteTodos.forEach(t => {
+                    let rawDate = t.deadline || t.dealline || '無期限';
+                    let displayDate = rawDate;
+                    let isToday = false;
+                    
+                    // 判斷是否為今天
+                    if (rawDate === todayYMD || rawDate === '今天') {
+                        displayDate = '今天';
+                        isToday = true;
+                    } else if (rawDate === '明天') {
+                        displayDate = '明天';
+                    } else if (rawDate.includes('-')) {
+                        const parts = rawDate.split('-');
+                        if (parts.length === 3) displayDate = `${parts[1]}/${parts[2]}`;
+                    }
+                    
+                    // 判斷字數並截斷超過10個字的內容
+                    let title = t.title || t.text || t.task || "未命名任務";
+                    if (title.length > 10) {
+                        title = title.substring(0, 10) + '...';
+                    }
+                    
+                    // 處理人員陣列
+                    let assigneesArray = [];
+                    if (t.assignees) {
+                        if (Array.isArray(t.assignees)) {
+                            assigneesArray = t.assignees;
+                        } else {
+                            assigneesArray = [String(t.assignees)];
+                        }
+                    }
+                    if (assigneesArray.length === 0) assigneesArray = ['未指派'];
+                    
+                    // 產生堆疊頭像 HTML (Facepile)
+                    let avatarsHtml = assigneesArray.map((name, index) => {
+                        let actualName = (name === '所有人員' || name === '所有人') ? '所有人' : name;
+                        // 若無設定頭像則給予預設圖示
+                        let avatarUrl = window.userAvatarMap[actualName] || `https://ui-avatars.com/api/?name=${actualName}&background=e5e7eb`;
+                        // 第二個人以後往左推 8px 做出重疊效果
+                        let marginLeft = index === 0 ? '0' : '-8px'; 
+                        return `<img src="${avatarUrl}" title="${actualName}" style="width:24px; height:24px; border-radius:50%; border:2px solid #fff; margin-left:${marginLeft}; object-fit:cover; background:var(--bg-body); box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
+                    }).join('');
+
+                    // 若是今天，給予醒目的橘紅色小標籤
+                    let badgeStyle = isToday 
+                        ? 'color: var(--danger); background: var(--danger-light);'
+                        : 'color: var(--primary-dark); background: var(--primary-light);';
+
+                    html += `
+                        <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:10px 12px; border-radius:12px; border:1px solid var(--border-color);">
+                            <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+                                <span style="font-size:11px; font-weight:800; ${badgeStyle} padding:3px 8px; border-radius:8px; white-space:nowrap;">${displayDate}</span>
+                                <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap;">${title}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
+                                ${avatarsHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:center; padding:20px; color:var(--text-sub); font-size:13px; font-weight:700; background:var(--bg-body); border-radius:12px; border:1px dashed var(--border-color);">
+                        ✨ 目前無待辦事項，太棒了！
+                    </div>
+                `;
+            }
+        }, (err) => { 
+            console.error("【待辦 Debug】讀取錯誤:", err); 
+            document.getElementById('todoWidgetContent').innerHTML = `<div style="color:var(--danger); font-size:13px;">讀取失敗，請確認權限</div>`;
+        });
+    }
+
+    // 2. 抓取本月記帳總計
+    if (document.getElementById('financeWidgetValue')) {
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        const expQ = query(collection(db, "expenses"), where("groupId", "==", groupId));
+        
+        financeUnsubscribe = onSnapshot(expQ, (snap) => {
+            let totalExpense = 0;
+            snap.forEach(docSnap => {
+                const data = docSnap.data();
+                let dateStr = '';
+                if (data.date && typeof data.date.toDate === 'function') {
+                    const d = data.date.toDate();
+                    dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                } else if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                    const d = data.createdAt.toDate();
+                    dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                } else {
+                    dateStr = String(data.date || data.createdAt || '');
+                }
+
+                const typeVal = String(data.type || 'expense');
+                const amount = Number(data.amount || data.price || 0);
+                const isThisMonth = dateStr.includes(currentYearMonth) || !dateStr;
+
+                if (isThisMonth) {
+                    if (typeVal === 'expense' || typeVal === '支出' || typeVal === 'undefined' || !data.type) {
+                        totalExpense += amount;
+                    }
+                }
+            });
+            
+            const valEl = document.getElementById('financeWidgetValue');
+            const subEl = document.getElementById('financeWidgetSub');
+            if (valEl) {
+                valEl.innerText = `$${totalExpense.toLocaleString()}`;
+                subEl.innerText = `本月累計支出`;
+            }
+        }, (err) => { console.error("記帳本讀取錯誤: ", err); });
+    }
+};
+
+window.checkUnreadMessages = function(user) {
+    try {
+        if (!window.currentGroup) return;
+        const q = query(collection(db, "rooms"), where("groupId", "==", window.currentGroup.id), where("participants", "array-contains", user.name));
+        unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
+            let totalUnreadMessages = 0;
+            querySnapshot.forEach(docSnap => {
+                const room = docSnap.data();
+                if (room.unreadCount && room.unreadCount[user.name]) totalUnreadMessages += room.unreadCount[user.name];
+                else {
+                    let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
+                    let myReadTime = room.readTimestamps?.[user.name] || 0;
+                    const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
+                    const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+                    if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) totalUnreadMessages++;
+                }
+            });
+            const badge = document.getElementById('chatBadge');
+            if (badge) { if (totalUnreadMessages > 0) { badge.style.display = 'block'; badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages; } else badge.style.display = 'none'; }
+        });
+    } catch (e) {}
+};
+
+window.checkGalleryUnreads = function(user) {
+    try {
+        if (!window.currentGroup) return;
+        let lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
+        if (lastReadTime === 0) lastReadTime = Date.now() - (7 * 24 * 60 * 60 * 1000); 
+        const lastReadDate = new Date(lastReadTime);
+        const q = query(collection(db, "photos"), where("groupId", "==", window.currentGroup.id), where("timestamp", ">", lastReadDate));
+        galleryUnsubscribe = onSnapshot(q, (snapshot) => {
+            let unreadCount = 0;
+            snapshot.forEach(docSnap => {
+                const photo = docSnap.data();
+                if (photo.uploader !== user.name) unreadCount++;
+            });
+            const sideBadge = document.getElementById('sideGalleryBadge');
+            if (sideBadge) { if (unreadCount > 0) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${unreadCount}`; } else sideBadge.style.display = 'none'; }
+        });
+    } catch (e) {}
+};
+
+window.checkCalendarAlerts = function(user) {
+    if (!window.currentGroup) return;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    try {
+        const q = query(collection(db, "events"), where("groupId", "==", window.currentGroup.id), where("date", "==", todayStr));
+        calendarUnsubscribe = onSnapshot(q, (snapshot) => {
+            cachedCalendarEvents = [];
+            snapshot.forEach(docSnap => {
+                const evt = docSnap.data();
+                if (evt.visibility === 'public' || evt.operator === user.name) cachedCalendarEvents.push(evt);
+            });
+            window.renderAgendaUI();
+        });
+        calendarUIRenderInterval = setInterval(window.renderAgendaUI, 60000); 
+    } catch (e) { console.error("行事曆錯誤:", e) }
+};
+
+window.renderAgendaUI = function() {
+    const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽', birthday: '🎂', personal: '👤', other: '📌' };
+    const now = new Date();
+    const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
+    
+    let activeIcons = [], validEvents = [];
+    
+    cachedCalendarEvents.forEach(evt => {
+        let start = new Date(now), end = new Date(now), isExpired = false;
+        if (evt.isAllDay !== false) { start.setHours(0,0,0,0); end.setHours(23,59,59,999); } 
+        else {
+            if(evt.startTime) { const [sh, sm] = evt.startTime.split(':'); start.setHours(sh, sm, 0, 0); }
+            if(evt.endTime) { const [eh, em] = evt.endTime.split(':'); end.setHours(eh, em, 0, 0); if (now > end) isExpired = true; }
+        }
+        if (!isExpired) {
+            validEvents.push(evt);
+            let triggerTime = new Date(start);
+            if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
+            else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
+            if (now >= triggerTime && now <= end) activeIcons.push(categoryIcons[evt.category] || '📌');
+        }
+    });
+
+    const agendaContainer = document.getElementById('todayAgendaContainer');
+    if (!agendaContainer) return;
+
+    let listHtml = '';
+    if (validEvents.length > 0) {
+        validEvents.sort((a, b) => {
+            if (a.isAllDay && !b.isAllDay) return -1; if (!a.isAllDay && b.isAllDay) return 1;
+            if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime); return 0;
+        });
+        listHtml = validEvents.map(evt => {
+            let timeStr = (evt.isAllDay !== false) ? '全天' : `${evt.startTime} - ${evt.endTime}`;
+            const avatar = window.userAvatarMap[evt.operator] || `https://ui-avatars.com/api/?name=${evt.operator}&background=e5e7eb`;
+            return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${avatar}"></div>`;
+        }).join('');
+        
+        agendaContainer.innerHTML = `
+            <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
+                <div class="agenda-header">
+                    <div class="agenda-date">${dateTitle}</div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
+                        <div class="agenda-count">今天有 ${validEvents.length} 個行程</div>
+                    </div>
+                </div>
+                <div class="agenda-list">${listHtml}</div>
+            </div>`;
+    } else {
+        agendaContainer.innerHTML = `
+            <div class="agenda-card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
+                <div>
+                    <div class="agenda-date" style="font-size: 15px;">${dateTitle}</div>
+                    <div style="font-size: 13px; color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
+                </div>
+                <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; color:var(--text-main);">📅</div>
+            </div>`;
+    }
+};
+
+window.fetchAndRenderPhotoCarousel = function(user) {
+    if (!window.currentGroup) return;
+    const q = query(collection(db, "photos"), where("groupId", "==", window.currentGroup.id), orderBy("timestamp", "desc"), limit(5));
+    onSnapshot(q, (snapshot) => {
+        const section = document.getElementById('photoCarouselSection');
+        const container = document.getElementById('photoCarouselContainer');
+        if (snapshot.empty) { section.style.display = 'none'; return; }
+        section.style.display = 'block'; let html = '';
+        snapshot.forEach(docSnap => {
+            const photo = docSnap.data(); const photoId = docSnap.id;
+            const dateObj = photo.timestamp ? photo.timestamp.toDate() : new Date();
+            const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
+            const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
+            let displayImageUrl = '';
+            if (photo.imageUrls && Array.isArray(photo.imageUrls) && photo.imageUrls.length > 0) displayImageUrl = photo.imageUrls[0]; 
+            else displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
+            const likes = photo.likes || []; const isLiked = likes.includes(user.name); const likeCount = likes.length;
+            if (displayImageUrl) {
+                html += `
+                    <div class="carousel-item">
+                        <img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="localStorage.setItem('target_photo_id', '${photoId}'); window.navTo('gallery.html', 'Photo Dump');">
+                        <div class="carousel-info">
+                            <div class="carousel-author">
+                                <img class="carousel-author-img" src="${uploaderAvatar}">
+                                <div>
+                                    <div class="carousel-author-name">${photo.uploader}</div>
+                                    <div class="carousel-date">${dateStr}</div>
+                                </div>
+                            </div>
+                            <div class="carousel-actions">
+                                <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span></button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+        });
+        container.innerHTML = html;
+    });
+};
+
+window.togglePhotoLike = async function(photoId) {
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+    try {
+        const photoRef = doc(db, "photos", photoId);
+        const photoSnap = await getDoc(photoRef);
+        if (photoSnap.exists()) {
+            let likes = photoSnap.data().likes || [];
+            if (likes.includes(user.name)) likes = likes.filter(n => n !== user.name); else likes.push(user.name); 
+            await updateDoc(photoRef, { likes: likes });
+        }
+    } catch(e) {}
+};
