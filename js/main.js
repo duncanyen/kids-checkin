@@ -105,9 +105,60 @@ window.shareApp = async function() {
     } catch (err) {}
 };
 
+// 評估使用者的群組狀態，決定顯示哪個畫面 (【修改重點】加入記憶判斷)
+window.evaluateUserGroups = async function(user) {
+    document.getElementById('loadingView').style.display = 'none';
+    
+    // 【加入讀取暫存的記憶群組 ID】
+    const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
+    
+    // 檢查是否有邀請碼等著加入
+    const pendingCode = localStorage.getItem('pendingInviteCode');
+    if (pendingCode) {
+        document.getElementById('actionSection').style.display = 'block';
+        window.goToActionStep('obStepJoin');
+        document.getElementById('obInviteCode').value = pendingCode;
+        localStorage.removeItem('pendingInviteCode');
+        return;
+    }
+
+    if (user.groups && user.groups.length > 1) {
+        // 使用者有多個群組
+        if (savedGroupId) {
+            // 如果有記憶上次選的群組，就在他的群組清單中找出來
+            const targetGroup = user.groups.find(g => g.id === savedGroupId);
+            if (targetGroup) {
+                window.currentGroup = targetGroup;
+                window.showDashboard();
+                return; // 直接進入，中斷後續顯示群組列表的動作
+            }
+        }
+        
+        // 如果沒有記憶，或者找不到對應群組，就顯示群組選擇列表
+        window.hideAllSections();
+        document.getElementById('groupSelectionSection').style.display = 'block';
+        if (window.renderGroupList) {
+            window.renderGroupList(user.groups);
+        }
+        
+    } else if (user.groups && user.groups.length === 1) {
+        // 只有單一個群組，直接進入並記錄起來
+        window.currentGroup = user.groups[0];
+        sessionStorage.setItem('nexus_active_group_id', window.currentGroup.id);
+        window.showDashboard();
+    } else {
+        // 沒有任何群組，進入建立/加入群組的新手畫面
+        window.hideAllSections();
+        document.getElementById('actionSection').style.display = 'block';
+        window.goToActionStep('obStepAction');
+    }
+};
+
 // 初始化主流程
 async function initializeAppFlow() {
-    window.processPendingLogs();
+    if (window.processPendingLogs) {
+        window.processPendingLogs();
+    }
     
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('code');
@@ -126,15 +177,21 @@ async function initializeAppFlow() {
             if (snap.empty) {
                 alert("此帳號已失效或被刪除，請重新登入。");
                 sessionStorage.removeItem('familyCheckInUser');
-                window.showAuthSection();
+                if (window.showAuthSection) window.showAuthSection();
             } else {
                 const latestUser = snap.docs[0].data();
                 latestUser.docId = snap.docs[0].id;
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
+                
+                // 進入評估群組狀態的流程
                 await window.evaluateUserGroups(latestUser); 
             }
-        } catch (e) { window.showAuthSection(); }
-    } else { window.showAuthSection(); }
+        } catch (e) { 
+            if (window.showAuthSection) window.showAuthSection(); 
+        }
+    } else { 
+        if (window.showAuthSection) window.showAuthSection(); 
+    }
 }
 
 if (document.readyState === 'loading') { 
