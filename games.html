@@ -38,7 +38,6 @@
             text-align: center; 
         }
 
-        /* 頂部導航列 */
         .top-nav { 
             display: flex; 
             justify-content: space-between; 
@@ -84,7 +83,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* 家長專屬模式切換 Tab */
         .mode-switch-container { display: none; justify-content: center; gap: 12px; margin-bottom: 24px; }
         .btn-switch { 
             background: white; 
@@ -99,7 +97,6 @@
         }
         .btn-switch.active { background: var(--primary-color); color: white; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2); }
 
-        /* 遊戲選擇大廳選單 (重新設計質感卡片) */
         .game-lobby { max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
         .game-card-item { 
             background: var(--card-bg); 
@@ -133,14 +130,12 @@
         .game-card-title { font-size: 18px; font-weight: 700; color: var(--primary-color); margin-bottom: 6px; }
         .game-card-desc { font-size: 13px; color: var(--text-sub); line-height: 1.4; }
 
-        /* 通用遊戲容器包裝 */
         .sub-game-container { max-width: 500px; margin: 0 auto; display: none; }
         .btn-return-lobby { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 12px; font-weight: 600; color: var(--text-main); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; box-shadow: var(--shadow-sm); }
         .btn-leaderboard { background: #fff8e1; color: #f57f17; border: 1px solid #ffe0b2; padding: 8px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); transition: background 0.2s; }
         .btn-leaderboard:hover { background: #ffecb3; }
         .game-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
-        /* 剪刀石頭布樣式 */
         .score-board { background: white; border-radius: 16px; padding: 18px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
         .score-item { text-align: center; }
         .score-label { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
@@ -158,7 +153,6 @@
         .p-card.disabled { opacity: 0.4; cursor: not-allowed; transform: none; border-color: var(--border-color); }
         .game-result { font-size: 18px; font-weight: 700; margin-top: 24px; height: 28px; color: var(--cancel-color); }
         
-        /* 2048 遊戲專屬樣式 */
         .g2048-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .g2048-scores { display: flex; gap: 8px; }
         .g2048-box { background: #bbada0; padding: 8px 16px; border-radius: 10px; color: white; text-align: center; }
@@ -182,7 +176,6 @@
         .btn-restart-2048 { background: #8f7a66; color: white; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.2s; }
         .btn-restart-2048:hover { background: #7f6a56; }
 
-        /* ================= 專業 UI/UX 權限管理面板 ================= */
         .admin-panel { 
             background: white; 
             border-radius: 20px; 
@@ -212,7 +205,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* 成員篩選器選單 (橫向 Chip 列表) */
         .member-chips-container {
             display: flex;
             gap: 8px;
@@ -244,7 +236,6 @@
             box-shadow: 0 4px 10px rgba(46, 125, 50, 0.25);
         }
 
-        /* 選定成員後的遊戲項目權限卡片 */
         .member-games-container {
             background: #f8fafc;
             border-radius: 16px;
@@ -278,7 +269,6 @@
         .game-perm-info { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: var(--text-main); }
         .game-perm-icon { font-size: 22px; }
 
-        /* 允許 / 不允許開關按鈕群組 */
         .perm-action-group { display: flex; gap: 6px; }
         .btn-perm {
             border: 1px solid var(--border-color);
@@ -304,7 +294,6 @@
             box-shadow: 0 2px 6px rgba(211, 47, 47, 0.15);
         }
 
-        /* 排行榜 Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); max-height: 80vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px; }
@@ -339,13 +328,11 @@
 
     <h2 class="system-title" id="gameZoneTitle">🎮 遊戲區</h2>
 
-    <!-- 家長專屬模式切換選單 -->
     <div class="mode-switch-container" id="modeSwitchContainer">
         <button class="btn-switch active" id="btnModeAdmin">🛡️ 權限管理</button>
         <button class="btn-switch" id="btnModePlay">🎮 親自遊玩</button>
     </div>
 
-    <!-- 遊戲大廳選擇頁面 (高質感風格) -->
     <div class="game-lobby" id="gameLobby">
         <div class="game-card-item" onclick="selectGame('rps')">
             <div class="game-card-icon">✊</div>
@@ -363,7 +350,6 @@
         </div>
     </div>
 
-    <!-- 剪刀石頭布遊戲容器 -->
     <div class="sub-game-container" id="kidGameContainer">
         <div class="game-header-actions">
             <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
@@ -398,7 +384,6 @@
         </div>
     </div>
 
-    <!-- 2048 遊戲容器 -->
     <div class="sub-game-container" id="g2048Container">
         <div class="game-header-actions" style="max-width: 340px; margin: 0 auto 15px auto;">
             <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
@@ -418,7 +403,6 @@
         <div id="g2048Status" style="font-weight: bold; margin-top: 15px; color: var(--cancel-color); height: 25px;"></div>
     </div>
 
-    <!-- 家長視角：管理面板 (全新 UIUX 篩選與項目開關設計) -->
     <div id="parentAdminContainer" style="display: none;">
         <div class="admin-panel">
             <div class="admin-title">🛡️ 遊戲進入權限管理</div>
@@ -435,7 +419,6 @@
                         <span style="font-size:12px; font-weight:normal; color:var(--text-sub);">即時同步生效</span>
                     </div>
 
-                    <!-- 剪刀石頭布權限列 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
                             <span class="game-perm-icon">✊</span>
@@ -447,7 +430,6 @@
                         </div>
                     </div>
 
-                    <!-- 2048權限列 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
                             <span class="game-perm-icon">🔢</span>
@@ -463,7 +445,6 @@
         </div>
     </div>
 
-    <!-- 排行榜 Modal -->
     <div class="modal-overlay" id="leaderboardModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -529,7 +510,13 @@
         function listenMyPermissions() {
             onSnapshot(doc(db, "game_permissions", userDocId), (docSnap) => {
                 if (docSnap.exists()) {
-                    myPermissions = docSnap.data();
+                    const data = docSnap.data();
+                    myPermissions = {
+                        rps: data.rps !== false,
+                        g2048: data.g2048 !== false
+                    };
+                } else {
+                    myPermissions = { rps: true, g2048: true };
                 }
             });
         }
@@ -616,7 +603,6 @@
             };
         }
 
-        // ================= 專業 UI 權限管理：篩選成員與動態項目設定 =================
         let groupMembers = [];
         let kidsPermissions = {};
         let selectedMember = null;
@@ -641,16 +627,18 @@
                     groupMembers.push(currentUser.name);
                 }
 
-                // 批次監聽每個成員的權限狀態
                 groupMembers.forEach(memberName => {
                     const targetDocId = `${userGroupId}_${memberName}`;
                     onSnapshot(doc(db, "game_permissions", targetDocId), (docSnap) => {
                         if (docSnap.exists()) {
-                            kidsPermissions[memberName] = docSnap.data();
+                            const data = docSnap.data();
+                            kidsPermissions[memberName] = {
+                                rps: data.rps !== false,
+                                g2048: data.g2048 !== false
+                            };
                         } else {
                             kidsPermissions[memberName] = { rps: true, g2048: true };
                         }
-                        // 如果目前正選中該成員，即時更新其開關狀態
                         if (selectedMember === memberName) {
                             renderMemberPermissionDetails();
                         }
@@ -674,7 +662,7 @@
                 return;
             }
 
-            groupMembers.forEach((memberName, index) => {
+            groupMembers.forEach((memberName) => {
                 const chip = document.createElement('div');
                 chip.className = `member-chip ${selectedMember === memberName ? 'active' : ''}`;
                 chip.innerHTML = `👤 ${memberName}`;
@@ -682,7 +670,6 @@
                 chipsContainer.appendChild(chip);
             });
 
-            // 預設自動選擇第一個成員
             if (!selectedMember && groupMembers.length > 0) {
                 selectMemberToManage(groupMembers[0]);
             }
@@ -693,7 +680,6 @@
             document.getElementById('selectedMemberTitle').innerText = `管理 ${memberName} 的遊戲權限`;
             document.getElementById('memberPermissionSection').style.display = 'block';
 
-            // 更新 Chip 的 Active 樣式
             document.querySelectorAll('.member-chip').forEach(el => {
                 el.classList.toggle('active', el.innerText.includes(memberName));
             });
@@ -705,13 +691,11 @@
             if (!selectedMember) return;
             const perms = kidsPermissions[selectedMember] || { rps: true, g2048: true };
 
-            // 剪刀石頭布按鈕狀態
             const btnRpsAllow = document.getElementById('btnRpsAllow');
             const btnRpsBan = document.getElementById('btnRpsBan');
             btnRpsAllow.className = `btn-perm ${perms.rps !== false ? 'allow-active' : ''}`;
             btnRpsBan.className = `btn-perm ${perms.rps === false ? 'ban-active' : ''}`;
 
-            // 2048按鈕狀態
             const btn2048Allow = document.getElementById('btn2048Allow');
             const btn2048Ban = document.getElementById('btn2048Ban');
             btn2048Allow.className = `btn-perm ${perms.g2048 !== false ? 'allow-active' : ''}`;
@@ -732,7 +716,6 @@
             }
         };
 
-        // ================= 剪刀石頭布遊戲邏輯 =================
         let currentKidStats = getInitialRpsStats();
 
         function listenKidGameData(docId) {
@@ -842,7 +825,6 @@
             setTimeout(resetGameArena, 2000);
         }
 
-        // ================= 2048 遊戲核心邏輯 =================
         let g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
         let g2048Score = 0;
         let g2048BestScore = 0;
@@ -983,7 +965,6 @@
             }
         }
 
-        // ================= 排行榜邏輯 =================
         let currentLbGame = '';
         let currentLbTab = 'group';
 
