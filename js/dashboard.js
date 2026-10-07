@@ -30,8 +30,14 @@ window.showDashboard = async function() {
     if (todoUnsubscribe) { todoUnsubscribe(); todoUnsubscribe = null; }
     if (financeUnsubscribe) { financeUnsubscribe(); financeUnsubscribe = null; }
 
-    if (window.currentGroup) {
-        // 【修改點】將目前的群組 ID 記錄下來，這樣從其他頁面返回時才知道要進哪個群組
+    // 【關鍵修正】如果 window.currentGroup 遺失，但 sessionStorage 中有紀錄，自動恢復當前群組
+    const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
+    if (!window.currentGroup && savedGroupId) {
+        window.currentGroup = { id: savedGroupId };
+    }
+
+    if (window.currentGroup && window.currentGroup.id) {
+        // 確保將目前的群組 ID 記錄下來
         sessionStorage.setItem('nexus_active_group_id', window.currentGroup.id);
 
         groupNameUnsubscribe = onSnapshot(doc(db, "groups", window.currentGroup.id), (docSnap) => {
