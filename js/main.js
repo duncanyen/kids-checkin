@@ -57,7 +57,7 @@ document.getElementById('avatarUploadInput').addEventListener('change', function
 
 window.fetchAndRenderGroupMembers = async function() {
     try {
-        if (!window.currentGroup || !window.currentGroup.members || window.currentGroup.members.length === 0) return;
+        if (!window.currentGroup || !window.currentGroup.members || !Array.isArray(window.currentGroup.members) || window.currentGroup.members.length === 0) return;
         const memberNames = window.currentGroup.members;
         window.groupMembers = [];
         for (let i = 0; i < memberNames.length; i += 10) {
@@ -70,12 +70,15 @@ window.fetchAndRenderGroupMembers = async function() {
                 window.groupMembers.push(u);
             });
         }
-        document.getElementById('sideMembersList').innerHTML = window.groupMembers.map(u => `
-            <div class="member-avatar-container">
-                <img class="member-avatar" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff'">
-                <div class="member-name">${u.name}</div>
-            </div>
-        `).join('');
+        const sideList = document.getElementById('sideMembersList');
+        if (sideList) {
+            sideList.innerHTML = window.groupMembers.map(u => `
+                <div class="member-avatar-container">
+                    <img class="member-avatar" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff'">
+                    <div class="member-name">${u.name}</div>
+                </div>
+            `).join('');
+        }
     } catch (e) { console.error("抓取群組成員失敗: ", e); }
 };
 
@@ -107,7 +110,9 @@ window.shareApp = async function() {
 
 // 初始化主流程
 async function initializeAppFlow() {
-    window.processPendingLogs();
+    if (typeof window.processPendingLogs === 'function') {
+        window.processPendingLogs();
+    }
     
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('code');
@@ -115,6 +120,7 @@ async function initializeAppFlow() {
         localStorage.setItem('pendingInviteCode', inviteCode);
         window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
     const savedUserStr = sessionStorage.getItem('familyCheckInUser');
     if (savedUserStr) {
         document.getElementById('loadingView').style.display = 'flex';
@@ -127,33 +133,34 @@ async function initializeAppFlow() {
                 alert("此帳號已失效或被刪除，請重新登入。");
                 sessionStorage.removeItem('familyCheckInUser');
                 sessionStorage.removeItem('nexus_active_group_id');
-                document.getElementById('loadingView').style.display = 'none';
-                window.showAuthSection();
+                if (typeof window.showAuthSection === 'function') window.showAuthSection();
             } else {
                 const latestUser = snap.docs[0].data();
                 latestUser.docId = snap.docs[0].id;
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
 
-                // 優先檢查 SessionStorage 是否已保存當前群組 ID
                 const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
                 if (savedGroupId) {
                     window.currentGroup = { id: savedGroupId };
-                    await window.showDashboard();
+                    if (typeof window.showDashboard === 'function') {
+                        await window.showDashboard();
+                    }
                 } else {
-                    await window.evaluateUserGroups(latestUser); 
+                    if (typeof window.evaluateUserGroups === 'function') {
+                        await window.evaluateUserGroups(latestUser); 
+                    }
                 }
-                
-                // 【關鍵修正】資料與畫面載入完成後，隱藏載入遮罩
-                document.getElementById('loadingView').style.display = 'none';
             }
         } catch (e) { 
             console.error("初始化失敗: ", e);
+            if (typeof window.showAuthSection === 'function') window.showAuthSection(); 
+        } finally {
+            // 【最重要】強制關閉遮罩
             document.getElementById('loadingView').style.display = 'none';
-            window.showAuthSection(); 
         }
     } else { 
         document.getElementById('loadingView').style.display = 'none';
-        window.showAuthSection(); 
+        if (typeof window.showAuthSection === 'function') window.showAuthSection(); 
     }
 }
 
