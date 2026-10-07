@@ -91,7 +91,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDoc, setDoc, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -171,22 +171,33 @@
             } catch (e) { console.error("儲存設定失敗", e); alert('設定儲存失敗'); }
         };
 
+        // 讀取量優化：原本一次 getDocs 抓整張 checkins 表（打卡紀錄只會越來越多，
+        // 每次進入都要重讀全部歷史），改成只載入「目前顯示的月份」，切換月份時才載入該月。
         window.loadData = async function() {
+            await window.loadMonthData(window.viewDate.getFullYear(), window.viewDate.getMonth() + 1);
+        };
+
+        window.loadMonthData = async function(year, month) {
             document.getElementById('loadingView').style.display = 'flex';
+            const startStr = `${year}-${String(month).padStart(2, '0')}-01`;
+            const endStr = `${year}-${String(month).padStart(2, '0')}-31`;
             try {
-                const querySnapshot = await getDocs(collection(db, "checkins"));
-                window.attendanceData = {};
+                const q = query(
+                    collection(db, "checkins"),
+                    where("date", ">=", startStr),
+                    where("date", "<=", endStr)
+                );
+                const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(docSnap => {
                     const item = docSnap.data();
                     if (item.date) {
                         window.attendanceData[item.date] = { checked: true, time: item.time, operator: item.operator, docId: docSnap.id };
                     }
                 });
-                window.initCalendar();
             } catch (e) {
                 console.error("讀取打卡紀錄失敗:", e);
-                window.initCalendar();
             } finally {
+                window.initCalendar();
                 document.getElementById('loadingView').style.display = 'none';
             }
         };
@@ -222,7 +233,11 @@
             }
         };
 
-        window.changeMonth = function(dir) { window.viewDate.setMonth(window.viewDate.getMonth() + dir); window.initCalendar(); };
+        window.changeMonth = function(dir) {
+            window.viewDate.setMonth(window.viewDate.getMonth() + dir);
+            // 切換月份時才讀取該月資料（只讀一個月，不再重讀全部歷史）
+            window.loadMonthData(window.viewDate.getFullYear(), window.viewDate.getMonth() + 1);
+        };
 
         window.checkIn = async function() {
             const timeStr = `${String(window.today.getHours()).padStart(2, '0')}:${String(window.today.getMinutes()).padStart(2, '0')}`;
