@@ -127,13 +127,14 @@ async function initializeAppFlow() {
                 alert("此帳號已失效或被刪除，請重新登入。");
                 sessionStorage.removeItem('familyCheckInUser');
                 sessionStorage.removeItem('nexus_active_group_id');
+                document.getElementById('loadingView').style.display = 'none';
                 window.showAuthSection();
             } else {
                 const latestUser = snap.docs[0].data();
                 latestUser.docId = snap.docs[0].id;
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
 
-                // 【修正點】優先檢查 SessionStorage 是否已保存當前群組 ID
+                // 優先檢查 SessionStorage 是否已保存當前群組 ID
                 const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
                 if (savedGroupId) {
                     window.currentGroup = { id: savedGroupId };
@@ -141,9 +142,19 @@ async function initializeAppFlow() {
                 } else {
                     await window.evaluateUserGroups(latestUser); 
                 }
+                
+                // 【關鍵修正】資料與畫面載入完成後，隱藏載入遮罩
+                document.getElementById('loadingView').style.display = 'none';
             }
-        } catch (e) { window.showAuthSection(); }
-    } else { window.showAuthSection(); }
+        } catch (e) { 
+            console.error("初始化失敗: ", e);
+            document.getElementById('loadingView').style.display = 'none';
+            window.showAuthSection(); 
+        }
+    } else { 
+        document.getElementById('loadingView').style.display = 'none';
+        window.showAuthSection(); 
+    }
 }
 
 if (document.readyState === 'loading') { 
