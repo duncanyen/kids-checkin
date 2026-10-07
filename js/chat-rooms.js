@@ -11,11 +11,34 @@ function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openSubModal(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
 function backToSettings(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
 
+// 取得屬於當前主群組成員的列表（排除自身或包含自身，依介面需求）
+function getGroupMembers() {
+    return allUsers.filter(u => {
+        // 判斷使用者是否屬於當前群組 (相容 groupIds 陣列、groups 陣列或主群組紀錄)
+        if (u.groupIds && Array.isArray(u.groupIds)) return u.groupIds.includes(currentGroupId);
+        if (u.groups && Array.isArray(u.groups)) {
+            return u.groups.some(g => (typeof g === 'object' ? g.id : g) === currentGroupId);
+        }
+        if (u.groupId) return u.groupId === currentGroupId;
+        return true; // 若無特別區分群組欄位則預設保留
+    });
+}
+
 function getCheckboxesHtml(containerId, selected = []) {
     let html = '';
-    allUsers.forEach(u => {
-        html += `<label class="member-item"><input type="checkbox" value="${u.name}" ${selected.includes(u.name) ? 'checked' : ''}> <span>${u.name}</span></label>`;
+    const groupUsers = getGroupMembers();
+    
+    groupUsers.forEach(u => {
+        // 新增群組時排除自己，因為創建者預設會自動加入
+        if (u.name !== currentUser.name) {
+            html += `<label class="member-item"><input type="checkbox" value="${u.name}" ${selected.includes(u.name) ? 'checked' : ''}> <span>${u.name}</span></label>`;
+        }
     });
+
+    if (!html) {
+        html = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding:10px 0;">群組內無其他成員可邀請</div>';
+    }
+
     document.getElementById(containerId).innerHTML = html;
 }
 
@@ -66,8 +89,10 @@ function openInviteMembers() {
     let html = '';
     let hasCandidates = false;
     const currentMembers = chatState.activeRoomData.participants || [];
+    const groupUsers = getGroupMembers();
     
-    allUsers.forEach(u => {
+    groupUsers.forEach(u => {
+        // 只列出属于当前主群组，且尚未加入该聊天室的成員
         if (!currentMembers.includes(u.name)) {
             hasCandidates = true;
             html += `<label class="member-item"><input type="checkbox" value="${u.name}"> <span>${u.name}</span></label>`;
@@ -75,7 +100,7 @@ function openInviteMembers() {
     });
 
     if (!hasCandidates) {
-        html = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding:20px 0;">所有家人都已經在群組內囉！</div>';
+        html = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding:20px 0;">所有群組成員都已經在聊天室內囉！</div>';
         document.getElementById('btnSaveInvite').style.display = 'none';
     } else {
         document.getElementById('btnSaveInvite').style.display = 'block';
@@ -99,7 +124,7 @@ document.getElementById('btnSaveInvite').addEventListener('click', async () => {
     const checkboxes = document.querySelectorAll('#inviteMemberList input[type="checkbox"]:checked');
     const newMembers = Array.from(checkboxes).map(cb => cb.value);
     
-    if (newMembers.length === 0) return alert('請先勾選要邀請的家人！');
+    if (newMembers.length === 0) return alert('請先勾選要邀請的成員！');
     
     const participants = [...(chatState.activeRoomData.participants || []), ...newMembers];
     try {
