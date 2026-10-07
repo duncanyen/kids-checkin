@@ -1,5 +1,5 @@
 import { db } from "./firebase-config.js";
-import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 let unreadUnsubscribe = null;
 let galleryUnsubscribe = null;
@@ -301,7 +301,14 @@ window.checkWidgetData = function(user) {
     if (document.getElementById('financeWidgetValue')) {
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        const expQ = query(collection(db, "expenses"), where("groupId", "==", groupId));
+        // 讀取量優化：原本讀取該群組「全部」歷史支出（費用越多讀越多），
+        // 改成只查本月（與記帳本頁面相同的查詢條件，索引已存在）。
+        const expQ = query(
+            collection(db, "expenses"),
+            where("groupId", "==", groupId),
+            where("date", ">=", `${currentYearMonth}-01`),
+            where("date", "<=", `${currentYearMonth}-31`)
+        );
         
         financeUnsubscribe = onSnapshot(expQ, (snap) => {
             let totalExpense = 0;
@@ -363,22 +370,41 @@ window.checkUnreadMessages = function(user) {
 };
 
 window.checkGalleryUnreads = function(user) {
-    try {
-        if (!window.currentGroup) return;
+    if (!window.currentGroup) return;
+    const groupId = window.currentGroup.id;
+
+    const renderBadge = (count) => {
+        const sideBadge = document.getElementById('sideGalleryBadge');
+        if (!sideBadge) return;
+        if (count > 0) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${count > 99 ? '99+' : count}`; }
+        else sideBadge.style.display = 'none';
+    };
+
+    // 讀取量優化：原本用 onSnapshot 把「所有」未讀照片文件整包抓下來（含圖片網址、留言、按讚名單），
+    // 改用 count 聚合查詢：不下載文件內容，計費約每 1000 筆 1 次讀取。
+    // 上傳者在發佈後會更新自己的 last read，所以不會把自己的照片算成未讀。
+    const refreshGalleryBadge = async () => {
+        if (document.visibilityState !== 'visible') return;
         let lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
-        if (lastReadTime === 0) lastReadTime = Date.now() - (7 * 24 * 60 * 60 * 1000); 
-        const lastReadDate = new Date(lastReadTime);
-        const q = query(collection(db, "photos"), where("groupId", "==", window.currentGroup.id), where("timestamp", ">", lastReadDate));
-        galleryUnsubscribe = onSnapshot(q, (snapshot) => {
-            let unreadCount = 0;
-            snapshot.forEach(docSnap => {
-                const photo = docSnap.data();
-                if (photo.uploader !== user.name) unreadCount++;
-            });
-            const sideBadge = document.getElementById('sideGalleryBadge');
-            if (sideBadge) { if (unreadCount > 0) { sideBadge.style.display = 'inline-block'; sideBadge.innerText = `+${unreadCount}`; } else sideBadge.style.display = 'none'; }
-        });
-    } catch (e) {}
+        if (lastReadTime === 0) lastReadTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        try {
+            const q = query(
+                collection(db, "photos"),
+                where("groupId", "==", groupId),
+                where("timestamp", ">", new Date(lastReadTime))
+            );
+            const snap = await getCountFromServer(q);
+            renderBadge(snap.data().count);
+        } catch (e) { /* 權限或索引問題時靜默忽略 */ }
+    };
+
+    refreshGalleryBadge();
+    window.addEventListener('focus', refreshGalleryBadge);
+    document.addEventListener('visibilitychange', refreshGalleryBadge);
+    galleryUnsubscribe = () => {
+        window.removeEventListener('focus', refreshGalleryBadge);
+        document.removeEventListener('visibilitychange', refreshGalleryBadge);
+    };
 };
 
 window.checkCalendarAlerts = function(user) {
