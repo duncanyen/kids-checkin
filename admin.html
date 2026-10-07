@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HomeBase - 管理者後台</title>
+    <title>Nexus - 管理者後台</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <meta name="mobile-web-app-capable" content="yes">
     <style>
@@ -163,6 +163,38 @@
         </div>
     </div>
 
+    <!-- 3. 成員操作紀錄 (Logs) -->
+    <div class="panel">
+        <h2 class="system-title">📜 系統操作紀錄</h2>
+        
+        <button class="toggle-form-btn" id="btnToggleLogs">
+            <span>🔍 展開成員操作紀錄</span>
+            <span id="toggleIconLogs">▼</span>
+        </button>
+        
+        <div id="logsSection" style="display: none; margin-top: 10px;">
+            <div class="filter-group">
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; display: block; margin-bottom: 2px; font-weight: bold;">選擇日期：</label>
+                    <input type="date" id="logDateFilter">
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; display: block; margin-bottom: 2px; font-weight: bold;">篩選人員：</label>
+                    <select id="userFilter">
+                        <option value="all">全部人員</option>
+                    </select>
+                </div>
+                <div style="width: 100%; margin-top: 4px;">
+                    <button class="btn-query" id="btnQueryLogs">🔍 查詢紀錄</button>
+                </div>
+            </div>
+
+            <div class="user-reset-list" id="logContainer">
+                <div style="text-align:center; color:#888; padding: 15px;">請選擇日期後點擊「查詢紀錄」</div>
+            </div>
+        </div>
+    </div>
+
     <!-- 編輯成員 Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal-content">
@@ -228,6 +260,8 @@
 
         // 將選單改為空陣列，準備從資料庫讀取
         let systemMenuOptions = [];
+
+        let allLogs = [];
         let allUsers = [];
         let pendingRequests = [];
 
@@ -251,7 +285,7 @@
             initAdminPage();
         }
 
-        // ================= 從資料庫讀取系統選單 (單次讀取) =================
+        // ================= 新增：從資料庫讀取系統選單 (單次讀取) =================
         async function loadSystemMenus() {
             try {
                 const q = query(collection(db, "system_menus"), orderBy("order", "asc"));
@@ -259,11 +293,12 @@
                 
                 if (snapshot.empty) {
                     console.log("資料庫無功能卡設定，自動初始化預設清單...");
+                    // 包含新增的「待辦事項」
                     const defaultMenus = [
                         { id: 'chat', label: '💬 聊天室', isDefault: true, group: 'all', order: 1 },
                         { id: 'calendar', label: '📅 行事曆', isDefault: true, group: 'all', order: 2 },
                         { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all', order: 3 },
-                        { id: 'todo', label: '📝 待辦事項', isDefault: true, group: 'all', order: 4 },
+                        { id: 'todo', label: '📝 待辦事項', isDefault: true, group: 'all', order: 4 }, // 新增的待辦功能
                         { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all', order: 5 },
                         { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all', order: 6 },
                         { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family', order: 7 }, 
@@ -286,10 +321,16 @@
         }
 
         async function initAdminPage() {
+            // 先從資料庫載入選單（這只會在這裡消耗 1 次讀取）
             await loadSystemMenus();
 
+            // 載入完成後才繪製 Checkboxes
             renderMenuCheckboxes('newMenusContainer', false); 
             renderMenuCheckboxes('editMenusContainer', true); 
+            
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            document.getElementById('logDateFilter').value = todayStr;
 
             setupToggle('btnToggleGroupSettings', 'groupSettingsForm', 'toggleIconGroupSettings');
             setupToggle('btnToggleRequests', 'requestsSection', 'toggleIconRequests', () => {
@@ -297,12 +338,14 @@
             });
             setupToggle('btnToggleAddForm', 'addUserForm', 'toggleIconAdd');
             setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList');
+            setupToggle('btnToggleLogs', 'logsSection', 'toggleIconLogs');
             
             await loadGroupSettings();
             await loadUsersFromFirebase();
 
             document.getElementById('btnAddUser').addEventListener('click', addNewUser);
             document.getElementById('btnSaveGroupName').addEventListener('click', saveGroupName);
+            document.getElementById('btnQueryLogs').addEventListener('click', fetchLogsByDate);
             document.getElementById('btnRefreshRequests').addEventListener('click', fetchPendingRequests);
         }
 
@@ -380,6 +423,7 @@
 
                 alert("✅ 群組名稱已更新！");
                 lastGroupNameChange = Date.now();
+                await logAction('系統操作', `將群組名稱更改為：${newName}`);
             } catch (error) {
                 alert("更新失敗，請檢查網路連線。");
             }
@@ -446,11 +490,13 @@
             if (!confirm(`確定要【${actionText}】成員【${targetUserName}】的入群申請嗎？`)) return;
 
             try {
+                // 1. 更新請求狀態
                 await updateDoc(doc(db, "group_requests", reqId), {
                     status: actionStatus,
                     processedTime: serverTimestamp()
                 });
 
+                // 2. 如果同意，則正式建立或加入使用者到此群組
                 if (actionStatus === 'approved') {
                     const defaultMenus = systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
                     const newUserObj = {
@@ -462,6 +508,9 @@
                         avatar: `https://ui-avatars.com/api/?name=${targetUserName}&background=random`
                     };
                     await addDoc(collection(db, "users"), newUserObj);
+                    await logAction('系統操作', `審核通過：同意成員 ${targetUserName} 加入群組`);
+                } else {
+                    await logAction('系統操作', `審核駁回：婉拒成員 ${targetUserName} 的入群申請`);
                 }
 
                 alert(`已成功${actionText}該申請！`);
@@ -479,11 +528,17 @@
                 const querySnapshot = await getDocs(q);
                 
                 allUsers = [];
+                const filterSelect = document.getElementById('userFilter');
+                filterSelect.innerHTML = '<option value="all">全部人員</option>';
 
                 querySnapshot.forEach(docSnap => {
                     const uData = docSnap.data();
                     if(uData.role !== 'removed') {
                         allUsers.push({ docId: docSnap.id, ...uData });
+                        const opt = document.createElement('option');
+                        opt.value = uData.name;
+                        opt.innerText = uData.name;
+                        filterSelect.appendChild(opt);
                     }
                 });
 
@@ -510,6 +565,7 @@
                 
                 const idDisplay = user.accountId ? `帳號: ${user.accountId}` : '<span style="color:#e53935;">(無帳號)</span>';
                 
+                // 比對資料庫拉出的 systemMenuOptions 來顯示正確的中文 Label
                 const userMenus = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
                 const menuLabels = systemMenuOptions.filter(m => userMenus.includes(m.id)).map(m => m.label).join('、');
 
@@ -566,6 +622,7 @@
                 };
 
                 await addDoc(collection(db, "users"), newUser);
+                await logAction('系統操作', `新增了成員：${nameInput} (${idInput})`);
                 
                 alert(`成功新增成員：${nameInput}！`);
                 
@@ -646,6 +703,7 @@
                     if (localStorage.getItem('familyCheckInUser')) localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
                 }
 
+                await logAction('系統操作', `更新了成員資訊：${nameInput}`);
                 alert("儲存成功！");
                 closeEditModal();
                 await loadUsersFromFirebase();
@@ -668,6 +726,7 @@
                         role: 'removed' 
                     });
                     
+                    await logAction('系統操作', `已將成員退出群組：${targetName}`);
                     alert(`已成功將【${targetName}】退出群組。`);
                     await loadUsersFromFirebase(); 
                 } catch (error) {
@@ -676,6 +735,90 @@
             }
         };
 
+        async function logAction(actionType, details) {
+            const now = new Date();
+            const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            
+            await addDoc(collection(db, "logs"), {
+                groupId: groupId,
+                datetime: datetimeStr,
+                operator: currentUser.name,
+                actionType: actionType,
+                details: details,
+                timestamp: serverTimestamp()
+            });
+        }
+
+        async function fetchLogsByDate() {
+            const selectedDate = document.getElementById('logDateFilter').value;
+            if (!selectedDate) {
+                alert("請先選擇查詢日期！");
+                return;
+            }
+
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">資料載入中...</div>';
+
+            try {
+                // 讀取量優化：原本把整個群組的 log 全部抓下來（logs 已 5000+ 筆，且每次點查詢都重讀一次）
+                // 再在前端比對日期，等於一次查詢就燒掉數千次讀取。
+                // 改成只查「所選日期」這一天：datetime 是 "YYYY-MM-DD HH:MM:SS" 字串，
+                // 單欄位範圍查詢即可，不需要新增複合索引。
+                const q = query(
+                    collection(db, "logs"), 
+                    where("datetime", ">=", `${selectedDate} 00:00:00`),
+                    where("datetime", "<=", `${selectedDate} 23:59:59`),
+                    orderBy("datetime", "desc")
+                );
+
+                const snapshot = await getDocs(q);
+                allLogs = [];
+                
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // 維持「只看本群組紀錄」的原行為，改在前端篩選以避免新增複合索引
+                    if (data.groupId === groupId) allLogs.push(data);
+                });
+
+                renderLogs();
+            } catch (error) {
+                console.error("讀取操作紀錄失敗:", error);
+                container.innerHTML = '<div style="text-align:center; color:#e53935; padding: 20px;">載入紀錄失敗，請檢查網路或索引設定</div>';
+            }
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logContainer');
+            const filterName = document.getElementById('userFilter').value;
+            container.innerHTML = '';
+
+            const filteredLogs = allLogs.filter(log => filterName === 'all' || log.operator === filterName);
+
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">所選日期無任何操作紀錄。</div>';
+                return;
+            }
+
+            filteredLogs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'user-reset-item';
+                div.style.alignItems = 'flex-start';
+                div.innerHTML = `
+                    <div class="user-info">
+                        <div class="user-avatar" style="border:none; font-size:24px; background:transparent;">📝</div>
+                        <div style="flex:1;">
+                            <div class="user-name" style="color:var(--primary-color);">${log.actionType || '系統操作'}</div>
+                            <div class="user-subtext"><b>操作人員:</b> ${log.operator || '未知'}</div>
+                            <div class="user-subtext" style="color:#444;">${log.details || ''}</div>
+                            <div class="user-features" style="color:#888; margin-top:6px;">🕒 ${log.datetime || ''}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('userFilter').addEventListener('change', renderLogs);
         document.getElementById('btnBack').addEventListener('click', () => { window.location.href = 'index.html'; });
     </script>
 </body>
