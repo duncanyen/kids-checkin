@@ -33,14 +33,28 @@ window._isChatJustLoaded = false;
 fetchFamilyUsers();
 listenToRooms();
 
+// --- 讀取量優化：users 清單快取（原本每次進來聊天室都整包重讀一次）---
+const USERS_CACHE_KEY = 'nexus_users_cache_v1';
+const USERS_CACHE_TTL = 10 * 60 * 1000; // 10 分鐘內沿用快取
+
 async function fetchFamilyUsers() {
+    try {
+        const cached = JSON.parse(sessionStorage.getItem(USERS_CACHE_KEY) || 'null');
+        if (cached && Array.isArray(cached.users) && cached.users.length > 0 && (Date.now() - cached.ts) < USERS_CACHE_TTL) {
+            allUsers = cached.users;
+            return;
+        }
+    } catch (e) { /* 快取壞掉就忽略，直接讀取 */ }
+
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
         allUsers = [];
         querySnapshot.forEach(docSnap => {
             const uData = docSnap.data();
-            if (uData.name !== currentUser.name) allUsers.push(uData);
+            // 只保留畫面需要的欄位（name / avatar），密碼等資料不進快取
+            if (uData.name !== currentUser.name) allUsers.push({ name: uData.name, avatar: uData.avatar });
         });
+        sessionStorage.setItem(USERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), users: allUsers }));
     } catch (error) {
         console.error("讀取使用者失敗:", error);
     }
@@ -121,7 +135,7 @@ async function enterRoom(roomId, roomData) {
     document.getElementById('activeRoomName').innerText = roomData.name;
     document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=ecfdf5&color=059669`;
     
-    updateMyReadTimestamp(roomId);
+    markRoomRead(roomId, true);
     listenToMessages(roomId);
     listenToActiveRoom(roomId); 
 }
@@ -137,18 +151,44 @@ function listenToActiveRoom(roomId) {
     });
 }
 
-async function updateMyReadTimestamp(roomId) {
-    if (!roomId) return;
+// =================【讀取量優化：已讀時間寫入】=================
+// 舊版：每一次收到訊息快照就寫一次 rooms 文件（readTimestamps + unreadCount）。
+// 每寫一次，所有在線裝置的 rooms 清單 / 未讀 listener 都要重新讀取一次，
+// 4 個人聊天時一則訊息就被放大成數十次讀取。
+// 新版：只有真的需要（有未讀、頁面可見）才寫，且同一頁面每 45 秒最多一次。
+const READ_MARK_THROTTLE_MS = 45000;
+const READ_MARK_FRESH_MS = 5 * 60 * 1000;
+let lastReadMarkAt = 0;
+
+async function markRoomRead(roomId, force = false) {
+    if (!roomId || document.visibilityState !== 'visible') return;
+
+    const me = currentUser.name;
+    const room = chatState.activeRoomData || {};
+    const unread = (room.unreadCount && room.unreadCount[me]) || 0;
+    const lastRead = (room.readTimestamps && room.readTimestamps[me]) || 0;
+    const now = Date.now();
+
+    // 沒有未讀、而且不久前才標記過 → 這次不需要寫入
+    if (unread === 0 && lastRead > 0 && (now - lastRead) < READ_MARK_FRESH_MS) return;
+    // 節流：非強制寫入時，45 秒內最多寫一次
+    if (!force && (now - lastReadMarkAt) < READ_MARK_THROTTLE_MS) return;
+
+    lastReadMarkAt = now;
+    // 先更新本地狀態，避免同一時間重複送出寫入
+    room.unreadCount = { ...(room.unreadCount || {}), [me]: 0 };
+    room.readTimestamps = { ...(room.readTimestamps || {}), [me]: now };
+
     try {
-        const updateData = {};
-        updateData[`readTimestamps.${currentUser.name}`] = Date.now();
-        updateData[`unreadCount.${currentUser.name}`] = 0; 
-        await updateDoc(doc(db, "rooms", roomId), updateData);
+        await updateDoc(doc(db, "rooms", roomId), {
+            [`readTimestamps.${me}`]: now,
+            [`unreadCount.${me}`]: 0
+        });
     } catch (e) {}
 }
 
 document.getElementById('btnBackToList').addEventListener('click', () => {
-    updateMyReadTimestamp(chatState.activeRoomId);
+    markRoomRead(chatState.activeRoomId, true);
     if (messagesUnsubscribe) messagesUnsubscribe();
     if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
     
@@ -159,6 +199,10 @@ document.getElementById('btnBackToList').addEventListener('click', () => {
 });
 
 // =================【讀取優化核心修改區】=================
+// 每次進入聊天室只讀最新 30 筆（單次進房的初始讀取量）。
+// 註：訊息文件裡的圖片是 base64（單張可能數百 KB），降低這個數字同時省下大量流量。
+const MESSAGE_PAGE_SIZE = 30;
+
 function listenToMessages(roomId) {
     const q = query(
         collection(db, "messages"), 
@@ -166,8 +210,8 @@ function listenToMessages(roomId) {
         where("roomId", "==", roomId), 
         // 2. 改為 desc，從最新訊息開始抓
         orderBy("timestamp", "desc"), 
-        // 3. 限制只讀取最新的 50 筆訊息，節省龐大讀取量
-        limit(50)
+        // 3. 只讀取最新的 MESSAGE_PAGE_SIZE 筆訊息，節省龐大讀取量
+        limit(MESSAGE_PAGE_SIZE)
     );
     
     messagesUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -179,7 +223,7 @@ function listenToMessages(roomId) {
         chatState.currentMessagesList = tempMsgs.reverse(); 
         
         renderAllMessages(); 
-        updateMyReadTimestamp(roomId);
+        markRoomRead(roomId);
     }, (error) => {
         // 若因 where + orderBy 依然缺少索引，這裡會印出點擊連結
         console.error("【索引錯誤】讀取聊天訊息失敗！請點擊下方連結建立索引:", error.message);
