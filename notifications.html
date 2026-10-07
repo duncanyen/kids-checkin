@@ -82,7 +82,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, orderBy, limit, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -160,7 +160,8 @@
 
         // 💡 修正 2：移除雙重 orderBy，避免 Firebase 阻擋查詢要求建立複合索引 (Composite Index)
         // 改為單純依據發佈的時間戳記 (timestamp) 降冪排序即可
-        const q = query(collection(db, "app_notifications"), orderBy("timestamp", "desc"));
+        // 💡 讀取量優化：加上 limit，只讀最新 30 則（原本讀取整個 app_notifications 集合）
+        const q = query(collection(db, "app_notifications"), orderBy("timestamp", "desc"), limit(30));
         
         onSnapshot(q, (snapshot) => {
             const container = document.getElementById('noticeListContainer');
