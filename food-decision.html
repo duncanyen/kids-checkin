@@ -12,7 +12,7 @@
 <div class="app">
 <header>
   <button class="back-btn" onclick="window.location.href='index.html'">❮</button>
-  <div class="brand">吃什麼</div>
+  <div class="brand"></div>
   <div class="header-actions">
     <!-- 【修改 4】鎖定身份：移除 onclick，僅作為顯示 -->
     <div class="avatar-btn" id="headerAvatarBtn" style="pointer-events: none;"></div>
@@ -23,17 +23,6 @@
 <section id="home" class="view active">
   <div class="hero">
     <h1>今天，我們吃什麼？</h1>
-    <div class="sub">選一個時段，讓大家一起決定吃什麼</div>
-  </div>
-
-  <div class="card">
-    <div class="row between">
-      <b>家族群組</b>
-      <span class="chip active" id="groupMemberCount">載入中...</span>
-    </div>
-    <!-- 【修改 4】群組成員單純展示，移除按鈕切換效果 -->
-    <div class="member-strip" id="homeMemberStrip" style="margin-top:12px; pointer-events: none;"></div>
-    <div class="meta" style="margin-top:9px">我的身份：<b id="currentMemberName">載入中...</b></div>
   </div>
 
   <div class="section-title">現在要吃哪一餐？</div>
