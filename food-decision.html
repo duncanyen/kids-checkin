@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f8f5">
 <title>吃什麼｜一起投票，吃出好心情</title>
+<!-- 確保 CSS 路徑正確 -->
 <link rel="stylesheet" href="css/food-decision.css">
 </head>
 <body>
 <div class="app">
-<!-- 【修改點 1】對齊 Nexus 主頁的 Header 風格 -->
 <header>
   <button class="back-btn" onclick="window.location.href='index.html'">❮</button>
-  <div class="brand">吃<span>什麼</span></div>
+  <div class="brand">吃什麼</div>
   <div class="header-actions">
-    <!-- 這裡將由 JS 動態塞入真實頭像的 img -->
-    <button class="avatar-btn" onclick="window.foodApp.openMemberPicker()" id="headerAvatarBtn"></button>
+    <!-- 【修改 4】鎖定身份：移除 onclick，僅作為顯示 -->
+    <div class="avatar-btn" id="headerAvatarBtn" style="pointer-events: none;"></div>
   </div>
 </header>
 
@@ -24,6 +24,16 @@
   <div class="hero">
     <h1>今天，我們吃什麼？</h1>
     <div class="sub">選一個時段，讓大家一起決定吃什麼</div>
+  </div>
+
+  <div class="card">
+    <div class="row between">
+      <b>家族群組</b>
+      <span class="chip active" id="groupMemberCount">載入中...</span>
+    </div>
+    <!-- 【修改 4】群組成員單純展示，移除按鈕切換效果 -->
+    <div class="member-strip" id="homeMemberStrip" style="margin-top:12px; pointer-events: none;"></div>
+    <div class="meta" style="margin-top:9px">我的身份：<b id="currentMemberName">載入中...</b></div>
   </div>
 
   <div class="section-title">現在要吃哪一餐？</div>
@@ -45,16 +55,16 @@
   <div class="card" style="padding:13px">
     <div class="vote-header">
       <div>
-        <div style="font-size:11px;color:var(--muted)">目前投票身份</div>
+        <div style="font-size:11px;color:var(--muted)">我的投票身份</div>
         <div class="row" style="margin-top:4px">
-          <div id="voteFaceContainer"></div> <!-- JS 會在這裡塞入圓形頭像 -->
+          <div id="voteFaceContainer"></div> 
           <b id="voteMemberName">載入中...</b>
         </div>
       </div>
       <div class="vote-status" id="voteStatus">尚未投票</div>
     </div>
-    <!-- 【修改點 2】成員列表，JS 將動態載入包含真實頭像的按鈕 -->
-    <div class="member-strip" id="voteMemberStrip"></div>
+    <div style="font-size:12px; color:var(--muted); margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">群組投票動態：</div>
+    <div class="member-strip" id="voteMemberStrip" style="pointer-events: none; margin-top:4px;"></div>
   </div>
 
   <div class="mode-grid">
@@ -86,15 +96,22 @@
 </section>
 
 <section id="stats" class="view">
-  <div class="hero">
-    <div class="eyebrow">即時統計 · <span id="statsMeal">晚餐</span></div>
-    <h1>答案快出現了。</h1>
-    <div class="sub">每個人的選擇都算數，全部完成後就可以出發。</div>
+  <div class="hero" style="padding-bottom: 0;">
+    <div class="eyebrow">今日即時統計</div>
+    <h1>大家想吃什麼？</h1>
+  </div>
+
+  <!-- 【修改 3】結果頁面加入分頁 (Tabs) 切換不同時段 -->
+  <div class="chips" id="statsTabs" style="margin:14px 0; display:flex; justify-content:space-between; width:100%;">
+    <button class="chip" onclick="window.foodApp.switchStatsTab('早餐', this)" style="flex:1; text-align:center;">早餐</button>
+    <button class="chip" onclick="window.foodApp.switchStatsTab('午餐', this)" style="flex:1; text-align:center;">午餐</button>
+    <button class="chip active" onclick="window.foodApp.switchStatsTab('晚餐', this)" style="flex:1; text-align:center;">晚餐</button>
+    <button class="chip" onclick="window.foodApp.switchStatsTab('宵夜', this)" style="flex:1; text-align:center;">宵夜</button>
   </div>
 
   <div class="card winner-stat stats-hero">
     <div class="trophy">🏆</div>
-    <div style="font-size:11px;color:var(--green2);font-weight:900">目前領先</div>
+    <div style="font-size:11px;color:var(--green2);font-weight:900">目前領先 · <span id="statsMealName">晚餐</span></div>
     <h2 id="winnerStatName">尚未有人投票</h2>
     <p id="winnerStatScore">投下第一票吧</p>
     <div class="people" id="peopleFaces"></div>
@@ -115,6 +132,9 @@
 
   <button class="primary" onclick="window.foodApp.shareResult()">📣 分享結果給群組</button>
   <button class="secondary" style="width:100%;margin-top:10px" onclick="window.foodApp.finishDecision()">那就出發吧！ →</button>
+  
+  <!-- 【修改 2】管理員清除按鈕 -->
+  <button id="adminClearBtn" class="secondary" style="width:100%; margin-top:10px; background:#fef2f2; color:#dc2626; display:none;" onclick="window.foodApp.clearCurrentStats()">🗑️ 清除此時段投票結果</button>
 </section>
 
 <section id="manage" class="view">
@@ -136,7 +156,6 @@
 </section>
 </main>
 
-<!-- 【修改點 3】底部導覽列：間距縮小，四欄平行配置 -->
 <nav class="nav">
   <button class="active" data-view="home" onclick="window.foodApp.go('home',this)">
     <div class="nav-content"><b>⌂</b><span>首頁</span></div>
@@ -157,12 +176,7 @@
 <div class="confetti" id="confetti"></div>
 <div class="toast" id="toast"></div>
 
-<div class="modal" id="memberModal" onclick="if(event.target===this)window.foodApp.closeMemberPicker()">
-  <div class="sheet">
-    <div class="handle"></div><h2 style="margin:0 0 5px">我是誰？</h2><div class="sub">切換身份來模擬群組投票。</div>
-    <div id="memberPickerList" style="margin-top:12px"></div>
-  </div>
-</div>
+<!-- 已經移除切換身份的 Modal -->
 
 <div class="modal" id="modal" onclick="if(event.target===this)window.foodApp.closeModal()">
 <div class="sheet"><div class="handle"></div>
@@ -182,7 +196,6 @@
 <button class="primary" style="margin-top:14px" onclick="window.foodApp.saveRestaurant()">儲存餐廳</button>
 </div></div>
 
-<!-- 預防 JS 尚未載入完成時報錯的防呆機制 -->
 <script>
 window.foodApp = new Proxy({}, {
     get: function(target, prop) {
@@ -191,7 +204,6 @@ window.foodApp = new Proxy({}, {
 });
 </script>
 
-<!-- 引入 Firebase 與 Food 模組 -->
 <script type="module" src="js/food-decision.js"></script>
 </body>
 </html>
