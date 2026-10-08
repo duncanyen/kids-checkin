@@ -1,10 +1,8 @@
-// ⚠️ 重要路徑確認：
-// 如果 firebase-config.js 在上一層目錄 (根目錄)，請改成 import { db } from "../firebase-config.js";
-// 如果跟這個檔案一樣都在 js/ 目錄下，則保留 ./firebase-config.js
+// ⚠️ 確保這裡的路徑與您的 firebase-config.js 位置相符
 import { db } from "./firebase-config.js"; 
 import { collection, doc, getDoc, getDocs, updateDoc, onSnapshot, query, where, addDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-// 將所有功能覆寫綁定到 HTML 可讀取的 window.foodApp
+// 將所有功能綁定到 HTML 可讀取的 window.foodApp
 window.foodApp = (function() {
     
     // ================= 狀態變數 =================
@@ -74,8 +72,8 @@ window.foodApp = (function() {
                 restaurants.push({ id: doc.id, ...doc.data() });
             });
             renderRestaurants();
-            if (document.getElementById('vote').classList.contains('active')) renderVoteList();
-            if (document.getElementById('stats').classList.contains('active')) renderStats();
+            if (document.getElementById('vote')?.classList.contains('active')) renderVoteList();
+            if (document.getElementById('stats')?.classList.contains('active')) renderStats();
         });
     }
 
@@ -105,14 +103,14 @@ window.foodApp = (function() {
                 votes = docSnap.data().votes || {};
                 updateMemberUI();
                 renderVoteList();
-                if (document.getElementById('stats').classList.contains('active')) renderStats();
+                if (document.getElementById('stats')?.classList.contains('active')) renderStats();
             }
         });
     }
 
     function go(id, btn) {
         document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        document.getElementById(id)?.classList.add('active');
         document.querySelectorAll('.nav button').forEach(x => x.classList.remove('active'));
         if (btn) btn.classList.add('active');
         
@@ -136,18 +134,20 @@ window.foodApp = (function() {
     function updateMemberUI() {
         if (!currentUser) return;
         const myName = currentUser.name;
-        document.getElementById('currentMemberName').textContent = myName;
-        document.getElementById('headerAvatar').textContent = getFaceEmoji(myName);
-        document.getElementById('voteMemberName').textContent = myName;
-        document.getElementById('voteFace').textContent = getFaceEmoji(myName);
+        if(document.getElementById('currentMemberName')) document.getElementById('currentMemberName').textContent = myName;
+        if(document.getElementById('headerAvatar')) document.getElementById('headerAvatar').textContent = getFaceEmoji(myName);
+        if(document.getElementById('voteMemberName')) document.getElementById('voteMemberName').textContent = myName;
+        if(document.getElementById('voteFace')) document.getElementById('voteFace').textContent = getFaceEmoji(myName);
         
         generateMemberFaces('homeMemberStrip', true);
         generateMemberFaces('voteMemberStrip', true);
 
         const hasVote = !!votes[myName];
         const s = document.getElementById('voteStatus');
-        s.textContent = hasVote ? '已投票 · ' + getRestaurantName(votes[myName]) : '尚未投票';
-        s.classList.toggle('done', hasVote);
+        if(s) {
+            s.textContent = hasVote ? '已投票 · ' + getRestaurantName(votes[myName]) : '尚未投票';
+            s.classList.toggle('done', hasVote);
+        }
     }
 
     function selectMember(name) {
@@ -160,8 +160,8 @@ window.foodApp = (function() {
 
     function chooseMeal(meal, emoji) {
         selectedMeal = meal;
-        document.getElementById('mealEyebrow').textContent = emoji + ' ' + meal;
-        document.getElementById('statsMeal').textContent = meal;
+        if(document.getElementById('mealEyebrow')) document.getElementById('mealEyebrow').textContent = emoji + ' ' + meal;
+        if(document.getElementById('statsMeal')) document.getElementById('statsMeal').textContent = meal;
         initVoteSession(meal); 
         go('vote', document.querySelector('[data-view=vote]'));
         showList();
@@ -258,9 +258,9 @@ window.foodApp = (function() {
     }
 
     function renderStats() {
-        document.getElementById('statsMeal').textContent = selectedMeal;
+        if(document.getElementById('statsMeal')) document.getElementById('statsMeal').textContent = selectedMeal;
         const total = Object.keys(votes).length;
-        document.getElementById('totalVotes').textContent = total;
+        if(document.getElementById('totalVotes')) document.getElementById('totalVotes').textContent = total;
         
         const counts = {}; 
         Object.values(votes).forEach(id => counts[id] = (counts[id] || 0) + 1);
@@ -268,18 +268,18 @@ window.foodApp = (function() {
         const rows = Object.entries(counts).map(([id, n]) => ({ r: restaurants.find(x => x.id == id), n })).filter(x => x.r).sort((a, b) => b.n - a.n);
         const winner = rows[0];
         
-        document.getElementById('winnerStatName').textContent = winner ? winner.r.name : '尚未有人投票';
-        document.getElementById('winnerStatScore').textContent = winner ? `${winner.n} 票 · ${Math.round(winner.n / Math.max(total, 1) * 100)}%` : '投下第一票吧';
-        document.getElementById('peopleLabel').textContent = `${total} / ${groupMembers.length} 人已完成投票`;
-        document.getElementById('peopleFaces').innerHTML = groupMembers.map(m => votes[m.name] ? `<span class="face" title="${m.name}">${getFaceEmoji(m.name)}</span>` : '').join('');
+        if(document.getElementById('winnerStatName')) document.getElementById('winnerStatName').textContent = winner ? winner.r.name : '尚未有人投票';
+        if(document.getElementById('winnerStatScore')) document.getElementById('winnerStatScore').textContent = winner ? `${winner.n} 票 · ${Math.round(winner.n / Math.max(total, 1) * 100)}%` : '投下第一票吧';
+        if(document.getElementById('peopleLabel')) document.getElementById('peopleLabel').textContent = `${total} / ${groupMembers.length} 人已完成投票`;
+        if(document.getElementById('peopleFaces')) document.getElementById('peopleFaces').innerHTML = groupMembers.map(m => votes[m.name] ? `<span class="face" title="${m.name}">${getFaceEmoji(m.name)}</span>` : '').join('');
         
-        document.getElementById('ranking').innerHTML = rows.length ? rows.map((x, i) => `
+        if(document.getElementById('ranking')) document.getElementById('ranking').innerHTML = rows.length ? rows.map((x, i) => `
             <div style="margin-bottom:18px">
                 <div class="rank"><strong>${i + 1}. ${x.r.name}</strong><span>${x.n} 票 · ${Math.round(x.n / total * 100)}%</span></div>
                 <div class="bar"><i style="width:${x.n / total * 100}%"></i></div>
             </div>`).join('') : '<div class="empty">還沒有投票紀錄。<br>先回去投一票吧！</div>';
         
-        document.getElementById('memberVotes').innerHTML = groupMembers.map(m => {
+        if(document.getElementById('memberVotes')) document.getElementById('memberVotes').innerHTML = groupMembers.map(m => {
             const id = votes[m.name];
             const r = restaurants.find(x => x.id === id);
             return `<div class="member-vote-row"><span class="face">${getFaceEmoji(m.name)}</span><span class="mv-name">${m.name}</span><span class="mv-choice">${r ? foodEmoji(r.food) + ' ' + r.name : '尚未投票'}</span></div>`;
@@ -412,13 +412,19 @@ window.foodApp = (function() {
     }
 
     function toast(msg) {
-        const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window.__toast); window.__toast = setTimeout(() => t.classList.remove('show'), 1900);
+        const t = document.getElementById('toast'); 
+        if(!t) return;
+        t.textContent = msg; t.classList.add('show'); 
+        clearTimeout(window.__toast); 
+        window.__toast = setTimeout(() => t.classList.remove('show'), 1900);
     }
     function beep(freq) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(), o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = freq; o.type = 'sine'; g.gain.setValueAtTime(.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.08, ctx.currentTime + .02); g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .18); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + .2); } catch (e) { } }
     function playSpinSound() { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); [220, 280, 340, 420, 520, 650].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; o.type = 'triangle'; g.gain.value = .025; o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime + i * .28); o.stop(ctx.currentTime + i * .28 + .12); }); } catch (e) { } }
     function playWinSound() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f), i * 90)) }
     function makeConfetti() {
-        const box = document.getElementById('confetti'); box.innerHTML = '';
+        const box = document.getElementById('confetti'); 
+        if(!box) return;
+        box.innerHTML = '';
         for (let i = 0; i < 70; i++) {
             const p = document.createElement('i'); p.style.left = Math.random() * 100 + '%'; p.style.setProperty('--x', (Math.random() * 240 - 120) + 'px'); p.style.animationDelay = (Math.random() * .35) + 's'; p.style.background = ['#10aa78', '#ffd977', '#ffab4c', '#9fc8ff', '#c7b8f4', '#ed6a62'][Math.floor(Math.random() * 6)]; p.style.transform = `rotate(${Math.random() * 360}deg)`; box.appendChild(p);
         }
@@ -434,7 +440,8 @@ window.foodApp = (function() {
 
 })();
 
-// 頁面載入後自動啟動
 document.addEventListener("DOMContentLoaded", () => {
-    window.foodApp.init();
+    if(window.foodApp && typeof window.foodApp.init === 'function') {
+        window.foodApp.init();
+    }
 });
