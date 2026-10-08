@@ -13,15 +13,30 @@ button,input,select,textarea{font:inherit}
 button{border:0;cursor:pointer}
 button:active{transform:scale(.975)}
 .app{max-width:520px;min-height:100svh;margin:auto;background:var(--bg);position:relative}
+
+/* 頂部 Header 對齊主頁風格 */
 header{
-  height:72px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:30;background:rgba(247,248,245,.90);backdrop-filter:blur(18px)
+  height:60px;padding:12px 18px;display:flex;align-items:center;justify-content:center;
+  position:sticky;top:0;z-index:30;background:rgba(247,248,245,.90);backdrop-filter:blur(18px);
 }
-.brand{font-size:21px;font-weight:950;letter-spacing:-.06em}.brand span{color:var(--green)}
-.brand small{font-size:10px;color:#9aa49f;font-weight:700;margin-left:4px}
-.header-actions{display:flex;gap:8px;align-items:center}
-.iconbtn,.avatar-btn{width:42px;height:42px;border-radius:14px;background:#fff;box-shadow:0 5px 18px #163d2d10}
-.avatar-btn{display:grid;place-items:center;font-size:21px}
+.back-btn {
+  position: absolute; left: 18px;
+  width: 36px; height: 36px;
+  border-radius: 12px; background: #fff;
+  display: grid; place-items: center;
+  font-size: 16px; font-weight: bold; color: var(--ink);
+  box-shadow: 0 4px 12px rgba(20,50,38,.08);
+}
+.brand{font-size:18px;font-weight:900;letter-spacing:-.02em; text-align: center;}
+.brand span{color:var(--green)}
+.header-actions{position: absolute; right: 18px; display:flex; gap:8px; align-items:center}
+.iconbtn, .avatar-btn{width:36px; height:36px; border-radius:50%; background:#fff; box-shadow:0 4px 12px rgba(20,50,38,.08); padding:0; overflow:hidden;}
+
+/* 真實頭像樣式 */
+.real-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.face.real-avatar { width: 27px; height: 27px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.people .face.real-avatar { width: 34px; height: 34px; margin-left: -6px; border: 3px solid #fff; }
+
 main{padding:0 18px calc(var(--nav) + 30px)}
 .view{display:none;animation:rise .28s ease}.view.active{display:block}
 @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
@@ -42,7 +57,7 @@ h1{font-size:33px;line-height:1.10;margin:0 0 10px;letter-spacing:-.07em}
 .chip{white-space:nowrap;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:800}.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .chips{display:flex;gap:8px;overflow:auto;padding-bottom:3px}
 .member-strip{display:flex;align-items:center;gap:8px;overflow:auto;padding:4px 1px}
-.member{display:flex;align-items:center;gap:7px;padding:7px 10px 7px 7px;background:#fff;border:1px solid var(--line);border-radius:999px;white-space:nowrap;font-size:12px;font-weight:850}
+.member{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;background:#fff;border:1px solid var(--line);border-radius:999px;white-space:nowrap;font-size:12px;font-weight:850}
 .member.current{border-color:var(--green);box-shadow:0 0 0 3px #10aa7812}
 .face{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#edf6f1;font-size:15px}
 .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -83,8 +98,22 @@ h1{font-size:33px;line-height:1.10;margin:0 0 10px;letter-spacing:-.07em}
 .list-item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.list-item:last-child{border:0}
 .list-info{flex:1}.list-info b{font-size:15px}.list-info small{display:block;color:var(--muted);margin-top:4px;font-size:11px}
 .action{width:36px;height:36px;border-radius:12px;background:#f2f4f2}.danger{color:var(--red)}
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);height:var(--nav);padding:9px 18px calc(9px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(20px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);z-index:40}
-.nav button{background:none;color:#8a948f;font-size:11px;font-weight:900}.nav button b{display:block;font-size:21px;line-height:26px}.nav button.active{color:var(--green2)}
+
+/* 底部導覽列：緊密四欄平行設計 */
+.nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:min(520px,100%);height:var(--nav);
+  padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.94);backdrop-filter:blur(20px);
+  border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(4,1fr);z-index:40;
+}
+.nav button{background:none;color:#8a948f; display:flex; align-items:center; justify-content:center;}
+.nav-content { display:flex; flex-direction:column; align-items:center; gap: 2px; }
+.nav button b{font-size:22px;line-height:1}
+.nav button span{font-size:10px;font-weight:800}
+.nav button.active{color:var(--green2)}
+
 .modal{position:fixed;inset:0;background:#0c171280;z-index:70;display:none;align-items:flex-end;justify-content:center}.modal.show{display:flex}
 .sheet{width:min(520px,100%);background:#fff;border-radius:28px 28px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));max-height:90svh;overflow:auto;animation:sheet .25s ease}
 @keyframes sheet{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
