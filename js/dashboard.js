@@ -61,7 +61,7 @@ window.showDashboard = async function() {
     window.checkCalendarAlerts(user); 
     window.checkWidgetData(user); 
     
-    const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo'];
+    const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food'];
     if (allowedMenus.includes('photodump')) window.fetchAndRenderPhotoCarousel(user);
 };
 
@@ -74,7 +74,8 @@ window.renderDynamicModules = async function(user) {
     sideList.innerHTML = ''; 
     chatContainer.innerHTML = ''; 
     
-    const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo']; 
+    // 【修改】將 'food' (吃什麼) 加入預設允許選單
+    const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food']; 
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
     try {
@@ -95,7 +96,9 @@ window.renderDynamicModules = async function(user) {
         gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">🎮</span>遊戲區</div>`,
         wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">✨</span>許願牆</div>`,
         finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">💰</span>記帳本</div>`,
-        todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">📋</span>待辦事項</div>`
+        todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">📋</span>待辦事項</div>`,
+        // 【新增】吃什麼側邊欄選項
+        food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">🍽️</span>吃什麼？</div>`
     };
     
     order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
@@ -121,6 +124,21 @@ window.renderDynamicModules = async function(user) {
                     <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding-right:4px;">
                         <div style="font-size: 13px; color: var(--text-sub);">連線取得中...</div>
                     </div>
+                </div>
+            `;
+        }
+        
+        // 【新增】吃什麼 Widget 卡片
+        if (allowedMenus.includes('food')) {
+            miniCardsHtml += `
+                <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #fcd34d;">
+                    <div class="mini-widget-icon-bg" style="opacity: 0.4;">🍽️</div>
+                    <div class="mini-widget-header">
+                        <div class="mini-widget-icon" style="background: #fbbf24; color: white;">🍽️</div>
+                        <div class="mini-widget-title" style="color: #92400e;">吃什麼？</div>
+                    </div>
+                    <div class="mini-widget-value" style="color: #b45309; font-size: 16px; margin-top: 8px;">群組票選中</div>
+                    <div class="mini-widget-sub" style="color: #d97706;">點擊決定下一餐</div>
                 </div>
             `;
         }
@@ -171,7 +189,9 @@ window.renderDynamicModules = async function(user) {
         finance: `<div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">💰</div>`,
         checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">📍</div>`,
         gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">🎮</div>`,
-        wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">⭐</div>`
+        wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">⭐</div>`,
+        // 【新增】底部 Dock 捷徑
+        food: `<div class="dock-item" onclick="window.navTo('food-decision.html', '吃什麼？')" title="吃什麼">🍽️</div>`
     };
     
     order.forEach(modKey => {
