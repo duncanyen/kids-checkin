@@ -1,8 +1,6 @@
-// ⚠️ 確保這裡的路徑與您的 firebase-config.js 位置相符
 import { db } from "./firebase-config.js"; 
 import { collection, doc, getDoc, getDocs, updateDoc, onSnapshot, query, where, addDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-// 將所有功能綁定到 HTML 可讀取的 window.foodApp
 window.foodApp = (function() {
     
     // ================= 狀態變數 =================
@@ -57,7 +55,9 @@ window.foodApp = (function() {
             } else {
                 groupMembers = [currentUser];
             }
-            document.getElementById('groupMemberCount').innerText = `${groupMembers.length} 位成員`;
+            if(document.getElementById('groupMemberCount')) {
+                document.getElementById('groupMemberCount').innerText = `${groupMembers.length} 位成員`;
+            }
             updateMemberUI();
         } catch (e) {
             console.error("讀取成員失敗", e);
@@ -120,14 +120,24 @@ window.foodApp = (function() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // ================= UI 與真實頭像渲染 =================
+    // 取得頭像 HTML，若無則 fallback 到文字頭像產生器
+    function getAvatarHtml(userObj, cssClass = "face real-avatar") {
+        const url = userObj?.avatar || `https://ui-avatars.com/api/?name=${userObj?.name || 'User'}&background=e5e7eb`;
+        return `<img src="${url}" class="${cssClass}" alt="${userObj?.name}" />`;
+    }
+
     function generateMemberFaces(containerId, isClickable = false) {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = groupMembers.map((m) => {
             const isMe = m.name === currentUser.name;
-            const emojiFace = getFaceEmoji(m.name);
             const clickEvent = isClickable ? `onclick="window.foodApp.selectMember('${m.name}')"` : '';
-            return `<button class="member ${isMe ? 'current' : ''}" ${clickEvent}><span class="face">${emojiFace}</span>${m.name}</button>`;
+            return `
+            <button class="member ${isMe ? 'current' : ''}" ${clickEvent}>
+                ${getAvatarHtml(m, "face real-avatar")}
+                ${m.name}
+            </button>`;
         }).join('');
     }
 
@@ -135,11 +145,16 @@ window.foodApp = (function() {
         if (!currentUser) return;
         const myName = currentUser.name;
         if(document.getElementById('currentMemberName')) document.getElementById('currentMemberName').textContent = myName;
-        if(document.getElementById('headerAvatar')) document.getElementById('headerAvatar').textContent = getFaceEmoji(myName);
-        if(document.getElementById('voteMemberName')) document.getElementById('voteMemberName').textContent = myName;
-        if(document.getElementById('voteFace')) document.getElementById('voteFace').textContent = getFaceEmoji(myName);
         
-        generateMemberFaces('homeMemberStrip', true);
+        // 更新右上角按鈕的真實頭像
+        const headerBtn = document.getElementById('headerAvatarBtn');
+        if(headerBtn) headerBtn.innerHTML = getAvatarHtml(currentUser, "real-avatar");
+        
+        if(document.getElementById('voteMemberName')) document.getElementById('voteMemberName').textContent = myName;
+        
+        const voteFaceContainer = document.getElementById('voteFaceContainer');
+        if(voteFaceContainer) voteFaceContainer.innerHTML = getAvatarHtml(currentUser, "face real-avatar");
+        
         generateMemberFaces('voteMemberStrip', true);
 
         const hasVote = !!votes[myName];
@@ -271,7 +286,16 @@ window.foodApp = (function() {
         if(document.getElementById('winnerStatName')) document.getElementById('winnerStatName').textContent = winner ? winner.r.name : '尚未有人投票';
         if(document.getElementById('winnerStatScore')) document.getElementById('winnerStatScore').textContent = winner ? `${winner.n} 票 · ${Math.round(winner.n / Math.max(total, 1) * 100)}%` : '投下第一票吧';
         if(document.getElementById('peopleLabel')) document.getElementById('peopleLabel').textContent = `${total} / ${groupMembers.length} 人已完成投票`;
-        if(document.getElementById('peopleFaces')) document.getElementById('peopleFaces').innerHTML = groupMembers.map(m => votes[m.name] ? `<span class="face" title="${m.name}">${getFaceEmoji(m.name)}</span>` : '').join('');
+        
+        // 渲染真實頭像堆疊
+        if(document.getElementById('peopleFaces')) {
+            document.getElementById('peopleFaces').innerHTML = groupMembers.map(m => {
+                if (votes[m.name]) {
+                    return `<img src="${m.avatar || `https://ui-avatars.com/api/?name=${m.name}`}" class="face real-avatar" title="${m.name}" />`;
+                }
+                return '';
+            }).join('');
+        }
         
         if(document.getElementById('ranking')) document.getElementById('ranking').innerHTML = rows.length ? rows.map((x, i) => `
             <div style="margin-bottom:18px">
@@ -282,7 +306,12 @@ window.foodApp = (function() {
         if(document.getElementById('memberVotes')) document.getElementById('memberVotes').innerHTML = groupMembers.map(m => {
             const id = votes[m.name];
             const r = restaurants.find(x => x.id === id);
-            return `<div class="member-vote-row"><span class="face">${getFaceEmoji(m.name)}</span><span class="mv-name">${m.name}</span><span class="mv-choice">${r ? foodEmoji(r.food) + ' ' + r.name : '尚未投票'}</span></div>`;
+            return `
+            <div class="member-vote-row">
+                ${getAvatarHtml(m, "face real-avatar")}
+                <span class="mv-name">${m.name}</span>
+                <span class="mv-choice">${r ? foodEmoji(r.food) + ' ' + r.name : '尚未投票'}</span>
+            </div>`;
         }).join('');
     }
 
@@ -363,7 +392,7 @@ window.foodApp = (function() {
         const list = document.getElementById('memberPickerList');
         list.innerHTML = groupMembers.map((m) => `
             <button onclick="window.foodApp.selectMember('${m.name}')" style="width:100%;display:flex;align-items:center;gap:12px;background:${m.name === currentUser.name ? '#e4f8ef' : '#f7f9f8'};border:1px solid ${m.name === currentUser.name ? '#a9e3cc' : '#e7ece9'};padding:13px;border-radius:17px;margin-bottom:9px;text-align:left">
-                <span class="face" style="width:38px;height:38px">${getFaceEmoji(m.name)}</span>
+                ${getAvatarHtml(m, "face real-avatar")}
                 <span style="flex:1"><b>${m.name}</b><small style="display:block;color:#7b8781;margin-top:3px">${votes[m.name] ? '已投票' : '尚未投票'}</small></span>
                 ${m.name === currentUser.name ? '<b style="color:#087957">✓</b>' : ''}
             </button>`).join('');
@@ -399,13 +428,6 @@ window.foodApp = (function() {
     function candidates() { return restaurants.filter(r => r.meal === '不限' || r.meal === selectedMeal); }
     function showWheel() { document.getElementById('wheelPanel').style.display = 'block'; document.getElementById('listPanel').style.display = 'none'; document.getElementById('wheelState').textContent = '準備好了嗎？'; window.scrollTo({ top: document.getElementById('wheelPanel').offsetTop - 80, behavior: 'smooth' }); }
     function showList() { document.getElementById('wheelPanel').style.display = 'none'; document.getElementById('listPanel').style.display = 'block'; renderVoteList(); }
-
-    function getFaceEmoji(name) {
-        if (/爸|哥|公/.test(name)) return '👨';
-        if (/媽|姐|妹/.test(name)) return '👩';
-        if (/明/.test(name)) return '🧒';
-        return '🧑'; 
-    }
 
     function foodEmoji(food) {
         if (/麵|拉麵/.test(food)) return '🍜'; if (/飯|丼/.test(food)) return '🍚'; if (/壽司/.test(food)) return '🍣'; if (/牛排/.test(food)) return '🥩'; if (/披薩/.test(food)) return '🍕'; if (/漢堡/.test(food)) return '🍔'; if (/火鍋/.test(food)) return '🍲'; if (/蛋餅|早餐/.test(food)) return '🥞'; if (/咖啡/.test(food)) return '☕'; return '🍽️';
