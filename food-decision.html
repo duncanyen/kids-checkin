@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f8f5">
 <title>吃什麼｜一起投票，吃出好心情</title>
-<!-- 確保 CSS 路徑正確 -->
 <link rel="stylesheet" href="css/food-decision.css">
 </head>
 <body>
 <div class="app">
+<!-- 【修改點 1】對齊 Nexus 主頁的 Header 風格 -->
 <header>
+  <button class="back-btn" onclick="window.location.href='index.html'">❮</button>
+  <div class="brand">吃<span>什麼</span></div>
   <div class="header-actions">
-    <button class="iconbtn" onclick="window.location.href='index.html'" style="margin-right:8px">❮</button>
-    <button class="avatar-btn" onclick="window.foodApp.openMemberPicker()" id="headerAvatar">👨</button>
+    <!-- 這裡將由 JS 動態塞入真實頭像的 img -->
+    <button class="avatar-btn" onclick="window.foodApp.openMemberPicker()" id="headerAvatarBtn"></button>
   </div>
 </header>
 
@@ -44,10 +46,14 @@
     <div class="vote-header">
       <div>
         <div style="font-size:11px;color:var(--muted)">目前投票身份</div>
-        <div class="row" style="margin-top:4px"><span class="face" id="voteFace">👨</span><b id="voteMemberName">載入中...</b></div>
+        <div class="row" style="margin-top:4px">
+          <div id="voteFaceContainer"></div> <!-- JS 會在這裡塞入圓形頭像 -->
+          <b id="voteMemberName">載入中...</b>
+        </div>
       </div>
       <div class="vote-status" id="voteStatus">尚未投票</div>
     </div>
+    <!-- 【修改點 2】成員列表，JS 將動態載入包含真實頭像的按鈕 -->
     <div class="member-strip" id="voteMemberStrip"></div>
   </div>
 
@@ -130,11 +136,20 @@
 </section>
 </main>
 
+<!-- 【修改點 3】底部導覽列：間距縮小，四欄平行配置 -->
 <nav class="nav">
-  <button class="active" data-view="home" onclick="window.foodApp.go('home',this)"><b>⌂</b>首頁</button>
-  <button data-view="vote" onclick="window.foodApp.go('vote',this)"><b>◎</b>投票</button>
-  <button data-view="stats" onclick="window.foodApp.go('stats',this)"><b>♧</b>結果</button>
-  <button data-view="manage" onclick="window.foodApp.go('manage',this)"><b>⚙</b>管理</button>
+  <button class="active" data-view="home" onclick="window.foodApp.go('home',this)">
+    <div class="nav-content"><b>⌂</b><span>首頁</span></div>
+  </button>
+  <button data-view="vote" onclick="window.foodApp.go('vote',this)">
+    <div class="nav-content"><b>◎</b><span>投票</span></div>
+  </button>
+  <button data-view="stats" onclick="window.foodApp.go('stats',this)">
+    <div class="nav-content"><b>♧</b><span>結果</span></div>
+  </button>
+  <button data-view="manage" onclick="window.foodApp.go('manage',this)">
+    <div class="nav-content"><b>⚙</b><span>管理</span></div>
+  </button>
 </nav>
 </div>
 
