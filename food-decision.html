@@ -1,0 +1,103 @@
+<!-- 吃什麼 模組主容器 -->
+<div class="food-module-container" id="foodModule">
+    
+    <!-- 頂部標題與管理按鈕 -->
+    <div class="food-header">
+        <div class="food-title-group">
+            <h2>😋 今天吃什麼？</h2>
+            <p>解決群組每天最大的煩惱</p>
+        </div>
+        <button class="btn-icon-glass" onclick="window.foodApp.openManageModal()" title="管理美食清單">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+    </div>
+
+    <!-- 餐期分類 (早/中/晚/宵夜) - 帶有滑動指示器 -->
+    <div class="food-category-tabs">
+        <div class="tab-indicator" id="foodTabIndicator"></div>
+        <button class="f-tab active" onclick="window.foodApp.setCategory('breakfast', 0)">早餐</button>
+        <button class="f-tab" onclick="window.foodApp.setCategory('lunch', 1)">中餐</button>
+        <button class="f-tab" onclick="window.foodApp.setCategory('dinner', 2)">晚餐</button>
+        <button class="f-tab" onclick="window.foodApp.setCategory('latenight', 3)">宵夜</button>
+    </div>
+
+    <!-- 模式切換 (輪盤 / 票選) -->
+    <div class="mode-toggle-wrapper">
+        <div class="mode-toggle">
+            <input type="radio" id="modeVote" name="foodMode" value="vote" checked onchange="window.foodApp.switchMode('vote')">
+            <label for="modeVote">🗳️ 群組票選</label>
+            
+            <input type="radio" id="modeWheel" name="foodMode" value="wheel" onchange="window.foodApp.switchMode('wheel')">
+            <label for="modeWheel">🎯 命運輪盤</label>
+            
+            <div class="mode-slider"></div>
+        </div>
+    </div>
+
+    <!-- 內容展示區 -->
+    <div class="food-content-area">
+        
+        <!-- 模式A：票選清單 -->
+        <div id="viewVote" class="view-section active">
+            <div class="vote-list-container" id="voteListContainer">
+                <!-- 動態載入票選卡片 -->
+            </div>
+            <button class="btn-floating-add" onclick="window.foodApp.openManageModal()">+ 提議新選項</button>
+        </div>
+
+        <!-- 模式B：幸運輪盤 -->
+        <div id="viewWheel" class="view-section">
+            <div class="wheel-canvas-container">
+                <div class="wheel-pointer">
+                    <svg viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2L2 22h20L12 2z"/></svg>
+                </div>
+                <canvas id="foodWheelCanvas" width="320" height="320"></canvas>
+            </div>
+            <button class="btn-glowing-spin" id="btnSpinWheel" onclick="window.foodApp.spinWheel()">🚀 開始轉動</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- 新增/修改 美食 (Bottom Sheet Modal) -->
+<div class="food-overlay" id="foodManageModal">
+    <div class="food-bottom-sheet">
+        <div class="sheet-header">
+            <h3>✨ 提議美食</h3>
+            <button class="btn-close-sheet" onclick="window.foodApp.closeManageModal()">✕</button>
+        </div>
+        <div class="sheet-body">
+            <div class="form-group">
+                <label>適用餐期 (可複選)</label>
+                <div class="tag-selector" id="mealTypeSelector">
+                    <span class="type-tag active" data-type="breakfast">早餐</span>
+                    <span class="type-tag active" data-type="lunch">中餐</span>
+                    <span class="type-tag active" data-type="dinner">晚餐</span>
+                    <span class="type-tag" data-type="latenight">宵夜</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>餐廳 / 店名</label>
+                <input type="text" id="foodStoreName" placeholder="例如：巷口那家麵店">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>必點美食</label>
+                    <input type="text" id="foodItemName" placeholder="例如：麻醬麵">
+                </div>
+                <div class="form-group">
+                    <label>價位</label>
+                    <select id="foodPrice">
+                        <option value="1">💰 平價</option>
+                        <option value="2">💰💰 中等</option>
+                        <option value="3">💰💰💰 昂貴</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-primary-submit" onclick="window.foodApp.submitFood()">新增至清單</button>
+        </div>
+    </div>
+</div>
+
+<!-- 歡呼特效 Canvas (輪盤中獎用) -->
+<canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;"></canvas>
