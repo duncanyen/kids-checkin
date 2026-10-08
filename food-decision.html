@@ -1,103 +1,188 @@
-<!-- 吃什麼 模組主容器 -->
-<div class="food-module-container" id="foodModule">
-    
-    <!-- 頂部標題與管理按鈕 -->
-    <div class="food-header">
-        <div class="food-title-group">
-            <h2>😋 今天吃什麼？</h2>
-            <p>解決群組每天最大的煩惱</p>
-        </div>
-        <button class="btn-icon-glass" onclick="window.foodApp.openManageModal()" title="管理美食清單">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f8f5">
+<title>吃什麼｜一起投票，吃出好心情</title>
+<link rel="stylesheet" href="css/food.css">
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">吃<span>什麼</span><small>一起投票・吃出好心情</small></div>
+  <div class="header-actions">
+    <!-- 加入返回按鈕，整合進 Nexus -->
+    <button class="iconbtn" onclick="window.location.href='index.html'" style="margin-right:8px">❮</button>
+    <button class="avatar-btn" onclick="window.foodApp.openMemberPicker()" id="headerAvatar">👨</button>
+  </div>
+</header>
+
+<main>
+<section id="home" class="view active">
+  <div class="hero">
+    <div class="eyebrow">今天不用再問「你決定就好」</div>
+    <h1>今天，<br>我們吃什麼？</h1>
+    <div class="sub">選一個時段，讓大家一起決定。最後把選擇交給群組。</div>
+  </div>
+
+  <div class="card">
+    <div class="row between">
+      <b>家族群</b>
+      <span class="chip active" id="groupMemberCount">載入中...</span>
     </div>
-
-    <!-- 餐期分類 (早/中/晚/宵夜) - 帶有滑動指示器 -->
-    <div class="food-category-tabs">
-        <div class="tab-indicator" id="foodTabIndicator"></div>
-        <button class="f-tab active" onclick="window.foodApp.setCategory('breakfast', 0)">早餐</button>
-        <button class="f-tab" onclick="window.foodApp.setCategory('lunch', 1)">中餐</button>
-        <button class="f-tab" onclick="window.foodApp.setCategory('dinner', 2)">晚餐</button>
-        <button class="f-tab" onclick="window.foodApp.setCategory('latenight', 3)">宵夜</button>
+    <div class="member-strip" id="homeMemberStrip" style="margin-top:12px">
+      <!-- 成員會動態載入 -->
     </div>
+    <div class="meta" style="margin-top:9px">目前使用身份：<b id="currentMemberName">載入中...</b></div>
+  </div>
 
-    <!-- 模式切換 (輪盤 / 票選) -->
-    <div class="mode-toggle-wrapper">
-        <div class="mode-toggle">
-            <input type="radio" id="modeVote" name="foodMode" value="vote" checked onchange="window.foodApp.switchMode('vote')">
-            <label for="modeVote">🗳️ 群組票選</label>
-            
-            <input type="radio" id="modeWheel" name="foodMode" value="wheel" onchange="window.foodApp.switchMode('wheel')">
-            <label for="modeWheel">🎯 命運輪盤</label>
-            
-            <div class="mode-slider"></div>
-        </div>
+  <div class="section-title">現在要吃哪一餐？</div>
+  <div class="meal-grid">
+    <button class="meal breakfast" onclick="window.foodApp.chooseMeal('早餐','🌤️')"><span class="emoji">🌤️</span><b>早餐</b><small>早安，吃飽再出發</small></button>
+    <button class="meal lunch" onclick="window.foodApp.chooseMeal('午餐','🍱')"><span class="emoji">🍱</span><b>午餐</b><small>中午吃什麼！</small></button>
+    <button class="meal dinner" onclick="window.foodApp.chooseMeal('晚餐','🍲')"><span class="emoji">🍲</span><b>晚餐</b><small>今天的重頭戲</small></button>
+    <button class="meal late" onclick="window.foodApp.chooseMeal('宵夜','🌙')"><span class="emoji">🌙</span><b>宵夜</b><small>夜深了，來一口</small></button>
+  </div>
+</section>
+
+<section id="vote" class="view">
+  <div class="hero">
+    <div class="eyebrow" id="mealEyebrow">🍲 晚餐</div>
+    <h1>大家來決定</h1>
+    <div class="sub">可以把決定交給命運，也可以每個人投一票。</div>
+  </div>
+
+  <div class="card" style="padding:13px">
+    <div class="vote-header">
+      <div>
+        <div style="font-size:11px;color:var(--muted)">目前投票身份</div>
+        <div class="row" style="margin-top:4px"><span class="face" id="voteFace">👨</span><b id="voteMemberName">載入中...</b></div>
+      </div>
+      <div class="vote-status" id="voteStatus">尚未投票</div>
     </div>
-
-    <!-- 內容展示區 -->
-    <div class="food-content-area">
-        
-        <!-- 模式A：票選清單 -->
-        <div id="viewVote" class="view-section active">
-            <div class="vote-list-container" id="voteListContainer">
-                <!-- 動態載入票選卡片 -->
-            </div>
-            <button class="btn-floating-add" onclick="window.foodApp.openManageModal()">+ 提議新選項</button>
-        </div>
-
-        <!-- 模式B：幸運輪盤 -->
-        <div id="viewWheel" class="view-section">
-            <div class="wheel-canvas-container">
-                <div class="wheel-pointer">
-                    <svg viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2L2 22h20L12 2z"/></svg>
-                </div>
-                <canvas id="foodWheelCanvas" width="320" height="320"></canvas>
-            </div>
-            <button class="btn-glowing-spin" id="btnSpinWheel" onclick="window.foodApp.spinWheel()">🚀 開始轉動</button>
-        </div>
-
+    <div class="member-strip" id="voteMemberStrip">
+       <!-- 成員會動態載入 -->
     </div>
+  </div>
+
+  <div class="mode-grid">
+    <button class="mode" onclick="window.foodApp.showWheel()"><span style="font-size:31px">🎡</span><strong>交給命運</strong><span>大家都不想決定？讓輪盤幫你選。</span></button>
+    <button class="mode" onclick="window.foodApp.showList()"><span style="font-size:31px">🗳️</span><strong>大家票選</strong><span>每人一票，看誰最受歡迎。</span></button>
+  </div>
+
+  <div id="wheelPanel" class="card wheel-card" style="display:none;margin-top:14px">
+    <div class="wheel-intro"><strong>「大家都不想決定，那就交給命運。」</strong><p id="wheelHint">輪盤會從本時段候選餐廳中選出一家</p></div>
+    <div class="wheel-stage">
+      <div class="pointer"></div>
+      <div id="wheel" class="wheel"><div class="wheel-label">吃什麼？</div></div>
+    </div>
+    <div class="wheel-state" id="wheelState">準備好了嗎？</div>
+    <div id="winner" class="winner">
+      <div class="bigfood" id="winnerFood">🍜</div>
+      <div class="winner-name" id="winnerName">一蘭拉麵</div>
+      <small id="winnerMeta">日式 · 拉麵 · $$</small>
+      <button class="primary" style="margin-top:14px" onclick="window.foodApp.acceptWheelWinner()">今晚就它了！ →</button>
+    </div>
+    <button class="primary" id="spinBtn" onclick="window.foodApp.startSpin()">🎡 開始轉！</button>
+  </div>
+
+  <div id="listPanel" class="card" style="display:none;margin-top:14px">
+    <div class="row between"><b>候選餐廳</b><span class="meta">每人 1 票，可更換</span></div>
+    <div id="voteList"></div>
+    <button class="secondary" style="width:100%;margin-top:12px" onclick="window.foodApp.go('stats',document.querySelector('[data-view=stats]'))">查看目前結果 →</button>
+  </div>
+</section>
+
+<section id="stats" class="view">
+  <div class="hero">
+    <div class="eyebrow">即時統計 · <span id="statsMeal">晚餐</span></div>
+    <h1>答案快出現了。</h1>
+    <div class="sub">每個人的選擇都算數，全部完成後就可以出發。</div>
+  </div>
+
+  <div class="card winner-stat stats-hero">
+    <div class="trophy">🏆</div>
+    <div style="font-size:11px;color:var(--green2);font-weight:900">目前領先</div>
+    <h2 id="winnerStatName">尚未有人投票</h2>
+    <p id="winnerStatScore">投下第一票吧</p>
+    <div class="people" id="peopleFaces"></div>
+    <div class="people-label" id="peopleLabel">0 / 0 人已完成投票</div>
+  </div>
+
+  <div class="card stat-big"><b id="totalVotes">0</b><br><span>總票數 · 每人最多一票</span></div>
+
+  <div class="card">
+    <div class="row between"><b>即時排名</b><span class="meta">票數 / 比例</span></div>
+    <div id="ranking" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <b>每個人的選擇</b>
+    <div class="member-votes" id="memberVotes"></div>
+  </div>
+
+  <button class="primary" onclick="window.foodApp.shareResult()">📣 分享結果給群組</button>
+  <button class="secondary" style="width:100%;margin-top:10px" onclick="window.foodApp.finishDecision()">那就出發吧！ →</button>
+</section>
+
+<section id="manage" class="view">
+  <div class="hero">
+    <div class="eyebrow">大家一起維護</div>
+    <h1>餐廳清單</h1>
+    <div class="sub">每個群組成員都可以新增、修改、刪除，讓清單越吃越完整。</div>
+  </div>
+  <button class="primary" onclick="window.foodApp.openRestaurant()">＋ 新增餐廳</button>
+  <div class="manage-note">💡 建議每間餐廳至少設定「代表食物」與「適合時段」，輪盤和票選就能自動幫你篩選。</div>
+  <div class="chips">
+    <button class="chip active" onclick="window.foodApp.filterRestaurants('全部',this)">全部</button>
+    <button class="chip" onclick="window.foodApp.filterRestaurants('中式',this)">中式</button>
+    <button class="chip" onclick="window.foodApp.filterRestaurants('日式',this)">日式</button>
+    <button class="chip" onclick="window.foodApp.filterRestaurants('速食',this)">速食</button>
+    <button class="chip" onclick="window.foodApp.filterRestaurants('其他',this)">其他</button>
+  </div>
+  <div class="card" id="restaurantList" style="margin-top:12px"></div>
+</section>
+</main>
+
+<nav class="nav">
+  <button class="active" data-view="home" onclick="window.foodApp.go('home',this)"><b>⌂</b>首頁</button>
+  <button data-view="vote" onclick="window.foodApp.go('vote',this)"><b>◎</b>投票</button>
+  <button data-view="stats" onclick="window.foodApp.go('stats',this)"><b>♧</b>結果</button>
+  <button data-view="manage" onclick="window.foodApp.go('manage',this)"><b>⚙</b>管理</button>
+</nav>
 </div>
 
-<!-- 新增/修改 美食 (Bottom Sheet Modal) -->
-<div class="food-overlay" id="foodManageModal">
-    <div class="food-bottom-sheet">
-        <div class="sheet-header">
-            <h3>✨ 提議美食</h3>
-            <button class="btn-close-sheet" onclick="window.foodApp.closeManageModal()">✕</button>
-        </div>
-        <div class="sheet-body">
-            <div class="form-group">
-                <label>適用餐期 (可複選)</label>
-                <div class="tag-selector" id="mealTypeSelector">
-                    <span class="type-tag active" data-type="breakfast">早餐</span>
-                    <span class="type-tag active" data-type="lunch">中餐</span>
-                    <span class="type-tag active" data-type="dinner">晚餐</span>
-                    <span class="type-tag" data-type="latenight">宵夜</span>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>餐廳 / 店名</label>
-                <input type="text" id="foodStoreName" placeholder="例如：巷口那家麵店">
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>必點美食</label>
-                    <input type="text" id="foodItemName" placeholder="例如：麻醬麵">
-                </div>
-                <div class="form-group">
-                    <label>價位</label>
-                    <select id="foodPrice">
-                        <option value="1">💰 平價</option>
-                        <option value="2">💰💰 中等</option>
-                        <option value="3">💰💰💰 昂貴</option>
-                    </select>
-                </div>
-            </div>
-            <button class="btn-primary-submit" onclick="window.foodApp.submitFood()">新增至清單</button>
-        </div>
-    </div>
+<div class="countdown" id="countdown"><div><b id="countNumber">3</b><p>把今天的選擇交給命運</p></div></div>
+<div class="confetti" id="confetti"></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="memberModal" onclick="if(event.target===this)window.foodApp.closeMemberPicker()">
+  <div class="sheet">
+    <div class="handle"></div><h2 style="margin:0 0 5px">我是誰？</h2><div class="sub">切換身份來模擬群組投票。</div>
+    <div id="memberPickerList" style="margin-top:12px"></div>
+  </div>
 </div>
 
-<!-- 歡呼特效 Canvas (輪盤中獎用) -->
-<canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;"></canvas>
+<div class="modal" id="modal" onclick="if(event.target===this)window.foodApp.closeModal()">
+<div class="sheet"><div class="handle"></div>
+<h2 id="modalTitle" style="margin:0">新增餐廳</h2>
+<input type="hidden" id="editId">
+<label>店名 *</label><input id="rName" placeholder="例如：海底撈、麥當勞">
+<div class="form-grid">
+<div><label>類型</label><select id="rType"><option>中式</option><option>日式</option><option>韓式</option><option>西式</option><option>速食</option><option>火鍋</option><option>燒肉</option><option>咖啡</option><option>其他</option></select></div>
+<div><label>價格</label><select id="rPrice"><option>$</option><option>$$</option><option>$$$</option><option>$$$$</option></select></div>
+</div>
+<label>代表食物 *</label><input id="rFood" placeholder="例如：牛肉麵、漢堡、壽司">
+<div class="form-grid">
+<div><label>適合時段</label><select id="rMeal"><option>早餐</option><option>午餐</option><option>晚餐</option><option>宵夜</option><option>不限</option></select></div>
+<div><label>標籤</label><input id="rTags" placeholder="親子、外帶"></div>
+</div>
+<label>備註</label><textarea id="rNote" placeholder="例如：週末常排隊、適合多人"></textarea>
+<button class="primary" style="margin-top:14px" onclick="window.foodApp.saveRestaurant()">儲存餐廳</button>
+</div></div>
+
+<!-- 引入 Firebase 與 Food 模組 -->
+<script type="module" src="js/food.js"></script>
+</body>
+</html>
