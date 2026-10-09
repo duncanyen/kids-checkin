@@ -1,7 +1,5 @@
 import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-// 1. 直接從 firebase-config.js 引入 db
 import { db } from "./firebase-config.js";
-// 2. 從 chat-core.js 引入共用狀態
 import { currentUser, currentGroupId, allUsers, chatState } from "./chat-core.js";
 
 let uploadedAvatarBase64_Create = null; 
@@ -11,10 +9,8 @@ function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openSubModal(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
 function backToSettings(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
 
-// 取得屬於當前主群組成員的列表
 function getGroupMembers() {
     return allUsers.filter(u => {
-        // 現在 allUsers 已經有存下真正的 groupId 等欄位，此處篩選將正常發揮作用
         if (u.groupIds && Array.isArray(u.groupIds)) return u.groupIds.includes(currentGroupId);
         if (u.groups && Array.isArray(u.groups)) {
             return u.groups.some(g => (typeof g === 'object' ? g.id : g) === currentGroupId);
@@ -29,7 +25,6 @@ function getCheckboxesHtml(containerId, selected = []) {
     const groupUsers = getGroupMembers();
     
     groupUsers.forEach(u => {
-        // 新增群組時排除自己
         if (u.name !== currentUser.name) {
             html += `<label class="member-item"><input type="checkbox" value="${u.name}" ${selected.includes(u.name) ? 'checked' : ''}> <span>${u.name}</span></label>`;
         }
@@ -75,14 +70,55 @@ document.getElementById('btnOpenSettingsMenu').addEventListener('click', () => {
     document.getElementById('roomSettingsMenu').style.display = 'flex';
 });
 
+// =================【新增踢人功能】=================
+// 管理員 (admin/parent) 或是該群組的創立者 (creator) 才有權限踢人
 function openViewMembers() {
     let html = '';
     const members = chatState.activeRoomData.participants || [];
+    const isRoomAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent' || chatState.activeRoomData.creator === currentUser.name);
+
     members.forEach(p => {
-        html += `<div class="member-item" style="cursor:default; padding: 4px 0;"><span>👤 ${p}</span></div>`;
+        let kickBtn = '';
+        // 不要讓自己踢自己
+        if (isRoomAdmin && p !== currentUser.name) {
+            kickBtn = `<button class="btn-kick-member" onclick="window.chatRooms.kickMember('${p}')">移除</button>`;
+        }
+        
+        html += `<div class="member-item" style="cursor:default; padding: 6px 0; display:flex; align-items:center;">
+                    <span>👤 ${p}</span>
+                    ${kickBtn}
+                 </div>`;
     });
     document.getElementById('viewMemberList').innerHTML = html;
     openSubModal('viewMembersModal');
+}
+
+// 實際剔除成員的函式
+async function kickMember(targetMember) {
+    if (!confirm(`確定要將 ${targetMember} 移出聊天室嗎？`)) return;
+    
+    try {
+        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants: arrayRemove(targetMember) });
+
+        const systemMsgText = `${targetMember} 已退出聊天室`;
+        await addDoc(collection(db, "messages"), { 
+            groupId: currentGroupId, 
+            roomId: chatState.activeRoomId, 
+            sender: "系統", 
+            isSystem: true,
+            text: systemMsgText, 
+            timestamp: serverTimestamp() 
+        });
+
+        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { 
+            lastMessage: systemMsgText, 
+            lastMessageTime: serverTimestamp() 
+        });
+
+        // 刷新列表顯示
+        openViewMembers(); 
+        alert(`已將 ${targetMember} 移出聊天室`);
+    } catch (e) { alert("移除成員失敗"); }
 }
 
 function openInviteMembers() {
@@ -119,6 +155,7 @@ document.getElementById('btnSaveGroupEdit').addEventListener('click', async () =
     } catch (e) { alert("儲存失敗"); }
 });
 
+// =================【新增邀請提示功能】=================
 document.getElementById('btnSaveInvite').addEventListener('click', async () => {
     const checkboxes = document.querySelectorAll('#inviteMemberList input[type="checkbox"]:checked');
     const newMembers = Array.from(checkboxes).map(cb => cb.value);
@@ -128,6 +165,26 @@ document.getElementById('btnSaveInvite').addEventListener('click', async () => {
     const participants = [...(chatState.activeRoomData.participants || []), ...newMembers];
     try {
         await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants });
+
+        // 幫每一位新成員發送系統提示訊息
+        for (const member of newMembers) {
+            const systemMsgText = `${member} 加入聊天室`;
+            await addDoc(collection(db, "messages"), { 
+                groupId: currentGroupId, 
+                roomId: chatState.activeRoomId, 
+                sender: "系統", 
+                isSystem: true,
+                text: systemMsgText, 
+                timestamp: serverTimestamp() 
+            });
+        }
+        
+        // 更新聊天室最新對話
+        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { 
+            lastMessage: `${newMembers.join(', ')} 加入聊天室`, 
+            lastMessageTime: serverTimestamp() 
+        });
+
         backToSettings('inviteMembersModal');
     } catch (e) { alert("邀請成員失敗"); }
 });
@@ -135,10 +192,8 @@ document.getElementById('btnSaveInvite').addEventListener('click', async () => {
 async function leaveGroup() {
     if (!confirm(`確定要退出「${chatState.activeRoomData.name}」群組嗎？`)) return;
     try {
-        // 更新房間裡的 participant 陣列，把自己的名字移除
         await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants: arrayRemove(currentUser.name) });
 
-        // 新增：寫入一筆是 isSystem 的訊息做為退出提示
         const systemMsgText = `${currentUser.name} 已退出聊天室`;
         await addDoc(collection(db, "messages"), { 
             groupId: currentGroupId, 
@@ -149,7 +204,6 @@ async function leaveGroup() {
             timestamp: serverTimestamp() 
         });
 
-        // 順便把外層看板的最新訊息更新，讓其他成員看到
         await updateDoc(doc(db, "rooms", chatState.activeRoomId), { 
             lastMessage: systemMsgText, 
             lastMessageTime: serverTimestamp() 
@@ -170,7 +224,6 @@ function exportChatHistory() {
             const d = msg.timestamp.toDate();
             timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         }
-        // 若為系統退出訊息也放進匯出紀錄中
         if (msg.isSystem) {
             textOutput += `[${timeStr}] 系統: ${msg.text}\n`;
         } else {
@@ -229,8 +282,8 @@ function handleAvatarUpload(inputId, previewId, isCreate) {
 handleAvatarUpload('createAvatarInput', 'createAvatarPreview', true);
 handleAvatarUpload('editAvatarInput', 'editAvatarPreview', false);
 
-// 將需要被 HTML 觸發的函數掛載到 window
+// 將 kickMember 暴露給 HTML onClick 調用
 window.chatRooms = {
     closeModal, openSubModal, backToSettings, openViewMembers, openInviteMembers,
-    leaveGroup, exportChatHistory, openPhotoGallery
+    leaveGroup, exportChatHistory, openPhotoGallery, kickMember
 };
