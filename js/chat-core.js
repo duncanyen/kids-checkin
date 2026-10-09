@@ -1,7 +1,6 @@
-// 1. 改為從 firebase-config.js 引入 db (請確保 firebase-config.js 有匯出 db)
 import { db } from './firebase-config.js'; 
 import { 
-    collection, addDoc, getDocs, query, where, orderBy, limit, // 新增 limit
+    collection, addDoc, getDocs, query, where, orderBy, limit, 
     onSnapshot, serverTimestamp, doc, updateDoc, increment 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -33,9 +32,10 @@ window._isChatJustLoaded = false;
 fetchFamilyUsers();
 listenToRooms();
 
-// --- 讀取量優化：users 清單快取（原本每次進來聊天室都整包重讀一次）---
-const USERS_CACHE_KEY = 'nexus_users_cache_v1';
-const USERS_CACHE_TTL = 10 * 60 * 1000; // 10 分鐘內沿用快取
+// --- 讀取量優化：users 清單快取 ---
+// 升級快取版號為 v2，強迫載入一次最新包含群組資訊的資料
+const USERS_CACHE_KEY = 'nexus_users_cache_v2';
+const USERS_CACHE_TTL = 10 * 60 * 1000;
 
 async function fetchFamilyUsers() {
     try {
@@ -51,8 +51,16 @@ async function fetchFamilyUsers() {
         allUsers = [];
         querySnapshot.forEach(docSnap => {
             const uData = docSnap.data();
-            // 只保留畫面需要的欄位（name / avatar），密碼等資料不進快取
-            if (uData.name !== currentUser.name) allUsers.push({ name: uData.name, avatar: uData.avatar });
+            // 修正：除了 name, avatar，也要把群組資訊存起來，供 chat-rooms 過濾使用
+            if (uData.name !== currentUser.name) {
+                allUsers.push({ 
+                    name: uData.name, 
+                    avatar: uData.avatar,
+                    groupId: uData.groupId,
+                    groupIds: uData.groupIds,
+                    groups: uData.groups
+                });
+            }
         });
         sessionStorage.setItem(USERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), users: allUsers }));
     } catch (error) {
@@ -69,7 +77,6 @@ function listenToRooms() {
         orderBy("lastMessageTime", "desc")
     );
 
-    // 加入錯誤處理，萬一缺少複合索引，可以在 Console 看到點擊連結
     roomsUnsubscribe = onSnapshot(q, (snapshot) => {
         const container = document.getElementById('roomListContainer');
         container.innerHTML = '';
@@ -114,7 +121,7 @@ function listenToRooms() {
             container.appendChild(div);
         });
     }, (error) => {
-        console.error("【索引錯誤】讀取群組清單失敗！請點擊下方程式碼產生的連結，在 Firebase 自動建立索引:", error.message);
+        console.error("【索引錯誤】讀取群組清單失敗！", error.message);
     });
 }
 
@@ -151,11 +158,6 @@ function listenToActiveRoom(roomId) {
     });
 }
 
-// =================【讀取量優化：已讀時間寫入】=================
-// 舊版：每一次收到訊息快照就寫一次 rooms 文件（readTimestamps + unreadCount）。
-// 每寫一次，所有在線裝置的 rooms 清單 / 未讀 listener 都要重新讀取一次，
-// 4 個人聊天時一則訊息就被放大成數十次讀取。
-// 新版：只有真的需要（有未讀、頁面可見）才寫，且同一頁面每 45 秒最多一次。
 const READ_MARK_THROTTLE_MS = 45000;
 const READ_MARK_FRESH_MS = 5 * 60 * 1000;
 let lastReadMarkAt = 0;
@@ -169,13 +171,10 @@ async function markRoomRead(roomId, force = false) {
     const lastRead = (room.readTimestamps && room.readTimestamps[me]) || 0;
     const now = Date.now();
 
-    // 沒有未讀、而且不久前才標記過 → 這次不需要寫入
     if (unread === 0 && lastRead > 0 && (now - lastRead) < READ_MARK_FRESH_MS) return;
-    // 節流：非強制寫入時，45 秒內最多寫一次
     if (!force && (now - lastReadMarkAt) < READ_MARK_THROTTLE_MS) return;
 
     lastReadMarkAt = now;
-    // 先更新本地狀態，避免同一時間重複送出寫入
     room.unreadCount = { ...(room.unreadCount || {}), [me]: 0 };
     room.readTimestamps = { ...(room.readTimestamps || {}), [me]: now };
 
@@ -198,19 +197,13 @@ document.getElementById('btnBackToList').addEventListener('click', () => {
     document.getElementById('viewRoomList').style.display = 'flex';
 });
 
-// =================【讀取優化核心修改區】=================
-// 每次進入聊天室只讀最新 30 筆（單次進房的初始讀取量）。
-// 註：訊息文件裡的圖片是 base64（單張可能數百 KB），降低這個數字同時省下大量流量。
 const MESSAGE_PAGE_SIZE = 30;
 
 function listenToMessages(roomId) {
     const q = query(
         collection(db, "messages"), 
-        // 1. 移除 redundant 的 groupId 查詢，避免 Firebase 需要更複雜的三層複合索引
         where("roomId", "==", roomId), 
-        // 2. 改為 desc，從最新訊息開始抓
         orderBy("timestamp", "desc"), 
-        // 3. 只讀取最新的 MESSAGE_PAGE_SIZE 筆訊息，節省龐大讀取量
         limit(MESSAGE_PAGE_SIZE)
     );
     
@@ -219,17 +212,14 @@ function listenToMessages(roomId) {
         if (!snapshot.empty) {
             snapshot.forEach((docSnap) => tempMsgs.push({ id: docSnap.id, ...docSnap.data() }));
         }
-        // 4. 因為是從新到舊抓取，為了 UI 呈現正序，必須反轉陣列
         chatState.currentMessagesList = tempMsgs.reverse(); 
         
         renderAllMessages(); 
         markRoomRead(roomId);
     }, (error) => {
-        // 若因 where + orderBy 依然缺少索引，這裡會印出點擊連結
-        console.error("【索引錯誤】讀取聊天訊息失敗！請點擊下方連結建立索引:", error.message);
+        console.error("【索引錯誤】讀取聊天訊息失敗！", error.message);
     });
 }
-// =========================================================
 
 function lockScrollPosition() {
     const msgContainer = document.getElementById('chatMessages');
@@ -247,6 +237,7 @@ function renderAllMessages() {
     
     msgContainer.innerHTML = '';
     let unreadDividerAdded = false;
+    let lastDateStr = ""; // 紀錄上一則訊息的日期
 
     if (chatState.currentMessagesList.length === 0) {
         msgContainer.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; margin-top:20px; font-weight:600;">發個訊息打招呼吧！</div>';
@@ -256,7 +247,19 @@ function renderAllMessages() {
         let msgTimestampMs = Date.now();
         if (msg.timestamp && msg.timestamp.toDate) msgTimestampMs = msg.timestamp.toDate().getTime();
 
-        if (!unreadDividerAdded && chatState.entryReadTimestamp > 0 && msgTimestampMs > chatState.entryReadTimestamp && msg.sender !== currentUser.name) {
+        // --- LINE風格 日期分隔線判斷 ---
+        const d = new Date(msgTimestampMs);
+        const currentDateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        if (currentDateStr !== lastDateStr) {
+            const dateDivider = document.createElement('div');
+            dateDivider.className = "date-divider";
+            dateDivider.innerHTML = `<span class="date-badge">${currentDateStr}</span>`;
+            msgContainer.appendChild(dateDivider);
+            lastDateStr = currentDateStr;
+        }
+
+        // --- 未讀新訊息分隔線 ---
+        if (!unreadDividerAdded && chatState.entryReadTimestamp > 0 && msgTimestampMs > chatState.entryReadTimestamp && msg.sender !== currentUser.name && !msg.isSystem) {
             const divider = document.createElement('div');
             divider.id = "unread-divider-line";
             divider.className = "unread-divider";
@@ -264,6 +267,7 @@ function renderAllMessages() {
             msgContainer.appendChild(divider);
             unreadDividerAdded = true;
         }
+
         appendMessageUI(msg.id, msg, msgTimestampMs);
     });
 
@@ -279,8 +283,17 @@ function renderAllMessages() {
 }
 
 function appendMessageUI(msgId, msg, msgTimestampMs) {
-    const isMine = (msg.sender === currentUser.name);
     const wrapper = document.createElement('div');
+    
+    // 如果是系統退出訊息，特殊渲染置中顯示
+    if (msg.isSystem) {
+        wrapper.className = 'system-msg-wrapper';
+        wrapper.innerHTML = `<span class="system-msg">${msg.text}</span>`;
+        document.getElementById('chatMessages').appendChild(wrapper);
+        return;
+    }
+
+    const isMine = (msg.sender === currentUser.name);
     wrapper.className = `chat-msg-wrapper ${isMine ? 'msg-mine-wrapper' : 'msg-other-wrapper'}`;
     
     let timeStr = "剛才";
@@ -310,6 +323,8 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
     allNames.forEach(pName => {
         displayText = displayText.split(`@${pName}`).join(`<span class="mention-highlight">@${pName}</span>`);
     });
+    // 將換行符號轉為 <br> 讓畫面能正確換行顯示
+    displayText = displayText.replace(/\n/g, '<br>');
 
     let contentHtml = msg.imageUrl 
         ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="event.stopPropagation(); window.chatCore.openPhotoViewer(this.src);" onload="if(window._isChatJustLoaded) window.chatCore.lockScrollPosition();">` 
@@ -336,9 +351,13 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
 const chatInput = document.getElementById('chatInput');
 const mentionDropdown = document.getElementById('mentionDropdown');
 
-chatInput.addEventListener('input', (e) => {
-    const val = chatInput.value;
-    const cursorPos = chatInput.selectionStart;
+// textarea 自動長高與標記監聽
+chatInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+
+    const val = this.value;
+    const cursorPos = this.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
 
@@ -360,10 +379,22 @@ chatInput.addEventListener('input', (e) => {
     mentionDropdown.style.display = 'none';
 });
 
+// Shift+Enter 換行，單純 Enter 送出
+chatInput.addEventListener('keydown', (e) => { 
+    if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        document.getElementById('btnSend').click(); 
+    } 
+});
+
 document.getElementById('btnSend').addEventListener('click', async () => {
     const text = chatInput.value.trim();
     if (!text) return;
-    chatInput.value = ''; document.getElementById('btnSend').disabled = true;
+    
+    // 送出後重置狀態與高度
+    chatInput.value = ''; 
+    chatInput.style.height = 'auto';
+    document.getElementById('btnSend').disabled = true;
     mentionDropdown.style.display = 'none';
 
     try {
@@ -388,7 +419,6 @@ document.getElementById('btnSend').addEventListener('click', async () => {
     } catch (e) {} 
     finally { document.getElementById('btnSend').disabled = false; chatInput.focus(); }
 });
-chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnSend').click(); });
 
 const chatPhotoInput = document.getElementById('chatPhotoInput');
 document.getElementById('btnTriggerPhoto').addEventListener('click', () => chatPhotoInput.click());
