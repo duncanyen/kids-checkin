@@ -1,0 +1,135 @@
+:root {
+    --primary: #10b981;
+    --primary-dark: #059669;
+    --primary-light: #ecfdf5;
+    --danger: #ef4444;
+    --text-main: #1f2937;
+    --text-sub: #6b7280;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    --bg-color: #f8fafc;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; color: var(--text-main); }
+ 
+.top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 500px; margin-left: auto; margin-right: auto; }
+.btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
+.page-title { color: var(--text-main); font-size: 18px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 6px; }
+
+/* 未讀小徽章提示 */
+.unread-badge-global { background: var(--danger); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 700; display: none; }
+
+/* 排序控制列 */
+.sort-bar { max-width: 500px; margin: 0 auto 20px auto; display: flex; justify-content: flex-end; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--text-sub); }
+.sort-select { padding: 6px 12px; border-radius: 12px; border: 1px solid #e5e7eb; background: white; font-weight: 700; color: var(--text-main); outline: none; cursor: pointer; box-shadow: var(--shadow-sm); }
+
+/* FAB 按鈕與選單 */
+.fab-container { position: fixed; bottom: 25px; right: 25px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.fab-menu { display: none; flex-direction: column; gap: 8px; margin-bottom: 10px; animation: slideUp 0.2s ease-out; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fab-menu-btn { background: white; border: 1px solid #e5e7eb; color: var(--text-main); padding: 12px 20px; border-radius: 24px; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+.fab-menu-btn:active { background: #f1f5f9; }
+ 
+.btn-upload-fab { background-color: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s; }
+.btn-upload-fab:active { transform: scale(0.9); }
+
+/* 相簿動態牆容器 */
+.feed-container { max-width: 500px; margin: 0 auto 80px auto; display: flex; flex-direction: column; gap: 20px; }
+ 
+/* 每一篇照片卡片 */
+.photo-card { background: white; border-radius: 22px; box-shadow: var(--shadow-sm); overflow: hidden; border: 1px solid rgba(0,0,0,0.03); }
+.card-header { padding: 14px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #f8fafc; }
+.uploader-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
+.uploader-info { flex: 1; }
+.uploader-name { font-weight: 800; font-size: 15px; color: var(--text-main); }
+.upload-time { font-size: 11px; color: var(--text-sub); margin-top: 2px; font-weight: 600; }
+.btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px; padding: 6px; }
+
+/* 多圖輪播 (Carousel) */
+.photo-carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.photo-carousel::-webkit-scrollbar { display: none; }
+.carousel-item-wrapper { flex: 0 0 100%; scroll-snap-align: start; position: relative; }
+.card-image { width: 100%; max-height: 450px; object-fit: cover; display: block; cursor: pointer; background: #f1f5f9; }
+.img-counter { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; pointer-events: none; backdrop-filter: blur(4px); }
+
+.card-caption { padding: 14px 18px; font-size: 15px; line-height: 1.5; color: var(--text-main); font-weight: 500; }
+
+.interaction-bar { padding: 0 18px 12px 18px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #f1f5f9; }
+.btn-like { background: none; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--text-sub); font-weight: 700; }
+.btn-like.liked { color: #e11d48; }
+.likes-count { font-size: 13px; font-weight: 700; color: var(--text-sub); }
+
+/* 留言區塊 */
+.comments-section { background: #f8fafc; padding: 14px 18px; }
+.comments-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 300px; overflow-y: auto; }
+.comment-item { font-size: 14px; line-height: 1.4; background: white; padding: 10px 14px; border-radius: 14px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+.comment-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.comment-sender { font-weight: 800; color: var(--primary-dark); }
+.comment-time { font-size: 10px; color: var(--text-sub); font-weight: 600; }
+ 
+.comment-content-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.comment-content { flex: 1; word-break: break-all; }
+.reply-tag { color: var(--primary); font-weight: 800; margin-right: 6px; font-size: 13px; background: var(--primary-light); padding: 2px 6px; border-radius: 6px; }
+ 
+.comment-actions { display: flex; gap: 8px; flex-shrink: 0; margin-left: 10px; }
+.btn-action-sm { background: none; border: none; font-size: 12px; cursor: pointer; padding: 0; font-weight: 700; }
+.btn-reply { color: var(--primary); }
+.btn-del-comment { color: var(--danger); }
+
+/* 留言輸入區與回覆提示 */
+.reply-indicator { background: #e2e8f0; color: var(--text-main); font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px 8px 0 0; display: none; justify-content: space-between; align-items: center; margin-bottom: -5px; z-index: 1; position: relative; }
+.btn-cancel-reply { background: none; border: none; color: var(--text-sub); font-weight: 800; cursor: pointer; padding: 0 4px; }
+.comment-input-area { display: flex; gap: 8px; position: relative; z-index: 2; }
+.comment-input { flex: 1; padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 20px; outline: none; font-size: 14px; background: white; font-family: inherit; }
+.comment-input:focus { border-color: var(--primary); }
+.btn-comment { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: 800; cursor: pointer; font-size: 14px; box-shadow: 0 2px 6px rgba(16,185,129,0.2); }
+ 
+/* 上傳 Modal */
+.modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: center; }
+.modal-content { background: white; padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: var(--shadow-lg); }
+.modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; }
+ 
+/* 多圖預覽區塊 */
+.preview-upload-container { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 16px; padding-bottom: 8px; }
+.preview-item { width: 120px; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid #e5e7eb; flex-shrink: 0; background: #f1f5f9; }
+ 
+.upload-caption-input { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 14px; box-sizing: border-box; margin-bottom: 20px; resize: none; background: #f8fafc; font-family: inherit; outline: none; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-cancel { background: #f1f5f9; color: var(--text-main); border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+.btn-confirm { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
+.btn-confirm:disabled { background: var(--text-sub); cursor: not-allowed; box-shadow: none; }
+
+/* 照片全螢幕預覽 */
+.photo-viewer { display: none; position: fixed; z-index: 4000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.95); flex-direction: column; justify-content: center; align-items: center; touch-action: none; overflow: hidden; }
+.viewer-content-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transition: transform 0.15s ease-out; }
+.viewer-content { max-width: 95%; max-height: 85vh; object-fit: contain; border-radius: 8px; user-select: none; transition: transform 0.2s ease; transform-origin: center center; }
+.close-viewer { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); z-index: 4005; }
+.viewer-nav { position: absolute; top: 50%; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; transform: translateY(-50%); pointer-events: none; z-index: 4002; }
+.viewer-nav-btn { pointer-events: auto; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); }
+.viewer-footer { position: absolute; bottom: 25px; color: rgba(255,255,255,0.8); font-size: 14px; font-weight: 600; z-index: 4002; }
+
+/* ================= 塗鴉牆 (Drawing Board) 樣式 ================= */
+.drawing-board-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8fafc; z-index: 5000; flex-direction: column; }
+.draw-header { padding: 15px 20px; background: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; box-shadow: var(--shadow-sm); z-index: 10; }
+.draw-btn-text { background: none; border: none; font-size: 16px; font-weight: 700; color: var(--text-main); cursor: pointer; }
+.draw-btn-primary { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 15px; font-weight: 800; cursor: pointer; }
+ 
+.draw-canvas-container { flex: 1; position: relative; background: white; overflow: hidden; touch-action: none; }
+#drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+#stickerLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+ 
+.sticker-item { position: absolute; font-size: 45px; pointer-events: auto; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+.sticker-item:active { transform: translate(-50%, -50%) scale(1.1) !important; }
+ 
+.draw-toolbar { background: white; padding: 15px 20px 25px 20px; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.03); z-index: 10; }
+.toolbar-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.color-btn { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #e5e7eb; cursor: pointer; transition: transform 0.1s; }
+.color-btn.active { border-color: var(--text-main); transform: scale(1.15); box-shadow: 0 0 0 2px white inset; }
+.size-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; cursor: pointer; border: 2px solid transparent; }
+.size-btn.active { border-color: var(--primary); background: var(--primary-light); }
+.size-dot { background: var(--text-main); border-radius: 50%; }
+.tool-btn { background: #f1f5f9; border: 2px solid transparent; padding: 8px 14px; border-radius: 16px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--text-sub); }
+.tool-btn.active { background: var(--primary-light); color: var(--primary-dark); border-color: var(--primary); }
+.sticker-palette { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; flex: 1; }
+.sticker-btn { font-size: 26px; cursor: pointer; background: none; border: none; transition: transform 0.1s; flex-shrink: 0; }
+.sticker-btn:active { transform: scale(1.2); }
