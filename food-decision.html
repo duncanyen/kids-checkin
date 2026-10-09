@@ -7,6 +7,17 @@
 <title>吃什麼｜一起投票，吃出好心情</title>
 <!-- 確保 CSS 路徑正確 -->
 <link rel="stylesheet" href="css/food-decision.css">
+<style>
+/* 新增 Checkbox 樣式 */
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.checkbox-label { 
+    display: flex; align-items: center; gap: 4px; 
+    font-size: 13px; font-weight: normal; 
+    padding: 6px 10px; background: #f8faf9; 
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+}
+.checkbox-label input { width: auto; margin: 0; }
+</style>
 </head>
 <body>
 <div class="app">
@@ -14,7 +25,6 @@
   <button class="back-btn" onclick="window.location.href='index.html'">❮</button>
   <div class="brand"></div>
   <div class="header-actions">
-    <!-- 【修改 4】鎖定身份：移除 onclick，僅作為顯示 -->
     <div class="avatar-btn" id="headerAvatarBtn" style="pointer-events: none;"></div>
   </div>
 </header>
@@ -90,7 +100,6 @@
     <h1>大家想吃什麼？</h1>
   </div>
 
-  <!-- 【修改 3】結果頁面加入分頁 (Tabs) 切換不同時段 -->
   <div class="chips" id="statsTabs" style="margin:14px 0; display:flex; justify-content:space-between; width:100%;">
     <button class="chip" onclick="window.foodApp.switchStatsTab('早餐', this)" style="flex:1; text-align:center;">早餐</button>
     <button class="chip" onclick="window.foodApp.switchStatsTab('午餐', this)" style="flex:1; text-align:center;">午餐</button>
@@ -122,7 +131,6 @@
   <button class="primary" onclick="window.foodApp.shareResult()">📣 分享結果給群組</button>
   <button class="secondary" style="width:100%;margin-top:10px" onclick="window.foodApp.finishDecision()">那就出發吧！ →</button>
   
-  <!-- 【修改 2】管理員清除按鈕 -->
   <button id="adminClearBtn" class="secondary" style="width:100%; margin-top:10px; background:#fef2f2; color:#dc2626; display:none;" onclick="window.foodApp.clearCurrentStats()">🗑️ 清除此時段投票結果</button>
 </section>
 
@@ -165,8 +173,6 @@
 <div class="confetti" id="confetti"></div>
 <div class="toast" id="toast"></div>
 
-<!-- 已經移除切換身份的 Modal -->
-
 <div class="modal" id="modal" onclick="if(event.target===this)window.foodApp.closeModal()">
 <div class="sheet"><div class="handle"></div>
 <h2 id="modalTitle" style="margin:0">新增餐廳</h2>
@@ -177,9 +183,19 @@
 <div><label>價格</label><select id="rPrice"><option>$</option><option>$$</option><option>$$$</option><option>$$$$</option></select></div>
 </div>
 <label>代表食物 *</label><input id="rFood" placeholder="例如：牛肉麵、漢堡、壽司">
-<div class="form-grid">
-<div><label>適合時段</label><select id="rMeal"><option>早餐</option><option>午餐</option><option>晚餐</option><option>宵夜</option><option>不限</option></select></div>
-<div><label>標籤</label><input id="rTags" placeholder="親子、外帶"></div>
+
+<!-- 【修改】將適合時段改為 Checkbox 複選 -->
+<label>適合時段 (可複選) *</label>
+<div class="checkbox-group" id="rMealGroup">
+  <label class="checkbox-label"><input type="checkbox" name="rMeal" value="早餐"> 早餐</label>
+  <label class="checkbox-label"><input type="checkbox" name="rMeal" value="午餐"> 午餐</label>
+  <label class="checkbox-label"><input type="checkbox" name="rMeal" value="晚餐"> 晚餐</label>
+  <label class="checkbox-label"><input type="checkbox" name="rMeal" value="宵夜"> 宵夜</label>
+  <label class="checkbox-label"><input type="checkbox" name="rMeal" value="不限"> 不限</label>
+</div>
+
+<div class="form-grid" style="margin-top:12px;">
+<div style="grid-column: 1 / -1;"><label>標籤</label><input id="rTags" placeholder="親子、外帶"></div>
 </div>
 <label>備註</label><textarea id="rNote" placeholder="例如：週末常排隊、適合多人"></textarea>
 <button class="primary" style="margin-top:14px" onclick="window.foodApp.saveRestaurant()">儲存餐廳</button>
