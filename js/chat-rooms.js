@@ -1,7 +1,7 @@
 import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 // 1. 直接從 firebase-config.js 引入 db
 import { db } from "./firebase-config.js";
-// 2. 從 chat-core.js 引入共用狀態 (把 db 拿掉)
+// 2. 從 chat-core.js 引入共用狀態
 import { currentUser, currentGroupId, allUsers, chatState } from "./chat-core.js";
 
 let uploadedAvatarBase64_Create = null; 
@@ -11,16 +11,16 @@ function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openSubModal(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
 function backToSettings(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
 
-// 取得屬於當前主群組成員的列表（排除自身或包含自身，依介面需求）
+// 取得屬於當前主群組成員的列表
 function getGroupMembers() {
     return allUsers.filter(u => {
-        // 判斷使用者是否屬於當前群組 (相容 groupIds 陣列、groups 陣列或主群組紀錄)
+        // 現在 allUsers 已經有存下真正的 groupId 等欄位，此處篩選將正常發揮作用
         if (u.groupIds && Array.isArray(u.groupIds)) return u.groupIds.includes(currentGroupId);
         if (u.groups && Array.isArray(u.groups)) {
             return u.groups.some(g => (typeof g === 'object' ? g.id : g) === currentGroupId);
         }
         if (u.groupId) return u.groupId === currentGroupId;
-        return true; // 若無特別區分群組欄位則預設保留
+        return true;
     });
 }
 
@@ -29,7 +29,7 @@ function getCheckboxesHtml(containerId, selected = []) {
     const groupUsers = getGroupMembers();
     
     groupUsers.forEach(u => {
-        // 新增群組時排除自己，因為創建者預設會自動加入
+        // 新增群組時排除自己
         if (u.name !== currentUser.name) {
             html += `<label class="member-item"><input type="checkbox" value="${u.name}" ${selected.includes(u.name) ? 'checked' : ''}> <span>${u.name}</span></label>`;
         }
@@ -92,7 +92,6 @@ function openInviteMembers() {
     const groupUsers = getGroupMembers();
     
     groupUsers.forEach(u => {
-        // 只列出属于当前主群组，且尚未加入该聊天室的成員
         if (!currentMembers.includes(u.name)) {
             hasCandidates = true;
             html += `<label class="member-item"><input type="checkbox" value="${u.name}"> <span>${u.name}</span></label>`;
@@ -136,7 +135,26 @@ document.getElementById('btnSaveInvite').addEventListener('click', async () => {
 async function leaveGroup() {
     if (!confirm(`確定要退出「${chatState.activeRoomData.name}」群組嗎？`)) return;
     try {
+        // 更新房間裡的 participant 陣列，把自己的名字移除
         await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants: arrayRemove(currentUser.name) });
+
+        // 新增：寫入一筆是 isSystem 的訊息做為退出提示
+        const systemMsgText = `${currentUser.name} 已退出聊天室`;
+        await addDoc(collection(db, "messages"), { 
+            groupId: currentGroupId, 
+            roomId: chatState.activeRoomId, 
+            sender: "系統", 
+            isSystem: true,
+            text: systemMsgText, 
+            timestamp: serverTimestamp() 
+        });
+
+        // 順便把外層看板的最新訊息更新，讓其他成員看到
+        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { 
+            lastMessage: systemMsgText, 
+            lastMessageTime: serverTimestamp() 
+        });
+
         closeModal('roomSettingsMenu');
         document.getElementById('btnBackToList').click();
     } catch (e) { alert("退出失敗"); }
@@ -152,8 +170,13 @@ function exportChatHistory() {
             const d = msg.timestamp.toDate();
             timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         }
-        const content = msg.isRetracted ? "(收回了訊息)" : (msg.imageUrl ? "[傳送了圖片]" : msg.text);
-        textOutput += `[${timeStr}] ${msg.sender}: ${content}\n`;
+        // 若為系統退出訊息也放進匯出紀錄中
+        if (msg.isSystem) {
+            textOutput += `[${timeStr}] 系統: ${msg.text}\n`;
+        } else {
+            const content = msg.isRetracted ? "(收回了訊息)" : (msg.imageUrl ? "[傳送了圖片]" : msg.text);
+            textOutput += `[${timeStr}] ${msg.sender}: ${content}\n`;
+        }
     });
 
     const blob = new Blob([textOutput], { type: "text/plain;charset=utf-8" });
