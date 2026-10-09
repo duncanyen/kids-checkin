@@ -9,7 +9,6 @@ window.foodApp = (function() {
     let groupMembers = []; 
     let restaurants = [];
     
-    // 【修改 1, 3】跨日重置與全局統整
     // 一次性儲存今日四個時段的投票結果與對應的 Firebase Document ID
     let todayVotes = { '早餐': {}, '午餐': {}, '晚餐': {}, '宵夜': {} };
     let voteDocIds = { '早餐': null, '午餐': null, '晚餐': null, '宵夜': null };
@@ -45,7 +44,6 @@ window.foodApp = (function() {
                 return;
             }
 
-            // 【修改 2】管理員權限檢查，顯示清除按鈕
             const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent');
             if (isAdmin && document.getElementById('adminClearBtn')) {
                 document.getElementById('adminClearBtn').style.display = 'block';
@@ -53,7 +51,7 @@ window.foodApp = (function() {
 
             await fetchGroupMembers();
             listenRestaurants();
-            listenTodayVotes(); // 監聽今天的全部投票
+            listenTodayVotes(); 
             go('home');
         } catch (error) {
             console.error("模組初始化失敗:", error);
@@ -95,7 +93,6 @@ window.foodApp = (function() {
         });
     }
 
-    // 監聽今日「所有時段」的投票，達到跨日自動重置
     function listenTodayVotes() {
         if (unsubscribeVotes) unsubscribeVotes();
         
@@ -107,7 +104,6 @@ window.foodApp = (function() {
         );
 
         unsubscribeVotes = onSnapshot(q, (snapshot) => {
-            // 重置暫存
             todayVotes = { '早餐': {}, '午餐': {}, '晚餐': {}, '宵夜': {} };
             voteDocIds = { '早餐': null, '午餐': null, '晚餐': null, '宵夜': null };
             
@@ -132,17 +128,12 @@ window.foodApp = (function() {
         document.querySelectorAll('.nav button').forEach(x => x.classList.remove('active'));
         if (btn) btn.classList.add('active');
         
-        // 進入統計頁時，預設顯示剛剛在投票頁選擇的餐期
-        if (id === 'stats') {
-            switchStatsTab(selectedMeal);
-        }
-        
+        if (id === 'stats') { switchStatsTab(selectedMeal); }
         if (id === 'manage') renderRestaurants();
         if (id === 'vote') { updateMemberUI(); renderVoteList(); }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 結果頁 (Stats) 的頁籤切換
     function switchStatsTab(meal, btnEl = null) {
         statsCurrentTab = meal;
         document.querySelectorAll('#statsTabs .chip').forEach(el => el.classList.remove('active'));
@@ -150,7 +141,6 @@ window.foodApp = (function() {
         if (btnEl) {
             btnEl.classList.add('active');
         } else {
-            // 自動尋找對應的按鈕加 active
             document.querySelectorAll('#statsTabs .chip').forEach(el => {
                 if (el.innerText === meal) el.classList.add('active');
             });
@@ -232,12 +222,10 @@ window.foodApp = (function() {
         const myName = currentUser.name;
         const currentMealVotes = todayVotes[selectedMeal] || {};
         const previous = currentMealVotes[myName];
-        
         let docId = voteDocIds[selectedMeal];
         
         try {
             if (!docId) {
-                // 如果這個時段今天還沒人投過，先建立 Document
                 const todayStr = getLocalTodayDateString();
                 const newDocRef = await addDoc(collection(db, "food_votes"), {
                     groupId: currentGroupId,
@@ -245,10 +233,8 @@ window.foodApp = (function() {
                     meal: selectedMeal,
                     votes: { [myName]: restId }
                 });
-                // Snapshot 會自動更新 voteDocIds，但這裡先賦值確保順暢
                 voteDocIds[selectedMeal] = newDocRef.id;
             } else {
-                // 已有 Document，更新欄位
                 await updateDoc(doc(db, "food_votes", docId), { [`votes.${myName}`]: restId });
             }
             
@@ -257,6 +243,15 @@ window.foodApp = (function() {
             else toast(myName+' 已投票！ '+getRestaurantName(restId)+' 🍽️');
             
         } catch (e) { toast('投票失敗，請檢查網路'); }
+    }
+
+    // 【修改：過濾邏輯更新】檢查 meal 陣列是否包含選擇的時段，或包含 '不限'
+    function candidates() { 
+        return restaurants.filter(r => {
+            // 相容舊資料字串
+            const mealData = Array.isArray(r.meal) ? r.meal : [r.meal];
+            return mealData.includes('不限') || mealData.includes(selectedMeal);
+        }); 
     }
 
     function renderVoteList() {
@@ -326,16 +321,30 @@ window.foodApp = (function() {
         }).join('');
     }
 
+    // 【修改：儲存餐廳邏輯更新】收集所有選中的 Checkbox
     async function saveRestaurant() {
         const name = document.getElementById('rName').value.trim();
         const food = document.getElementById('rFood').value.trim();
         const editId = document.getElementById('editId').value;
         if (!name || !food) { toast('店名與代表食物一定要填喔'); return; }
 
+        // 收集選中的時段
+        const selectedMeals = [];
+        document.querySelectorAll('input[name="rMeal"]:checked').forEach(cb => {
+            selectedMeals.push(cb.value);
+        });
+        
+        if (selectedMeals.length === 0) { toast('請至少選擇一個適合時段'); return; }
+
         const data = {
-            groupId: currentGroupId, name, type: document.getElementById('rType').value,
-            price: document.getElementById('rPrice').value, food, meal: document.getElementById('rMeal').value,
-            tags: document.getElementById('rTags').value.trim(), note: document.getElementById('rNote').value.trim(),
+            groupId: currentGroupId, 
+            name, 
+            type: document.getElementById('rType').value,
+            price: document.getElementById('rPrice').value, 
+            food, 
+            meal: selectedMeals, // 存為陣列
+            tags: document.getElementById('rTags').value.trim(), 
+            note: document.getElementById('rNote').value.trim(),
             updatedAt: serverTimestamp()
         };
 
@@ -352,17 +361,21 @@ window.foodApp = (function() {
         catch(e) { toast('刪除失敗'); }
     }
 
+    // 【修改：顯示邏輯更新】將陣列轉為字串顯示
     function renderRestaurants() {
         const list = restaurants.filter(r => filter === '全部' || r.type === filter);
         const el = document.getElementById('restaurantList');
         if (!el) return;
-        el.innerHTML = list.length ? list.map(r => `
+        el.innerHTML = list.length ? list.map(r => {
+            const mealDisplay = Array.isArray(r.meal) ? r.meal.join(', ') : r.meal;
+            return `
             <div class="list-item">
                 <div class="foodpic">${foodEmoji(r.food)}</div>
-                <div class="list-info"><b>${r.name}</b><small>${r.type} · ${r.food} · ${r.price} · ${r.meal}</small></div>
+                <div class="list-info"><b>${r.name}</b><small>${r.type} · ${r.food} · ${r.price} · ${mealDisplay}</small></div>
                 <button class="action" onclick="window.foodApp.openRestaurant('${r.id}')">✎</button>
                 <button class="action danger" onclick="window.foodApp.removeRestaurant('${r.id}')">×</button>
-            </div>`).join('') : '<div class="empty">還沒有餐廳</div>';
+            </div>`;
+        }).join('') : '<div class="empty">還沒有餐廳</div>';
     }
 
     async function acceptWheelWinner() {
@@ -418,18 +431,31 @@ window.foodApp = (function() {
         playWinSound(); makeConfetti();
     }
 
+    // 【修改：編輯餐廳邏輯更新】打開 Modal 時根據陣列勾選 Checkbox
     function openRestaurant(id = null) {
         document.getElementById('modal').classList.add('show');
         document.getElementById('modalTitle').textContent = id ? '編輯餐廳' : '新增餐廳';
         document.getElementById('editId').value = id || '';
+        
         const r = restaurants.find(x => x.id === id);
         document.getElementById('rName').value = r?.name || '';
         document.getElementById('rType').value = r?.type || '中式';
         document.getElementById('rPrice').value = r?.price || '$$';
         document.getElementById('rFood').value = r?.food || '';
-        document.getElementById('rMeal').value = r?.meal || '晚餐';
         document.getElementById('rTags').value = r?.tags || '';
         document.getElementById('rNote').value = r?.note || '';
+        
+        // 處理時段 Checkbox
+        const checkboxes = document.querySelectorAll('input[name="rMeal"]');
+        if (r) {
+            const mealData = Array.isArray(r.meal) ? r.meal : [r.meal];
+            checkboxes.forEach(cb => {
+                cb.checked = mealData.includes(cb.value);
+            });
+        } else {
+            // 新增時預設勾選晚餐
+            checkboxes.forEach(cb => { cb.checked = (cb.value === '晚餐'); });
+        }
     }
     
     function closeModal() { document.getElementById('modal').classList.remove('show'); }
@@ -455,7 +481,7 @@ window.foodApp = (function() {
     }
 
     function getRestaurantName(id) { return restaurants.find(r => r.id === id)?.name || '已刪除的餐廳'; }
-    function candidates() { return restaurants.filter(r => r.meal === '不限' || r.meal === selectedMeal); }
+    
     function showWheel() { document.getElementById('wheelPanel').style.display = 'block'; document.getElementById('listPanel').style.display = 'none'; document.getElementById('wheelState').textContent = '準備好了嗎？'; window.scrollTo({ top: document.getElementById('wheelPanel').offsetTop - 80, behavior: 'smooth' }); }
     function showList() { document.getElementById('wheelPanel').style.display = 'none'; document.getElementById('listPanel').style.display = 'block'; renderVoteList(); }
     function foodEmoji(food) { if (/麵|拉麵/.test(food)) return '🍜'; if (/飯|丼/.test(food)) return '🍚'; if (/壽司/.test(food)) return '🍣'; if (/牛排/.test(food)) return '🥩'; if (/披薩/.test(food)) return '🍕'; if (/漢堡/.test(food)) return '🍔'; if (/火鍋/.test(food)) return '🍲'; if (/蛋餅|早餐/.test(food)) return '🥞'; if (/咖啡/.test(food)) return '☕'; return '🍽️'; }
