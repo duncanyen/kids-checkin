@@ -11,10 +11,10 @@ let financeUnsubscribe = null;
 let cachedCalendarEvents = [];
 let calendarUIRenderInterval = null;
 
-// 【新增】切換群組的全域函數
+// 切換群組的全域函數
 window.switchGroup = function() {
-    sessionStorage.removeItem('nexus_active_group_id'); // 清除記憶的群組
-    window.location.reload(); // 重新載入網頁，讓 main.js 重新導向至群組列表
+    sessionStorage.removeItem('nexus_active_group_id'); 
+    window.location.reload(); 
 };
 
 window.showDashboard = async function() {
@@ -30,16 +30,13 @@ window.showDashboard = async function() {
     if (todoUnsubscribe) { todoUnsubscribe(); todoUnsubscribe = null; }
     if (financeUnsubscribe) { financeUnsubscribe(); financeUnsubscribe = null; }
 
-    // 【關鍵修正】如果 window.currentGroup 遺失，但 sessionStorage 中有紀錄，自動恢復當前群組
     const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
     if (!window.currentGroup && savedGroupId) {
         window.currentGroup = { id: savedGroupId };
     }
 
     if (window.currentGroup && window.currentGroup.id) {
-        // 確保將目前的群組 ID 記錄下來
         sessionStorage.setItem('nexus_active_group_id', window.currentGroup.id);
-
         groupNameUnsubscribe = onSnapshot(doc(db, "groups", window.currentGroup.id), (docSnap) => {
             if (docSnap.exists()) {
                 window.currentGroup = { id: docSnap.id, ...docSnap.data() };
@@ -74,7 +71,6 @@ window.renderDynamicModules = async function(user) {
     sideList.innerHTML = ''; 
     chatContainer.innerHTML = ''; 
     
-    // 【修改】將 'food' (吃什麼) 加入預設允許選單
     const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food']; 
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
@@ -97,7 +93,6 @@ window.renderDynamicModules = async function(user) {
         wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">✨</span>許願牆</div>`,
         finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">💰</span>記帳本</div>`,
         todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">📋</span>待辦事項</div>`,
-        // 【新增】吃什麼側邊欄選項
         food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">🍽️</span>吃什麼？</div>`
     };
     
@@ -106,8 +101,6 @@ window.renderDynamicModules = async function(user) {
     if (user.role === 'admin' || user.role === 'parent') {
         sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
     }
-
-    // 【新增修改】在功能導覽最後面，加上「切換群組」的按鈕
     sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">🔄</span>切換群組</div>`;
 
     if (miniCardsContainer) {
@@ -128,7 +121,6 @@ window.renderDynamicModules = async function(user) {
             `;
         }
         
-        // 【新增】吃什麼 Widget 卡片
         if (allowedMenus.includes('food')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #fcd34d;">
@@ -190,7 +182,6 @@ window.renderDynamicModules = async function(user) {
         checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">📍</div>`,
         gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">🎮</div>`,
         wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">⭐</div>`,
-        // 【新增】底部 Dock 捷徑
         food: `<div class="dock-item" onclick="window.navTo('food-decision.html', '吃什麼？')" title="吃什麼">🍽️</div>`
     };
     
@@ -206,21 +197,16 @@ window.checkWidgetData = function(user) {
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
-    // 1. 待辦清單優化版 (頭像堆疊、字數截斷、今天判斷)
     if (document.getElementById('todoWidgetContent')) {
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
-        
         todoUnsubscribe = onSnapshot(todoQ, (snap) => {
             let incompleteTodos = [];
-            
             snap.forEach(docSnap => {
                 const docData = docSnap.data();
                 if (docData.todos && Array.isArray(docData.todos)) {
                     docData.todos.forEach(t => {
                         const isDone = (t.completed === true || t.isCompleted === true || String(t.completed) === "true");
-                        if (!isDone) {
-                            incompleteTodos.push(t);
-                        }
+                        if (!isDone) incompleteTodos.push(t);
                     });
                 }
             });
@@ -247,55 +233,37 @@ window.checkWidgetData = function(user) {
             const container = document.getElementById('todoWidgetContent');
             if (incompleteTodos.length > 0) {
                 incompleteTodos.sort((a, b) => getWeight(a.deadline || a.dealline) - getWeight(b.deadline || b.dealline));
-                
                 let html = '';
                 incompleteTodos.forEach(t => {
                     let rawDate = t.deadline || t.dealline || '無期限';
                     let displayDate = rawDate;
                     let isToday = false;
                     
-                    // 判斷是否為今天
-                    if (rawDate === todayYMD || rawDate === '今天') {
-                        displayDate = '今天';
-                        isToday = true;
-                    } else if (rawDate === '明天') {
-                        displayDate = '明天';
-                    } else if (rawDate.includes('-')) {
+                    if (rawDate === todayYMD || rawDate === '今天') { displayDate = '今天'; isToday = true; } 
+                    else if (rawDate === '明天') { displayDate = '明天'; } 
+                    else if (rawDate.includes('-')) {
                         const parts = rawDate.split('-');
                         if (parts.length === 3) displayDate = `${parts[1]}/${parts[2]}`;
                     }
                     
-                    // 判斷字數並截斷超過10個字的內容
                     let title = t.title || t.text || t.task || "未命名任務";
-                    if (title.length > 10) {
-                        title = title.substring(0, 10) + '...';
-                    }
+                    if (title.length > 10) title = title.substring(0, 10) + '...';
                     
-                    // 處理人員陣列
                     let assigneesArray = [];
                     if (t.assignees) {
-                        if (Array.isArray(t.assignees)) {
-                            assigneesArray = t.assignees;
-                        } else {
-                            assigneesArray = [String(t.assignees)];
-                        }
+                        if (Array.isArray(t.assignees)) assigneesArray = t.assignees;
+                        else assigneesArray = [String(t.assignees)];
                     }
                     if (assigneesArray.length === 0) assigneesArray = ['未指派'];
                     
-                    // 產生堆疊頭像 HTML (Facepile)
                     let avatarsHtml = assigneesArray.map((name, index) => {
                         let actualName = (name === '所有人員' || name === '所有人') ? '所有人' : name;
-                        // 若無設定頭像則給予預設圖示
                         let avatarUrl = window.userAvatarMap[actualName] || `https://ui-avatars.com/api/?name=${actualName}&background=e5e7eb`;
-                        // 第二個人以後往左推 8px 做出重疊效果
                         let marginLeft = index === 0 ? '0' : '-8px'; 
                         return `<img src="${avatarUrl}" title="${actualName}" style="width:24px; height:24px; border-radius:50%; border:2px solid #fff; margin-left:${marginLeft}; object-fit:cover; background:var(--bg-body); box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
                     }).join('');
 
-                    // 若是今天，給予醒目的橘紅色小標籤
-                    let badgeStyle = isToday 
-                        ? 'color: var(--danger); background: var(--danger-light);'
-                        : 'color: var(--primary-dark); background: var(--primary-light);';
+                    let badgeStyle = isToday ? 'color: var(--danger); background: var(--danger-light);' : 'color: var(--primary-dark); background: var(--primary-light);';
 
                     html += `
                         <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:10px 12px; border-radius:12px; border:1px solid var(--border-color);">
@@ -303,9 +271,7 @@ window.checkWidgetData = function(user) {
                                 <span style="font-size:11px; font-weight:800; ${badgeStyle} padding:3px 8px; border-radius:8px; white-space:nowrap;">${displayDate}</span>
                                 <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap;">${title}</span>
                             </div>
-                            <div style="display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
-                                ${avatarsHtml}
-                            </div>
+                            <div style="display:flex; align-items:center; flex-shrink:0; margin-left:8px;">${avatarsHtml}</div>
                         </div>
                     `;
                 });
@@ -323,12 +289,9 @@ window.checkWidgetData = function(user) {
         });
     }
 
-    // 2. 抓取本月記帳總計
     if (document.getElementById('financeWidgetValue')) {
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        // 讀取量優化：原本讀取該群組「全部」歷史支出（費用越多讀越多），
-        // 改成只查本月（與記帳本頁面相同的查詢條件，索引已存在）。
         const expQ = query(
             collection(db, "expenses"),
             where("groupId", "==", groupId),
@@ -372,6 +335,7 @@ window.checkWidgetData = function(user) {
     }
 };
 
+// 【確認與確保】查詢已加上 where("groupId", "==", window.currentGroup.id)
 window.checkUnreadMessages = function(user) {
     try {
         if (!window.currentGroup) return;
@@ -386,6 +350,7 @@ window.checkUnreadMessages = function(user) {
                     let myReadTime = room.readTimestamps?.[user.name] || 0;
                     const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
                     const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+                    // 系統訊息也不應該算成自己發送的而忽略，需嚴謹判斷
                     if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) totalUnreadMessages++;
                 }
             });
@@ -406,9 +371,6 @@ window.checkGalleryUnreads = function(user) {
         else sideBadge.style.display = 'none';
     };
 
-    // 讀取量優化：原本用 onSnapshot 把「所有」未讀照片文件整包抓下來（含圖片網址、留言、按讚名單），
-    // 改用 count 聚合查詢：不下載文件內容，計費約每 1000 筆 1 次讀取。
-    // 上傳者在發佈後會更新自己的 last read，所以不會把自己的照片算成未讀。
     const refreshGalleryBadge = async () => {
         if (document.visibilityState !== 'visible') return;
         let lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
@@ -421,7 +383,7 @@ window.checkGalleryUnreads = function(user) {
             );
             const snap = await getCountFromServer(q);
             renderBadge(snap.data().count);
-        } catch (e) { /* 權限或索引問題時靜默忽略 */ }
+        } catch (e) {}
     };
 
     refreshGalleryBadge();
