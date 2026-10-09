@@ -10,6 +10,28 @@
     <meta name="mobile-web-app-capable" content="yes">
     <!-- 引入抽離的 CSS -->
     <link rel="stylesheet" href="css/chat.css"> 
+    <!-- 補充修正樣式 -->
+    <style>
+        /* 日期分隔線 (LINE 風格) */
+        .date-divider { display: flex; justify-content: center; margin: 16px 0; }
+        .date-badge { background-color: rgba(0, 0, 0, 0.2); color: #fff; font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+        
+        /* 系統提示訊息 */
+        .system-msg-wrapper { display: flex; justify-content: center; margin: 12px 0; }
+        .system-msg { background-color: rgba(0, 0, 0, 0.1); color: #555; font-size: 12px; padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+
+        /* 輸入框多行支援 */
+        #chatInput {
+            flex: 1; border: none; outline: none; background: #f1f5f9; border-radius: 20px;
+            padding: 10px 16px; font-size: 14px; resize: none; overflow-y: auto; max-height: 100px;
+            font-family: inherit; line-height: 1.4; box-sizing: border-box;
+        }
+        
+        /* 傳送與圖片按鈕對齊 */
+        .btn-upload-photo, .btn-send { display: flex; align-items: center; justify-content: center; padding: 8px; border: none; background: transparent; cursor: pointer; }
+        .btn-send { color: var(--primary); background: var(--primary-light); border-radius: 50%; width: 36px; height: 36px; margin-left: 6px; }
+        .btn-upload-photo { color: var(--text-sub); }
+    </style>
 </head>
 <body>
     <div class="top-nav" id="mainTopNav">
@@ -54,11 +76,16 @@
             <!-- @ 標註清單 -->
             <div class="mention-dropdown" id="mentionDropdown"></div>
 
-            <div class="chat-input-area">
-                <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">📷</button>
+            <div class="chat-input-area" style="align-items: flex-end; padding-bottom: 8px;">
+                <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"></path></svg>
+                </button>
                 <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
-                <input type="text" id="chatInput" placeholder="輸入訊息... (輸入 @ 可標註家人)" autocomplete="off">
-                <button class="btn-send" id="btnSend">傳送</button>
+                <!-- 改用 textarea 支援換行 -->
+                <textarea id="chatInput" placeholder="輸入訊息... (@標註)" rows="1"></textarea>
+                <button class="btn-send" id="btnSend" title="傳送">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="transform: translateX(1px);"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                </button>
             </div>
         </div>
     </div>
