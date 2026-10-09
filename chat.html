@@ -10,7 +10,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <!-- 引入抽離的 CSS -->
     <link rel="stylesheet" href="css/chat.css"> 
-    <!-- 補充修正樣式 -->
     <style>
         /* 日期分隔線 (LINE 風格) */
         .date-divider { display: flex; justify-content: center; margin: 16px 0; }
@@ -29,8 +28,11 @@
         
         /* 傳送與圖片按鈕對齊 */
         .btn-upload-photo, .btn-send { display: flex; align-items: center; justify-content: center; padding: 8px; border: none; background: transparent; cursor: pointer; }
-        .btn-send { color: var(--primary); background: var(--primary-light); border-radius: 50%; width: 36px; height: 36px; margin-left: 6px; }
-        .btn-upload-photo { color: var(--text-sub); }
+        .btn-send { color: white; background: var(--primary); border-radius: 50%; width: 36px; height: 36px; margin-left: 6px; box-shadow: 0 2px 4px rgba(16,185,129,0.2); }
+        .btn-upload-photo { color: #64748b; }
+        
+        /* 移除成員的按鈕 */
+        .btn-kick-member { background: #fee2e2; color: #ef4444; border: none; font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: 600; cursor: pointer; margin-left: auto; }
     </style>
 </head>
 <body>
@@ -77,14 +79,17 @@
             <div class="mention-dropdown" id="mentionDropdown"></div>
 
             <div class="chat-input-area" style="align-items: flex-end; padding-bottom: 8px;">
+                <!-- 🛠️ 修正 SVG 顏色指定 -->
                 <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">
-                    <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"></path></svg>
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="#64748b"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"></path></svg>
                 </button>
                 <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
-                <!-- 改用 textarea 支援換行 -->
+                
                 <textarea id="chatInput" placeholder="輸入訊息... (@標註)" rows="1"></textarea>
+                
+                <!-- 🛠️ 修正 SVG 紙飛機顏色 -->
                 <button class="btn-send" id="btnSend" title="傳送">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="transform: translateX(1px);"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="transform: translateX(1px);"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
                 </button>
             </div>
         </div>
@@ -99,9 +104,7 @@
         </div>
     </div>
 
-    <!-- ================= 核心：全新 LINE 風格設定與各項 Modal ================= -->
-    
-    <!-- 1. 新增群組 Modal -->
+    <!-- 新增群組 Modal -->
     <div class="modal" id="createGroupModal">
         <div class="modal-content">
             <div class="modal-header" style="padding:0 0 16px 0; border:none;">
@@ -127,7 +130,7 @@
         </div>
     </div>
 
-    <!-- 2. LINE 風格群組設定主選單 (全螢幕上滑) -->
+    <!-- LINE 風格群組設定主選單 -->
     <div class="full-modal" id="roomSettingsMenu">
         <div class="full-modal-content">
             <div class="modal-header">
@@ -135,7 +138,6 @@
                 <h3>聊天室設定</h3>
                 <span style="width: 24px;"></span>
             </div>
-            <!-- 上方三大圖示 -->
             <div class="settings-top-bar">
                 <div class="settings-icon-btn" onclick="window.chatRooms.openViewMembers()">
                     <div class="icon">👥</div>
@@ -150,7 +152,6 @@
                     <span style="color:var(--danger);">退出</span>
                 </div>
             </div>
-            <!-- 下方列表 -->
             <div class="settings-menu-list">
                 <div class="settings-menu-item" onclick="window.chatRooms.openPhotoGallery()">
                     <span>群組照片</span>
@@ -168,7 +169,6 @@
         </div>
     </div>
 
-    <!-- 2-1. 相片集 (子畫面) -->
     <div class="full-modal" id="photoGalleryModal">
         <div class="full-modal-content">
             <div class="modal-header">
@@ -177,12 +177,10 @@
                 <span style="width: 24px;"></span>
             </div>
             <div class="gallery-grid" id="galleryGrid">
-                <!-- 照片會填入這裡 -->
             </div>
         </div>
     </div>
 
-    <!-- 2-2. 變更群組名稱與頭像 (子畫面) -->
     <div class="full-modal" id="editGroupModal">
         <div class="full-modal-content">
             <div class="modal-header">
@@ -205,7 +203,7 @@
         </div>
     </div>
 
-    <!-- 2-3. 純檢視成員 (子畫面) -->
+    <!-- 純檢視成員 (加入管理員踢人功能) -->
     <div class="full-modal" id="viewMembersModal">
         <div class="full-modal-content">
             <div class="modal-header">
@@ -219,7 +217,6 @@
         </div>
     </div>
 
-    <!-- 2-4. 邀請成員 (子畫面) -->
     <div class="full-modal" id="inviteMembersModal">
         <div class="full-modal-content">
             <div class="modal-header">
@@ -235,14 +232,11 @@
         </div>
     </div>
 
-    <!-- 圖片全螢幕檢視器 -->
     <div id="photoViewerModal" class="photo-viewer" onclick="window.chatCore.closePhotoViewer()">
         <span class="close-viewer">✕</span>
-        <!-- 點擊圖片本身不關閉預覽，阻止事件冒泡 -->
         <img class="viewer-content" id="viewerImage" onclick="event.stopPropagation()">
     </div>
 
-    <!-- 引入拆分的 JS 模組 -->
     <script type="module" src="js/chat-core.js"></script>
     <script type="module" src="js/chat-rooms.js"></script>
 </body>
