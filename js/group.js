@@ -30,10 +30,11 @@ window.processCreateGroup = async function() {
         user.role = 'admin';
         sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
 
+        // 【修改處 1】建立群組時，members 陣列改用 user.accountId 替代 user.name
         const newGroupData = {
             name: groupName,
             icon: window.selectedPresetIcon,
-            members: [user.name],
+            members: [user.accountId],
             inviteCode: window.generateInviteCode(),
             createdAt: serverTimestamp()
         };
@@ -70,8 +71,9 @@ window.processJoinGroup = async function() {
         const groupData = groupDoc.data();
         let members = groupData.members || [];
         
-        if (!members.includes(user.name)) {
-            members.push(user.name);
+        // 【修改處 2】加入群組時，檢查與寫入的是 user.accountId 而非 user.name
+        if (!members.includes(user.accountId)) {
+            members.push(user.accountId);
             await updateDoc(doc(db, "groups", groupDoc.id), { members: members });
         }
         
