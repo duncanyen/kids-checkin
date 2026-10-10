@@ -90,7 +90,9 @@ window.toggleAuth = function(type) {
 window.evaluateUserGroups = async function(userObj) {
     document.getElementById('loadingView').style.display = 'flex';
     try {
-        const q = query(collection(db, "groups"), where("members", "array-contains", userObj.name));
+        // 【核心修改】：改以 userObj.accountId 查詢群組 members 陣列
+        const searchKey = userObj.accountId || userObj.name;
+        const q = query(collection(db, "groups"), where("members", "array-contains", searchKey));
         const snap = await getDocs(q);
         let userGroups = [];
         snap.forEach(docSnap => userGroups.push({ id: docSnap.id, ...docSnap.data() }));
