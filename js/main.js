@@ -55,21 +55,40 @@ document.getElementById('avatarUploadInput').addEventListener('change', function
     reader.readAsDataURL(file);
 });
 
+// 【核心修改】抓取群組成員改以 accountId 查詢
 window.fetchAndRenderGroupMembers = async function() {
     try {
         if (!window.currentGroup || !window.currentGroup.members || !Array.isArray(window.currentGroup.members) || window.currentGroup.members.length === 0) return;
-        const memberNames = window.currentGroup.members;
+        const memberIdentifiers = window.currentGroup.members; // 此處現在裝的是 accountId
         window.groupMembers = [];
-        for (let i = 0; i < memberNames.length; i += 10) {
-            const chunk = memberNames.slice(i, i + 10);
-            const q = query(collection(db, "users"), where("name", "in", chunk));
-            const snap = await getDocs(q);
-            snap.forEach(docSnap => {
+        
+        for (let i = 0; i < memberIdentifiers.length; i += 10) {
+            const chunk = memberIdentifiers.slice(i, i + 10);
+            
+            // 雙重防護查詢：優先用 accountId 查，若舊資料有混用 name 也能兼容查詢
+            const qId = query(collection(db, "users"), where("accountId", "in", chunk));
+            const snapId = await getDocs(qId);
+            snapId.forEach(docSnap => {
                 let u = docSnap.data();
+                window.userAvatarMap[u.accountId] = u.avatar;
+                window.userAvatarMap[u.name] = u.avatar; // 相容舊對應
+                if (!window.groupMembers.some(m => m.accountId === u.accountId)) {
+                    window.groupMembers.push(u);
+                }
+            });
+
+            const qName = query(collection(db, "users"), where("name", "in", chunk));
+            const snapName = await getDocs(qName);
+            snapName.forEach(docSnap => {
+                let u = docSnap.data();
+                window.userAvatarMap[u.accountId] = u.avatar;
                 window.userAvatarMap[u.name] = u.avatar;
-                window.groupMembers.push(u);
+                if (!window.groupMembers.some(m => m.accountId === u.accountId)) {
+                    window.groupMembers.push(u);
+                }
             });
         }
+
         const sideList = document.getElementById('sideMembersList');
         if (sideList) {
             sideList.innerHTML = window.groupMembers.map(u => `
@@ -108,7 +127,7 @@ window.shareApp = async function() {
     } catch (err) {}
 };
 
-// 【重點更新】動態模組渲染邏輯改寫，導入 Bento Box 網格系統
+// 動態模組渲染邏輯，導入 Bento Box 網格系統
 window.renderDynamicModules = async function(user) {
     const sideList = document.getElementById('sideMenuFeatureList');
     const chatContainer = document.getElementById('chatMainCardContainer');
@@ -122,7 +141,7 @@ window.renderDynamicModules = async function(user) {
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
     try {
-        const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
+        const userConfigDoc = await getDoc(doc(db, "userSettings", user.accountId || user.name));
         if (userConfigDoc.exists()) {
             const data = userConfigDoc.data();
             if (data.modules) modules = data.modules;
@@ -150,11 +169,9 @@ window.renderDynamicModules = async function(user) {
     }
     sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">🔄</span>切換群組</div>`;
 
-    // 重新設計的主頁卡片區塊
     if (miniCardsContainer) {
         let miniCardsHtml = '';
         
-        // 1. 聊天室 (設定為全寬，作為高頻互動的首要入口)
         if (allowedMenus.includes('chat') && modules.chat !== false) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('chat.html', '聊天室')" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; justify-content: space-between; min-height: 80px;">
@@ -170,7 +187,6 @@ window.renderDynamicModules = async function(user) {
             `;
         }
 
-        // 2. 記帳本 (設定為半寬)
         if (allowedMenus.includes('finance')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('expense.html', '記帳本')">
@@ -186,7 +202,6 @@ window.renderDynamicModules = async function(user) {
             `;
         }
         
-        // 3. 吃什麼 (設定為半寬，不再使用突兀的全黃背景)
         if (allowedMenus.includes('food')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')">
@@ -202,7 +217,6 @@ window.renderDynamicModules = async function(user) {
             `;
         }
 
-        // 4. 待辦事項 (設定為全寬，以容納清單資訊)
         if (allowedMenus.includes('todo')) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 20px;">
@@ -264,7 +278,14 @@ async function initializeAppFlow() {
         document.getElementById('loadingView').style.display = 'flex';
         try {
             const savedUser = JSON.parse(savedUserStr);
-            const q = query(collection(db, "users"), where("name", "==", savedUser.name));
+            // 優先透過 accountId 進行校驗，若無則相容用 name 查詢
+            let q;
+            if (savedUser.accountId) {
+                q = query(collection(db, "users"), where("accountId", "==", savedUser.accountId));
+            } else {
+                q = query(collection(db, "users"), where("name", "==", savedUser.name));
+            }
+            
             const snap = await getDocs(q);
             
             if (snap.empty) {
@@ -293,7 +314,6 @@ async function initializeAppFlow() {
             console.error("初始化失敗: ", e);
             if (typeof window.showAuthSection === 'function') window.showAuthSection(); 
         } finally {
-            // 【最重要】強制關閉遮罩
             document.getElementById('loadingView').style.display = 'none';
         }
     } else { 
