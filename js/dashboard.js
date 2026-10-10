@@ -75,7 +75,8 @@ window.renderDynamicModules = async function(user) {
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
     try {
-        const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
+        // 【修改處】：以 user.accountId 或 user.name 讀取 userSettings
+        const userConfigDoc = await getDoc(doc(db, "userSettings", user.accountId || user.name));
         if (userConfigDoc.exists()) {
             const data = userConfigDoc.data();
             if (data.modules) modules = data.modules;
@@ -335,7 +336,6 @@ window.checkWidgetData = function(user) {
     }
 };
 
-// 【確認與確保】查詢已加上 where("groupId", "==", window.currentGroup.id)
 window.checkUnreadMessages = function(user) {
     try {
         if (!window.currentGroup) return;
@@ -350,7 +350,6 @@ window.checkUnreadMessages = function(user) {
                     let myReadTime = room.readTimestamps?.[user.name] || 0;
                     const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
                     const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
-                    // 系統訊息也不應該算成自己發送的而忽略，需嚴謹判斷
                     if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) totalUnreadMessages++;
                 }
             });
