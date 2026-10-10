@@ -108,6 +108,144 @@ window.shareApp = async function() {
     } catch (err) {}
 };
 
+// 【重點更新】動態模組渲染邏輯改寫，導入 Bento Box 網格系統
+window.renderDynamicModules = async function(user) {
+    const sideList = document.getElementById('sideMenuFeatureList');
+    const chatContainer = document.getElementById('chatMainCardContainer');
+    const miniCardsContainer = document.getElementById('miniCardsContainer'); 
+    const dockContainer = document.getElementById('bottomDockContainer');
+    
+    sideList.innerHTML = ''; 
+    chatContainer.innerHTML = ''; 
+    
+    const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food']; 
+    const allowedMenus = user.menus || defaultAllowed;
+    let modules = {}, order = [];
+    try {
+        const userConfigDoc = await getDoc(doc(db, "userSettings", user.name));
+        if (userConfigDoc.exists()) {
+            const data = userConfigDoc.data();
+            if (data.modules) modules = data.modules;
+            if (data.order && Array.isArray(data.order)) order = data.order.filter(k => allowedMenus.includes(k));
+        }
+        allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
+    } catch (e) { order = [...allowedMenus]; }
+
+    const sideMenuTemplates = {
+        chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">💬</span>聊天室</div>`,
+        checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">📍</span>到家打卡</div>`,
+        calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">📅</span>行事曆</div>`,
+        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">📸</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
+        gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">🎮</span>遊戲區</div>`,
+        wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">✨</span>許願牆</div>`,
+        finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">💰</span>記帳本</div>`,
+        todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">📋</span>待辦事項</div>`,
+        food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">🍽️</span>吃什麼？</div>`
+    };
+    
+    order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
+    
+    if (user.role === 'admin' || user.role === 'parent') {
+        sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
+    }
+    sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">🔄</span>切換群組</div>`;
+
+    // 重新設計的主頁卡片區塊
+    if (miniCardsContainer) {
+        let miniCardsHtml = '';
+        
+        // 1. 聊天室 (設定為全寬，作為高頻互動的首要入口)
+        if (allowedMenus.includes('chat') && modules.chat !== false) {
+            miniCardsHtml += `
+                <div class="mini-widget" onclick="window.navTo('chat.html', '聊天室')" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; justify-content: space-between; min-height: 80px;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div class="mini-widget-icon" style="background: #e0f2fe; color: #0284c7;">💬</div>
+                        <div>
+                            <div class="mini-widget-title" style="font-size: 16px;">群組聊天室</div>
+                            <div class="mini-widget-sub" style="margin-top: 2px;">點擊進入與成員保持聯繫</div>
+                        </div>
+                    </div>
+                    <div class="notification-badge" id="chatBadge" style="position: relative; top: auto; right: auto; left: auto; display: none;">0</div>
+                </div>
+            `;
+        }
+
+        // 2. 記帳本 (設定為半寬)
+        if (allowedMenus.includes('finance')) {
+            miniCardsHtml += `
+                <div class="mini-widget" onclick="window.navTo('expense.html', '記帳本')">
+                    <div class="mini-widget-header">
+                        <div class="mini-widget-icon" style="background: #dcfce7; color: #16a34a;">💰</div>
+                        <div class="mini-widget-title">記帳本</div>
+                    </div>
+                    <div>
+                        <div class="mini-widget-value" id="financeWidgetValue">...</div>
+                        <div class="mini-widget-sub" id="financeWidgetSub">本月累計支出</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 3. 吃什麼 (設定為半寬，不再使用突兀的全黃背景)
+        if (allowedMenus.includes('food')) {
+            miniCardsHtml += `
+                <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')">
+                    <div class="mini-widget-header">
+                        <div class="mini-widget-icon" style="background: #fef08a; color: #ca8a04;">🍽️</div>
+                        <div class="mini-widget-title">吃什麼？</div>
+                    </div>
+                    <div>
+                        <div class="mini-widget-value" style="font-size: 16px;">票選進行中</div>
+                        <div class="mini-widget-sub">點擊決定下一餐</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. 待辦事項 (設定為全寬，以容納清單資訊)
+        if (allowedMenus.includes('todo')) {
+            miniCardsHtml += `
+                <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 20px;">
+                    <div class="mini-widget-header" style="margin-bottom: 16px;">
+                        <div class="mini-widget-icon" style="background: #f3f4f6; color: #4b5563;">📋</div>
+                        <div class="mini-widget-title">待辦清單</div>
+                    </div>
+                    <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto; padding-right:4px;">
+                        <div style="font-size: 13px; color: var(--text-sub);">連線取得中...</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (miniCardsHtml) {
+            miniCardsContainer.innerHTML = miniCardsHtml;
+            miniCardsContainer.style.display = 'grid';
+        } else {
+            miniCardsContainer.style.display = 'none';
+        }
+    }
+
+    let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>`;
+    const dockMap = {
+        calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>`,
+        chat: `<div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">💬</div>`,
+        photodump: `<div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">📸</div>`,
+        todo: `<div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">📋</div>`,
+        finance: `<div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">💰</div>`,
+        checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">📍</div>`,
+        gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">🎮</div>`,
+        wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">⭐</div>`,
+        food: `<div class="dock-item" onclick="window.navTo('food-decision.html', '吃什麼？')" title="吃什麼">🍽️</div>`
+    };
+    
+    order.forEach(modKey => {
+        if (allowedMenus.includes(modKey) && dockMap[modKey]) {
+            dockHtml += dockMap[modKey];
+        }
+    });
+    dockContainer.innerHTML = dockHtml;
+};
+
 // 初始化主流程
 async function initializeAppFlow() {
     if (typeof window.processPendingLogs === 'function') {
