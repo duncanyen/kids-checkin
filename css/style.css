@@ -83,7 +83,7 @@ body {
 .btn-line-share { background: #06C755; color: white; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; margin-top: 16px; }
 .btn-line-share:active { background: #05a746; }
 
-/* === 主選單 Dashboard 框架 === */
+/* === 主選單 Dashboard 框架更新 === */
 #dashboardView { display: none; max-width: 500px; margin: 0 auto; animation: fadeIn 0.4s ease-out forwards; opacity: 0; padding-bottom: 40px; }
 .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 8px 0; position: sticky; top: 0; background: var(--bg-body); z-index: 100; backdrop-filter: blur(10px); }
 .app-brand { font-size: 24px; font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
@@ -95,15 +95,81 @@ body {
 .user-badge-name { font-size: 14px; font-weight: 800; color: var(--text-main); }
 
 /* === 待辦與記帳 (雙欄並排 Widget) === */
-.dash-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; width: 100%; }
-.mini-widget { background: var(--bg-card); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: space-between; min-height: 115px; position: relative; overflow: hidden; }
-.mini-widget:active { transform: scale(0.96); background: #fafafa; }
-.mini-widget-icon-bg { position: absolute; right: -12px; bottom: -16px; font-size: 64px; opacity: 0.04; z-index: 0; }
-.mini-widget-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; z-index: 1; }
-.mini-widget-icon { width: 32px; height: 32px; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-.mini-widget-title { font-size: 14px; font-weight: 800; color: var(--text-main); }
-.mini-widget-value { font-size: 17px; font-weight: 900; color: var(--text-main); z-index: 1; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.mini-widget-sub { font-size: 12px; font-weight: 600; color: var(--text-sub); z-index: 1; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-2col { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 16px; 
+    margin-bottom: 24px; 
+    width: 100%; 
+}
+
+/* 統一的現代化卡片設計 (Bento UI) */
+.mini-widget { 
+    background: #ffffff; 
+    border-radius: 20px; /* 微調圓角，看起來更精緻 */
+    padding: 20px; 
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); 
+    border: 1px solid rgba(0, 0, 0, 0.03); 
+    cursor: pointer; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-between; 
+    min-height: 120px; 
+    position: relative; 
+    overflow: hidden; 
+}
+
+.mini-widget:active { 
+    transform: scale(0.97); 
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02); 
+}
+
+/* 將圖示改為精緻的彩色圓角方形底座 */
+.mini-widget-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 16px; 
+    z-index: 1; 
+}
+
+.mini-widget-icon { 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 12px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 20px; 
+}
+
+.mini-widget-title { 
+    font-size: 15px; 
+    font-weight: 800; 
+    color: var(--text-main); 
+}
+
+.mini-widget-value { 
+    font-size: 22px; /* 放大重要數據 */
+    font-weight: 900; 
+    color: var(--text-main); 
+    z-index: 1; 
+    letter-spacing: 0px; 
+}
+
+.mini-widget-sub { 
+    font-size: 13px; 
+    font-weight: 600; 
+    color: var(--text-sub); 
+    z-index: 1; 
+    margin-top: 6px; 
+}
+
+/* 移除突兀的背景大圖示，改為純淨風格 */
+.mini-widget-icon-bg { 
+    display: none; 
+}
 
 /* === 手機版底部快捷導覽列 (Floating Dock) === */
 .bottom-dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 8px 12px; border-radius: 30px; display: flex; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 1000; }
