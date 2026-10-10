@@ -1,5 +1,5 @@
 import { db } from "./firebase-config.js";
-import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // 引入其他模組確保他們的功能綁定在 window 上
 import "./auth.js";
@@ -55,35 +55,49 @@ document.getElementById('avatarUploadInput').addEventListener('change', function
     reader.readAsDataURL(file);
 });
 
-// 【核心修改】抓取群組成員改以 accountId 查詢
+// 【核心修改】抓取群組成員改以 accountId 查詢，並完整建立雙向對應 Map
 window.fetchAndRenderGroupMembers = async function() {
     try {
-        if (!window.currentGroup || !window.currentGroup.members || !Array.isArray(window.currentGroup.members) || window.currentGroup.members.length === 0) return;
-        const memberIdentifiers = window.currentGroup.members; // 此處現在裝的是 accountId
+        if (!window.currentGroup) return;
+        
+        // 若當前群組物件沒有 members 陣列，嘗試即時從 Firestore 讀取最新群組資料
+        let memberIdentifiers = window.currentGroup.members;
+        if (!memberIdentifiers || !Array.isArray(memberIdentifiers) || memberIdentifiers.length === 0) {
+            const groupSnap = await getDoc(doc(db, "groups", window.currentGroup.id));
+            if (groupSnap.exists()) {
+                window.currentGroup = { id: groupSnap.id, ...groupSnap.data() };
+                memberIdentifiers = window.currentGroup.members;
+            }
+        }
+
+        if (!memberIdentifiers || !Array.isArray(memberIdentifiers) || memberIdentifiers.length === 0) return;
+        
         window.groupMembers = [];
+        window.userAvatarMap = {}; // 每次抓取前重新初始化
         
         for (let i = 0; i < memberIdentifiers.length; i += 10) {
             const chunk = memberIdentifiers.slice(i, i + 10);
             
-            // 雙重防護查詢：優先用 accountId 查，若舊資料有混用 name 也能兼容查詢
+            // 雙重防護查詢：優先用 accountId 查
             const qId = query(collection(db, "users"), where("accountId", "in", chunk));
             const snapId = await getDocs(qId);
             snapId.forEach(docSnap => {
                 let u = docSnap.data();
-                window.userAvatarMap[u.accountId] = u.avatar;
-                window.userAvatarMap[u.name] = u.avatar; // 相容舊對應
-                if (!window.groupMembers.some(m => m.accountId === u.accountId)) {
+                if (u.accountId) window.userAvatarMap[u.accountId] = u.avatar;
+                if (u.name) window.userAvatarMap[u.name] = u.avatar;
+                if (!window.groupMembers.some(m => m.accountId === u.accountId || m.name === u.name)) {
                     window.groupMembers.push(u);
                 }
             });
 
+            // 備用防護查詢：用 name 查（相容舊資料）
             const qName = query(collection(db, "users"), where("name", "in", chunk));
             const snapName = await getDocs(qName);
             snapName.forEach(docSnap => {
                 let u = docSnap.data();
-                window.userAvatarMap[u.accountId] = u.avatar;
-                window.userAvatarMap[u.name] = u.avatar;
-                if (!window.groupMembers.some(m => m.accountId === u.accountId)) {
+                if (u.accountId) window.userAvatarMap[u.accountId] = u.avatar;
+                if (u.name) window.userAvatarMap[u.name] = u.avatar;
+                if (!window.groupMembers.some(m => m.accountId === u.accountId || m.name === u.name)) {
                     window.groupMembers.push(u);
                 }
             });
@@ -278,7 +292,6 @@ async function initializeAppFlow() {
         document.getElementById('loadingView').style.display = 'flex';
         try {
             const savedUser = JSON.parse(savedUserStr);
-            // 優先透過 accountId 進行校驗，若無則相容用 name 查詢
             let q;
             if (savedUser.accountId) {
                 q = query(collection(db, "users"), where("accountId", "==", savedUser.accountId));
