@@ -20,17 +20,24 @@
             --income-color: #43a047;  /* 收入的綠色 */
             --bg-color: #f4f7f6;
             --border-color: #e0e0e0;
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; }
         
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; max-width: 650px; margin-left: auto; margin-right: auto; }
         .btn-back { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: #555; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .page-title { color: var(--primary-color); font-size: 20px; font-weight: bold; margin: 0; }
+        
+        /* 雙模式切換 Tab */
+        .view-tabs { display: flex; max-width: 650px; margin: 0 auto 20px auto; background: #e0e0e0; border-radius: 25px; padding: 4px; }
+        .view-tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 20px; font-weight: bold; color: #666; cursor: pointer; transition: 0.3s; font-size: 15px; }
+        .view-tab-btn.active { background: white; color: var(--primary-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-        .main-container { max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px; }
+        .main-container { max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 30px; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* === 月曆區塊 === */
-        .calendar-card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 15px; }
+        /* === 日曆模式區塊 (既有) === */
+        .calendar-card { background: white; border-radius: 16px; box-shadow: var(--card-shadow); padding: 15px; }
         .month-selector { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .month-btn { background: none; border: none; font-size: 20px; color: var(--primary-color); cursor: pointer; padding: 5px 15px; font-weight: bold; }
         .current-month { font-size: 18px; font-weight: bold; color: #333; }
@@ -41,15 +48,12 @@
         .day-cell:active { background: var(--primary-light); }
         .day-cell.today { border: 1px solid var(--primary-color); background: #fff; }
         .date-num { font-size: 14px; font-weight: bold; color: #555; margin-bottom: 2px; }
-        /* 金額顯示修正：強制不換行，使用省略號 */
         .day-expense, .day-income { font-size: 11px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
         .day-expense { color: var(--expense-color); }
         .day-income { color: var(--income-color); margin-top: 1px; }
 
-        /* === 統計圖表區塊 === */
-        .chart-card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; text-align: center; }
-        
-        /* 收支總覽切換面板 */
+        /* === 統計圖表區塊 (既有) === */
+        .chart-card { background: white; border-radius: 16px; box-shadow: var(--card-shadow); padding: 20px; text-align: center; }
         .stats-overview { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
         .stat-box { flex: 1; padding: 15px 10px; border-radius: 12px; background: #f9f9f9; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
         .stat-box.active-expense { border-color: var(--expense-color); background: #ffebee; }
@@ -58,10 +62,48 @@
         .stat-amount { font-size: 20px; font-weight: bold; }
         .stat-amount.expense { color: var(--expense-color); }
         .stat-amount.income { color: var(--income-color); }
-
         .chart-container { position: relative; height: 230px; width: 100%; display: flex; justify-content: center; margin-top: 15px; }
 
-        /* === 新增/編輯 彈窗 (BottomSheet 風格) === */
+        /* ========================================= */
+        /* === 回顧分析模式 (Review UI) 全新設計 === */
+        /* ========================================= */
+        .review-card { background: white; border-radius: 16px; box-shadow: var(--card-shadow); padding: 20px; }
+        .review-card-title { font-size: 16px; font-weight: bold; color: #444; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        
+        /* 1. 本月收支 & 3. 累計收支 (網格設計) */
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .summary-item { background: #f8f9fa; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; }
+        .summary-item.full-width { grid-column: 1 / -1; background: linear-gradient(135deg, #f0f7fa 0%, #e1f5fe 100%); }
+        .summary-label { font-size: 12px; color: #777; font-weight: bold; margin-bottom: 5px; }
+        .summary-val { font-size: 18px; font-weight: 800; }
+        .summary-val.exp { color: var(--expense-color); }
+        .summary-val.inc { color: var(--income-color); }
+        .summary-val.bal { color: var(--primary-color); font-size: 24px; }
+        
+        /* 2. 六個月長條圖分析 */
+        .bar-chart-container { position: relative; height: 200px; width: 100%; }
+        .chart-analysis { margin-top: 15px; padding: 12px; background: #fffde7; border-radius: 10px; font-size: 13px; color: #5c5500; font-weight: bold; line-height: 1.5; border-left: 4px solid #fbc02d; }
+        .chart-analysis.good { background: #e8f5e9; color: #1b5e20; border-left-color: #4caf50; }
+        .chart-analysis.warn { background: #ffebee; color: #b71c1c; border-left-color: #f44336; }
+
+        /* 4. 月度清單 (時光軸美學) */
+        .month-list-container { display: flex; flex-direction: column; gap: 12px; }
+        .month-list-card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f0f0f0; padding: 16px; display: flex; align-items: center; justify-content: space-between; }
+        .ml-left { display: flex; flex-direction: column; }
+        .ml-year { font-size: 12px; color: #999; font-weight: bold; }
+        .ml-month { font-size: 22px; font-weight: 900; color: #333; display: flex; align-items: baseline; gap: 4px; }
+        .ml-month span { font-size: 14px; font-weight: bold; color: #777; }
+        
+        .ml-right { text-align: right; display: flex; flex-direction: column; gap: 4px; }
+        .ml-row { font-size: 13px; color: #666; font-weight: bold; }
+        .ml-row span { font-family: monospace; font-size: 14px; }
+        .ml-balance-badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-weight: 900; font-size: 16px; margin-top: 4px; }
+        .ml-balance-badge.positive { background: #e8f5e9; color: var(--income-color); }
+        .ml-balance-badge.negative { background: #ffebee; color: var(--expense-color); }
+        .ml-balance-badge.neutral { background: #f5f5f5; color: #666; }
+
+
+        /* === 新增/編輯 彈窗 (既有) === */
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: flex-end; }
         .modal-content { background: white; width: 100%; max-width: 650px; border-radius: 20px 20px 0 0; padding: 25px 20px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -70,13 +112,11 @@
         .modal-date { font-size: 18px; font-weight: bold; color: #333; }
         .btn-close { background: #f0f0f0; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; }
 
-        /* 收支切換 Toggle */
         .type-toggle { display: flex; background: #f0f0f0; border-radius: 12px; margin-bottom: 20px; padding: 4px; }
         .type-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 8px; font-weight: bold; color: #888; cursor: pointer; transition: 0.2s; font-size: 15px; }
         .type-btn.active.expense { background: white; color: var(--expense-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .type-btn.active.income { background: white; color: var(--income-color); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
-        /* 分類按鈕網格 */
         .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
         .cat-btn { background: #f5f5f5; border: 2px solid transparent; border-radius: 12px; padding: 12px 5px; text-align: center; cursor: pointer; transition: 0.2s; }
         .cat-btn.selected.expense { background: #ffebee; border-color: var(--expense-color); }
@@ -84,7 +124,6 @@
         .cat-icon { font-size: 24px; margin-bottom: 4px; display: block; }
         .cat-name { font-size: 12px; font-weight: bold; color: #555; }
 
-        /* 輸入表單 */
         .input-group { margin-bottom: 15px; }
         .amount-input-wrapper { display: flex; align-items: center; font-size: 24px; font-weight: bold; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
         .amount-input-wrapper.expense { color: var(--expense-color); }
@@ -98,7 +137,6 @@
         .btn-save.expense { background: var(--expense-color); box-shadow: 0 4px 10px rgba(229, 57, 53, 0.3); }
         .btn-save.income { background: var(--income-color); box-shadow: 0 4px 10px rgba(67, 160, 71, 0.3); }
 
-        /* 當日明細清單 */
         .day-list-title { font-size: 14px; font-weight: bold; color: #888; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
         .exp-cat-info { display: flex; align-items: center; gap: 10px; }
@@ -116,12 +154,21 @@
 <body>
 
     <div class="top-nav">
-        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
-        <div class="page-title">💰 記帳本</div>
-        <div style="width: 80px;"></div>
+        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回</button>
+        <div class="page-title">💰 家庭記帳本</div>
+        <div style="width: 70px;"></div>
     </div>
 
-    <div class="main-container">
+    <!-- 頂部 Tab 切換 -->
+    <div class="view-tabs">
+        <button id="tabCalendar" class="view-tab-btn active" onclick="switchMainView('calendar')">📅 日曆模式</button>
+        <button id="tabReview" class="view-tab-btn" onclick="switchMainView('review')">📊 回顧分析</button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- [視圖 1] 原有的月曆與圓餅圖 (日曆模式) -->
+    <!-- ============================================== -->
+    <div id="calendarView" class="main-container">
         <!-- 月曆區塊 -->
         <div class="calendar-card">
             <div class="month-selector">
@@ -130,10 +177,8 @@
                 <button class="month-btn" onclick="changeMonth(1)">❯</button>
             </div>
             <div class="calendar-grid" id="calendarGrid">
-                <!-- 標題列 -->
                 <div class="weekday">日</div><div class="weekday">一</div><div class="weekday">二</div>
                 <div class="weekday">三</div><div class="weekday">四</div><div class="weekday">五</div><div class="weekday">六</div>
-                <!-- 網格內容由 JS 動態產生 -->
             </div>
         </div>
 
@@ -141,12 +186,11 @@
         <div class="chart-card">
             <div class="stats-overview">
                 <div class="stat-box active-expense" id="statBoxExpense" onclick="switchChartType('expense')">
-                    <div class="stat-label">本月支出</div>
+                    <div class="stat-label">當月總支出</div>
                     <div class="stat-amount expense" id="monthTotalExpense">$0</div>
                 </div>
-                <!-- 收入統計框，依據權限決定是否顯示 -->
                 <div class="stat-box" id="statBoxIncome" onclick="switchChartType('income')">
-                    <div class="stat-label">本月收入</div>
+                    <div class="stat-label">當月總收入</div>
                     <div class="stat-amount income" id="monthTotalIncome">$0</div>
                 </div>
             </div>
@@ -156,26 +200,85 @@
         </div>
     </div>
 
-    <!-- 記帳與明細 Modal -->
+    <!-- ============================================== -->
+    <!-- [視圖 2] 全新的回顧分析頁面 (回顧模式) -->
+    <!-- ============================================== -->
+    <div id="reviewView" class="main-container" style="display:none;">
+        
+        <!-- 1. 本月收支區塊 -->
+        <div class="review-card">
+            <div class="review-card-title">📌 本月收支狀況</div>
+            <div class="summary-grid">
+                <div class="summary-item full-width require-income">
+                    <div class="summary-label">本月結餘 (收入 - 支出)</div>
+                    <div class="summary-val bal" id="revThisMonthBalance">NT$ 0</div>
+                </div>
+                <div class="summary-item require-income">
+                    <div class="summary-label">總收入</div>
+                    <div class="summary-val inc" id="revThisMonthIncome">NT$ 0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">總支出</div>
+                    <div class="summary-val exp" id="revThisMonthExpense">NT$ 0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 最新6個月分析 (長條圖) -->
+        <div class="review-card">
+            <div class="review-card-title">📈 近半年支出趨勢</div>
+            <div class="bar-chart-container">
+                <canvas id="sixMonthBarChart"></canvas>
+            </div>
+            <div id="chartAnalysisText" class="chart-analysis">分析載入中...</div>
+        </div>
+
+        <!-- 3. 歷史累計區塊 -->
+        <div class="review-card">
+            <div class="review-card-title">🏦 累計財務總覽</div>
+            <div class="summary-grid">
+                <!-- 今年累計 -->
+                <div class="summary-item">
+                    <div class="summary-label" id="revYearTitle">今年度 (2026)</div>
+                    <div class="summary-val exp" id="revYearExpense">支: $0</div>
+                    <div class="summary-val inc require-income" id="revYearIncome">收: $0</div>
+                    <div class="summary-label require-income" style="margin-top:8px;">結餘: <span id="revYearBalance" style="color:var(--primary-color);font-size:14px;">$0</span></div>
+                </div>
+                <!-- 歷史累計 -->
+                <div class="summary-item">
+                    <div class="summary-label">歷史總累計 (All-time)</div>
+                    <div class="summary-val exp" id="revTotalExpense">支: $0</div>
+                    <div class="summary-val inc require-income" id="revTotalIncome">收: $0</div>
+                    <div class="summary-label require-income" style="margin-top:8px;">總資產: <span id="revTotalBalance" style="color:var(--primary-color);font-size:14px;">$0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 月度清單列表 -->
+        <div class="review-card">
+            <div class="review-card-title">🗓️ 歷史月度清單</div>
+            <div class="month-list-container" id="monthlyHistoryList">
+                <!-- 由 JS 動態生成 -->
+                <div style="text-align:center; color:#999; font-size:14px;">資料載入中...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 記帳與明細 Modal (共用) -->
     <div class="modal" id="expenseModal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-date" id="modalDateTitle">2026年9月17日</div>
                 <button class="btn-close" onclick="closeModal()">✕</button>
             </div>
-
             <!-- 收支切換 -->
             <div class="type-toggle">
                 <button id="btnTypeExpense" class="type-btn active expense" onclick="switchModalType('expense')">支出</button>
-                <!-- 收入按鈕，依據權限決定是否顯示 -->
                 <button id="btnTypeIncome" class="type-btn" onclick="switchModalType('income')">收入</button>
             </div>
-
             <!-- 分類選擇 -->
-            <div class="category-grid" id="categoryGrid">
-                <!-- 由 JS 生成分類按鈕 -->
-            </div>
-
+            <div class="category-grid" id="categoryGrid"></div>
             <!-- 金額與備註 -->
             <div class="input-group">
                 <div class="amount-input-wrapper expense" id="amountWrapper">
@@ -185,9 +288,7 @@
             <div class="input-group">
                 <input type="text" id="expenseNote" class="note-input" placeholder="新增備註 (選填，例如：大潤發採買)">
             </div>
-            
             <button class="btn-save expense" id="btnSaveExpense">儲存紀錄</button>
-
             <!-- 當日明細 -->
             <div class="day-list-title">當日明細</div>
             <div id="dayExpenseList"></div>
@@ -198,7 +299,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, getDocs, query, where, 
-            deleteDoc, doc, updateDoc, serverTimestamp 
+            deleteDoc, doc, serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -216,63 +317,57 @@
         let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
         if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-        // groupId 控管：若尚未設定則自動導向預設家庭群組
         const currentGroupId = localStorage.getItem('lastGroupId') || 'wJOpq0uAnXvO4ezZ1IK9';
 
-       
-
-        // ================= 權限判斷邏輯 (已強化與放寬條件) =================
+        // ================= 權限判斷邏輯 =================
         const roleStr = String(currentUser.role || '').toLowerCase();
         const nameStr = String(currentUser.name || '').toLowerCase(); 
-
         const canViewIncome = 
-            roleStr.includes('家長') || 
-            roleStr.includes('管理') || 
-            roleStr.includes('admin') || 
-            roleStr.includes('parent') ||
-            nameStr.includes('爸') ||   
-            nameStr.includes('媽') ||   
-            nameStr.includes('admin');
-
-        console.log("目前使用者角色:", currentUser.role, "是否可見收入:", canViewIncome);
+            roleStr.includes('家長') || roleStr.includes('管理') || roleStr.includes('admin') || roleStr.includes('parent') ||
+            nameStr.includes('爸') || nameStr.includes('媽') || nameStr.includes('admin');
 
         if (!canViewIncome) {
             document.getElementById('statBoxIncome').style.display = 'none';
             document.getElementById('btnTypeIncome').style.display = 'none';
+            
+            // 隱藏回顧頁面所有跟收入、餘額有關的區塊
+            const incElements = document.querySelectorAll('.require-income');
+            incElements.forEach(el => el.style.display = 'none');
+            
+            // 讓本月支出區塊佔滿寬度
+            const thisMonthExp = document.getElementById('revThisMonthExpense').parentElement;
+            thisMonthExp.classList.add('full-width');
         }
 
         // --- 全域變數 ---
         let currentDate = new Date(); 
         let selectedDateStr = "";     
         let monthData = [];            
-        let chartInstance = null;      
+        let pieChartInstance = null;      
+        let barChartInstance = null;
         
-        let currentModalType = 'expense'; // 'expense' 或 'income'
-        let currentChartType = 'expense'; // 圖表當前顯示類型
+        let currentModalType = 'expense';
+        let currentChartType = 'expense'; 
         let selectedCategory = "";
+
+        // 回顧頁面快取資料 (避免重複讀取)
+        let hasLoadedAllData = false;
+        let allExpensesData = [];
 
         // 支出分類
         const expenseCategories = [
-            { id: '早餐', icon: '🥪', color: '#FFB74D' },
-            { id: '午餐', icon: '🍱', color: '#FF8A65' },
-            { id: '晚餐', icon: '🍲', color: '#E57373' },
-            { id: '日用品', icon: '🛒', color: '#4DB6AC' },
-            { id: '交通', icon: '⛽', color: '#90A4AE' },
-            { id: '水電瓦斯', icon: '⚡', color: '#4FC3F7' },
-            { id: '學習娛樂', icon: '📚', color: '#9575CD' },
-            { id: '其他支出', icon: '📦', color: '#A1887F' }
+            { id: '早餐', icon: '🥪', color: '#FFB74D' }, { id: '午餐', icon: '🍱', color: '#FF8A65' },
+            { id: '晚餐', icon: '🍲', color: '#E57373' }, { id: '日用品', icon: '🛒', color: '#4DB6AC' },
+            { id: '交通', icon: '⛽', color: '#90A4AE' }, { id: '水電瓦斯', icon: '⚡', color: '#4FC3F7' },
+            { id: '學習娛樂', icon: '📚', color: '#9575CD' }, { id: '其他支出', icon: '📦', color: '#A1887F' }
         ];
 
         // 收入分類
         const incomeCategories = [
-            { id: '薪資', icon: '💼', color: '#4CAF50' },
-            { id: '獎金', icon: '🎊', color: '#66BB6A' },
-            { id: '投資', icon: '📈', color: '#81C784' },
-            { id: '兼職', icon: '🧑‍💻', color: '#2E7D32' },
-            { id: '紅包', icon: '🧧', color: '#E53935' },
-            { id: '退款', icon: '💸', color: '#8D6E63' },
-            { id: '零用錢', icon: '💰', color: '#FBC02D' },
-            { id: '其他收入', icon: '📥', color: '#B0BEC5' }
+            { id: '薪資', icon: '💼', color: '#4CAF50' }, { id: '獎金', icon: '🎊', color: '#66BB6A' },
+            { id: '投資', icon: '📈', color: '#81C784' }, { id: '兼職', icon: '🧑‍💻', color: '#2E7D32' },
+            { id: '紅包', icon: '🧧', color: '#E53935' }, { id: '退款', icon: '💸', color: '#8D6E63' },
+            { id: '零用錢', icon: '💰', color: '#FBC02D' }, { id: '其他收入', icon: '📥', color: '#B0BEC5' }
         ];
 
         function formatK(num) {
@@ -284,7 +379,25 @@
         // 初始化
         loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 
-        // ================= 月曆與資料讀取 (加入 groupId 篩選) =================
+        // ================= 雙模式切換 =================
+        window.switchMainView = function(view) {
+            document.getElementById('tabCalendar').classList.remove('active');
+            document.getElementById('tabReview').classList.remove('active');
+            document.getElementById('calendarView').style.display = 'none';
+            document.getElementById('reviewView').style.display = 'none';
+
+            if (view === 'calendar') {
+                document.getElementById('tabCalendar').classList.add('active');
+                document.getElementById('calendarView').style.display = 'flex';
+            } else {
+                document.getElementById('tabReview').classList.add('active');
+                document.getElementById('reviewView').style.display = 'flex';
+                fetchAndRenderReviewData(); // 讀取並渲染回顧資料
+            }
+        };
+
+
+        // ================= 月曆與圓餅圖 (既有邏輯) =================
         async function loadMonthData(year, month) {
             const startStr = `${year}-${String(month).padStart(2,'0')}-01`;
             const endStr = `${year}-${String(month).padStart(2,'0')}-31`; 
@@ -292,14 +405,12 @@
             document.getElementById('calendarMonthTitle').innerText = '讀取中...';
             
             try {
-                // 查詢時加上 groupId 條件，確保只讀取目前群組的記帳
                 const q = query(
                     collection(db, "expenses"),
                     where("groupId", "==", currentGroupId),
                     where("date", ">=", startStr),
                     where("date", "<=", endStr)
                 );
-                
                 const snapshot = await getDocs(q);
                 monthData = [];
                 snapshot.forEach(docSnap => {
@@ -310,7 +421,7 @@
 
                 document.getElementById('calendarMonthTitle').innerText = `${year}年 ${month}月`;
                 renderCalendar(year, month);
-                renderChart();
+                renderPieChart();
 
             } catch (error) {
                 console.error("讀取資料失敗：", error);
@@ -321,7 +432,6 @@
         function renderCalendar(year, month) {
             const grid = document.getElementById('calendarGrid');
             while (grid.children.length > 7) { grid.removeChild(grid.lastChild); }
-
             const firstDayIndex = new Date(year, month - 1, 1).getDay();
             const totalDays = new Date(year, month, 0).getDate();
             const today = new Date();
@@ -329,21 +439,15 @@
             const dailyStats = {};
             monthData.forEach(item => {
                 if (!dailyStats[item.date]) dailyStats[item.date] = { expense: 0, income: 0 };
-                if (item.type === 'income') {
-                    dailyStats[item.date].income += Number(item.amount);
-                } else {
-                    dailyStats[item.date].expense += Number(item.amount);
-                }
+                if (item.type === 'income') dailyStats[item.date].income += Number(item.amount);
+                else dailyStats[item.date].expense += Number(item.amount);
             });
 
-            for (let i = 0; i < firstDayIndex; i++) {
-                grid.appendChild(document.createElement('div'));
-            }
+            for (let i = 0; i < firstDayIndex; i++) grid.appendChild(document.createElement('div'));
 
             for (let day = 1; day <= totalDays; day++) {
                 const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 const isToday = (day === today.getDate() && month - 1 === today.getMonth() && year === today.getFullYear());
-                
                 const stats = dailyStats[dateStr] || { expense: 0, income: 0 };
 
                 const dayDiv = document.createElement('div');
@@ -352,10 +456,7 @@
 
                 let html = `<div class="date-num">${day}</div>`;
                 if (stats.expense > 0) html += `<div class="day-expense">-${formatK(stats.expense)}</div>`;
-                
-                if (canViewIncome && stats.income > 0) {
-                    html += `<div class="day-income">+${formatK(stats.income)}</div>`;
-                }
+                if (canViewIncome && stats.income > 0) html += `<div class="day-income">+${formatK(stats.income)}</div>`;
                 
                 dayDiv.innerHTML = html;
                 grid.appendChild(dayDiv);
@@ -367,28 +468,22 @@
             loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
         };
 
-        // ================= 圓餅圖繪製 =================
         window.switchChartType = function(type) {
             if (type === 'income' && !canViewIncome) return;
-
             currentChartType = type;
             document.getElementById('statBoxExpense').className = `stat-box ${type === 'expense' ? 'active-expense' : ''}`;
             document.getElementById('statBoxIncome').className = `stat-box ${type === 'income' ? 'active-income' : ''}`;
-            renderChart();
+            renderPieChart();
         }
 
-        function renderChart() {
-            let totalExpense = 0;
-            let totalIncome = 0;
+        function renderPieChart() {
+            let totalExpense = 0, totalIncome = 0;
             const categorySums = {};
             
             monthData.forEach(item => {
                 const amt = Number(item.amount);
-                if (item.type === 'income') {
-                    totalIncome += amt;
-                } else {
-                    totalExpense += amt;
-                }
+                if (item.type === 'income') totalIncome += amt;
+                else totalExpense += amt;
                 
                 if (item.type === currentChartType) {
                     categorySums[item.category] = (categorySums[item.category] || 0) + amt;
@@ -398,10 +493,7 @@
             document.getElementById('monthTotalExpense').innerText = `$${totalExpense.toLocaleString()}`;
             document.getElementById('monthTotalIncome').innerText = `$${totalIncome.toLocaleString()}`;
 
-            const labels = [];
-            const data = [];
-            const bgColors = [];
-
+            const labels = [], data = [], bgColors = [];
             const refCategories = currentChartType === 'expense' ? expenseCategories : incomeCategories;
 
             refCategories.forEach(cat => {
@@ -413,10 +505,10 @@
             });
 
             const ctx = document.getElementById('expensePieChart').getContext('2d');
-            if (chartInstance) { chartInstance.destroy(); }
+            if (pieChartInstance) pieChartInstance.destroy();
 
             if (data.length === 0) {
-                chartInstance = new Chart(ctx, {
+                pieChartInstance = new Chart(ctx, {
                     type: 'doughnut',
                     data: { labels: ['無紀錄'], datasets: [{ data: [1], backgroundColor: ['#eeeeee'] }] },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { enabled: false } } }
@@ -424,181 +516,108 @@
                 return;
             }
 
-            chartInstance = new Chart(ctx, {
+            pieChartInstance = new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{ data: data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#ffffff' }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '60%',
-                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 } } } }
+                data: { labels: labels, datasets: [{ data: data, backgroundColor: bgColors, borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 } } } } }
+            });
+        }
+
+        // ==============================================
+        // ================= 回顧分析邏輯 =================
+        // ==============================================
+        async function fetchAndRenderReviewData() {
+            // 優化效能：僅在第一次進入回顧時撈取全部資料，後續使用快取
+            if (!hasLoadedAllData) {
+                try {
+                    const q = query(collection(db, "expenses"), where("groupId", "==", currentGroupId));
+                    const snapshot = await getDocs(q);
+                    allExpensesData = [];
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (!data.type) data.type = 'expense';
+                        allExpensesData.push({ id: docSnap.id, ...data });
+                    });
+                    hasLoadedAllData = true;
+                } catch (error) {
+                    console.error("讀取歷史資料失敗：", error);
+                    alert("歷史資料讀取失敗！");
+                    return;
                 }
+            }
+            processReviewData();
+        }
+
+        function processReviewData() {
+            const now = new Date();
+            const currentY = now.getFullYear();
+            const currentM = String(now.getMonth() + 1).padStart(2, '0');
+            const currentYM = `${currentY}-${currentM}`;
+
+            let thisMonthExp = 0, thisMonthInc = 0;
+            let yearExp = 0, yearInc = 0;
+            let totalExp = 0, totalInc = 0;
+            
+            // 按月份群組
+            const monthlyStats = {};
+
+            allExpensesData.forEach(item => {
+                const amt = Number(item.amount);
+                const isInc = item.type === 'income';
+                const dateStr = item.date || ""; // "YYYY-MM-DD"
+                const itemY = dateStr.substring(0, 4);
+                const itemYM = dateStr.substring(0, 7);
+
+                // 總累計
+                if (isInc) totalInc += amt; else totalExp += amt;
+                
+                // 本年度累計
+                if (itemY == currentY) {
+                    if (isInc) yearInc += amt; else yearExp += amt;
+                }
+                
+                // 本月累計
+                if (itemYM === currentYM) {
+                    if (isInc) thisMonthInc += amt; else thisMonthExp += amt;
+                }
+
+                // 群組處理
+                if (!monthlyStats[itemYM]) monthlyStats[itemYM] = { income: 0, expense: 0, year: itemY, month: itemYM.substring(5,7) };
+                if (isInc) monthlyStats[itemYM].income += amt; else monthlyStats[itemYM].expense += amt;
             });
-        }
 
+            // --- 渲染 1. 本月收支 ---
+            document.getElementById('revThisMonthExpense').innerText = `NT$ ${thisMonthExp.toLocaleString()}`;
+            document.getElementById('revThisMonthIncome').innerText = `NT$ ${thisMonthInc.toLocaleString()}`;
+            document.getElementById('revThisMonthBalance').innerText = `NT$ ${(thisMonthInc - thisMonthExp).toLocaleString()}`;
 
-        // ================= 新增/編輯 Modal 邏輯 =================
-        window.switchModalType = function(type) {
-            if (type === 'income' && !canViewIncome) return;
+            // --- 渲染 3. 累計財務 ---
+            document.getElementById('revYearTitle').innerText = `今年度 (${currentY})`;
+            document.getElementById('revYearExpense').innerText = `支: $${yearExp.toLocaleString()}`;
+            document.getElementById('revYearIncome').innerText = `收: $${yearInc.toLocaleString()}`;
+            document.getElementById('revYearBalance').innerText = `$${(yearInc - yearExp).toLocaleString()}`;
 
-            currentModalType = type;
+            document.getElementById('revTotalExpense').innerText = `支: $${totalExp.toLocaleString()}`;
+            document.getElementById('revTotalIncome').innerText = `收: $${totalInc.toLocaleString()}`;
+            document.getElementById('revTotalBalance').innerText = `$${(totalInc - totalExp).toLocaleString()}`;
+
+            // --- 準備資料給圖表與列表 ---
+            // 取出 keys 並遞減排序 (由新到舊)
+            const sortedYMs = Object.keys(monthlyStats).sort((a, b) => b.localeCompare(a));
             
-            document.getElementById('btnTypeExpense').className = `type-btn ${type === 'expense' ? 'active expense' : ''}`;
-            document.getElementById('btnTypeIncome').className = `type-btn ${type === 'income' ? 'active income' : ''}`;
+            // --- 渲染 4. 月度清單 ---
+            const listContainer = document.getElementById('monthlyHistoryList');
+            listContainer.innerHTML = '';
             
-            document.getElementById('amountWrapper').className = `amount-input-wrapper ${type}`;
-            document.getElementById('btnSaveExpense').className = `btn-save ${type}`;
+            if (sortedYMs.length === 0) {
+                listContainer.innerHTML = '<div style="text-align:center; color:#999;">尚無歷史資料</div>';
+            } else {
+                sortedYMs.forEach(ym => {
+                    const d = monthlyStats[ym];
+                    const balance = d.income - d.expense;
+                    
+                    let badgeClass = 'neutral';
+                    if (balance > 0) badgeClass = 'positive';
+                    else if (balance < 0) badgeClass = 'negative';
 
-            renderCategoryGrid();
-        }
-
-        function renderCategoryGrid() {
-            const grid = document.getElementById('categoryGrid');
-            grid.innerHTML = '';
-            const list = currentModalType === 'expense' ? expenseCategories : incomeCategories;
-            
-            list.forEach(cat => {
-                const btn = document.createElement('div');
-                btn.className = 'cat-btn';
-                btn.id = `cat-${cat.id}`;
-                btn.onclick = () => selectCategory(cat.id);
-                btn.innerHTML = `
-                    <span class="cat-icon">${cat.icon}</span>
-                    <span class="cat-name">${cat.id}</span>
-                `;
-                grid.appendChild(btn);
-            });
-            selectCategory(list[0].id); 
-        }
-
-        function selectCategory(catId) {
-            selectedCategory = catId;
-            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected', 'expense', 'income'));
-            document.getElementById(`cat-${catId}`).classList.add('selected', currentModalType);
-        }
-
-        window.openModal = function(dateStr) {
-            selectedDateStr = dateStr;
-            const [y, m, d] = dateStr.split('-');
-            document.getElementById('modalDateTitle').innerText = `${y}年${parseInt(m)}月${parseInt(d)}日`;
-            
-            document.getElementById('expenseAmount').value = '';
-            document.getElementById('expenseNote').value = '';
-            
-            switchModalType('expense');
-            renderDayList();
-
-            document.getElementById('expenseModal').style.display = 'flex';
-        };
-
-        window.closeModal = function() {
-            document.getElementById('expenseModal').style.display = 'none';
-        };
-
-        // 儲存紀錄 (寫入時夾帶 groupId)
-        document.getElementById('btnSaveExpense').addEventListener('click', async () => {
-            const amountStr = document.getElementById('expenseAmount').value;
-            const note = document.getElementById('expenseNote').value.trim();
-            const amount = parseInt(amountStr);
-
-            if (!amount || amount <= 0) { alert('請輸入有效金額！'); return; }
-
-            const btn = document.getElementById('btnSaveExpense');
-            btn.disabled = true;
-            btn.innerText = '儲存中...';
-
-            try {
-                const newItem = {
-                    groupId: currentGroupId, // 寫入所屬群組代號
-                    date: selectedDateStr,
-                    amount: amount,
-                    category: selectedCategory,
-                    type: currentModalType, 
-                    note: note,
-                    operator: currentUser.name,
-                    timestamp: serverTimestamp()
-                };
-
-                const docRef = await addDoc(collection(db, "expenses"), newItem);
-                
-                monthData.push({ id: docRef.id, ...newItem, timestamp: new Date() });
-                
-                document.getElementById('expenseAmount').value = '';
-                document.getElementById('expenseNote').value = '';
-                
-                renderDayList();
-                renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
-                renderChart();
-
-            } catch (e) {
-                console.error("儲存失敗：", e);
-                alert("儲存失敗，請檢查網路！");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = '儲存紀錄';
-            }
-        });
-
-        function renderDayList() {
-            const container = document.getElementById('dayExpenseList');
-            container.innerHTML = '';
-            
-            let dayRecords = monthData.filter(e => e.date === selectedDateStr);
-
-            if (!canViewIncome) {
-                dayRecords = dayRecords.filter(e => e.type !== 'income');
-            }
-
-            if (dayRecords.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa; font-size:13px;">當日尚無紀錄</div>';
-                return;
-            }
-
-            dayRecords.forEach(item => {
-                const isIncome = (item.type === 'income');
-                const list = isIncome ? incomeCategories : expenseCategories;
-                const catObj = list.find(c => c.id === item.category) || { icon: '📦', color: '#999' };
-                
-                const div = document.createElement('div');
-                div.className = 'expense-item';
-                div.innerHTML = `
-                    <div class="exp-cat-info">
-                        <div class="exp-icon-box" style="color: ${catObj.color}">${catObj.icon}</div>
-                        <div class="exp-details">
-                            <span class="exp-cat-name">${item.category}</span>
-                            <span class="exp-note">${item.note ? item.note : `<span style="opacity:0.5">${item.operator}記帳</span>`}</span>
-                        </div>
-                    </div>
-                    <div style="display:flex; align-items:center;">
-                        <span class="exp-amount ${isIncome ? 'income' : 'expense'}">${isIncome ? '+' : '-'}$${item.amount.toLocaleString()}</span>
-                        <button class="btn-del-exp" onclick="deleteExpense('${item.id}')">✕</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        window.deleteExpense = async function(docId) {
-            if (!confirm("確定要刪除這筆紀錄嗎？")) return;
-            try {
-                await deleteDoc(doc(db, "expenses", docId));
-                monthData = monthData.filter(e => e.id !== docId);
-                
-                renderDayList();
-                renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
-                renderChart();
-            } catch (e) {
-                console.error("刪除失敗：", e);
-                alert("刪除失敗，請檢查網路。");
-            }
-        };
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('expenseModal');
-            if (event.target == modal) { modal.style.display = "none"; }
-        };
-
-    </script>
-</body>
-</html>
+                    let
