@@ -75,7 +75,6 @@ window.renderDynamicModules = async function(user) {
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
     try {
-        // 【修改處】：以 user.accountId 或 user.name 讀取 userSettings
         const userConfigDoc = await getDoc(doc(db, "userSettings", user.accountId || user.name));
         if (userConfigDoc.exists()) {
             const data = userConfigDoc.data();
@@ -85,10 +84,14 @@ window.renderDynamicModules = async function(user) {
         allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
     } catch (e) { order = [...allowedMenus]; }
 
+    // 動態產生當天日期的日曆圖示 (使用 em 單位以配合父層字體大小自動縮放)
+    const todayNum = new Date().getDate();
+    const dynamicCalIcon = `<div style="display:inline-flex; flex-direction:column; align-items:center; width:1.2em; height:1.2em; border:0.12em solid currentColor; border-radius:0.2em; overflow:hidden; box-sizing:border-box; flex-shrink:0; vertical-align:middle; background:var(--bg-body, #fff);"><div style="background:var(--danger, #e11d48); width:100%; height:25%;"></div><div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:0.65em; font-weight:800; color:inherit; width:100%; font-family:sans-serif; margin:0; padding:0; line-height:1;">${todayNum}</div></div>`;
+
     const sideMenuTemplates = {
         chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">💬</span>聊天室</div>`,
         checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">📍</span>到家打卡</div>`,
-        calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">📅</span>行事曆</div>`,
+        calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">${dynamicCalIcon}</span>行事曆</div>`,
         photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">📸</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
         gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">🎮</span>遊戲區</div>`,
         wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">✨</span>許願牆</div>`,
@@ -175,7 +178,7 @@ window.renderDynamicModules = async function(user) {
 
     let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>`;
     const dockMap = {
-        calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>`,
+        calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">${dynamicCalIcon}</div>`,
         chat: `<div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">💬</div>`,
         photodump: `<div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">📸</div>`,
         todo: `<div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">📋</div>`,
@@ -419,6 +422,10 @@ window.renderAgendaUI = function() {
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
     
+    // 動態產生當天日期的日曆圖示 (用於主頁無行程的空狀態區塊)
+    const todayNum = now.getDate();
+    const dynamicCalIcon = `<div style="display:inline-flex; flex-direction:column; align-items:center; width:1.2em; height:1.2em; border:0.12em solid currentColor; border-radius:0.2em; overflow:hidden; box-sizing:border-box; flex-shrink:0; vertical-align:middle; background:var(--bg-body, #fff);"><div style="background:var(--danger, #e11d48); width:100%; height:25%;"></div><div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:0.65em; font-weight:800; color:inherit; width:100%; font-family:sans-serif; margin:0; padding:0; line-height:1;">${todayNum}</div></div>`;
+    
     let activeIcons = [], validEvents = [];
     
     cachedCalendarEvents.forEach(evt => {
@@ -470,7 +477,8 @@ window.renderAgendaUI = function() {
                     <div class="agenda-date" style="font-size: 15px;">${dateTitle}</div>
                     <div style="font-size: 13px; color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
                 </div>
-                <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; color:var(--text-main);">📅</div>
+                <!-- 這裡使用動態生成的 HTML 替換原本的 📅 Emoji -->
+                <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; color:var(--text-main);">${dynamicCalIcon}</div>
             </div>`;
     }
 };
