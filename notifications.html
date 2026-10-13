@@ -27,17 +27,22 @@
         .btn-add-notice:active { transform: scale(0.98); }
 
         /* 通知卡片 */
-        .notice-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; }
-        .notice-date { font-size: 13px; font-weight: 800; color: var(--primary-dark); background: #d1fae5; display: inline-block; padding: 4px 10px; border-radius: 20px; margin-bottom: 10px; }
+        .notice-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; position: relative; }
+        .notice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .notice-date { font-size: 13px; font-weight: 800; color: var(--primary-dark); background: #d1fae5; padding: 4px 10px; border-radius: 20px; }
+        .notice-actions { display: none; gap: 8px; }
+        .btn-action { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-sub); padding: 4px; border-radius: 4px; }
+        .btn-action:hover { background: #f3f4f6; color: var(--text-main); }
         .notice-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; line-height: 1.4; }
         .notice-content { font-size: 15px; color: #4b5563; line-height: 1.6; white-space: pre-wrap; }
         .empty-state { text-align: center; color: var(--text-sub); padding: 40px 0; font-weight: 600; display: none; }
 
-        /* 新增表單區塊 */
+        /* 表單區塊 */
         .form-section { display: none; background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 2px dashed var(--primary); margin-bottom: 20px; }
+        .form-title { margin-top: 0; color: var(--primary-dark); font-size: 18px; margin-bottom: 16px; }
         .form-group { margin-bottom: 16px; }
         .form-label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-        .form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; font-family: inherit; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; font-family: inherit; box-sizing: border-box; }
         .form-control:focus { outline: none; border-color: var(--primary); }
         .form-actions { display: flex; gap: 10px; margin-top: 20px; }
         .btn-cancel { flex: 1; padding: 12px; background: #e2e8f0; color: #334155; border: 1px solid var(--border-color); border-radius: 8px; font-weight: 700; cursor: pointer; }
@@ -54,9 +59,10 @@
         <!-- 管理員專用新增按鈕 -->
         <button class="btn-add-notice" id="btnShowAddForm">➕ 發佈新公告</button>
 
-        <!-- 發佈表單 -->
-        <div class="form-section" id="addNoticeForm">
-            <h3 style="margin-top: 0; color: var(--primary-dark);">新增改版公告</h3>
+        <!-- 發佈/編輯表單 -->
+        <div class="form-section" id="noticeForm">
+            <h3 class="form-title" id="formTitle">新增改版公告</h3>
+            <input type="hidden" id="editNoticeId">
             <div class="form-group">
                 <label class="form-label">選擇日期</label>
                 <input type="date" id="noticeDate" class="form-control">
@@ -71,7 +77,7 @@
             </div>
             <div class="form-actions">
                 <button class="btn-cancel" onclick="closeForm()">取消</button>
-                <button class="btn-submit" onclick="submitNotice()">發佈</button>
+                <button class="btn-submit" onclick="submitNotice()" id="btnSubmit">發佈</button>
             </div>
         </div>
 
@@ -82,7 +88,10 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, orderBy, limit, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+        import { 
+            getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, 
+            query, orderBy, limit, serverTimestamp, onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
@@ -102,17 +111,18 @@
         if (!currentUser) {
             alert("請先登入系統！");
             window.location.href = 'index.html';
-            // 💡 修正 1：加上 return，防止未登入時下方腳本繼續執行報錯
             throw new Error("User not logged in");
         }
 
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent');
+        let noticesData = []; // 暫存資料以便編輯時取用
 
-        // 如果是管理員，顯示新增按鈕
+        // 初始化管理員介面
         if (isAdmin) {
             document.getElementById('btnShowAddForm').style.display = 'block';
-            
-            // 預設今天日期
+        }
+
+        function setTodayDate() {
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -120,47 +130,108 @@
             document.getElementById('noticeDate').value = `${yyyy}-${mm}-${dd}`;
         }
 
+        // 顯示新增表單
         document.getElementById('btnShowAddForm').addEventListener('click', () => {
-            document.getElementById('addNoticeForm').style.display = 'block';
+            document.getElementById('noticeForm').style.display = 'block';
             document.getElementById('btnShowAddForm').style.display = 'none';
-        });
-
-        window.closeForm = function() {
-            document.getElementById('addNoticeForm').style.display = 'none';
-            document.getElementById('btnShowAddForm').style.display = 'block';
+            document.getElementById('formTitle').textContent = '新增改版公告';
+            document.getElementById('btnSubmit').textContent = '發佈';
+            document.getElementById('editNoticeId').value = '';
             document.getElementById('noticeTitle').value = '';
             document.getElementById('noticeContent').value = '';
-        }
+            setTodayDate();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
+        // 關閉表單
+        window.closeForm = function() {
+            document.getElementById('noticeForm').style.display = 'none';
+            document.getElementById('btnShowAddForm').style.display = 'block';
+            document.getElementById('editNoticeId').value = '';
+            document.getElementById('noticeTitle').value = '';
+            document.getElementById('noticeContent').value = '';
+        };
+
+        // 編輯公告 (掛載到 window 供 onclick 呼叫)
+        window.editNotice = function(id) {
+            const notice = noticesData.find(n => n.id === id);
+            if (!notice) return;
+
+            document.getElementById('noticeForm').style.display = 'block';
+            document.getElementById('btnShowAddForm').style.display = 'none';
+            document.getElementById('formTitle').textContent = '編輯公告';
+            document.getElementById('btnSubmit').textContent = '儲存修改';
+            
+            document.getElementById('editNoticeId').value = notice.id;
+            document.getElementById('noticeDate').value = notice.date;
+            document.getElementById('noticeTitle').value = notice.title;
+            document.getElementById('noticeContent').value = notice.content;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // 刪除公告 (掛載到 window 供 onclick 呼叫)
+        window.deleteNotice = async function(id) {
+            if (!confirm("確定要刪除這則公告嗎？刪除後無法復原。")) return;
+            
+            try {
+                await deleteDoc(doc(db, "app_notifications", id));
+                alert("公告已刪除！");
+            } catch (e) {
+                console.error("刪除失敗:", e);
+                alert("刪除失敗，請檢查網路連線。");
+            }
+        };
+
+        // 提交表單 (新增或更新)
         window.submitNotice = async function() {
             const date = document.getElementById('noticeDate').value;
             const title = document.getElementById('noticeTitle').value.trim();
             const content = document.getElementById('noticeContent').value.trim();
+            const editId = document.getElementById('editNoticeId').value;
+            const btn = document.getElementById('btnSubmit');
 
             if (!date || !title || !content) {
                 alert("請完整填寫日期、主旨與內容！");
                 return;
             }
 
+            btn.disabled = true;
+            btn.textContent = '處理中...';
+
             try {
-                await addDoc(collection(db, "app_notifications"), {
-                    date: date,
-                    title: title,
-                    content: content,
-                    author: currentUser.name,
-                    timestamp: serverTimestamp()
-                });
-                alert("公告已成功發佈！");
+                if (editId) {
+                    // 更新現有公告
+                    await updateDoc(doc(db, "app_notifications", editId), {
+                        date: date,
+                        title: title,
+                        content: content,
+                        editor: currentUser.name,
+                        lastEditedAt: serverTimestamp()
+                    });
+                    alert("公告已成功更新！");
+                } else {
+                    // 新增公告
+                    await addDoc(collection(db, "app_notifications"), {
+                        date: date,
+                        title: title,
+                        content: content,
+                        author: currentUser.name,
+                        timestamp: serverTimestamp()
+                    });
+                    alert("公告已成功發佈！");
+                }
                 closeForm();
             } catch (e) {
-                console.error(e);
-                alert("發佈失敗，請檢查網路連線。");
+                console.error("儲存失敗:", e);
+                alert("儲存失敗，請檢查網路連線。");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = editId ? '儲存修改' : '發佈';
             }
-        }
+        };
 
-        // 💡 修正 2：移除雙重 orderBy，避免 Firebase 阻擋查詢要求建立複合索引 (Composite Index)
-        // 改為單純依據發佈的時間戳記 (timestamp) 降冪排序即可
-        // 💡 讀取量優化：加上 limit，只讀最新 30 則（原本讀取整個 app_notifications 集合）
+        // 監聽公告列表 (即時更新)
         const q = query(collection(db, "app_notifications"), orderBy("timestamp", "desc"), limit(30));
         
         onSnapshot(q, (snapshot) => {
@@ -168,6 +239,7 @@
             const emptyState = document.getElementById('emptyState');
             
             container.innerHTML = '';
+            noticesData = []; // 清空暫存
 
             if (snapshot.empty) {
                 emptyState.style.display = 'block';
@@ -178,10 +250,25 @@
             
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
+                const id = docSnap.id;
+                noticesData.push({ id, ...data });
+
                 const card = document.createElement('div');
                 card.className = 'notice-card';
+                
+                // 管理員可見的編輯/刪除按鈕
+                const actionsHtml = isAdmin ? `
+                    <div class="notice-actions" style="display: flex;">
+                        <button class="btn-action" onclick="editNotice('${id}')" title="編輯">✏️</button>
+                        <button class="btn-action" onclick="deleteNotice('${id}')" title="刪除">🗑️</button>
+                    </div>
+                ` : '';
+
                 card.innerHTML = `
-                    <div class="notice-date">${data.date}</div>
+                    <div class="notice-header">
+                        <div class="notice-date">${data.date}</div>
+                        ${actionsHtml}
+                    </div>
                     <div class="notice-title">${data.title}</div>
                     <div class="notice-content">${data.content}</div>
                 `;
