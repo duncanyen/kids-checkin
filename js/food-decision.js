@@ -26,6 +26,36 @@ let currentEmoji = '';
 let selectedDate = new Date();
 let calendarDate = new Date();
 
+// ================= 初始化身份資料 =================
+
+function initIdentity() {
+    const nameEl = document.getElementById('voteMemberName');
+    const faceEl = document.getElementById('voteFaceContainer');
+    const headerAvatar = document.getElementById('headerAvatarBtn');
+    
+    // 取得頭像或備用字元
+    const avatarUrl = currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl;
+    const fallbackChar = (currentUser.name || '訪').charAt(0);
+
+    // 更新投票身份名稱
+    if (nameEl) nameEl.innerText = currentUser.name || '訪客';
+    
+    // 更新投票身份頭像
+    const faceHtml = avatarUrl 
+        ? `<img src="${avatarUrl}" class="face real-avatar">` 
+        : `<div class="face">${fallbackChar}</div>`;
+    if (faceEl) faceEl.innerHTML = faceHtml;
+    
+    // 更新頂部 Header 頭像
+    if (headerAvatar) {
+        headerAvatar.innerHTML = avatarUrl 
+            ? `<img src="${avatarUrl}" class="real-avatar">` 
+            : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;background:#edf6f1;color:var(--green2);font-weight:bold;">${fallbackChar}</div>`;
+    }
+}
+
+// ================= 日期與月曆邏輯 =================
+
 function formatDateStr(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -96,30 +126,9 @@ function getVoteDocId(meal) {
     return `${currentGroupId}_${dateStr}_${meal}`;
 }
 
-// ================= 資料載入與渲染 =================
+// ================= 資料載入與清單渲染 =================
 
-async function loadRestaurants() {
-    try {
-        // 修正：正確的集合名稱為 food_restaurants
-        const q = query(collection(db, "food_restaurants"), where("groupId", "==", currentGroupId));
-        const snap = await getDocs(q);
-        restaurants = [];
-        snap.forEach(d => restaurants.push({id: d.id, ...d.data()}));
-        renderRestaurantList('全部');
-    } catch (error) {
-        console.error("載入餐廳失敗:", error);
-    }
-}
-
-window.foodApp.filterRestaurants = function(type, btn) {
-    if(btn) {
-        document.querySelectorAll('#manage .chip').forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-    }
-    renderRestaurantList(type);
-};
-
-function renderRestaurantList(type = '全部') {
+window.foodApp.renderRestaurantList = function(type = '全部') {
     const list = document.getElementById('restaurantList');
     if (!list) return;
     list.innerHTML = '';
@@ -135,7 +144,7 @@ function renderRestaurantList(type = '全部') {
     }
     
     filtered.forEach(r => {
-        const mealStr = (r.meal || []).join(', '); // 修正防呆
+        const mealStr = (r.meal || []).join(', '); // 防呆處理陣列
         list.innerHTML += `
             <div class="list-item">
                 <div class="list-info">
@@ -146,7 +155,28 @@ function renderRestaurantList(type = '全部') {
             </div>
         `;
     });
+};
+
+async function loadRestaurants() {
+    try {
+        const q = query(collection(db, "food_restaurants"), where("groupId", "==", currentGroupId));
+        const snap = await getDocs(q);
+        restaurants = [];
+        snap.forEach(d => restaurants.push({id: d.id, ...d.data()}));
+        
+        window.foodApp.renderRestaurantList('全部');
+    } catch (error) {
+        console.error("載入餐廳失敗:", error);
+    }
 }
+
+window.foodApp.filterRestaurants = function(type, btn) {
+    if(btn) {
+        document.querySelectorAll('#manage .chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    window.foodApp.renderRestaurantList(type);
+};
 
 // ================= 導覽與流程控制 =================
 
@@ -201,7 +231,6 @@ function setupWheel() {
         if(!c.classList.contains('wheel-label')) c.remove();
     });
 
-    // 修正：改用 r.meal
     const candidates = restaurants.filter(r => {
         const mealArr = r.meal || [];
         return mealArr.includes(currentMeal) || mealArr.includes('不限');
@@ -299,13 +328,12 @@ window.foodApp.acceptWheelWinner = function() {
     window.foodApp.go('stats', document.querySelector('[data-view=stats]'));
 };
 
-// ================= 投票清單邏輯 =================
+// ================= 投票清單與儲存邏輯 =================
 
 function renderVoteList() {
     const list = document.getElementById('voteList');
     list.innerHTML = '';
     
-    // 修正：改用 r.meal
     const candidates = restaurants.filter(r => {
         const mealArr = r.meal || [];
         return mealArr.includes(currentMeal) || mealArr.includes('不限');
@@ -330,7 +358,6 @@ function renderVoteList() {
     });
 }
 
-// 投票儲存 (綁定 accountId)
 let mockVotesMap = {};
 async function saveVote(restaurantName, source = 'manual') {
     const docId = getVoteDocId(currentMeal);
@@ -359,15 +386,19 @@ async function saveVote(restaurantName, source = 'manual') {
                 meal: currentMeal,
                 votes: votesMap
             });
+        } else {
+            // 注意：若真實環境沒有自訂 _id，需要透過 document id 更新
+            // const realDocId = docSnap.docs[0].id;
+            // await updateDoc(doc(db, 'food_votes', realDocId), { votes: votesMap });
         }
     } catch(e) {
-        console.log("Mock Save Vote error:", e);
+        console.log("Save Vote error:", e);
     }
     
     // 本地預覽即時更新
     mockVotesMap[accountId] = {
         name: currentUser.name,
-        avatar: null,
+        avatar: currentUser.avatar || null,
         choice: restaurantName
     };
     renderStats(mockVotesMap);
@@ -424,14 +455,33 @@ function renderStats(votesMap) {
     const membersDiv = document.getElementById('memberVotes');
     membersDiv.innerHTML = '';
     Object.values(votesMap).forEach(v => {
+        const fallbackChar = (v.name || '訪').charAt(0);
+        const faceHtml = v.avatar 
+            ? `<img src="${v.avatar}" class="face real-avatar">` 
+            : `<div class="face">${fallbackChar}</div>`;
+            
         membersDiv.innerHTML += `
             <div class="member-vote-row">
-                <div class="face">${v.name[0]}</div>
+                ${faceHtml}
                 <div class="mv-name">${v.name}</div>
                 <div class="mv-choice">${v.choice}</div>
             </div>
         `;
     });
+
+    // 更新投票狀態標籤
+    const currentAccountId = currentUser.accountId || currentUser.id || currentUser.uid || 'unknown';
+    const myVote = votesMap[currentAccountId];
+    const voteStatusEl = document.getElementById('voteStatus');
+    if (voteStatusEl) {
+        if (myVote) {
+            voteStatusEl.innerText = '已完成投票 ✓';
+            voteStatusEl.classList.add('done');
+        } else {
+            voteStatusEl.innerText = '尚未投票';
+            voteStatusEl.classList.remove('done');
+        }
+    }
 }
 
 // ================= 管理：新增餐廳功能 =================
@@ -492,8 +542,9 @@ window.foodApp.saveRestaurant = async function() {
     }
 };
 
-// ================= 初始化 =================
+// ================= 啟動初始化 =================
 
+initIdentity();
 updateDateDisplay();
 renderCalendar();
 loadRestaurants();
