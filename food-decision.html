@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f8f5">
 <title>吃什麼｜一起投票，吃出好心情</title>
-<!-- 確保 CSS 路徑正確 -->
 <link rel="stylesheet" href="css/food-decision.css">
 <style>
-/* 新增 Checkbox 樣式 */
 .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .checkbox-label { 
     display: flex; align-items: center; gap: 4px; 
@@ -17,6 +15,71 @@
     border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
 }
 .checkbox-label input { width: auto; margin: 0; }
+.date-selector-container {
+    background: #fff;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 60px;
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.date-btn {
+    background: var(--green);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.calendar-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+    display: none; align-items: center; justify-content: center;
+}
+.calendar-modal.show { display: flex; }
+.calendar-content {
+    background: white; width: 90%; max-width: 400px;
+    border-radius: 20px; padding: 20px;
+}
+.calendar-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+}
+.calendar-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center;
+}
+.calendar-day {
+    padding: 10px 0; border-radius: 8px; cursor: pointer;
+}
+.calendar-day:hover { background: var(--mint); }
+.calendar-day.active { background: var(--green); color: white; }
+.calendar-weekday { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+
+/* Wheel Segment Colors */
+.wheel-segment {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    transform-origin: bottom right;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    clip-path: polygon(100% 100%, 0 0, 100% 0); /* Adjusted for exact degree later */
+}
+.wheel-text {
+    position: absolute;
+    left: 20%; /* adjust for label position */
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg); /* Adjust based on segment */
+    transform-origin: left center;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--ink);
+    white-space: nowrap;
+}
+
 </style>
 </head>
 <body>
@@ -29,10 +92,15 @@
   </div>
 </header>
 
+<div class="date-selector-container">
+    <span id="currentSelectedDateDisplay" style="font-weight:bold;">今天</span>
+    <button class="date-btn" onclick="document.getElementById('calendarModal').classList.add('show')">選擇日期 📅</button>
+</div>
+
 <main>
 <section id="home" class="view active">
   <div class="hero">
-    <h1>今天，我們吃什麼？</h1>
+    <h1><span id="homeDateText">今天</span>，我們吃什麼？</h1>
   </div>
 
   <div class="section-title">現在要吃哪一餐？</div>
@@ -75,7 +143,10 @@
     <div class="wheel-intro"><strong>「大家都不想決定，那就交給命運。」</strong><p id="wheelHint">輪盤會從本時段候選餐廳中選出一家</p></div>
     <div class="wheel-stage">
       <div class="pointer"></div>
-      <div id="wheel" class="wheel"><div class="wheel-label">吃什麼？</div></div>
+      <div id="wheel" class="wheel">
+        <!-- Segments will be injected here -->
+        <div class="wheel-label">吃什麼？</div>
+      </div>
     </div>
     <div class="wheel-state" id="wheelState">準備好了嗎？</div>
     <div id="winner" class="winner">
@@ -96,7 +167,7 @@
 
 <section id="stats" class="view">
   <div class="hero" style="padding-bottom: 0;">
-    <div class="eyebrow">今日即時統計</div>
+    <div class="eyebrow"><span id="statsDateText">今日</span>即時統計</div>
     <h1>大家想吃什麼？</h1>
   </div>
 
@@ -169,7 +240,26 @@
 </nav>
 </div>
 
-<div class="countdown" id="countdown"><div><b id="countNumber">3</b><p>把今天的選擇交給命運</p></div></div>
+<!-- Calendar Modal -->
+<div class="calendar-modal" id="calendarModal" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="calendar-content">
+        <div class="calendar-header">
+            <button class="btn-back" onclick="window.foodApp.changeMonth(-1)" style="position:static; box-shadow:none; border:1px solid var(--line);">❮</button>
+            <h3 id="calendarMonthYear" style="margin:0;">2026年 10月</h3>
+            <button class="btn-back" onclick="window.foodApp.changeMonth(1)" style="position:static; box-shadow:none; border:1px solid var(--line);">❯</button>
+        </div>
+        <div class="calendar-grid">
+            <div class="calendar-weekday">日</div><div class="calendar-weekday">一</div><div class="calendar-weekday">二</div>
+            <div class="calendar-weekday">三</div><div class="calendar-weekday">四</div><div class="calendar-weekday">五</div><div class="calendar-weekday">六</div>
+        </div>
+        <div class="calendar-grid" id="calendarDays">
+            <!-- Days will be generated here -->
+        </div>
+        <button class="primary" style="margin-top:15px;" onclick="document.getElementById('calendarModal').classList.remove('show')">確認</button>
+    </div>
+</div>
+
+<div class="countdown" id="countdown"><div><b id="countNumber">3</b><p>把決定交給命運</p></div></div>
 <div class="confetti" id="confetti"></div>
 <div class="toast" id="toast"></div>
 
@@ -184,7 +274,6 @@
 </div>
 <label>代表食物 *</label><input id="rFood" placeholder="例如：牛肉麵、漢堡、壽司">
 
-<!-- 【修改】將適合時段改為 Checkbox 複選 -->
 <label>適合時段 (可複選) *</label>
 <div class="checkbox-group" id="rMealGroup">
   <label class="checkbox-label"><input type="checkbox" name="rMeal" value="早餐"> 早餐</label>
@@ -204,7 +293,7 @@
 <script>
 window.foodApp = new Proxy({}, {
     get: function(target, prop) {
-        return target[prop] || function() { alert('系統載入中或發生錯誤，請檢查網路，或確認 js/food-decision.js 是否存在！'); };
+        return target[prop] || function() { console.log('Mock foodApp called:', prop); };
     }
 });
 </script>
