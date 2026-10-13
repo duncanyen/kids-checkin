@@ -54,6 +54,7 @@ let selectedPersonalAccountId = null; // 當前選取的個人ID
 let hasLoadedAllData = false;
 let allExpensesData = [];
 let allAvailableYears = new Set(); 
+let allUsersMap = {}; // 存放所有使用者的頭像對應表
 
 // 預設分類
 const defaultExpenseCategories = [
@@ -77,10 +78,32 @@ function formatK(num) {
 }
 
 async function initApp() {
+    await loadAllUsers(); // 初始化時先載入所有成員的頭像
     await loadCustomCategories(); 
     loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 }
 initApp();
+
+// 新增：從 users 集合抓取所有人的大頭照
+async function loadAllUsers() {
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        allUsersMap = {};
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            const uid = data.accountId || data.id || data.uid || docSnap.id;
+            const avatarUrl = data.avatar || data.photoURL || data.avatarUrl || null;
+            
+            allUsersMap[uid] = avatarUrl;
+            // 備用防呆：如果有舊資料只存了名字，也綁定一下頭像
+            if (data.name) {
+                allUsersMap[data.name] = avatarUrl;
+            }
+        });
+    } catch (error) {
+        console.error("載入使用者清單失敗：", error);
+    }
+}
 
 async function loadCustomCategories() {
     try {
@@ -202,12 +225,17 @@ function renderPersonalAvatars() {
         const uid = item.accountId || item.operator || '未知ID';
         const uname = item.operator || '未知';
         
-        let userAvatar = null;
-        if(uid === currentAccountId || uname === currentUser.name) {
+        // 修正：優先從剛剛抓下來的全域使用者清單 (allUsersMap) 配對頭像
+        let userAvatar = allUsersMap[uid] || allUsersMap[uname] || null;
+
+        // 保底：如果是當前操作者且沒配對到，用暫存檔裡的
+        if(!userAvatar && (uid === currentAccountId || uname === currentUser.name)) {
             userAvatar = currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl || null;
         }
+        
         if(!usersMap[uid]) usersMap[uid] = { id: uid, name: uname, avatar: userAvatar };
     });
+    
     const users = Object.values(usersMap);
     
     if(users.length === 0) {
