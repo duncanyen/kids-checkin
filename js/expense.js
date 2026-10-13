@@ -19,8 +19,8 @@ const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage
 let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-// 修正：帳號優先取 account, id 或 uid，不再預設取 email
-const currentAccountId = currentUser.account || currentUser.id || currentUser.uid || currentUser.name || "unknown";
+// 修正：優先取得 users 集合中真正的 accountId，並移除 name 避免存錯
+const currentAccountId = currentUser.accountId || currentUser.id || currentUser.uid || currentUser.account || "unknown";
 const currentGroupId = localStorage.getItem('lastGroupId') || 'wJOpq0uAnXvO4ezZ1IK9';
 
 // ================= 權限判斷邏輯 =================
@@ -201,8 +201,7 @@ function renderPersonalAvatars() {
     monthData.forEach(item => {
         const uid = item.accountId || item.operator || '未知ID';
         const uname = item.operator || '未知';
-        // 若能從 item 中拿到 avatar 或者從全域 currentUser 拿到也可以
-        // 這裡做個防呆，若帳號剛好是當前使用者，抓 currentUser.avatar (或 photoURL)
+        
         let userAvatar = null;
         if(uid === currentAccountId || uname === currentUser.name) {
             userAvatar = currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl || null;
@@ -224,7 +223,6 @@ function renderPersonalAvatars() {
         const btn = document.createElement('div');
         btn.className = `avatar-btn ${selectedPersonalAccountId === u.id ? 'active' : ''}`;
         
-        // 修正：支援大頭照圖片顯示
         if (u.avatar) {
             btn.innerHTML = `<img src="${u.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; pointer-events:none;">`;
             btn.style.padding = '0';
@@ -603,7 +601,6 @@ window.deleteCategory = async function(catId) {
         console.error(e);
     }
 }
-
 
 // ================= 自訂類別儲存邏輯 =================
 document.getElementById('btnSaveCustomCat').addEventListener('click', async () => {
