@@ -144,7 +144,7 @@ window.foodApp.renderRestaurantList = function(type = '全部') {
     }
     
     filtered.forEach(r => {
-        const mealStr = (r.meal || []).join(', '); // 防呆處理陣列
+        const mealStr = (r.meal || []).join(', ');
         list.innerHTML += `
             <div class="list-item">
                 <div class="list-info">
@@ -255,10 +255,16 @@ function setupWheel() {
         
         const labelDiv = document.createElement('div');
         labelDiv.className = 'wheel-text';
+        
         const textAngle = startAngle + (angle / 2);
         
-        labelDiv.innerText = cand.name;
-        labelDiv.style.transform = `translateY(-50%) rotate(${textAngle - 90}deg) translateX(50px)`; 
+        // 限制字數，避免超長店名撐破排版
+        let displayName = cand.name;
+        if(displayName.length > 7) displayName = displayName.substring(0, 6) + '...';
+        labelDiv.innerText = displayName;
+        
+        // 推移距離改為 75px 往外推
+        labelDiv.style.transform = `translateY(-50%) rotate(${textAngle - 90}deg) translateX(75px)`; 
         labelDiv.style.left = '50%';
         labelDiv.style.top = '50%';
         labelDiv.style.transformOrigin = '0 0';
@@ -386,16 +392,11 @@ async function saveVote(restaurantName, source = 'manual') {
                 meal: currentMeal,
                 votes: votesMap
             });
-        } else {
-            // 注意：若真實環境沒有自訂 _id，需要透過 document id 更新
-            // const realDocId = docSnap.docs[0].id;
-            // await updateDoc(doc(db, 'food_votes', realDocId), { votes: votesMap });
         }
     } catch(e) {
         console.log("Save Vote error:", e);
     }
     
-    // 本地預覽即時更新
     mockVotesMap[accountId] = {
         name: currentUser.name,
         avatar: currentUser.avatar || null,
@@ -418,7 +419,7 @@ window.foodApp.switchStatsTab = function(meal, btn) {
 
 function loadVotes(meal) {
     document.getElementById('statsMealName').innerText = meal;
-    renderStats(mockVotesMap); // 實際環境需改為 onSnapshot 即時監聽
+    renderStats(mockVotesMap); 
 }
 
 function renderStats(votesMap) {
@@ -469,7 +470,6 @@ function renderStats(votesMap) {
         `;
     });
 
-    // 更新投票狀態標籤
     const currentAccountId = currentUser.accountId || currentUser.id || currentUser.uid || 'unknown';
     const myVote = votesMap[currentAccountId];
     const voteStatusEl = document.getElementById('voteStatus');
@@ -535,7 +535,7 @@ window.foodApp.saveRestaurant = async function() {
         await addDoc(collection(db, "food_restaurants"), payload);
         alert("新增成功！");
         window.foodApp.closeModal();
-        loadRestaurants(); // 重新讀取清單
+        loadRestaurants(); 
     } catch(e) {
         console.error("儲存餐廳失敗", e);
         alert("發生錯誤，請稍後再試。");
