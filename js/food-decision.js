@@ -13,19 +13,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Data structure mimicking real app
+// 讀取當前使用者與群組資料
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-const currentUser = savedUserStr ? JSON.parse(savedUserStr) : { accountId: 'mock-account', name: 'Mock User' };
-const currentGroupId = localStorage.getItem('lastGroupId') || 'mock-group';
+const currentUser = savedUserStr ? JSON.parse(savedUserStr) : { accountId: 'unknown', name: '訪客' };
+const currentGroupId = localStorage.getItem('lastGroupId') || 'wJOpq0uAnXvO4ezZ1IK9';
 
 let restaurants = [];
-let unsubscribeVotes = null;
 let currentMeal = '';
 let currentEmoji = '';
 
-// Selected Date State
+// 日期狀態
 let selectedDate = new Date();
-// For calendar rendering
 let calendarDate = new Date();
 
 function formatDateStr(date) {
@@ -67,7 +65,6 @@ function renderCalendar() {
     const firstDay = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
     const daysInMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate();
     
-    // Empty slots before first day
     for(let i=0; i<firstDay; i++) {
         daysContainer.innerHTML += `<div></div>`;
     }
@@ -86,7 +83,6 @@ function renderCalendar() {
             updateDateDisplay();
             renderCalendar();
             document.getElementById('calendarModal').classList.remove('show');
-            // If already on stats or vote view, reload data
             if(currentMeal) {
                 loadVotes(currentMeal);
             }
@@ -95,19 +91,78 @@ function renderCalendar() {
     }
 }
 
-// Ensure unique document ID based on group, date, and meal
 function getVoteDocId(meal) {
     const dateStr = formatDateStr(selectedDate);
     return `${currentGroupId}_${dateStr}_${meal}`;
 }
 
+// ================= 資料載入與渲染 =================
+
 async function loadRestaurants() {
-    const q = query(collection(db, "restaurants"), where("groupId", "==", currentGroupId));
-    const snap = await getDocs(q);
-    restaurants = [];
-    snap.forEach(d => restaurants.push({id: d.id, ...d.data()}));
-    renderRestaurantList('全部');
+    try {
+        // 修正：正確的集合名稱為 food_restaurants
+        const q = query(collection(db, "food_restaurants"), where("groupId", "==", currentGroupId));
+        const snap = await getDocs(q);
+        restaurants = [];
+        snap.forEach(d => restaurants.push({id: d.id, ...d.data()}));
+        renderRestaurantList('全部');
+    } catch (error) {
+        console.error("載入餐廳失敗:", error);
+    }
 }
+
+window.foodApp.filterRestaurants = function(type, btn) {
+    if(btn) {
+        document.querySelectorAll('#manage .chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    renderRestaurantList(type);
+};
+
+function renderRestaurantList(type = '全部') {
+    const list = document.getElementById('restaurantList');
+    if (!list) return;
+    list.innerHTML = '';
+    
+    let filtered = restaurants;
+    if (type !== '全部') {
+        filtered = restaurants.filter(r => r.type === type);
+    }
+    
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty">目前沒有餐廳資料</div>';
+        return;
+    }
+    
+    filtered.forEach(r => {
+        const mealStr = (r.meal || []).join(', '); // 修正防呆
+        list.innerHTML += `
+            <div class="list-item">
+                <div class="list-info">
+                    <b>${r.name}</b>
+                    <small>${r.type} · ${r.price || '未定價'} · ${r.food}</small>
+                    <small style="color:var(--green2)">適用: ${mealStr}</small>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// ================= 導覽與流程控制 =================
+
+window.foodApp.go = function(viewId, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    
+    if(btn) {
+        document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    
+    if(viewId === 'stats') {
+        loadVotes(currentMeal || '晚餐');
+    }
+};
 
 window.foodApp.chooseMeal = function(meal, emoji) {
     currentMeal = meal;
@@ -115,7 +170,6 @@ window.foodApp.chooseMeal = function(meal, emoji) {
     document.getElementById('mealEyebrow').innerText = `${emoji} ${meal}`;
     window.foodApp.go('vote', document.querySelector('[data-view=vote]'));
     
-    // Switch stats tab to match
     const tabs = document.querySelectorAll('#statsTabs .chip');
     tabs.forEach(t => {
         if(t.innerText === meal) {
@@ -137,16 +191,22 @@ window.foodApp.showList = function() {
     renderVoteList();
 };
 
+// ================= 命運輪盤邏輯 =================
+
 const wheelColors = ['#ffd77a', '#9fdcc2', '#b9d0fa', '#ffb6a9', '#c6b7f1', '#a8dce9'];
 
 function setupWheel() {
     const wheel = document.getElementById('wheel');
-    // Clear old segments except label
     Array.from(wheel.children).forEach(c => {
         if(!c.classList.contains('wheel-label')) c.remove();
     });
 
-    const candidates = restaurants.filter(r => r.meals.includes(currentMeal) || r.meals.includes('不限'));
+    // 修正：改用 r.meal
+    const candidates = restaurants.filter(r => {
+        const mealArr = r.meal || [];
+        return mealArr.includes(currentMeal) || mealArr.includes('不限');
+    });
+
     if(candidates.length === 0) {
         document.getElementById('wheelHint').innerText = '尚無適合此時段的餐廳';
         wheel.style.background = '#eee';
@@ -155,7 +215,6 @@ function setupWheel() {
     
     const numSegments = candidates.length;
     const angle = 360 / numSegments;
-    
     let gradientParts = [];
     
     candidates.forEach((cand, i) => {
@@ -165,18 +224,12 @@ function setupWheel() {
         
         gradientParts.push(`${color} ${startAngle}deg ${endAngle}deg`);
         
-        // Add text label segment
         const labelDiv = document.createElement('div');
         labelDiv.className = 'wheel-text';
-        
-        // Rotate container to the middle of the segment
         const textAngle = startAngle + (angle / 2);
         
         labelDiv.innerText = cand.name;
-        // Position it absolute, originating from center
         labelDiv.style.transform = `translateY(-50%) rotate(${textAngle - 90}deg) translateX(50px)`; 
-        // Note: The math for positioning text perfectly inside a conic gradient can get complex in standard CSS.
-        // A simpler approach for the text is placing them absolute rotated from center.
         labelDiv.style.left = '50%';
         labelDiv.style.top = '50%';
         labelDiv.style.transformOrigin = '0 0';
@@ -186,8 +239,6 @@ function setupWheel() {
 
     wheel.style.background = `conic-gradient(${gradientParts.join(', ')})`;
     wheel.style.transform = 'rotate(0deg)';
-    
-    // Store candidates on element for spinning logic
     wheel.dataset.candidates = JSON.stringify(candidates);
 }
 
@@ -209,7 +260,6 @@ window.foodApp.startSpin = function() {
         count--;
         if(count > 0) {
             cNum.innerText = count;
-            // Retrigger animation
             cNum.style.animation = 'none';
             void cNum.offsetWidth;
             cNum.style.animation = 'pop 0.8s ease';
@@ -225,15 +275,10 @@ function executeSpin(candidates) {
     const wheel = document.getElementById('wheel');
     const segmentAngle = 360 / candidates.length;
     
-    // Pick winner
     const winIndex = Math.floor(Math.random() * candidates.length);
     const winner = candidates[winIndex];
     
-    // Calculate rotation to make the winning segment end up at top (pointer position)
-    // The pointer is at the top (0 degrees).
-    // The center of the winning segment is `winIndex * segmentAngle + segmentAngle / 2`
-    // We need to rotate the wheel backwards so this center aligns with top.
-    const baseRotations = 5 * 360; // 5 full spins
+    const baseRotations = 5 * 360; 
     const targetAngle = baseRotations + (360 - (winIndex * segmentAngle + segmentAngle / 2));
     
     wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
@@ -241,14 +286,12 @@ function executeSpin(candidates) {
     
     setTimeout(() => {
         document.getElementById('winner').classList.add('show');
-        document.getElementById('winnerFood').innerText = '🎉'; // could use emoji if stored
+        document.getElementById('winnerFood').innerText = '🎉'; 
         document.getElementById('winnerName').innerText = winner.name;
-        document.getElementById('winnerMeta').innerText = `${winner.type} · ${winner.price}`;
+        document.getElementById('winnerMeta').innerText = `${winner.type} · ${winner.food} · ${winner.price || ''}`;
         document.getElementById('spinBtn').disabled = false;
         
-        // Save vote to DB directly for the wheel result
         saveVote(winner.name, 'wheel');
-        
     }, 4000);
 }
 
@@ -256,10 +299,17 @@ window.foodApp.acceptWheelWinner = function() {
     window.foodApp.go('stats', document.querySelector('[data-view=stats]'));
 };
 
+// ================= 投票清單邏輯 =================
+
 function renderVoteList() {
     const list = document.getElementById('voteList');
     list.innerHTML = '';
-    const candidates = restaurants.filter(r => r.meals.includes(currentMeal) || r.meals.includes('不限'));
+    
+    // 修正：改用 r.meal
+    const candidates = restaurants.filter(r => {
+        const mealArr = r.meal || [];
+        return mealArr.includes(currentMeal) || mealArr.includes('不限');
+    });
     
     if(candidates.length === 0) {
         list.innerHTML = '<div class="empty">目前沒有適合此時段的餐廳</div>';
@@ -280,15 +330,13 @@ function renderVoteList() {
     });
 }
 
-// Important Fix: Use groupId and accountId for keys
+// 投票儲存 (綁定 accountId)
+let mockVotesMap = {};
 async function saveVote(restaurantName, source = 'manual') {
     const docId = getVoteDocId(currentMeal);
-    const docRef = doc(db, 'food_votes', docId);
-    
     const accountId = currentUser.accountId || currentUser.id || currentUser.uid || 'unknown';
     
     try {
-        // Fetch current to update or create new
         const docSnap = await getDocs(query(collection(db, 'food_votes'), where('__name__', '==', docId)));
         
         let votesMap = {};
@@ -296,7 +344,6 @@ async function saveVote(restaurantName, source = 'manual') {
             votesMap = docSnap.docs[0].data().votes || {};
         }
         
-        // Update user's vote using accountId as key
         votesMap[accountId] = {
             name: currentUser.name,
             avatar: currentUser.avatar || null,
@@ -306,54 +353,29 @@ async function saveVote(restaurantName, source = 'manual') {
         
         if (docSnap.empty) {
             await addDoc(collection(db, 'food_votes'), {
-                _id: docId, // Store explicit ID to query if needed
+                _id: docId,
                 groupId: currentGroupId,
                 date: formatDateStr(selectedDate),
                 meal: currentMeal,
                 votes: votesMap
             });
-            // Firestore doesn't easily let you specify ID in addDoc client side without setDoc, 
-            // since setDoc isn't imported, let's just query by attributes.
-        } else {
-           // We actually need setDoc for custom ID, modifying logic to query by groupId, date, meal
         }
     } catch(e) {
-        console.log("Mock Save Vote:", restaurantName);
+        console.log("Mock Save Vote error:", e);
     }
     
-    // Simulate real time update for mock
-    simulateRealtimeUpdate(restaurantName);
-}
-
-// Workaround for full DB integration in mock script:
-let mockVotesMap = {};
-function simulateRealtimeUpdate(choice) {
-     const accountId = currentUser.accountId || 'mock';
-     mockVotesMap[accountId] = {
-         name: currentUser.name,
-         avatar: null,
-         choice: choice
-     };
-     renderStats(mockVotesMap);
+    // 本地預覽即時更新
+    mockVotesMap[accountId] = {
+        name: currentUser.name,
+        avatar: null,
+        choice: restaurantName
+    };
+    renderStats(mockVotesMap);
 }
 
 window.foodApp.castVote = function(name) {
     saveVote(name);
     window.foodApp.go('stats', document.querySelector('[data-view=stats]'));
-};
-
-window.foodApp.go = function(viewId, btn) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
-    
-    if(btn) {
-        document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-    }
-    
-    if(viewId === 'stats') {
-        loadVotes(currentMeal || '晚餐');
-    }
 };
 
 window.foodApp.switchStatsTab = function(meal, btn) {
@@ -365,9 +387,7 @@ window.foodApp.switchStatsTab = function(meal, btn) {
 
 function loadVotes(meal) {
     document.getElementById('statsMealName').innerText = meal;
-    // In real app, attach onSnapshot based on currentGroupId, formatDateStr(selectedDate), meal
-    // Here we use mock data
-    renderStats(mockVotesMap);
+    renderStats(mockVotesMap); // 實際環境需改為 onSnapshot 即時監聽
 }
 
 function renderStats(votesMap) {
@@ -414,8 +434,66 @@ function renderStats(votesMap) {
     });
 }
 
-// Init
+// ================= 管理：新增餐廳功能 =================
+
+window.foodApp.openRestaurant = function() {
+    document.getElementById('modalTitle').innerText = '新增餐廳';
+    document.getElementById('editId').value = '';
+    document.getElementById('rName').value = '';
+    document.getElementById('rFood').value = '';
+    document.getElementById('rTags').value = '';
+    document.getElementById('rNote').value = '';
+    
+    document.querySelectorAll('input[name="rMeal"]').forEach(chk => chk.checked = false);
+    
+    document.getElementById('modal').classList.add('show');
+};
+
+window.foodApp.closeModal = function() {
+    document.getElementById('modal').classList.remove('show');
+};
+
+window.foodApp.saveRestaurant = async function() {
+    const name = document.getElementById('rName').value.trim();
+    const type = document.getElementById('rType').value;
+    const price = document.getElementById('rPrice').value;
+    const food = document.getElementById('rFood').value.trim();
+    const tags = document.getElementById('rTags').value.trim();
+    const note = document.getElementById('rNote').value.trim();
+    
+    const mealCheckboxes = document.querySelectorAll('input[name="rMeal"]:checked');
+    const meal = Array.from(mealCheckboxes).map(cb => cb.value);
+
+    if(!name || !food || meal.length === 0) {
+        alert("店名、代表食物、適合時段為必填項目！");
+        return;
+    }
+
+    try {
+        const payload = {
+            groupId: currentGroupId,
+            name,
+            type,
+            price,
+            food,
+            meal,
+            tags,
+            note,
+            updatedAt: new Date().toISOString()
+        };
+
+        await addDoc(collection(db, "food_restaurants"), payload);
+        alert("新增成功！");
+        window.foodApp.closeModal();
+        loadRestaurants(); // 重新讀取清單
+    } catch(e) {
+        console.error("儲存餐廳失敗", e);
+        alert("發生錯誤，請稍後再試。");
+    }
+};
+
+// ================= 初始化 =================
+
 updateDateDisplay();
 renderCalendar();
 loadRestaurants();
-
