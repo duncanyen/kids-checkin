@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus 咕咕莊園</title>
+  <link rel="stylesheet" href="css/farmgame.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1>咕咕莊園</h1>
+      <div class="user-stats">
+        <span class="stat-badge">🪙 <span id="my-coins">0</span></span>
+        <span class="stat-badge">🥚 <span id="my-eggs">0</span></span>
+      </div>
+    </header>
+
+    <!-- 自己的農場區塊 -->
+    <section class="card my-farm-card">
+      <h2>我的雞舍</h2>
+      <div class="coop-display">
+        <div class="hen-status">
+          <span class="hen-icon">🐔</span>
+          <p id="hen-count">母雞數量: 1</p>
+        </div>
+        <div class="egg-status">
+          <p id="egg-timer">下蛋倒數: --:--</p>
+          <button id="btn-harvest" class="btn primary-btn" disabled>收成雞蛋</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 商店區塊 -->
+    <section class="card shop-card">
+      <h2>商店</h2>
+      <div class="shop-actions">
+        <button id="btn-sell-egg" class="btn secondary-btn">賣出雞蛋 (+10 🪙)</button>
+        <button id="btn-buy-hen" class="btn secondary-btn">買母雞 (-500 🪙)</button>
+      </div>
+    </section>
+
+    <!-- 群組偷蛋區塊 -->
+    <section class="card group-farm-card">
+      <h2>群組成員農場 (偷偷來...)</h2>
+      <div id="group-list" class="group-list">
+        <!-- JS 動態生成群組成員 -->
+        <p class="loading-text">載入群組成員中...</p>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="js/farmgame.js"></script>
+</body>
+</html>
