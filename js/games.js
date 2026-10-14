@@ -2,7 +2,7 @@
 import { db } from './firebase-config.js'; 
 import { 
     doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, 
-    getDocs, query, where, orderBy, limit, runTransaction 
+    getDocs, query, where, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const RPS_ICONS = ["✊", "✋", "✌️"];
@@ -72,7 +72,6 @@ function switchParentView(mode) {
         document.getElementById('gameLobby').style.display = 'none';
         document.getElementById('kidGameContainer').style.display = 'none';
         document.getElementById('g2048Container').style.display = 'none';
-        document.getElementById('farmContainer').style.display = 'none';
         loadParentAdminData();
     } else {
         btnPlay.classList.add('active');
@@ -99,6 +98,12 @@ function selectGame(gameType) {
         return;
     }
 
+    // 👉 如果是咕咕莊園，直接跳轉到獨立頁面
+    if (gameType === 'farm') {
+        window.location.href = 'farmgame.html';
+        return;
+    }
+
     document.getElementById('gameLobby').style.display = 'none';
     if (gameType === 'rps') {
         document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布對決";
@@ -107,17 +112,12 @@ function selectGame(gameType) {
         document.getElementById('gameZoneTitle').innerText = "🔢 2048 數字方塊";
         document.getElementById('g2048Container').style.display = 'block';
         init2048Game();
-    } else if (gameType === 'farm') {
-        document.getElementById('gameZoneTitle').innerText = "🐔 咕咕莊園";
-        document.getElementById('farmContainer').style.display = 'block';
-        initFarmGame();
     }
 }
 
 function returnToLobby() {
     document.getElementById('kidGameContainer').style.display = 'none';
     document.getElementById('g2048Container').style.display = 'none';
-    document.getElementById('farmContainer').style.display = 'none';
     document.getElementById('gameLobby').style.display = 'flex';
     document.getElementById('gameZoneTitle').innerText = isParent && document.getElementById('btnModePlay').classList.contains('active') ? "🎮 遊戲區 (親自遊玩)" : "🎮 遊戲區";
 }
@@ -221,197 +221,8 @@ async function setMemberPermission(gameType, allow) {
 }
 
 // ---------------------------
-// 🐔 咕咕莊園 遊戲邏輯區塊
-// ---------------------------
-const EGG_PRICE = 10;
-const HEN_PRICE = 500;
-const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; 
-const STEAL_SUCCESS_RATE = 0.7;
-
-let farmUnsubscribe = null;
-let farmInterval = null;
-
-function initFarmGame() {
-    const myFarmRef = doc(db, "groups", userGroupId, "users", currentUser.name);
-    
-    if (farmUnsubscribe) farmUnsubscribe();
-    farmUnsubscribe = onSnapshot(myFarmRef, (docSnap) => {
-        if (!docSnap.exists() || !docSnap.data().farm) {
-            setDoc(myFarmRef, {
-                farm: { coins: 0, inventoryEggs: 0, hens: 1, eggsReady: 0, todayLaid: 0, lastLayTime: Date.now() }
-            }, { merge: true });
-            return;
-        }
-        const farmData = docSnap.data().farm;
-        updateFarmUI(farmData);
-        startEggTimer(farmData, myFarmRef);
-    });
-
-    loadGroupMembersFarm();
-}
-
-function updateFarmUI(farmData) {
-    document.getElementById('my-coins').textContent = farmData.coins || 0;
-    document.getElementById('my-eggs').textContent = farmData.inventoryEggs || 0;
-    document.getElementById('hen-count').textContent = `母雞數量: ${farmData.hens || 1}`;
-    
-    const btnHarvest = document.getElementById('btn-harvest');
-    const elEggTimer = document.getElementById('egg-timer');
-
-    if (farmData.eggsReady > 0) {
-        elEggTimer.textContent = `🥚 已經有 ${farmData.eggsReady} 顆蛋可以收成！`;
-        btnHarvest.disabled = false;
-    } else {
-        btnHarvest.disabled = true;
-    }
-}
-
-function startEggTimer(farmData, myFarmRef) {
-    if (farmInterval) clearInterval(farmInterval);
-    farmInterval = setInterval(() => {
-        const elEggTimer = document.getElementById('egg-timer');
-        if (farmData.eggsReady > 0) return; // 已經有蛋等收成，不繼續倒數
-
-        const timeLeft = LAY_EGG_TIME_MS - (Date.now() - farmData.lastLayTime);
-        
-        if (timeLeft <= 0) {
-            elEggTimer.textContent = "正在下蛋...";
-            // 觸發下蛋 (保護機制: 由客戶端發起，若有 Cloud Function 更好)
-            setDoc(myFarmRef, {
-                "farm.eggsReady": farmData.eggsReady + 1,
-                "farm.lastLayTime": Date.now()
-            }, { merge: true });
-            clearInterval(farmInterval);
-        } else {
-            const h = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-            const m = Math.floor((timeLeft / 1000 / 60) % 60);
-            const s = Math.floor((timeLeft / 1000) % 60);
-            elEggTimer.textContent = `下蛋倒數: ${h}時 ${m}分 ${s}秒`;
-        }
-    }, 1000);
-}
-
-async function harvestEggs() {
-    const myFarmRef = doc(db, "groups", userGroupId, "users", currentUser.name);
-    try {
-        await runTransaction(db, async (transaction) => {
-            const docSnap = await transaction.get(myFarmRef);
-            const farm = docSnap.data().farm;
-            if (farm.eggsReady > 0) {
-                transaction.update(myFarmRef, {
-                    "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
-                    "farm.eggsReady": 0,
-                    "farm.lastLayTime": Date.now()
-                });
-            }
-        });
-        alert("🎉 收成成功！");
-    } catch (e) {
-        console.error("收成失敗:", e);
-    }
-}
-
-async function sellEggs() {
-    const myFarmRef = doc(db, "groups", userGroupId, "users", currentUser.name);
-    try {
-        await runTransaction(db, async (transaction) => {
-            const docSnap = await transaction.get(myFarmRef);
-            const farm = docSnap.data().farm;
-            if (farm.inventoryEggs >= 1) {
-                transaction.update(myFarmRef, {
-                    "farm.inventoryEggs": farm.inventoryEggs - 1,
-                    "farm.coins": (farm.coins || 0) + EGG_PRICE
-                });
-            } else {
-                throw "沒有蛋可以賣囉！";
-            }
-        });
-    } catch (e) {
-        alert(e);
-    }
-}
-
-async function buyHen() {
-    const myFarmRef = doc(db, "groups", userGroupId, "users", currentUser.name);
-    try {
-        await runTransaction(db, async (transaction) => {
-            const docSnap = await transaction.get(myFarmRef);
-            const farm = docSnap.data().farm;
-            if (farm.coins >= HEN_PRICE) {
-                transaction.update(myFarmRef, {
-                    "farm.coins": farm.coins - HEN_PRICE,
-                    "farm.hens": (farm.hens || 1) + 1
-                });
-            } else {
-                throw "金幣不足！";
-            }
-        });
-        alert("🐔 成功購買一隻母雞！");
-    } catch (e) {
-        alert(e);
-    }
-}
-
-function loadGroupMembersFarm() {
-    const groupUsersRef = collection(db, "groups", userGroupId, "users");
-    const groupList = document.getElementById('group-farm-list');
-    
-    onSnapshot(groupUsersRef, (snapshot) => {
-        groupList.innerHTML = '';
-        let hasOthers = false;
-        
-        snapshot.forEach((docSnap) => {
-            if (docSnap.id === currentUser.name) return; // 不顯示自己
-            hasOthers = true;
-            const farmData = docSnap.data().farm || {};
-            
-            const div = document.createElement('div');
-            div.className = 'farm-member-item';
-            const hasEggHint = farmData.eggsReady > 0 ? "⚠️ 雞舍有動靜" : "💤 安靜";
-            
-            div.innerHTML = `
-                <div>
-                    <strong>👤 ${docSnap.id}</strong>
-                    <p style="font-size: 12px; color: var(--text-sub);">狀態: ${hasEggHint}</p>
-                </div>
-                <button class="btn btn-steal" onclick="stealEgg('${docSnap.id}')">摸走雞蛋</button>
-            `;
-            groupList.appendChild(div);
-        });
-        
-        if (!hasOthers) groupList.innerHTML = '<p style="color:var(--text-sub);">群組內還沒有其他人開始養雞喔</p>';
-    });
-}
-
-async function stealEgg(targetName) {
-    const targetRef = doc(db, "groups", userGroupId, "users", targetName);
-    const myFarmRef = doc(db, "groups", userGroupId, "users", currentUser.name);
-    
-    try {
-        await runTransaction(db, async (transaction) => {
-            const targetDoc = await transaction.get(targetRef);
-            const myDoc = await transaction.get(myFarmRef);
-            
-            const targetFarm = targetDoc.data().farm;
-            const myFarm = myDoc.data().farm;
-
-            if (!targetFarm || targetFarm.eggsReady <= 0) throw "哎呀！裡面沒有蛋。";
-
-            if (Math.random() > STEAL_SUCCESS_RATE) throw "🐕 汪！被狗咬了！偷竊失敗！";
-
-            transaction.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 });
-            transaction.update(myFarmRef, { "farm.inventoryEggs": (myFarm.inventoryEggs || 0) + 1 });
-        });
-        alert("😎 神不知鬼不覺！偷到一顆蛋！");
-    } catch (error) {
-        alert(error);
-    }
-}
-
-// ---------------------------
 // 剪刀石頭布 & 2048 原有邏輯
 // ---------------------------
-// (此處保留了你原本的所有剪刀石頭布與2048的程式碼，為了版面整潔與正確性，原邏輯未做任何刪減)
 function getTodayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function getInitialRpsStats() { return { groupId: userGroupId, userName: currentUser.name, totalScore: 0, lastPlayDate: getTodayStr(), currentStreak: 0, maxStreak: 0 }; }
 
@@ -503,7 +314,9 @@ async function playGame(playerChoice) {
     setTimeout(resetGameArena, 2000);
 }
 
-// 2048 與排行榜邏輯省略 (直接沿用你原有的全部邏輯)
+// ---------------------------
+// 2048 與排行榜邏輯
+// ---------------------------
 let g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
 let g2048Score = 0; let g2048BestScore = 0; let g2048GameOver = false;
 
@@ -649,66 +462,4 @@ async function loadLeaderboard(tabType) {
             
             listEl.innerHTML += `
                 <li class="lb-item">
-                    <div class="lb-rank ${rankClass}">${index + 1}</div>
-                    <div class="lb-info"><div class="lb-name">${item.userName || '匿名玩家'}</div>${groupDisplay}</div>
-                    <div class="lb-score">${scoreText}</div>
-                </li>
-            `;
-        });
-    } catch (error) { listEl.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗</div>'; }
-}
-
-// --- 暴露給 window 供 HTML onClick 綁定 ---
-window.selectGame = selectGame;
-window.returnToLobby = returnToLobby;
-window.selectMemberToManage = selectMemberToManage;
-window.setMemberPermission = setMemberPermission;
-window.init2048Game = init2048Game;
-window.openLeaderboard = openLeaderboard;
-window.closeLeaderboard = closeLeaderboard;
-window.loadLeaderboard = loadLeaderboard;
-window.playGame = playGame;
-// 咕咕莊園暴露函數
-window.harvestEggs = harvestEggs;
-window.sellEggs = sellEggs;
-window.buyHen = buyHen;
-window.stealEgg = stealEgg;
-
-
-// --- 事件監聽器區 ---
-window.addEventListener('keydown', (e) => {
-    if(document.getElementById('g2048Container').style.display === 'block') {
-        if(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", " "].includes(e.key)) { e.preventDefault(); }
-        if(e.key === 'ArrowLeft') makeMove('left'); if(e.key === 'ArrowUp') makeMove('up');
-        if(e.key === 'ArrowRight') makeMove('right'); if(e.key === 'ArrowDown') makeMove('down');
-    }
-});
-
-let touchStartX = 0, touchStartY = 0;
-const boardEl = document.getElementById('g2048Board');
-if (boardEl) {
-    boardEl.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, {passive: true});
-    boardEl.addEventListener('touchend', (e) => {
-        if(document.getElementById('g2048Container').style.display !== 'block') return;
-        let deltaX = e.changedTouches[0].clientX - touchStartX;
-        let deltaY = e.changedTouches[0].clientY - touchStartY;
-        if(Math.abs(deltaX) > Math.abs(deltaY)) {
-            if(Math.abs(deltaX) > 30) { if(deltaX > 0) makeMove('right'); else makeMove('left'); }
-        } else {
-            if(Math.abs(deltaY) > 30) { if(deltaY > 0) makeMove('down'); else makeMove('up'); }
-        }
-    }, {passive: true});
-}
-
-document.querySelectorAll('.p-card').forEach(card => {
-    card.addEventListener('click', () => playGame(parseInt(card.getAttribute('data-choice'))));
-});
-
-document.getElementById('btnModeAdmin').addEventListener('click', () => switchParentView('admin'));
-document.getElementById('btnModePlay').addEventListener('click', () => switchParentView('play'));
-document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
-document.getElementById('btnLogout').addEventListener('click', () => {
-    sessionStorage.removeItem('familyCheckInUser');
-    localStorage.removeItem('familyCheckInUser');
-    window.location.href = 'index.html';
-});
+                    <div class
