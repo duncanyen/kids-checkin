@@ -13,12 +13,27 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 模擬登入狀態 (請替換成 Nexus App 實際傳遞過來的值)
-const CURRENT_GROUP_ID = "group_123";
-const CURRENT_ACCOUNT_ID = "user_001";
+// ==========================================
+// 1. 動態取得當下登入的群組與人員資訊
+// ==========================================
+const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
+// 若未登入，阻斷執行並導回首頁
+if (!currentUser) {
+    alert('請先選擇使用者登入！');
+    window.location.href = 'index.html';
+    throw new Error("未登入，停止載入遊戲"); 
+}
+
+// 動態設定為當前登入者的群組 ID 與名稱
+const CURRENT_GROUP_ID = currentUser.groupId || "default_group";
+const CURRENT_ACCOUNT_ID = currentUser.name; 
 const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_ID);
 
+// ==========================================
 // 遊戲設定常數
+// ==========================================
 const EGG_PRICE = 10;
 const HEN_PRICE = 500;
 const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; // 4 小時
@@ -35,7 +50,7 @@ const btnSellEgg = document.getElementById('btn-sell-egg');
 const btnBuyHen = document.getElementById('btn-buy-hen');
 const groupList = document.getElementById('group-list');
 
-// 1. 初始化 / 監聽自己的農場狀態 (Realtime Snapshot)
+// 2. 初始化 / 監聽自己的農場狀態 (Realtime Snapshot)
 async function initMyFarm() {
   onSnapshot(myFarmRef, (docSnap) => {
     if (!docSnap.exists()) {
@@ -63,9 +78,9 @@ async function initMyFarm() {
 
 // 更新自己介面的數值
 function updateMyUI(farmData) {
-  elCoins.textContent = farmData.coins;
-  elEggs.textContent = farmData.inventoryEggs;
-  elHenCount.textContent = `母雞數量: ${farmData.hens}`;
+  elCoins.textContent = farmData.coins || 0;
+  elEggs.textContent = farmData.inventoryEggs || 0;
+  elHenCount.textContent = `母雞數量: ${farmData.hens || 1}`;
   
   if (farmData.eggsReady > 0) {
     elEggTimer.textContent = `🥚 已經有 ${farmData.eggsReady} 顆蛋可以收成！`;
@@ -75,7 +90,7 @@ function updateMyUI(farmData) {
   }
 }
 
-// 2. 檢查是否該下蛋了 (前端顯示用，實際寫入應由後端或 Transaction 保護)
+// 3. 檢查是否該下蛋了 (前端顯示用)
 function checkEggProduction(farmData) {
   // 簡化版計時器：每秒更新倒數
   setInterval(() => {
@@ -90,7 +105,7 @@ function checkEggProduction(farmData) {
 
     if (timeLeft <= 0) {
       elEggTimer.textContent = "即將下蛋...";
-      // 這裡應該呼叫 Firebase Function 或更新 DB 狀態為「已下蛋」
+      // 注意：這只是前端視覺，實際收成/增加應透過後端或 Transaction 防護
     } else {
       const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
       const mins = Math.floor((timeLeft / 1000 / 60) % 60);
@@ -100,7 +115,7 @@ function checkEggProduction(farmData) {
   }, 1000);
 }
 
-// 3. 實作：收成自己的蛋
+// 4. 實作：收成自己的蛋
 btnHarvest.addEventListener('click', async () => {
   try {
     await runTransaction(db, async (transaction) => {
@@ -109,7 +124,7 @@ btnHarvest.addEventListener('click', async () => {
       
       if (farm.eggsReady > 0) {
         transaction.update(myFarmRef, {
-          "farm.inventoryEggs": farm.inventoryEggs + farm.eggsReady,
+          "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
           "farm.eggsReady": 0,
           "farm.lastLayTime": Date.now() // 重置計時
         });
@@ -121,30 +136,58 @@ btnHarvest.addEventListener('click', async () => {
   }
 });
 
-// 4. 實作：商店買賣
+// 5. 實作：商店買賣 (賣雞蛋)
 btnSellEgg.addEventListener('click', async () => {
-  await runTransaction(db, async (transaction) => {
-    const docSnap = await transaction.get(myFarmRef);
-    const farm = docSnap.data().farm;
-    if (farm.inventoryEggs >= 1) {
-      transaction.update(myFarmRef, {
-        "farm.inventoryEggs": farm.inventoryEggs - 1,
-        "farm.coins": farm.coins + EGG_PRICE
-      });
-    } else {
-      alert("沒有蛋可以賣囉！");
-    }
-  });
+  try {
+    await runTransaction(db, async (transaction) => {
+      const docSnap = await transaction.get(myFarmRef);
+      const farm = docSnap.data().farm;
+      if (farm.inventoryEggs >= 1) {
+        transaction.update(myFarmRef, {
+          "farm.inventoryEggs": farm.inventoryEggs - 1,
+          "farm.coins": (farm.coins || 0) + EGG_PRICE
+        });
+      } else {
+        throw "沒有蛋可以賣囉！";
+      }
+    });
+  } catch (e) {
+    alert(e);
+  }
 });
 
-// 5. 載入群組成員列表並實作「偷蛋」
+// 5-1. 實作：商店買賣 (買母雞)
+btnBuyHen.addEventListener('click', async () => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const docSnap = await transaction.get(myFarmRef);
+      const farm = docSnap.data().farm;
+      if (farm.coins >= HEN_PRICE) {
+        transaction.update(myFarmRef, {
+          "farm.coins": farm.coins - HEN_PRICE,
+          "farm.hens": (farm.hens || 1) + 1
+        });
+      } else {
+        throw "金幣不足！需要 " + HEN_PRICE + " 🪙";
+      }
+    });
+    alert("🐔 成功購買一隻母雞！");
+  } catch (e) {
+    alert(e);
+  }
+});
+
+// 6. 載入群組成員列表並實作「偷蛋」介面
 async function loadGroupMembers() {
   const usersRef = collection(db, "groups", CURRENT_GROUP_ID, "users");
   onSnapshot(usersRef, (snapshot) => {
     groupList.innerHTML = '';
+    let hasOthers = false;
+
     snapshot.forEach((docSnap) => {
       if (docSnap.id === CURRENT_ACCOUNT_ID) return; // 不顯示自己
       
+      hasOthers = true;
       const memberData = docSnap.data();
       const farmData = memberData.farm || {};
       
@@ -163,6 +206,10 @@ async function loadGroupMembers() {
       `;
       groupList.appendChild(div);
     });
+
+    if (!hasOthers) {
+      groupList.innerHTML = '<p style="color:#6b7280;">群組內還沒有其他人開始養雞喔</p>';
+    }
   });
 }
 
@@ -192,15 +239,17 @@ window.stealEgg = async (targetAccountId) => {
         "farm.eggsReady": targetFarm.eggsReady - 1
       });
       transaction.update(myFarmRef, {
-        "farm.inventoryEggs": myFarm.inventoryEggs + 1
+        "farm.inventoryEggs": (myFarm.inventoryEggs || 0) + 1
       });
     });
-    alert("神不知鬼不覺！偷到一顆蛋！");
+    alert("😎 神不知鬼不覺！偷到一顆蛋！");
   } catch (error) {
     alert(error);
   }
 };
 
+// ==========================================
 // 啟動應用
+// ==========================================
 initMyFarm();
 loadGroupMembers();
