@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HomeBase - 遊戲區</title>
+    <title>Nexus - 遊戲區</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="homebase_icon.jpg">
     <meta name="apple-mobile-web-app-title" content="HomeBase">
     <meta name="mobile-web-app-capable" content="yes">
-    <!-- 引入獨立的 CSS 樣式表 -->
     <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
@@ -24,12 +23,21 @@
 
     <!-- 家長專屬模式切換選單 -->
     <div class="mode-switch-container" id="modeSwitchContainer">
-        <button class="btn-switch active" id="btnModeAdmin">🛡️️ 權限管理</button>
+        <button class="btn-switch active" id="btnModeAdmin">🛡 權限管理</button>
         <button class="btn-switch" id="btnModePlay">🎮 親自遊玩</button>
     </div>
 
     <!-- 遊戲選擇大廳 -->
     <div class="game-lobby" id="gameLobby">
+        <!-- 咕咕莊園 -->
+        <div class="game-card-item" onclick="selectGame('farm')">
+            <div class="game-card-icon">🐔</div>
+            <div class="game-card-info">
+                <div class="game-card-title">咕咕莊園</div>
+                <div class="game-card-desc">收集、偷蛋社交！經營你的專屬農莊。</div>
+            </div>
+        </div>
+        <!-- 剪刀石頭布 -->
         <div class="game-card-item" onclick="selectGame('rps')">
             <div class="game-card-icon">✊</div>
             <div class="game-card-info">
@@ -37,6 +45,7 @@
                 <div class="game-card-desc">經典 PK 挑戰，無限制暢玩！比拼最高積分與連勝紀錄。</div>
             </div>
         </div>
+        <!-- 2048 -->
         <div class="game-card-item" onclick="selectGame('g2048')">
             <div class="game-card-icon">🔢</div>
             <div class="game-card-info">
@@ -46,8 +55,48 @@
         </div>
     </div>
 
+    <!-- 咕咕莊園遊戲容器 -->
+    <div class="sub-game-container" id="farmContainer" style="display: none;">
+        <div class="game-header-actions" style="margin-bottom: 15px;">
+            <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
+            <div class="farm-stats">
+                <span class="stat-badge">🪙 <span id="my-coins">0</span></span>
+                <span class="stat-badge">🥚 <span id="my-eggs">0</span></span>
+            </div>
+        </div>
+
+        <div class="farm-card">
+            <h3 class="farm-card-title">我的雞舍</h3>
+            <div class="coop-display">
+                <div class="hen-status">
+                    <span class="hen-icon">🐔</span>
+                    <p id="hen-count">母雞: 1</p>
+                </div>
+                <div class="egg-status">
+                    <p id="egg-timer">下蛋倒數: --:--</p>
+                    <button id="btn-harvest" class="btn primary-btn" onclick="harvestEggs()" disabled>收成雞蛋</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="farm-card shop-card">
+            <h3 class="farm-card-title">商店</h3>
+            <div class="shop-actions">
+                <button class="btn secondary-btn" onclick="sellEggs()">賣出雞蛋 (+10 🪙)</button>
+                <button class="btn secondary-btn" onclick="buyHen()">買母雞 (-500 🪙)</button>
+            </div>
+        </div>
+
+        <div class="farm-card group-farm-card">
+            <h3 class="farm-card-title">群組成員農場 (偷偷來...)</h3>
+            <div id="group-farm-list" class="group-list">
+                <p class="lb-loading">載入群組成員中...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- 剪刀石頭布遊戲容器 -->
-    <div class="sub-game-container" id="kidGameContainer">
+    <div class="sub-game-container" id="kidGameContainer" style="display: none;">
         <div class="game-header-actions">
             <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
             <button class="btn-leaderboard" onclick="openLeaderboard('rps')">🏆 排行榜</button>
@@ -75,14 +124,14 @@
             <div class="player-cards">
                 <div class="p-card" data-choice="0">✊</div>
                 <div class="p-card" data-choice="1">✋</div>
-                <div class="p-card" data-choice="2">✌️️</div>
+                <div class="p-card" data-choice="2">✌</div>
             </div>
             <div class="game-result" id="gameResultText">準備好了嗎？</div>
         </div>
     </div>
 
     <!-- 2048 遊戲容器 -->
-    <div class="sub-game-container" id="g2048Container">
+    <div class="sub-game-container" id="g2048Container" style="display: none;">
         <div class="game-header-actions" style="max-width: 340px; margin: 0 auto 15px auto;">
             <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
             <div style="display:flex; gap:8px;">
@@ -118,6 +167,19 @@
                         <span style="font-size:12px; font-weight:normal; color:var(--text-sub);">即時同步生效</span>
                     </div>
 
+                    <!-- 咕咕莊園權限 -->
+                    <div class="game-perm-row">
+                        <div class="game-perm-info">
+                            <span class="game-perm-icon">🐔</span>
+                            <span>咕咕莊園</span>
+                        </div>
+                        <div class="perm-action-group">
+                            <button class="btn-perm" id="btnFarmAllow" onclick="setMemberPermission('farm', true)">允許進入</button>
+                            <button class="btn-perm" id="btnFarmBan" onclick="setMemberPermission('farm', false)">禁止進入</button>
+                        </div>
+                    </div>
+
+                    <!-- 剪刀石頭布權限 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
                             <span class="game-perm-icon">✊</span>
@@ -129,6 +191,7 @@
                         </div>
                     </div>
 
+                    <!-- 2048權限 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
                             <span class="game-perm-icon">🔢</span>
@@ -161,7 +224,6 @@
         </div>
     </div>
 
-    <!-- 引入獨立的 JS 邏輯腳本 -->
     <script type="module" src="js/games.js"></script>
 </body>
 </html>
