@@ -55,46 +55,6 @@
         </div>
     </div>
 
-    <!-- 咕咕莊園遊戲容器 -->
-    <div class="sub-game-container" id="farmContainer" style="display: none;">
-        <div class="game-header-actions" style="margin-bottom: 15px;">
-            <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
-            <div class="farm-stats">
-                <span class="stat-badge">🪙 <span id="my-coins">0</span></span>
-                <span class="stat-badge">🥚 <span id="my-eggs">0</span></span>
-            </div>
-        </div>
-
-        <div class="farm-card">
-            <h3 class="farm-card-title">我的雞舍</h3>
-            <div class="coop-display">
-                <div class="hen-status">
-                    <span class="hen-icon">🐔</span>
-                    <p id="hen-count">母雞: 1</p>
-                </div>
-                <div class="egg-status">
-                    <p id="egg-timer">下蛋倒數: --:--</p>
-                    <button id="btn-harvest" class="btn primary-btn" onclick="harvestEggs()" disabled>收成雞蛋</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="farm-card shop-card">
-            <h3 class="farm-card-title">商店</h3>
-            <div class="shop-actions">
-                <button class="btn secondary-btn" onclick="sellEggs()">賣出雞蛋 (+10 🪙)</button>
-                <button class="btn secondary-btn" onclick="buyHen()">買母雞 (-500 🪙)</button>
-            </div>
-        </div>
-
-        <div class="farm-card group-farm-card">
-            <h3 class="farm-card-title">群組成員農場 (偷偷來...)</h3>
-            <div id="group-farm-list" class="group-list">
-                <p class="lb-loading">載入群組成員中...</p>
-            </div>
-        </div>
-    </div>
-
     <!-- 剪刀石頭布遊戲容器 -->
     <div class="sub-game-container" id="kidGameContainer" style="display: none;">
         <div class="game-header-actions">
