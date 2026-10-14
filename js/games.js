@@ -24,8 +24,11 @@ if (!currentUser) {
     userGroupId = currentUser.groupId || 'default_group';
     userDocId = `${userGroupId}_${currentUser.name}`;
 
-    document.getElementById('gameUserAvatar').src = currentUser.avatar || 'homebase_icon.jpg';
-    document.getElementById('gameUserName').innerText = currentUser.name || '';
+    const avatarEl = document.getElementById('gameUserAvatar');
+    if (avatarEl) avatarEl.src = currentUser.avatar || 'homebase_icon.jpg';
+    
+    const nameEl = document.getElementById('gameUserName');
+    if (nameEl) nameEl.innerText = currentUser.name || '';
     
     isParent = (currentUser.role === 'admin' || currentUser.role === 'parent' || currentUser.name === '爸爸' || currentUser.name === '媽咪');
     setupView();
@@ -48,12 +51,15 @@ function listenMyPermissions() {
 }
 
 function setupView() {
+    const modeSwitchContainer = document.getElementById('modeSwitchContainer');
+    const gameZoneTitle = document.getElementById('gameZoneTitle');
+
     if (isParent) {
-        document.getElementById('modeSwitchContainer').style.display = 'flex';
+        if (modeSwitchContainer) modeSwitchContainer.style.display = 'flex';
         switchParentView('admin');
     } else {
-        document.getElementById('modeSwitchContainer').style.display = 'none';
-        document.getElementById('gameZoneTitle').innerText = "🎮 遊戲區";
+        if (modeSwitchContainer) modeSwitchContainer.style.display = 'none';
+        if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
         returnToLobby();
         listenKidGameData(userDocId);
         listen2048UserData(userDocId);
@@ -63,21 +69,26 @@ function setupView() {
 function switchParentView(mode) {
     const btnAdmin = document.getElementById('btnModeAdmin');
     const btnPlay = document.getElementById('btnModePlay');
+    const gameZoneTitle = document.getElementById('gameZoneTitle');
+    const parentAdminContainer = document.getElementById('parentAdminContainer');
+    const gameLobby = document.getElementById('gameLobby');
+    const kidGameContainer = document.getElementById('kidGameContainer');
+    const g2048Container = document.getElementById('g2048Container');
 
     if (mode === 'admin') {
-        btnAdmin.classList.add('active');
-        btnPlay.classList.remove('active');
-        document.getElementById('gameZoneTitle').innerText = "🛡️ 權限管理中心";
-        document.getElementById('parentAdminContainer').style.display = 'block';
-        document.getElementById('gameLobby').style.display = 'none';
-        document.getElementById('kidGameContainer').style.display = 'none';
-        document.getElementById('g2048Container').style.display = 'none';
+        if (btnAdmin) btnAdmin.classList.add('active');
+        if (btnPlay) btnPlay.classList.remove('active');
+        if (gameZoneTitle) gameZoneTitle.innerText = "🛡️ 權限管理中心";
+        if (parentAdminContainer) parentAdminContainer.style.display = 'block';
+        if (gameLobby) gameLobby.style.display = 'none';
+        if (kidGameContainer) kidGameContainer.style.display = 'none';
+        if (g2048Container) g2048Container.style.display = 'none';
         loadParentAdminData();
     } else {
-        btnPlay.classList.add('active');
-        btnAdmin.classList.remove('active');
-        document.getElementById('gameZoneTitle').innerText = "🎮 遊戲區 (親自遊玩)";
-        document.getElementById('parentAdminContainer').style.display = 'none';
+        if (btnPlay) btnPlay.classList.add('active');
+        if (btnAdmin) btnAdmin.classList.remove('active');
+        if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區 (親自遊玩)";
+        if (parentAdminContainer) parentAdminContainer.style.display = 'none';
         returnToLobby();
         listenKidGameData(userDocId);
         listen2048UserData(userDocId);
@@ -105,21 +116,32 @@ function selectGame(gameType) {
     }
 
     document.getElementById('gameLobby').style.display = 'none';
+    const gameZoneTitle = document.getElementById('gameZoneTitle');
+
     if (gameType === 'rps') {
-        document.getElementById('gameZoneTitle').innerText = "🎮 剪刀石頭布對決";
+        if (gameZoneTitle) gameZoneTitle.innerText = "🎮 剪刀石頭布對決";
         document.getElementById('kidGameContainer').style.display = 'block';
     } else if (gameType === 'g2048') {
-        document.getElementById('gameZoneTitle').innerText = "🔢 2048 數字方塊";
+        if (gameZoneTitle) gameZoneTitle.innerText = "🔢 2048 數字方塊";
         document.getElementById('g2048Container').style.display = 'block';
         init2048Game();
     }
 }
 
 function returnToLobby() {
-    document.getElementById('kidGameContainer').style.display = 'none';
-    document.getElementById('g2048Container').style.display = 'none';
-    document.getElementById('gameLobby').style.display = 'flex';
-    document.getElementById('gameZoneTitle').innerText = isParent && document.getElementById('btnModePlay').classList.contains('active') ? "🎮 遊戲區 (親自遊玩)" : "🎮 遊戲區";
+    const kidGameContainer = document.getElementById('kidGameContainer');
+    const g2048Container = document.getElementById('g2048Container');
+    const gameLobby = document.getElementById('gameLobby');
+    const gameZoneTitle = document.getElementById('gameZoneTitle');
+    const btnModePlay = document.getElementById('btnModePlay');
+
+    if (kidGameContainer) kidGameContainer.style.display = 'none';
+    if (g2048Container) g2048Container.style.display = 'none';
+    if (gameLobby) gameLobby.style.display = 'flex';
+    
+    if (gameZoneTitle) {
+        gameZoneTitle.innerText = (isParent && btnModePlay && btnModePlay.classList.contains('active')) ? "🎮 遊戲區 (親自遊玩)" : "🎮 遊戲區";
+    }
 }
 
 let groupMembers = [];
@@ -128,6 +150,8 @@ let selectedMember = null;
 
 async function loadParentAdminData() {
     const chipsContainer = document.getElementById('memberChipsList');
+    if (!chipsContainer) return;
+    
     chipsContainer.innerHTML = '<div class="lb-loading" style="padding:10px;">載入群組成員中...</div>';
 
     try {
@@ -140,7 +164,9 @@ async function loadParentAdminData() {
             if (userData.name) groupMembers.push(userData.name);
         });
 
-        if (!groupMembers.includes(currentUser.name)) groupMembers.push(currentUser.name);
+        if (!groupMembers.includes(currentUser.name)) {
+            groupMembers.push(currentUser.name);
+        }
 
         groupMembers.forEach(memberName => {
             const targetDocId = `${userGroupId}_${memberName}`;
@@ -155,7 +181,9 @@ async function loadParentAdminData() {
                 } else {
                     kidsPermissions[memberName] = { rps: true, g2048: true, farm: true };
                 }
-                if (selectedMember === memberName) renderMemberPermissionDetails();
+                if (selectedMember === memberName) {
+                    renderMemberPermissionDetails();
+                }
             });
         });
         renderMemberChips();
@@ -166,8 +194,13 @@ async function loadParentAdminData() {
 
 function renderMemberChips() {
     const chipsContainer = document.getElementById('memberChipsList');
+    if (!chipsContainer) return;
+    
     chipsContainer.innerHTML = '';
-    if (groupMembers.length === 0) return chipsContainer.innerHTML = '<div class="lb-loading">尚無其他成員</div>';
+    if (groupMembers.length === 0) {
+        chipsContainer.innerHTML = '<div class="lb-loading">尚無其他成員</div>';
+        return;
+    }
 
     groupMembers.forEach((memberName) => {
         const chip = document.createElement('div');
@@ -176,14 +209,22 @@ function renderMemberChips() {
         chip.onclick = () => selectMemberToManage(memberName);
         chipsContainer.appendChild(chip);
     });
-    if (!selectedMember && groupMembers.length > 0) selectMemberToManage(groupMembers[0]);
+    if (!selectedMember && groupMembers.length > 0) {
+        selectMemberToManage(groupMembers[0]);
+    }
 }
 
 function selectMemberToManage(memberName) {
     selectedMember = memberName;
-    document.getElementById('selectedMemberTitle').innerText = `管理 ${memberName} 的遊戲權限`;
-    document.getElementById('memberPermissionSection').style.display = 'block';
-    document.querySelectorAll('.member-chip').forEach(el => el.classList.toggle('active', el.innerText.includes(memberName)));
+    const titleEl = document.getElementById('selectedMemberTitle');
+    const sectionEl = document.getElementById('memberPermissionSection');
+    
+    if (titleEl) titleEl.innerText = `管理 ${memberName} 的遊戲權限`;
+    if (sectionEl) sectionEl.style.display = 'block';
+    
+    document.querySelectorAll('.member-chip').forEach(el => {
+        el.classList.toggle('active', el.innerText.includes(memberName));
+    });
     renderMemberPermissionDetails();
 }
 
@@ -221,10 +262,16 @@ async function setMemberPermission(gameType, allow) {
 }
 
 // ---------------------------
-// 剪刀石頭布 & 2048 原有邏輯
+// 剪刀石頭布邏輯
 // ---------------------------
-function getTodayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-function getInitialRpsStats() { return { groupId: userGroupId, userName: currentUser.name, totalScore: 0, lastPlayDate: getTodayStr(), currentStreak: 0, maxStreak: 0 }; }
+function getTodayStr() { 
+    const d = new Date(); 
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
+}
+
+function getInitialRpsStats() { 
+    return { groupId: userGroupId, userName: currentUser.name, totalScore: 0, lastPlayDate: getTodayStr(), currentStreak: 0, maxStreak: 0 }; 
+}
 
 let currentKidStats = getInitialRpsStats();
 
@@ -247,17 +294,31 @@ function listenKidGameData(docId) {
 }
 
 function updateGameUI() {
-    document.getElementById('gameTotalScore').innerText = currentKidStats.totalScore || 0;
-    document.getElementById('gameStreak').innerText = currentKidStats.currentStreak || 0;
-    document.getElementById('gameMaxStreak').innerText = currentKidStats.maxStreak || 0;
-    if (!isGameLocked) document.querySelectorAll('.p-card').forEach(card => card.classList.remove('disabled'));
+    const tsEl = document.getElementById('gameTotalScore');
+    const gsEl = document.getElementById('gameStreak');
+    const msEl = document.getElementById('gameMaxStreak');
+    
+    if (tsEl) tsEl.innerText = currentKidStats.totalScore || 0;
+    if (gsEl) gsEl.innerText = currentKidStats.currentStreak || 0;
+    if (msEl) msEl.innerText = currentKidStats.maxStreak || 0;
+    
+    if (!isGameLocked) {
+        document.querySelectorAll('.p-card').forEach(card => card.classList.remove('disabled'));
+    }
 }
 
 function resetGameArena() {
     isGameLocked = false;
-    document.getElementById('compCard').innerText = "❓";
-    document.getElementById('compCard').classList.remove('card-solid');
-    document.getElementById('gameResultText').innerText = "準備好了嗎？";
+    const compCardEl = document.getElementById('compCard');
+    const resultTextEl = document.getElementById('gameResultText');
+    
+    if (compCardEl) {
+        compCardEl.innerText = "❓";
+        compCardEl.classList.remove('card-solid');
+    }
+    if (resultTextEl) {
+        resultTextEl.innerText = "準備好了嗎？";
+    }
     document.querySelectorAll('.p-card').forEach(card => card.classList.remove('disabled'));
 }
 
@@ -268,46 +329,72 @@ async function playGame(playerChoice) {
 
     const compChoice = Math.floor(Math.random() * 3);
     const compCardEl = document.getElementById('compCard');
-    compCardEl.innerText = RPS_ICONS[compChoice];
-    compCardEl.classList.add('card-solid');
+    if (compCardEl) {
+        compCardEl.innerText = RPS_ICONS[compChoice];
+        compCardEl.classList.add('card-solid');
+    }
 
     const resultTextEl = document.getElementById('gameResultText');
     const result = (playerChoice - compChoice + 3) % 3;
-    let addedPoints = 0, reason = "";
+    let addedPoints = 0;
+    let reason = "";
 
     if (result === 0) {
-        resultTextEl.innerText = "平手！再來一次！";
-        resultTextEl.style.color = "#f59e0b";
+        if (resultTextEl) {
+            resultTextEl.innerText = "平手！再來一次！";
+            resultTextEl.style.color = "#f59e0b";
+        }
         setTimeout(resetGameArena, 1500);
         return;
     } else if (result === 1) {
-        currentKidStats.totalScore += 1;
-        currentKidStats.currentStreak += 1;
-        if (currentKidStats.currentStreak > (currentKidStats.maxStreak || 0)) currentKidStats.maxStreak = currentKidStats.currentStreak;
-        addedPoints = 1; reason = "剪刀石頭布 獲勝";
+        currentKidStats.totalScore = (currentKidStats.totalScore || 0) + 1;
+        currentKidStats.currentStreak = (currentKidStats.currentStreak || 0) + 1;
+        
+        if (currentKidStats.currentStreak > (currentKidStats.maxStreak || 0)) {
+            currentKidStats.maxStreak = currentKidStats.currentStreak;
+        }
+        
+        addedPoints = 1; 
+        reason = "剪刀石頭布 獲勝";
         let msg = "🎉 贏了！獲得 1 分！";
 
         if (currentKidStats.currentStreak % 3 === 0) {
-            currentKidStats.totalScore += 2; addedPoints += 2;
+            currentKidStats.totalScore += 2; 
+            addedPoints += 2;
             reason = `剪刀石頭布 連勝${currentKidStats.currentStreak}場額外加分`;
             msg = `🔥 連贏 ${currentKidStats.currentStreak} 場！總共獲得 3 分！`;
         }
-        resultTextEl.innerText = msg; resultTextEl.style.color = "var(--primary-color)";
+        if (resultTextEl) {
+            resultTextEl.innerText = msg; 
+            resultTextEl.style.color = "var(--primary-color)";
+        }
     } else {
         currentKidStats.currentStreak = 0;
-        resultTextEl.innerText = "😢 輸了！連勝中斷！";
-        resultTextEl.style.color = "var(--cancel-color)";
+        if (resultTextEl) {
+            resultTextEl.innerText = "😢 輸了！連勝中斷！";
+            resultTextEl.style.color = "var(--cancel-color)";
+        }
     }
 
     const docRef = doc(db, "game_records", userDocId);
     await setDoc(docRef, {
-        groupId: userGroupId, userName: currentUser.name, totalScore: currentKidStats.totalScore,
-        lastPlayDate: getTodayStr(), currentStreak: currentKidStats.currentStreak, maxStreak: currentKidStats.maxStreak || 0
+        groupId: userGroupId, 
+        userName: currentUser.name, 
+        totalScore: currentKidStats.totalScore,
+        lastPlayDate: getTodayStr(), 
+        currentStreak: currentKidStats.currentStreak, 
+        maxStreak: currentKidStats.maxStreak || 0
     }, { merge: true });
 
     if (addedPoints > 0) {
         await addDoc(collection(db, "scores"), {
-            date: getTodayStr(), operator: currentUser.name, examType: "遊戲獎勵", subject: reason, score: 100, points: addedPoints, timestamp: serverTimestamp()
+            date: getTodayStr(), 
+            operator: currentUser.name, 
+            examType: "遊戲獎勵", 
+            subject: reason, 
+            score: 100, 
+            points: addedPoints, 
+            timestamp: serverTimestamp()
         });
     }
     updateGameUI();
@@ -318,28 +405,42 @@ async function playGame(playerChoice) {
 // 2048 與排行榜邏輯
 // ---------------------------
 let g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
-let g2048Score = 0; let g2048BestScore = 0; let g2048GameOver = false;
+let g2048Score = 0; 
+let g2048BestScore = 0; 
+let g2048GameOver = false;
 
 function listen2048UserData(docId) {
     onSnapshot(doc(db, "game_records_2048", docId), (docSnap) => {
         if (docSnap.exists()) {
             g2048BestScore = docSnap.data().bestScore || 0;
-            document.getElementById('g2048BestScore').innerText = g2048BestScore;
+            const el = document.getElementById('g2048BestScore');
+            if (el) el.innerText = g2048BestScore;
         }
     });
 }
 
 function init2048Game() {
     g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
-    g2048Score = 0; g2048GameOver = false;
-    document.getElementById('g2048Score').innerText = g2048Score;
-    document.getElementById('g2048Status').innerText = "";
-    addNewTile(); addNewTile(); render2048Board();
+    g2048Score = 0; 
+    g2048GameOver = false;
+    
+    const scEl = document.getElementById('g2048Score');
+    const stEl = document.getElementById('g2048Status');
+    if (scEl) scEl.innerText = g2048Score;
+    if (stEl) stEl.innerText = "";
+    
+    addNewTile(); 
+    addNewTile(); 
+    render2048Board();
 }
 
 function addNewTile() {
     let emptyCells = [];
-    for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(g2048Board[r][c] === 0) emptyCells.push({r, c});
+    for(let r=0; r<4; r++) {
+        for(let c=0; c<4; c++) {
+            if(g2048Board[r][c] === 0) emptyCells.push({r, c});
+        }
+    }
     if(emptyCells.length > 0) {
         let cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
         g2048Board[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4;
@@ -348,6 +449,8 @@ function addNewTile() {
 
 function render2048Board() {
     const boardEl = document.getElementById('g2048Board');
+    if (!boardEl) return;
+    
     boardEl.innerHTML = '';
     for(let r=0; r<4; r++) {
         for(let c=0; c<4; c++) {
@@ -358,18 +461,31 @@ function render2048Board() {
             boardEl.appendChild(cellDiv);
         }
     }
-    document.getElementById('g2048Score').innerText = g2048Score;
+    
+    const scEl = document.getElementById('g2048Score');
+    if (scEl) scEl.innerText = g2048Score;
+    
     if(g2048Score > g2048BestScore) {
         g2048BestScore = g2048Score;
-        document.getElementById('g2048BestScore').innerText = g2048BestScore;
-        setDoc(doc(db, "game_records_2048", userDocId), { groupId: userGroupId, userName: currentUser.name, bestScore: g2048BestScore }, { merge: true }).catch(e=>{});
+        const bscEl = document.getElementById('g2048BestScore');
+        if (bscEl) bscEl.innerText = g2048BestScore;
+        
+        setDoc(doc(db, "game_records_2048", userDocId), { 
+            groupId: userGroupId, 
+            userName: currentUser.name, 
+            bestScore: g2048BestScore 
+        }, { merge: true }).catch(e=>{});
     }
 }
 
 function slideRow(row) {
     let arr = row.filter(val => val !== 0);
     for(let i=0; i<arr.length-1; i++) {
-        if(arr[i] === arr[i+1]) { arr[i] *= 2; g2048Score += arr[i]; arr[i+1] = 0; }
+        if(arr[i] === arr[i+1]) { 
+            arr[i] *= 2; 
+            g2048Score += arr[i]; 
+            arr[i+1] = 0; 
+        }
     }
     arr = arr.filter(val => val !== 0);
     while(arr.length < 4) arr.push(0);
@@ -385,30 +501,56 @@ function moveLeft() {
     }
     return changed;
 }
+
 function rotateBoard() {
     let newBoard = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
-    for(let r=0; r<4; r++) for(let c=0; c<4; c++) newBoard[c][3-r] = g2048Board[r][c];
+    for(let r=0; r<4; r++) {
+        for(let c=0; c<4; c++) {
+            newBoard[c][3-r] = g2048Board[r][c];
+        }
+    }
     g2048Board = newBoard;
 }
+
 function makeMove(direction) {
     if(g2048GameOver) return;
     let moved = false;
-    if(direction === 'left') { moved = moveLeft(); }
-    else if(direction === 'up') { rotateBoard(); rotateBoard(); rotateBoard(); moved = moveLeft(); rotateBoard(); }
-    else if(direction === 'right') { rotateBoard(); rotateBoard(); moved = moveLeft(); rotateBoard(); rotateBoard(); }
-    else if(direction === 'down') { rotateBoard(); moved = moveLeft(); rotateBoard(); rotateBoard(); rotateBoard(); }
+    if(direction === 'left') { 
+        moved = moveLeft(); 
+    } else if(direction === 'up') { 
+        rotateBoard(); rotateBoard(); rotateBoard(); 
+        moved = moveLeft(); 
+        rotateBoard(); 
+    } else if(direction === 'right') { 
+        rotateBoard(); rotateBoard(); 
+        moved = moveLeft(); 
+        rotateBoard(); rotateBoard(); 
+    } else if(direction === 'down') { 
+        rotateBoard(); 
+        moved = moveLeft(); 
+        rotateBoard(); rotateBoard(); rotateBoard(); 
+    }
 
-    if(moved) { addNewTile(); render2048Board(); checkGameOver(); }
+    if(moved) { 
+        addNewTile(); 
+        render2048Board(); 
+        checkGameOver(); 
+    }
 }
 
 function checkGameOver() {
-    let hasZero = false; let canMerge = false;
+    let hasZero = false; 
+    let canMerge = false;
+    const stEl = document.getElementById('g2048Status');
+
     for(let r=0; r<4; r++) {
         for(let c=0; c<4; c++) {
             if(g2048Board[r][c] === 2048 && !window._hasWon2048) {
                 window._hasWon2048 = true;
-                document.getElementById('g2048Status').innerText = "🏆 太神啦！成功拼出 2048！";
-                document.getElementById('g2048Status').style.color = "var(--primary-color)";
+                if (stEl) {
+                    stEl.innerText = "🏆 太神啦！成功拼出 2048！";
+                    stEl.style.color = "var(--primary-color)";
+                }
             }
             if(g2048Board[r][c] === 0) hasZero = true;
             if(c < 3 && g2048Board[r][c] === g2048Board[r][c+1]) canMerge = true;
@@ -417,32 +559,54 @@ function checkGameOver() {
     }
     if(!hasZero && !canMerge) {
         g2048GameOver = true;
-        document.getElementById('g2048Status').innerText = "😢 遊戲結束！";
-        document.getElementById('g2048Status').style.color = "var(--cancel-color)";
+        if (stEl) {
+            stEl.innerText = "😢 遊戲結束！";
+            stEl.style.color = "var(--cancel-color)";
+        }
     }
 }
 
-let currentLbGame = ''; let currentLbTab = 'group';
+let currentLbGame = ''; 
+let currentLbTab = 'group';
+
 function openLeaderboard(gameType) {
-    currentLbGame = gameType; currentLbTab = 'group';
-    document.getElementById('lbTitle').innerText = gameType === 'rps' ? '🏆 猜拳 排行榜' : '🏆 2048 排行榜';
-    document.getElementById('leaderboardModal').style.display = 'flex';
+    currentLbGame = gameType; 
+    currentLbTab = 'group';
+    const lbTitle = document.getElementById('lbTitle');
+    const lbModal = document.getElementById('leaderboardModal');
+    
+    if (lbTitle) lbTitle.innerText = gameType === 'rps' ? '🏆 猜拳 排行榜' : '🏆 2048 排行榜';
+    if (lbModal) lbModal.style.display = 'flex';
+    
     loadLeaderboard('group');
 }
-function closeLeaderboard() { document.getElementById('leaderboardModal').style.display = 'none'; }
+
+function closeLeaderboard() { 
+    const lbModal = document.getElementById('leaderboardModal');
+    if (lbModal) lbModal.style.display = 'none'; 
+}
+
 async function loadLeaderboard(tabType) {
     currentLbTab = tabType;
-    document.getElementById('tabGroup').classList.toggle('active', tabType === 'group');
-    document.getElementById('tabGlobal').classList.toggle('active', tabType === 'global');
+    const tabGroup = document.getElementById('tabGroup');
+    const tabGlobal = document.getElementById('tabGlobal');
+    
+    if (tabGroup) tabGroup.classList.toggle('active', tabType === 'group');
+    if (tabGlobal) tabGlobal.classList.toggle('active', tabType === 'global');
     
     const listEl = document.getElementById('lbList');
+    if (!listEl) return;
+    
     listEl.innerHTML = '<div class="lb-loading">載入中...</div>';
 
     try {
         const colName = currentLbGame === 'rps' ? 'game_records' : 'game_records_2048';
         let q;
-        if (tabType === 'group') q = query(collection(db, colName), where("groupId", "==", userGroupId));
-        else q = query(collection(db, colName), orderBy(currentLbGame === 'rps' ? 'totalScore' : 'bestScore', "desc"), limit(100));
+        if (tabType === 'group') {
+            q = query(collection(db, colName), where("groupId", "==", userGroupId));
+        } else {
+            q = query(collection(db, colName), orderBy(currentLbGame === 'rps' ? 'totalScore' : 'bestScore', "desc"), limit(100));
+        }
 
         const querySnapshot = await getDocs(q);
         let dataList = [];
@@ -453,7 +617,10 @@ async function loadLeaderboard(tabType) {
         }
 
         listEl.innerHTML = '';
-        if (dataList.length === 0) return listEl.innerHTML = '<div class="lb-loading">目前尚無紀錄</div>';
+        if (dataList.length === 0) {
+            listEl.innerHTML = '<div class="lb-loading">目前尚無紀錄</div>';
+            return;
+        }
 
         dataList.forEach((item, index) => {
             let rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
@@ -468,7 +635,9 @@ async function loadLeaderboard(tabType) {
                 </li>
             `;
         });
-    } catch (error) { listEl.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗</div>'; }
+    } catch (error) { 
+        listEl.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗</div>'; 
+    }
 }
 
 // --- 暴露給 window 供 HTML onClick 綁定 ---
@@ -482,41 +651,69 @@ window.closeLeaderboard = closeLeaderboard;
 window.loadLeaderboard = loadLeaderboard;
 window.playGame = playGame;
 
-
 // --- 事件監聽器區 ---
 window.addEventListener('keydown', (e) => {
-    if(document.getElementById('g2048Container') && document.getElementById('g2048Container').style.display === 'block') {
+    const g2048Container = document.getElementById('g2048Container');
+    if(g2048Container && g2048Container.style.display === 'block') {
         if(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", " "].includes(e.key)) { e.preventDefault(); }
-        if(e.key === 'ArrowLeft') makeMove('left'); if(e.key === 'ArrowUp') makeMove('up');
-        if(e.key === 'ArrowRight') makeMove('right'); if(e.key === 'ArrowDown') makeMove('down');
+        if(e.key === 'ArrowLeft') makeMove('left'); 
+        if(e.key === 'ArrowUp') makeMove('up');
+        if(e.key === 'ArrowRight') makeMove('right'); 
+        if(e.key === 'ArrowDown') makeMove('down');
     }
 });
 
 let touchStartX = 0, touchStartY = 0;
 const boardEl = document.getElementById('g2048Board');
 if (boardEl) {
-    boardEl.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, {passive: true});
+    boardEl.addEventListener('touchstart', (e) => { 
+        touchStartX = e.touches[0].clientX; 
+        touchStartY = e.touches[0].clientY; 
+    }, {passive: true});
+    
     boardEl.addEventListener('touchend', (e) => {
-        if(document.getElementById('g2048Container') && document.getElementById('g2048Container').style.display !== 'block') return;
+        const g2048Container = document.getElementById('g2048Container');
+        if(g2048Container && g2048Container.style.display !== 'block') return;
+        
         let deltaX = e.changedTouches[0].clientX - touchStartX;
         let deltaY = e.changedTouches[0].clientY - touchStartY;
+        
         if(Math.abs(deltaX) > Math.abs(deltaY)) {
-            if(Math.abs(deltaX) > 30) { if(deltaX > 0) makeMove('right'); else makeMove('left'); }
+            if(Math.abs(deltaX) > 30) { 
+                if(deltaX > 0) makeMove('right'); 
+                else makeMove('left'); 
+            }
         } else {
-            if(Math.abs(deltaY) > 30) { if(deltaY > 0) makeMove('down'); else makeMove('up'); }
+            if(Math.abs(deltaY) > 30) { 
+                if(deltaY > 0) makeMove('down'); 
+                else makeMove('up'); 
+            }
         }
     }, {passive: true});
 }
 
 document.querySelectorAll('.p-card').forEach(card => {
-    card.addEventListener('click', () => playGame(parseInt(card.getAttribute('data-choice'))));
+    card.addEventListener('click', () => {
+        playGame(parseInt(card.getAttribute('data-choice')));
+    });
 });
 
-if(document.getElementById('btnModeAdmin')) document.getElementById('btnModeAdmin').addEventListener('click', () => switchParentView('admin'));
-if(document.getElementById('btnModePlay')) document.getElementById('btnModePlay').addEventListener('click', () => switchParentView('play'));
-if(document.getElementById('btnBack')) document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
-if(document.getElementById('btnLogout')) {
-    document.getElementById('btnLogout').addEventListener('click', () => {
+const btnModeAdmin = document.getElementById('btnModeAdmin');
+const btnModePlay = document.getElementById('btnModePlay');
+const btnBack = document.getElementById('btnBack');
+const btnLogout = document.getElementById('btnLogout');
+
+if (btnModeAdmin) {
+    btnModeAdmin.addEventListener('click', () => switchParentView('admin'));
+}
+if (btnModePlay) {
+    btnModePlay.addEventListener('click', () => switchParentView('play'));
+}
+if (btnBack) {
+    btnBack.addEventListener('click', () => window.location.href = 'index.html');
+}
+if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
         sessionStorage.removeItem('familyCheckInUser');
         localStorage.removeItem('familyCheckInUser');
         window.location.href = 'index.html';
