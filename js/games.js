@@ -462,4 +462,63 @@ async function loadLeaderboard(tabType) {
             
             listEl.innerHTML += `
                 <li class="lb-item">
-                    <div class
+                    <div class="lb-rank ${rankClass}">${index + 1}</div>
+                    <div class="lb-info"><div class="lb-name">${item.userName || '匿名玩家'}</div>${groupDisplay}</div>
+                    <div class="lb-score">${scoreText}</div>
+                </li>
+            `;
+        });
+    } catch (error) { listEl.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗</div>'; }
+}
+
+// --- 暴露給 window 供 HTML onClick 綁定 ---
+window.selectGame = selectGame;
+window.returnToLobby = returnToLobby;
+window.selectMemberToManage = selectMemberToManage;
+window.setMemberPermission = setMemberPermission;
+window.init2048Game = init2048Game;
+window.openLeaderboard = openLeaderboard;
+window.closeLeaderboard = closeLeaderboard;
+window.loadLeaderboard = loadLeaderboard;
+window.playGame = playGame;
+
+
+// --- 事件監聽器區 ---
+window.addEventListener('keydown', (e) => {
+    if(document.getElementById('g2048Container') && document.getElementById('g2048Container').style.display === 'block') {
+        if(["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", " "].includes(e.key)) { e.preventDefault(); }
+        if(e.key === 'ArrowLeft') makeMove('left'); if(e.key === 'ArrowUp') makeMove('up');
+        if(e.key === 'ArrowRight') makeMove('right'); if(e.key === 'ArrowDown') makeMove('down');
+    }
+});
+
+let touchStartX = 0, touchStartY = 0;
+const boardEl = document.getElementById('g2048Board');
+if (boardEl) {
+    boardEl.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, {passive: true});
+    boardEl.addEventListener('touchend', (e) => {
+        if(document.getElementById('g2048Container') && document.getElementById('g2048Container').style.display !== 'block') return;
+        let deltaX = e.changedTouches[0].clientX - touchStartX;
+        let deltaY = e.changedTouches[0].clientY - touchStartY;
+        if(Math.abs(deltaX) > Math.abs(deltaY)) {
+            if(Math.abs(deltaX) > 30) { if(deltaX > 0) makeMove('right'); else makeMove('left'); }
+        } else {
+            if(Math.abs(deltaY) > 30) { if(deltaY > 0) makeMove('down'); else makeMove('up'); }
+        }
+    }, {passive: true});
+}
+
+document.querySelectorAll('.p-card').forEach(card => {
+    card.addEventListener('click', () => playGame(parseInt(card.getAttribute('data-choice'))));
+});
+
+if(document.getElementById('btnModeAdmin')) document.getElementById('btnModeAdmin').addEventListener('click', () => switchParentView('admin'));
+if(document.getElementById('btnModePlay')) document.getElementById('btnModePlay').addEventListener('click', () => switchParentView('play'));
+if(document.getElementById('btnBack')) document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
+if(document.getElementById('btnLogout')) {
+    document.getElementById('btnLogout').addEventListener('click', () => {
+        sessionStorage.removeItem('familyCheckInUser');
+        localStorage.removeItem('familyCheckInUser');
+        window.location.href = 'index.html';
+    });
+}
