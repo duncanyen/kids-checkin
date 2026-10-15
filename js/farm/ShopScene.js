@@ -8,7 +8,7 @@ export default class ShopScene extends Phaser.Scene {
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
-        this.add.text(195, 60, '🛒 咕咕莊園商店', { fontSize: '22px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(195, 60, '🛒 商店', { fontSize: '22px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         const btnBack = this.add.rectangle(55, 60, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
@@ -16,11 +16,11 @@ export default class ShopScene extends Phaser.Scene {
 
         this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'center', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
 
-        this.isProcessing = false; // 🔒 防連點鎖定狀態
+        this.isProcessing = false; 
         
-        // 準備確認視窗
+        // 準備隱藏的確認視窗 (文字Bug已在此修正)
         this.createConfirmDialog();
-        // 準備分頁
+        // 準備買賣分頁與商品圖示
         this.createTabs();
 
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
@@ -49,24 +49,26 @@ export default class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        // --- 買進列表 ---
-        this.addShopItem(this.buyContainer, 95, 40, `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
-        this.addShopItem(this.buyContainer, 295, 40, `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
-        this.addShopItem(this.buyContainer, 95, 140, `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍(10雞)', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
-        this.addShopItem(this.buyContainer, 295, 140, `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍(20雞)', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
+        // --- 買進列表 (加入對應圖示) ---
+        this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
+        this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
+        this.addShopItem(this.buyContainer, 95, 140, 'coop', `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍(10雞)', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
+        this.addShopItem(this.buyContainer, 295, 140, 'coop', `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍(20雞)', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
 
-        // --- 賣出列表 ---
-        this.addShopItem(this.sellContainer, 95, 40, `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
-        this.addShopItem(this.sellContainer, 295, 40, `菜蟲\n(+${WORM_PRICE})`, 0x333333, () => this.askConfirm('賣出菜蟲', 0, () => this.sellItem('worms', WORM_PRICE, '菜蟲')));
-        this.addShopItem(this.sellContainer, 95, 140, `蚯蚓\n(+${EARTHWORM_PRICE})`, 0x333333, () => this.askConfirm('賣出蚯蚓', 0, () => this.sellItem('earthworms', EARTHWORM_PRICE, '蚯蚓')));
-        this.addShopItem(this.sellContainer, 295, 140, `狼牙\n(+${FANG_PRICE})`, 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙')));
+        // --- 賣出列表 (加入對應圖示) ---
+        this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
+        this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n(+${WORM_PRICE})`, 0x333333, () => this.askConfirm('賣出菜蟲', 0, () => this.sellItem('worms', WORM_PRICE, '菜蟲')));
+        this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n(+${EARTHWORM_PRICE})`, 0x333333, () => this.askConfirm('賣出蚯蚓', 0, () => this.sellItem('earthworms', EARTHWORM_PRICE, '蚯蚓')));
+        this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n(+${FANG_PRICE})`, 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙')));
     }
 
-    addShopItem(container, x, y, text, color, callback) {
-        const bg = this.add.rectangle(x, y, 160, 80, color, 0.9).setInteractive({ cursor: 'pointer' });
-        const txt = this.add.text(x, y, text, { fontSize: '15px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+    // 負責把圖示與文字組裝進方塊中
+    addShopItem(container, x, y, iconKey, text, color, callback) {
+        const bg = this.add.rectangle(x, y, 170, 80, color, 0.9).setInteractive({ cursor: 'pointer' });
+        const icon = this.add.image(x - 45, y, iconKey).setScale(1.5);
+        const txt = this.add.text(x + 15, y, text, { fontSize: '15px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
         bg.on('pointerdown', callback);
-        container.add([bg, txt]);
+        container.add([bg, icon, txt]);
     }
 
     createConfirmDialog() {
@@ -76,10 +78,10 @@ export default class ShopScene extends Phaser.Scene {
         this.dialogText = this.add.text(195, 380, '確定要購買嗎？', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
         
         const btnYes = this.add.rectangle(120, 460, 100, 40, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+        const txtYes = this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
         const btnNo = this.add.rectangle(270, 460, 100, 40, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+        const txtNo = this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
         btnYes.on('pointerdown', () => {
@@ -87,7 +89,8 @@ export default class ShopScene extends Phaser.Scene {
             if (this.confirmCallback) this.confirmCallback();
         });
 
-        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff' }).setOrigin(0.5), btnNo, this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff' }).setOrigin(0.5)]);
+        // 正確將所有 UI 放入容器中，這樣隱藏時就不會漏掉文字
+        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, txtYes, btnNo, txtNo]);
     }
 
     askConfirm(itemName, price, callback) {
@@ -112,7 +115,6 @@ export default class ShopScene extends Phaser.Scene {
         this.tweens.add({ targets: this.msgText, alpha: 0, duration: 2000, delay: 1000 });
     }
 
-    // --- 交易邏輯與防連點保護 ---
     async sellItem(itemKey, price, itemName) {
         if (this.isProcessing) return;
         if (!this.farmData || (this.farmData[itemKey] || 0) < 1) { this.showMsg(`${itemName}不足，無法賣出！`, '#F44336'); return; }
