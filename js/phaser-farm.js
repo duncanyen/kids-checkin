@@ -32,23 +32,22 @@ class MainScene extends Phaser.Scene {
         this.farmInterval = null;
     }
 
-    // 🌟 核心亮點：在這裡用「字串矩陣」畫出 Minecraft 風格像素圖
     preload() {
-        // 定義像素調色盤 (Palette)
+        // 定義像素調色盤 (Palette) - 已微調為更接近麥塊的顏色
         const palette = {
-            '1': '#FFFFFF', // 白 (母雞/雞蛋)
-            '2': '#E53935', // 紅 (雞冠)
-            '3': '#FB8C00', // 橘 (嘴/腳)
+            '1': '#FFFFFF', // 白 (母雞身體)
+            '2': '#E53935', // 紅 (肉垂)
+            '3': '#FBC02D', // 黃 (嘴/腳)
             '4': '#000000', // 黑 (眼睛)
             '5': '#8D6E63', // 淺木頭 (雞舍)
             '6': '#5D4037', // 深木頭 (雞舍陰影)
             '7': '#FDD835', // 金黃色 (金幣)
-            '8': '#E0E0E0', // 灰白 (雞蛋陰影)
+            '8': '#BDBDBD', // 灰白 (翅膀陰影)
             '9': '#7CB342', // 淺草地
             'A': '#689F38'  // 深草地
         };
 
-        // 1. 生成草地 (Grass Tile)
+        // 1. 生成草地
         this.textures.generate('grass', {
             data: [
                 '99999999',
@@ -60,23 +59,27 @@ class MainScene extends Phaser.Scene {
                 '99999999',
                 '9999A999'
             ],
-            pixelWidth: 8, // 每個像素放大 8 倍 (Minecraft 粗糙感)
+            pixelWidth: 8,
             palette: palette
         });
 
-        // 2. 生成母雞 (Hen)
+        // 2. 🌟 生成 Minecraft 完美還原版母雞 (側視圖)
         this.textures.generate('hen', {
             data: [
-                '..22......',
-                '..111.2...',
-                '.114113...',
-                '.11111....',
-                '..111111..',
-                '..1111111.',
-                '...1111...',
-                '....3..3..'
+                '......1111..', // 頭頂
+                '......1411..', // 眼睛 (4是黑眼珠)
+                '......1111..', // 臉頰
+                '......111133', // 鳥喙 (3是黃色)
+                '....11111122', // 脖子與紅色肉垂 (2是紅色)
+                '....111111..', // 身體前端
+                '..11118811..', // 尾巴、身體與灰色翅膀 (8是灰色)
+                '..11118811..', // 尾巴、身體與灰色翅膀
+                '....118811..', // 身體底部與翅膀
+                '....111111..', // 身體最底部
+                '......3..3..', // 腳
+                '......3..3..'  // 腳
             ],
-            pixelWidth: 8,
+            pixelWidth: 6, // 放大倍率
             palette: palette
         });
 
@@ -142,11 +145,10 @@ class MainScene extends Phaser.Scene {
 
         // 4. 放置母雞
         this.hen = this.add.image(cx - 20, cy + 20, 'hen').setOrigin(0.5);
-        this.hen.setInteractive({ cursor: 'pointer' }); // 讓滑鼠變成手指
+        this.hen.setInteractive({ cursor: 'pointer' }); 
         
         // 點擊母雞的互動特效
         this.hen.on('pointerdown', () => {
-            // 點擊縮放跳躍特效
             this.tweens.add({
                 targets: this.hen,
                 y: this.hen.y - 15,
@@ -158,7 +160,7 @@ class MainScene extends Phaser.Scene {
             this.harvestEgg();
         });
 
-        // 5. 繪製 UI (金幣與庫存)，加入深色半透明底框讓字體清楚
+        // 5. 繪製 UI
         this.add.rectangle(70, 30, 120, 70, 0x000000, 0.5).setOrigin(0.5);
         this.add.image(30, 20, 'coin').setOrigin(0.5);
         this.coinsText = this.add.text(50, 10, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
@@ -199,11 +201,11 @@ class MainScene extends Phaser.Scene {
         this.eggsText.setText(`${this.farmData.inventoryEggs || 0}`);
 
         if (this.farmData.eggsReady > 0) {
-            this.egg.setVisible(true); // 顯示雞蛋
+            this.egg.setVisible(true); 
             this.statusText.setText(`產了 ${this.farmData.eggsReady} 顆蛋！(點擊母雞收成)`);
-            this.statusText.setColor('#A5D6A7'); // 變成綠色字
+            this.statusText.setColor('#A5D6A7'); 
         } else {
-            this.egg.setVisible(false); // 隱藏雞蛋
+            this.egg.setVisible(false); 
             this.statusText.setColor('#ffffff');
         }
     }
@@ -291,7 +293,7 @@ const config = {
     width: 480,       
     height: 640,      
     parent: 'game-container', 
-    pixelArt: true, // ⚠️ 關鍵：開啟像素模式，圖片放大時不會模糊
+    pixelArt: true, // 保持邊緣銳利，呈現完美麥塊感
     scene: [MainScene] 
 };
 
