@@ -1,10 +1,14 @@
-class ShopScene extends Phaser.Scene {
+import { db } from '../firebase-config.js';
+import { onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX } from './constants.js';
+
+export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
 
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
-        this.add.text(195, 60, '🛒 咕咕莊園商店', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(195, 60, '🛒 咕咕莊園商店', { fontSize: '22px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         const btnBack = this.add.rectangle(55, 60, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
@@ -12,18 +16,17 @@ class ShopScene extends Phaser.Scene {
 
         this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'center', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
 
-        this.isProcessing = false; // 🔒 防連點鎖
-
-        // 創建確認視窗 Container (預設隱藏)
+        this.isProcessing = false; // 🔒 防連點鎖定狀態
+        
+        // 準備確認視窗
         this.createConfirmDialog();
-
-        // 創建 Tab 切換
-        this.currentTab = 'buy';
+        // 準備分頁
         this.createTabs();
 
-        this.msgText = this.add.text(195, 750, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
-
+        this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
         this.initFirebase();
+
+        this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
     }
 
     createTabs() {
@@ -46,17 +49,17 @@ class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        // --- 買進列表 (網格排列) ---
-        this.addShopItem(this.buyContainer, 95, 40, '母雞\n(-500)', 0x333333, () => this.askConfirm('母雞', 500, () => this.buyHen()));
-        this.addShopItem(this.buyContainer, 295, 40, '擴充倉庫\n(-100)', 0x333333, () => this.askConfirm('倉庫容量+10', 100, () => this.expandWarehouse()));
-        this.addShopItem(this.buyContainer, 95, 140, '中雞舍\n(-3000)', 0x1976D2, () => this.askConfirm('中型雞舍(容納10隻)', 3000, () => this.upgradeCoop(2, 3000)));
-        this.addShopItem(this.buyContainer, 295, 140, '大雞舍\n(-10000)', 0x1976D2, () => this.askConfirm('大型雞舍(容納20隻)', 10000, () => this.upgradeCoop(3, 10000)));
+        // --- 買進列表 ---
+        this.addShopItem(this.buyContainer, 95, 40, `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
+        this.addShopItem(this.buyContainer, 295, 40, `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
+        this.addShopItem(this.buyContainer, 95, 140, `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍(10雞)', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
+        this.addShopItem(this.buyContainer, 295, 140, `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍(20雞)', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
 
-        // --- 賣出列表 (網格排列) ---
-        this.addShopItem(this.sellContainer, 95, 40, '雞蛋\n(+10)', 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', 10, '雞蛋')));
-        this.addShopItem(this.sellContainer, 295, 40, '菜蟲\n(+1)', 0x333333, () => this.askConfirm('賣出菜蟲', 0, () => this.sellItem('worms', 1, '菜蟲')));
-        this.addShopItem(this.sellContainer, 95, 140, '蚯蚓\n(+5)', 0x333333, () => this.askConfirm('賣出蚯蚓', 0, () => this.sellItem('earthworms', 5, '蚯蚓')));
-        this.addShopItem(this.sellContainer, 295, 140, '狼牙\n(+10)', 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', 10, '狼牙')));
+        // --- 賣出列表 ---
+        this.addShopItem(this.sellContainer, 95, 40, `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
+        this.addShopItem(this.sellContainer, 295, 40, `菜蟲\n(+${WORM_PRICE})`, 0x333333, () => this.askConfirm('賣出菜蟲', 0, () => this.sellItem('worms', WORM_PRICE, '菜蟲')));
+        this.addShopItem(this.sellContainer, 95, 140, `蚯蚓\n(+${EARTHWORM_PRICE})`, 0x333333, () => this.askConfirm('賣出蚯蚓', 0, () => this.sellItem('earthworms', EARTHWORM_PRICE, '蚯蚓')));
+        this.addShopItem(this.sellContainer, 295, 140, `狼牙\n(+${FANG_PRICE})`, 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙')));
     }
 
     addShopItem(container, x, y, text, color, callback) {
@@ -68,9 +71,9 @@ class ShopScene extends Phaser.Scene {
 
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
-        const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); // 阻擋下方點擊
+        const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
         const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
-        this.dialogText = this.add.text(195, 380, '確定要購買嗎？', { fontSize: '18px', color: '#000', fontStyle: 'bold' }).setOrigin(0.5);
+        this.dialogText = this.add.text(195, 380, '確定要購買嗎？', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
         
         const btnYes = this.add.rectangle(120, 460, 100, 40, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
         this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
@@ -88,37 +91,68 @@ class ShopScene extends Phaser.Scene {
     }
 
     askConfirm(itemName, price, callback) {
-        if (this.isProcessing) return; // 若正在交易中則阻擋
-        this.dialogText.setText(price > 0 ? `確定花費 ${price} 購買\n[${itemName}] 嗎？` : `確定要 ${itemName} 嗎？`);
+        if (this.isProcessing) return; 
+        this.dialogText.setText(price > 0 ? `確定花費 ${price} 購買\n[${itemName}] 嗎？` : `確定要執行\n[${itemName}] 嗎？`);
         this.confirmCallback = callback;
         this.dialogContainer.setVisible(true);
     }
 
-    // --- Firebase Transaction 範例 (防連點與雞舍容量判斷) ---
+    initFirebase() {
+        this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
+            if (docSnap.exists() && docSnap.data().farm) {
+                this.farmData = docSnap.data().farm;
+                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
+                this.assetText.setText(`持有金幣: ${this.farmData.coins || 0}\n庫存容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
+            }
+        });
+    }
+
+    showMsg(msg, color) {
+        this.msgText.setText(msg).setColor(color).setAlpha(1);
+        this.tweens.add({ targets: this.msgText, alpha: 0, duration: 2000, delay: 1000 });
+    }
+
+    // --- 交易邏輯與防連點保護 ---
+    async sellItem(itemKey, price, itemName) {
+        if (this.isProcessing) return;
+        if (!this.farmData || (this.farmData[itemKey] || 0) < 1) { this.showMsg(`${itemName}不足，無法賣出！`, '#F44336'); return; }
+        
+        this.isProcessing = true;
+        try {
+            await runTransaction(db, async (t) => {
+                const snap = await t.get(myFarmRef);
+                const farm = snap.data().farm;
+                if (farm[itemKey] > 0) {
+                    t.update(myFarmRef, { [`farm.${itemKey}`]: farm[itemKey] - 1, "farm.coins": (farm.coins || 0) + price });
+                } else { throw `${itemName}不足！`; }
+            });
+            this.showMsg(`賣出成功！獲得 ${price} 金幣`, '#4CAF50');
+        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
+        finally { this.isProcessing = false; }
+    }
+
     async buyHen() {
         if (this.isProcessing) return;
-        this.isProcessing = true; 
-
+        if (!this.farmData || (this.farmData.coins || 0) < HEN_PRICE) { this.showMsg(`金幣不足！`, '#F44336'); return; }
+        
+        this.isProcessing = true;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 const coopLevel = farm.coopLevel || 1; 
                 let maxHens = 3;
-                if (coopLevel === 2) maxHens = 10;
-                if (coopLevel === 3) maxHens = 20;
+                if (coopLevel === 2) maxHens = COOP_LV2_MAX;
+                if (coopLevel === 3) maxHens = COOP_LV3_MAX;
 
-                if ((farm.hens || 1) >= maxHens) throw "雞舍已滿，請先升級雞舍！";
-                if ((farm.coins || 0) < 500) throw "金幣不足！";
+                if ((farm.hens || 1) >= maxHens) throw `雞舍已滿 (${maxHens}隻)，請先升級雞舍！`;
+                if ((farm.coins || 0) < HEN_PRICE) throw "金幣不足！";
 
-                t.update(myFarmRef, { "farm.coins": farm.coins - 500, "farm.hens": (farm.hens || 1) + 1 });
+                t.update(myFarmRef, { "farm.coins": farm.coins - HEN_PRICE, "farm.hens": (farm.hens || 1) + 1 });
             });
             this.showMsg('購買成功！母雞數量 +1', '#FFD54F');
-        } catch (e) { 
-            this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); 
-        } finally {
-            this.isProcessing = false; // 🔓 解除鎖定
-        }
+        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
+        finally { this.isProcessing = false; }
     }
 
     async upgradeCoop(level, price) {
@@ -135,12 +169,24 @@ class ShopScene extends Phaser.Scene {
                 t.update(myFarmRef, { "farm.coins": farm.coins - price, "farm.coopLevel": level });
             });
             this.showMsg('雞舍升級成功！', '#FFD54F');
-        } catch (e) {
-            this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336');
-        } finally {
-            this.isProcessing = false;
-        }
+        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); } 
+        finally { this.isProcessing = false; }
     }
 
-    // ...(其他買賣機制同理，在 try-catch 的 finally 內加入 this.isProcessing = false)...
+    async expandWarehouse() {
+        if (this.isProcessing) return;
+        if (!this.farmData || (this.farmData.coins || 0) < EXPAND_SLOT_PRICE) { this.showMsg(`金幣不足！`, '#F44336'); return; }
+        
+        this.isProcessing = true;
+        try {
+            await runTransaction(db, async (t) => {
+                const snap = await t.get(myFarmRef);
+                const farm = snap.data().farm;
+                if ((farm.coins || 0) < EXPAND_SLOT_PRICE) throw "金幣不足！";
+                t.update(myFarmRef, { "farm.coins": farm.coins - EXPAND_SLOT_PRICE, "farm.warehouseLimit": (farm.warehouseLimit || 10) + 10 });
+            });
+            this.showMsg('擴充成功！容量 +10', '#FFD54F');
+        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
+        finally { this.isProcessing = false; }
+    }
 }
