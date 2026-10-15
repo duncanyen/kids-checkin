@@ -30,11 +30,14 @@ class MainScene extends Phaser.Scene {
         super({ key: 'MainScene' });
         this.farmData = null;
         this.farmInterval = null;
-        this.isHenSitting = false; // 判斷母雞狀態
+        this.isHenSitting = false; 
+        
+        // 新增：母雞生氣計數系統
+        this.emptyClickCount = 0;
+        this.emptyClickTimer = null;
     }
 
     preload() {
-        // 定義更豐富的像素調色盤 (Palette)
         const palette = {
             '1': '#FFFFFF', // 白 (母雞身體)
             '2': '#E53935', // 紅 (肉垂)
@@ -53,7 +56,6 @@ class MainScene extends Phaser.Scene {
             'I': '#81D4FA'  // 窗戶玻璃
         };
 
-        // 1. 生成草地
         this.textures.generate('grass', {
             data: [
                 '99999999', '9A999999', '9999A999', '99999999',
@@ -63,7 +65,6 @@ class MainScene extends Phaser.Scene {
             palette: palette
         });
 
-        // 2. 生成 Minecraft 母雞 (側視圖)
         this.textures.generate('hen', {
             data: [
                 '......1111..', 
@@ -83,7 +84,6 @@ class MainScene extends Phaser.Scene {
             palette: palette
         });
 
-        // 3. 生成精緻版雞舍 (紅色穀倉風格)
         this.textures.generate('coop', {
             data: [
                 '......CCCC......',
@@ -106,7 +106,6 @@ class MainScene extends Phaser.Scene {
             palette: palette
         });
 
-        // 4. 生成雞蛋
         this.textures.generate('egg', {
             data: [
                 '..11..', '.1111.', '111111',
@@ -116,7 +115,6 @@ class MainScene extends Phaser.Scene {
             palette: palette
         });
         
-        // 5. 生成金幣
         this.textures.generate('coin', {
             data: [
                 '.777.', '77177', '71777', '77777', '.777.'
@@ -130,39 +128,35 @@ class MainScene extends Phaser.Scene {
         const cx = this.cameras.main.centerX;
         const cy = this.cameras.main.centerY;
 
-        // 1. 鋪滿像素草地背景
         this.add.tileSprite(0, 0, 480, 640, 'grass').setOrigin(0, 0);
 
-        // 2. 放置升級版雞舍
         this.coop = this.add.image(cx, cy - 80, 'coop').setOrigin(0.5);
 
-        // 3. 放置雞蛋 (預設隱藏)
         this.egg = this.add.image(cx, cy - 10, 'egg').setOrigin(0.5);
-        this.egg.setDepth(5); // 確保顯示在母雞前面或適當位置
+        this.egg.setDepth(5); 
         this.egg.setVisible(false);
 
-        // 4. 放置母雞
         this.hen = this.add.image(cx, cy + 60, 'hen').setOrigin(0.5);
-        this.hen.setDepth(10); // 確保母雞在最上層
+        this.hen.setDepth(10); 
         this.hen.setInteractive({ cursor: 'pointer' }); 
         
-        // 點擊母雞收成
         this.hen.on('pointerdown', () => {
             if (!this.isHenSitting) {
-                // 站立時的點擊特效
-                this.tweens.add({
-                    targets: this.hen,
-                    y: this.hen.y - 15,
-                    scaleX: 1.1,
-                    scaleY: 0.9,
-                    duration: 100,
-                    yoyo: true
-                });
+                // 普通的點擊跳動特效 (如果沒生氣的話)
+                if (this.emptyClickCount < 4) {
+                    this.tweens.add({
+                        targets: this.hen,
+                        y: this.hen.y - 15,
+                        scaleX: 1.1,
+                        scaleY: 0.9,
+                        duration: 100,
+                        yoyo: true
+                    });
+                }
             }
             this.harvestEgg();
         });
 
-        // 5. 繪製 UI 
         this.add.rectangle(70, 30, 120, 70, 0x000000, 0.5).setOrigin(0.5);
         this.add.image(30, 20, 'coin').setOrigin(0.5);
         this.coinsText = this.add.text(50, 10, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
@@ -170,7 +164,6 @@ class MainScene extends Phaser.Scene {
         this.add.image(30, 45, 'egg').setScale(0.7).setOrigin(0.5);
         this.eggsText = this.add.text(50, 35, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
 
-        // 6. 狀態提示文字框 (預設隱藏，有蛋才顯示)
         this.promptBg = this.add.rectangle(cx, cy - 200, 280, 40, 0x000000, 0.6).setOrigin(0.5);
         this.statusText = this.add.text(cx, cy - 200, '', { 
             fontSize: '18px', fontFamily: 'sans-serif', color: '#A5D6A7'
@@ -178,16 +171,11 @@ class MainScene extends Phaser.Scene {
         this.promptBg.setVisible(false);
         this.statusText.setVisible(false);
 
-        // 7. 啟動 Firebase 與母雞 AI 行為
         this.initFirebase();
-        this.startHenRoutine(); // 啟動自動走路 AI
+        this.startHenRoutine(); 
     }
 
-    // ==========================================
-    // 母雞 AI 巡邏系統 (走路與下蛋動畫)
-    // ==========================================
     startHenRoutine() {
-        // 每 30 秒強制母雞回雞舍「蹲下」
         this.time.addEvent({
             delay: 30000, 
             callback: this.prepareToLayEgg,
@@ -195,25 +183,20 @@ class MainScene extends Phaser.Scene {
             loop: true
         });
         
-        // 立即開始散步
         this.wanderHen();
     }
 
     wanderHen() {
         if (this.isHenSitting) return;
 
-        // 隨機決定草地上的目標位置
         const targetX = Phaser.Math.Between(80, 400);
         const targetY = Phaser.Math.Between(250, 550);
 
-        // 決定面向 (原圖頭朝右，若往左走則水平翻轉)
         this.hen.setFlipX(targetX < this.hen.x);
 
-        // 計算距離以維持固定移動速度
         const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, targetX, targetY);
-        const duration = distance * 20; // 調整這個數字可以改變走路速度
+        const duration = distance * 20; 
 
-        // 走路位移動畫
         this.walkTween = this.tweens.add({
             targets: this.hen,
             x: targetX,
@@ -222,14 +205,12 @@ class MainScene extends Phaser.Scene {
             ease: 'Linear',
             onComplete: () => {
                 if (this.isHenSitting) return;
-                // 到達定點後，隨機發呆 1~3 秒再繼續走
                 this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => {
                     this.wanderHen();
                 });
             }
         });
 
-        // 走路時可愛的上下搖晃特效 (Waddle)
         this.waddleTween = this.tweens.add({
             targets: this.hen,
             y: '-=6',
@@ -242,18 +223,15 @@ class MainScene extends Phaser.Scene {
     prepareToLayEgg() {
         this.isHenSitting = true;
         
-        // 停止目前的走路與搖晃
         if (this.walkTween) this.walkTween.stop();
         if (this.waddleTween) this.waddleTween.stop();
 
-        // 目標：雞舍門口
         const nestX = this.cameras.main.centerX;
         const nestY = this.cameras.main.centerY - 20;
 
         this.hen.setFlipX(nestX < this.hen.x);
         const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, nestX, nestY);
         
-        // 走向雞舍
         this.tweens.add({
             targets: this.hen,
             x: nestX,
@@ -261,18 +239,15 @@ class MainScene extends Phaser.Scene {
             duration: distance * 15,
             ease: 'Linear',
             onComplete: () => {
-                // 到達雞舍，蹲下準備生蛋
                 this.tweens.add({
                     targets: this.hen,
-                    scaleY: 0.7,   // 壓扁
-                    scaleX: 1.15,  // 變寬
-                    y: nestY + 15, // 身體往下沉
+                    scaleY: 0.7,   
+                    scaleX: 1.15,  
+                    y: nestY + 15, 
                     duration: 300,
                     ease: 'Power2',
                     onComplete: () => {
-                        // 假裝生蛋蹲 5 秒鐘
                         this.time.delayedCall(5000, () => {
-                            // 站起來繼續散步
                             this.tweens.add({
                                 targets: this.hen,
                                 scaleY: 1,
@@ -281,7 +256,7 @@ class MainScene extends Phaser.Scene {
                                 duration: 300,
                                 onComplete: () => {
                                     this.isHenSitting = false;
-                                    this.wanderHen(); // 恢復散步
+                                    this.wanderHen(); 
                                 }
                             });
                         });
@@ -291,9 +266,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ==========================================
-    // Firebase 資料庫邏輯
-    // ==========================================
     initFirebase() {
         onSnapshot(myFarmRef, (docSnap) => {
             if (!docSnap.exists() || !docSnap.data().farm) {
@@ -304,7 +276,7 @@ class MainScene extends Phaser.Scene {
             }
             this.farmData = docSnap.data().farm;
             this.updateUI();
-            this.startEggTimer(); // 啟動背後計算
+            this.startEggTimer(); 
         });
     }
 
@@ -314,7 +286,6 @@ class MainScene extends Phaser.Scene {
         this.coinsText.setText(`${this.farmData.coins || 0}`);
         this.eggsText.setText(`${this.farmData.inventoryEggs || 0}`);
 
-        // 根據資料庫實際狀態更新畫面 (只顯示結果，不顯示倒數)
         if (this.farmData.eggsReady > 0) {
             this.egg.setVisible(true); 
             this.statusText.setText(`產了 ${this.farmData.eggsReady} 顆蛋！(點擊母雞收成)`);
@@ -326,11 +297,9 @@ class MainScene extends Phaser.Scene {
             this.promptBg.setVisible(false);
         }
     }
-
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
-        // 這裡純粹在背後計算時間，不干擾畫面顯示
         this.farmInterval = setInterval(() => {
             if (!this.farmData) return;
             
@@ -340,7 +309,6 @@ class MainScene extends Phaser.Scene {
 
             const timeLeft = LAY_EGG_TIME_MS - (Date.now() - this.farmData.lastLayTime);
             
-            // 時間到了，觸發資料庫寫入生蛋
             if (timeLeft <= 0) {
                 setDoc(myFarmRef, {
                     "farm.eggsReady": this.farmData.eggsReady + 1,
@@ -353,9 +321,48 @@ class MainScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (!this.farmData || this.farmData.eggsReady <= 0) {
-            this.showFloatingText('沒蛋啦~ 咕咕！', '#ffffff');
+            // 🌟 這裡實作母雞生氣的邏輯 🌟
+            this.emptyClickCount++;
+
+            // 清除之前的重置計時器，確保連點計數有效
+            if (this.emptyClickTimer) {
+                this.emptyClickTimer.remove();
+            }
+
+            // 如果超過 2 秒沒點擊，就把計數器歸零
+            this.emptyClickTimer = this.time.delayedCall(2000, () => {
+                this.emptyClickCount = 0;
+            });
+
+            if (this.emptyClickCount >= 5) {
+                // 生氣演出：飄出生氣文字
+                this.showFloatingText('就跟你說沒有蛋了還一直點~咕咕💢', '#F44336', 16); 
+                
+                // 生氣演出：母雞變紅 500 毫秒
+                this.hen.setTint(0xff0000); 
+                this.time.delayedCall(500, () => this.hen.clearTint());
+
+                // 生氣演出：快速憤怒跳躍
+                this.tweens.add({
+                    targets: this.hen,
+                    y: this.hen.y - 25,
+                    duration: 100,
+                    yoyo: true,
+                    repeat: 1
+                });
+                
+                // 重置計數，要再點 5 下才會再次暴走
+                this.emptyClickCount = 0;
+            } else {
+                // 普通沒蛋的提示
+                this.showFloatingText('沒蛋啦~ 咕咕！', '#ffffff', 22);
+            }
             return;
         }
+
+        // 如果成功收成，把計數器與計時器歸零
+        this.emptyClickCount = 0;
+        if (this.emptyClickTimer) this.emptyClickTimer.remove();
 
         try {
             await runTransaction(db, async (transaction) => {
@@ -369,15 +376,15 @@ class MainScene extends Phaser.Scene {
                     });
                 }
             });
-            this.showFloatingText('+1 🥚', '#FFD54F');
+            this.showFloatingText('+1 🥚', '#FFD54F', 22);
         } catch (e) {
             console.error("收成失敗:", e);
         }
     }
 
-    showFloatingText(msg, color) {
+    showFloatingText(msg, color, fontSize = 22) {
         const floatTxt = this.add.text(this.hen.x, this.hen.y - 40, msg, { 
-            fontSize: '22px', 
+            fontSize: `${fontSize}px`, 
             fontFamily: 'monospace', 
             color: color, 
             fontStyle: 'bold',
@@ -404,7 +411,7 @@ const config = {
     width: 480,       
     height: 640,      
     parent: 'game-container', 
-    pixelArt: true, // 保持邊緣銳利，呈現完美麥塊感
+    pixelArt: true, 
     scene: [MainScene] 
 };
 
