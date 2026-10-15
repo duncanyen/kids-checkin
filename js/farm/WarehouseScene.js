@@ -1,110 +1,67 @@
 import { db } from '../firebase-config.js';
 import { onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX } from './constants.js';
+import { myFarmRef, LAY_EGG_TIME_MS } from './constants.js';
 
-export default class ShopScene extends Phaser.Scene {
-    constructor() { super({ key: 'ShopScene' }); }
+export default class WarehouseScene extends Phaser.Scene {
+    constructor() { super({ key: 'WarehouseScene' }); }
 
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
+        this.hen = this.add.image(195, 180, 'hen').setScale(1.5).setOrigin(0.5);
+        this.isFeeding = false;
+
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
-        this.add.text(195, 60, '🛒 商店', { fontSize: '22px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(195, 60, '🎒 我的倉庫', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         const btnBack = this.add.rectangle(55, 60, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnBack.on('pointerdown', () => this.scene.start('MyFarmScene'));
 
-        this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'center', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
+        this.capacityText = this.add.text(195, 110, '容量: 0/10', { fontSize: '16px', color: '#fff', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
 
-        this.isProcessing = false; 
+        this.itemsPanel = this.add.container(0, 260);
+        this.itemSlots = {};
         
-        // 準備隱藏的確認視窗
-        this.createConfirmDialog();
-        // 準備買賣分頁與商品圖示
-        this.createTabs();
+        const configItems = [
+            { key: 'coins', name: '金幣', icon: 'coin' },
+            { key: 'inventoryEggs', name: '雞蛋', icon: 'egg' },
+            { key: 'worms', name: '菜蟲', icon: 'worm' },
+            { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' },
+            { key: 'wolfFangs', name: '狼牙', icon: 'fang' } 
+        ];
 
-        this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        let index = 0;
+        configItems.forEach(item => {
+            const col = index % 2;
+            const row = Math.floor(index / 2);
+            const x = 100 + col * 190;
+            const y = row * 100;
+
+            const bg = this.add.rectangle(x, y, 160, 80, 0x000000, 0.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+            const img = this.add.image(x - 40, y, item.icon).setScale(1.5);
+            const txt = this.add.text(x + 10, y - 10, `${item.name}\nx 0`, { fontSize: '16px', color: '#fff', align: 'center' }).setOrigin(0.5);
+
+            bg.on('pointerdown', () => this.handleItemClick(item.key, item.name));
+            this.itemSlots[item.key] = txt;
+            this.itemsPanel.add([bg, img, txt]);
+            index++;
+        });
+
+        this.actionPanel = this.add.container(0, 530).setVisible(false);
+        this.actionBg = this.add.rectangle(195, 0, 340, 100, 0x333333, 0.9).setOrigin(0.5);
+        this.actionTitle = this.add.text(195, -25, '選擇動作', { fontSize: '18px', color: '#fff' }).setOrigin(0.5);
+        
+        this.btnFeed = this.add.rectangle(110, 20, 120, 40, 0x4CAF50, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.add.text(110, 20, '🍗 餵食母雞', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        
+        this.btnDiscard = this.add.rectangle(280, 20, 120, 40, 0xE53935, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.add.text(280, 20, '🗑️ 丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        this.actionPanel.add([this.actionBg, this.actionTitle, this.btnFeed, this.btnDiscard]);
+        this.msgText = this.add.text(195, 650, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+
         this.initFirebase();
-
         this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
-    }
-
-    createTabs() {
-        const btnBuy = this.add.rectangle(100, 180, 120, 40, 0xE53935, 1).setInteractive({ cursor: 'pointer' });
-        const textBuy = this.add.text(100, 180, '📥 買進', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        
-        const btnSell = this.add.rectangle(290, 180, 120, 40, 0x4CAF50, 0.5).setInteractive({ cursor: 'pointer' });
-        const textSell = this.add.text(290, 180, '📤 賣出', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-
-        this.buyContainer = this.add.container(0, 240);
-        this.sellContainer = this.add.container(0, 240).setVisible(false);
-
-        btnBuy.on('pointerdown', () => {
-            btnBuy.setFillStyle(0xE53935, 1); btnSell.setFillStyle(0x4CAF50, 0.5);
-            this.buyContainer.setVisible(true); this.sellContainer.setVisible(false);
-        });
-
-        btnSell.on('pointerdown', () => {
-            btnSell.setFillStyle(0x4CAF50, 1); btnBuy.setFillStyle(0xE53935, 0.5);
-            this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
-        });
-
-        // --- 買進列表 (加入對應圖示) ---
-        this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
-        this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
-        this.addShopItem(this.buyContainer, 95, 140, 'coop', `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍(10雞)', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
-        this.addShopItem(this.buyContainer, 295, 140, 'coop', `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍(20雞)', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
-
-        // --- 賣出列表 (加入對應圖示) ---
-        this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
-        this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n(+${WORM_PRICE})`, 0x333333, () => this.askConfirm('賣出菜蟲', 0, () => this.sellItem('worms', WORM_PRICE, '菜蟲')));
-        this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n(+${EARTHWORM_PRICE})`, 0x333333, () => this.askConfirm('賣出蚯蚓', 0, () => this.sellItem('earthworms', EARTHWORM_PRICE, '蚯蚓')));
-        this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n(+${FANG_PRICE})`, 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙')));
-    }
-
-    // 負責把圖示與文字組裝進方塊中，並加入防破版縮放機制
-    addShopItem(container, x, y, iconKey, text, color, callback) {
-        const bg = this.add.rectangle(x, y, 170, 80, color, 0.9).setInteractive({ cursor: 'pointer' });
-        
-        // 動態縮放圖示：限制最大只能是 45x45 像素
-        const icon = this.add.image(x - 45, y, iconKey);
-        const maxIconSize = 45;
-        const scale = Math.min(maxIconSize / icon.width, maxIconSize / icon.height);
-        icon.setScale(scale);
-
-        // 文字稍微往右邊推，避免與圖示重疊
-        const txt = this.add.text(x + 18, y, text, { fontSize: '14px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
-        
-        bg.on('pointerdown', callback);
-        container.add([bg, icon, txt]);
-    }
-
-    createConfirmDialog() {
-        this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
-        const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
-        const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
-        this.dialogText = this.add.text(195, 380, '確定要購買嗎？', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
-        
-        const btnYes = this.add.rectangle(120, 460, 100, 40, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        const txtYes = this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        
-        const btnNo = this.add.rectangle(270, 460, 100, 40, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        const txtNo = this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-
-        btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
-        btnYes.on('pointerdown', () => {
-            this.dialogContainer.setVisible(false);
-            if (this.confirmCallback) this.confirmCallback();
-        });
-
-        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, txtYes, btnNo, txtNo]);
-    }
-
-    askConfirm(itemName, price, callback) {
-        if (this.isProcessing) return; 
-        this.dialogText.setText(price > 0 ? `確定花費 ${price} 購買\n[${itemName}] 嗎？` : `確定要執行\n[${itemName}] 嗎？`);
-        this.confirmCallback = callback;
-        this.dialogContainer.setVisible(true);
     }
 
     initFirebase() {
@@ -112,90 +69,97 @@ export default class ShopScene extends Phaser.Scene {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.farmData = docSnap.data().farm;
                 const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
-                this.assetText.setText(`持有金幣: ${this.farmData.coins || 0}\n庫存容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
+                this.capacityText.setText(`容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
+                this.itemSlots['coins'].setText(`金幣\nx ${this.farmData.coins || 0}`);
+                this.itemSlots['inventoryEggs'].setText(`雞蛋\nx ${this.farmData.inventoryEggs || 0}`);
+                this.itemSlots['worms'].setText(`菜蟲\nx ${this.farmData.worms || 0}`);
+                this.itemSlots['earthworms'].setText(`蚯蚓\nx ${this.farmData.earthworms || 0}`);
+                this.itemSlots['wolfFangs'].setText(`狼牙\nx ${this.farmData.wolfFangs || 0}`);
             }
         });
     }
 
+    handleItemClick(key, name) {
+        if (!this.farmData) return;
+        const count = this.farmData[key] || 0;
+        
+        if (key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs') {
+            this.actionPanel.setVisible(false);
+            this.showMsg('此物品請至商店販售！', '#FFD54F');
+            return;
+        }
+
+        if (count <= 0) {
+            this.actionPanel.setVisible(false);
+            this.showMsg(`沒有${name}可以操作！`, '#F44336'); return;
+        }
+
+        this.actionTitle.setText(`對 ${name} 進行操作`);
+        this.actionPanel.setVisible(true);
+        this.btnFeed.removeAllListeners();
+        this.btnDiscard.removeAllListeners();
+
+        this.btnFeed.on('pointerdown', () => this.feedItem(key));
+        this.btnDiscard.on('pointerdown', () => this.discardItem(key));
+    }
+
+    async feedItem(key) {
+        if (this.isFeeding || !this.farmData || (this.farmData[key] || 0) <= 0) return;
+        this.actionPanel.setVisible(false);
+        this.isFeeding = true; 
+
+        const reduceMins = key === 'worms' ? 30 : 60;
+        const reduceMs = reduceMins * 60 * 1000;
+
+        try {
+            await runTransaction(db, async (t) => {
+                const snap = await t.get(myFarmRef);
+                const farm = snap.data().farm;
+                if (farm[key] > 0) {
+                    let newLastLayTime = farm.lastLayTime - reduceMs;
+                    let newEggsReady = farm.eggsReady || 0;
+                    const now = Date.now();
+                    
+                    // 🌟 多雞折算：判斷目前真實的生產速度
+                    const henCount = farm.hens || 1;
+                    const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
+                    const maxEggs = henCount * 6;
+                    
+                    while (now - newLastLayTime >= currentLayTimeMs && newEggsReady < maxEggs) {
+                        newEggsReady++;
+                        newLastLayTime += currentLayTimeMs;
+                    }
+                    if (newEggsReady >= maxEggs && (now - newLastLayTime > 0)) { newLastLayTime = now; }
+
+                    t.update(myFarmRef, { [`farm.${key}`]: farm[key] - 1, "farm.lastLayTime": newLastLayTime, "farm.eggsReady": newEggsReady });
+                }
+            });
+            this.showHeartEffect(key === 'earthworms');
+            this.showMsg(`全體母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
+        } catch (e) { console.error(e); } 
+        finally { this.isFeeding = false; }
+    }
+
+    async discardItem(key) {
+        if (!this.farmData || (this.farmData[key] || 0) <= 0) return;
+        this.actionPanel.setVisible(false);
+        try {
+            await runTransaction(db, async (t) => {
+                const snap = await t.get(myFarmRef);
+                const farm = snap.data().farm;
+                if (farm[key] > 0) { t.update(myFarmRef, { [`farm.${key}`]: farm[key] - 1 }); }
+            });
+            this.showMsg('已丟棄物品！', '#BDBDBD');
+        } catch (e) { console.error(e); }
+    }
+
+    showHeartEffect(isBig) {
+        this.tweens.add({ targets: this.hen, y: this.hen.y - 15, duration: 150, yoyo: true });
+        const heart = this.add.image(this.hen.x, this.hen.y - 30, 'heart').setScale(isBig ? 2 : 1).setDepth(20);
+        this.tweens.add({ targets: heart, y: heart.y - 50, alpha: 0, duration: 1500, onComplete: () => heart.destroy() });
+    }
     showMsg(msg, color) {
         this.msgText.setText(msg).setColor(color).setAlpha(1);
-        this.tweens.add({ targets: this.msgText, alpha: 0, duration: 2000, delay: 1000 });
-    }
-
-    async sellItem(itemKey, price, itemName) {
-        if (this.isProcessing) return;
-        if (!this.farmData || (this.farmData[itemKey] || 0) < 1) { this.showMsg(`${itemName}不足，無法賣出！`, '#F44336'); return; }
-        
-        this.isProcessing = true;
-        try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                if (farm[itemKey] > 0) {
-                    t.update(myFarmRef, { [`farm.${itemKey}`]: farm[itemKey] - 1, "farm.coins": (farm.coins || 0) + price });
-                } else { throw `${itemName}不足！`; }
-            });
-            this.showMsg(`賣出成功！獲得 ${price} 金幣`, '#4CAF50');
-        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
-        finally { this.isProcessing = false; }
-    }
-
-    async buyHen() {
-        if (this.isProcessing) return;
-        if (!this.farmData || (this.farmData.coins || 0) < HEN_PRICE) { this.showMsg(`金幣不足！`, '#F44336'); return; }
-        
-        this.isProcessing = true;
-        try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                const coopLevel = farm.coopLevel || 1; 
-                let maxHens = 3;
-                if (coopLevel === 2) maxHens = COOP_LV2_MAX;
-                if (coopLevel === 3) maxHens = COOP_LV3_MAX;
-
-                if ((farm.hens || 1) >= maxHens) throw `雞舍已滿 (${maxHens}隻)，請先升級雞舍！`;
-                if ((farm.coins || 0) < HEN_PRICE) throw "金幣不足！";
-
-                t.update(myFarmRef, { "farm.coins": farm.coins - HEN_PRICE, "farm.hens": (farm.hens || 1) + 1 });
-            });
-            this.showMsg('購買成功！母雞數量 +1', '#FFD54F');
-        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
-        finally { this.isProcessing = false; }
-    }
-
-    async upgradeCoop(level, price) {
-        if (this.isProcessing) return;
-        this.isProcessing = true;
-
-        try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                if ((farm.coopLevel || 1) >= level) throw "你已經擁有同級或更高級的雞舍了！";
-                if ((farm.coins || 0) < price) throw "金幣不足！";
-
-                t.update(myFarmRef, { "farm.coins": farm.coins - price, "farm.coopLevel": level });
-            });
-            this.showMsg('雞舍升級成功！', '#FFD54F');
-        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); } 
-        finally { this.isProcessing = false; }
-    }
-
-    async expandWarehouse() {
-        if (this.isProcessing) return;
-        if (!this.farmData || (this.farmData.coins || 0) < EXPAND_SLOT_PRICE) { this.showMsg(`金幣不足！`, '#F44336'); return; }
-        
-        this.isProcessing = true;
-        try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                if ((farm.coins || 0) < EXPAND_SLOT_PRICE) throw "金幣不足！";
-                t.update(myFarmRef, { "farm.coins": farm.coins - EXPAND_SLOT_PRICE, "farm.warehouseLimit": (farm.warehouseLimit || 10) + 10 });
-            });
-            this.showMsg('擴充成功！容量 +10', '#FFD54F');
-        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
-        finally { this.isProcessing = false; }
+        this.tweens.add({ targets: this.msgText, alpha: 0, duration: 2500, delay: 1000 });
     }
 }
