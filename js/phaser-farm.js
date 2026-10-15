@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js'; 
-import { doc, onSnapshot, runTransaction, setDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { doc, onSnapshot, runTransaction, setDoc, updateDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // ==========================================
 // 1. Firebase 用戶驗證與設定 (嚴格使用 accountId)
@@ -70,7 +70,7 @@ class MyFarmScene extends Phaser.Scene {
         const cy = this.cameras.main.centerY;
         this.isHenSitting = false;
         this.emptyClickCount = 0;
-        this.isHarvesting = false; // 防連點鎖
+        this.isHarvesting = false; 
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5);
@@ -185,7 +185,7 @@ class MyFarmScene extends Phaser.Scene {
         this.coopEgg.setVisible(this.farmData.eggsReady > 0);
     }
 
-    // 🌟 徹底修復時間債與上限問題 🌟
+    // 🌟 徹底修復時間債與中繼區 Bug 🌟
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -207,7 +207,7 @@ class MyFarmScene extends Phaser.Scene {
                 changed = true;
             }
 
-            // ⚠️ 核心防呆：如果中繼區滿了，捨棄剩下的累積時間債，強制重新開始倒數
+            // ⚠️ 核心防呆：如果中繼區滿了，捨棄剩下的累積時間債，強制把計算起點設為現在
             if (eggsReady >= maxEggs) {
                 if (now - lastLayTime > 0) {
                     lastLayTime = now;
@@ -216,10 +216,11 @@ class MyFarmScene extends Phaser.Scene {
             }
 
             if (changed) {
-                setDoc(myFarmRef, {
+                // ⚠️ BUG FIX：使用 updateDoc 正確更新嵌套欄位，避免覆蓋與字串解析錯誤
+                updateDoc(myFarmRef, {
                     "farm.eggsReady": eggsReady,
                     "farm.lastLayTime": lastLayTime
-                }, { merge: true });
+                }).catch(e => console.error(e));
                 
                 // 本地預先更新防畫面閃爍
                 this.farmData.eggsReady = eggsReady;
@@ -317,11 +318,13 @@ class MyFarmScene extends Phaser.Scene {
             await runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
                 const farm = docSnap.data().farm;
+                
+                // 再次嚴格確認中繼區有蛋
                 if (farm.eggsReady > 0) {
                     transaction.update(myFarmRef, {
                         "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
                         "farm.eggsReady": 0
-                        // 移除雞蛋後 eggsReady 會歸零，畫面小雞蛋圖示會在快照更新時自動消失
+                        // 收成時，把中繼的蛋歸零移到庫存，畫面快照更新時會自動拔掉雞舍內的雞蛋
                     });
                 }
             });
@@ -424,7 +427,7 @@ class VisitScene extends Phaser.Scene {
         const cy = this.cameras.main.centerY;
         this.emptyClickCount = 0;
         this.targetFarmData = null;
-        this.isStealing = false; // 防連點鎖
+        this.isStealing = false; 
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.coop = this.add.image(cx, cy - 100, 'coop').setOrigin(0.5);
@@ -728,7 +731,7 @@ class WarehouseScene extends Phaser.Scene {
         if (this.isFeeding) return;
         if (!this.farmData || (this.farmData[key] || 0) <= 0) return;
         this.actionPanel.setVisible(false);
-        this.isFeeding = true; // 防連點
+        this.isFeeding = true; 
 
         const reduceMins = key === 'worms' ? 30 : 60;
         const reduceMs = reduceMins * 60 * 1000;
@@ -743,7 +746,6 @@ class WarehouseScene extends Phaser.Scene {
                     const now = Date.now();
                     const maxEggs = (farm.hens || 1) * 6;
                     
-                    // 檢查餵食後是否直接產生了新的雞蛋
                     while (now - newLastLayTime >= LAY_EGG_TIME_MS && newEggsReady < maxEggs) {
                         newEggsReady++;
                         newLastLayTime += LAY_EGG_TIME_MS;
@@ -752,6 +754,7 @@ class WarehouseScene extends Phaser.Scene {
                         if (now - newLastLayTime > 0) newLastLayTime = now;
                     }
 
+                    // ⚠️ BUG FIX：在交易內同樣使用 update 安全地更新特定嵌套欄位
                     t.update(myFarmRef, { 
                         [`farm.${key}`]: farm[key] - 1,
                         "farm.lastLayTime": newLastLayTime,
