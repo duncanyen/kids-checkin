@@ -1,7 +1,7 @@
 // 1. 從 firebase-config.js 引入共用 db
 import { db } from './firebase-config.js'; 
 import { 
-    doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, 
+    doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, getDoc,
     getDocs, query, where, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -50,21 +50,67 @@ function listenMyPermissions() {
     });
 }
 
-function setupView() {
+async function setupView() {
     const modeSwitchContainer = document.getElementById('modeSwitchContainer');
     const gameZoneTitle = document.getElementById('gameZoneTitle');
+    const adminConfig = document.getElementById('adminGameConfig');
 
     if (isParent) {
         if (modeSwitchContainer) modeSwitchContainer.style.display = 'flex';
+        // 只有家長可以看到推播頻道設定
+        if (adminConfig) {
+            adminConfig.style.display = 'flex';
+            await loadGameChatRoomsForSelect();
+        }
         switchParentView('admin');
     } else {
         if (modeSwitchContainer) modeSwitchContainer.style.display = 'none';
+        if (adminConfig) adminConfig.style.display = 'none';
         if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
         returnToLobby();
         listenKidGameData(userDocId);
         listen2048UserData(userDocId);
     }
 }
+
+// 🌟 新增：讀取聊天室列表供下拉選單選擇
+async function loadGameChatRoomsForSelect() {
+    try {
+        const select = document.getElementById('targetGameChatRoomSelect');
+        if (!select) return;
+        select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
+        
+        // 讀取所有房間 (這裡要根據你的房間架構來調整，這邊參考你打卡的房間讀取)
+        const querySnapshot = await getDocs(collection(db, "rooms"));
+        querySnapshot.forEach(docSnap => {
+            const room = docSnap.data();
+            const opt = document.createElement('option');
+            opt.value = docSnap.id;
+            opt.innerText = room.name;
+            select.appendChild(opt);
+        });
+        
+        // 讀取目前設定的頻道
+        const configDoc = await getDoc(doc(db, "settings", "gameConfig"));
+        if (configDoc.exists()) {
+            const targetRoomId = configDoc.data().targetRoomId;
+            if (targetRoomId) select.value = targetRoomId;
+        }
+    } catch (e) { 
+        console.error("載入聊天室清單失敗", e); 
+    }
+}
+
+// 🌟 新增：儲存選定的推播聊天室
+window.saveTargetGameRoom = async function(roomId) {
+    try {
+        await setDoc(doc(db, "settings", "gameConfig"), { targetRoomId: roomId, updatedAt: serverTimestamp() }, { merge: true });
+        alert('已成功設定遊戲通知發送的聊天室！');
+    } catch (e) { 
+        console.error("儲存設定失敗", e); 
+        alert('設定儲存失敗'); 
+    }
+};
 
 function switchParentView(mode) {
     const btnAdmin = document.getElementById('btnModeAdmin');
@@ -423,6 +469,7 @@ function init2048Game() {
     g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
     g2048Score = 0; 
     g2048GameOver = false;
+    window._hasWon2048 = false;
     
     const scEl = document.getElementById('g2048Score');
     const stEl = document.getElementById('g2048Status');
