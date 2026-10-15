@@ -21,9 +21,8 @@ document.getElementById('playerName').innerText = currentUser.name || "我";
 
 // 遊戲邏輯常數
 const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; // 4 小時生一顆
-const MAX_EGGS_PER_DAY = 6;                 // 中繼區上限 6 顆
-const STEAL_COOLDOWN_MS = 60 * 60 * 1000;   
-const STEAL_SUCCESS_RATE = 0.7;             
+const STEAL_COOLDOWN_MS = 60 * 60 * 1000;   // 偷蛋 CD 1 小時
+const STEAL_SUCCESS_RATE = 0.7;             // 偷竊成功率 70%
 
 const EGG_PRICE = 10;   
 const HEN_PRICE = 500;  
@@ -71,15 +70,15 @@ class MyFarmScene extends Phaser.Scene {
         const cy = this.cameras.main.centerY;
         this.isHenSitting = false;
         this.emptyClickCount = 0;
+        this.isHarvesting = false; // 防連點鎖
 
-        // 1. 背景與雞舍
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5);
         this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
-        // 2. 擴建為 10x10 大菜園 (100顆高麗菜)
+        // 10x10 大菜園
         const startX = cx - 135, startY = cy + 60, spacing = 30;
-        this.add.rectangle(cx, startY + 135, 300, 300, 0x5D4037, 0.4).setOrigin(0.5); // 菜園泥土底色
+        this.add.rectangle(cx, startY + 135, 300, 300, 0x5D4037, 0.4).setOrigin(0.5);
         
         for (let r = 0; r < 10; r++) {
             for (let c = 0; c < 10; c++) {
@@ -88,7 +87,6 @@ class MyFarmScene extends Phaser.Scene {
             }
         }
 
-        // 3. 母雞
         this.hen = this.add.image(cx, cy - 30, 'hen').setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' }); 
         this.hen.on('pointerdown', () => {
             if (!this.isHenSitting && this.emptyClickCount < 4) {
@@ -97,7 +95,7 @@ class MyFarmScene extends Phaser.Scene {
             this.harvestEgg();
         });
 
-        // 4. 左上角功能列
+        // 左上角按鈕
         const btnLobby = this.add.rectangle(55, 40, 85, 40, 0x1976D2, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(55, 40, '🗺️ 村落', { fontSize: '14px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnLobby.on('pointerdown', () => this.scene.start('LobbyScene'));
@@ -110,12 +108,12 @@ class MyFarmScene extends Phaser.Scene {
         this.add.text(235, 40, '🎒 倉庫', { fontSize: '14px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnWarehouse.on('pointerdown', () => this.scene.start('WarehouseScene'));
 
-        // 5. 右上角資源列 (純金幣)
+        // 右上角金幣
         this.add.rectangle(340, 40, 90, 40, 0x000000, 0.6).setOrigin(0.5);
         this.add.image(315, 40, 'coin').setScale(0.8).setOrigin(0.5);
         this.coinsText = this.add.text(345, 40, '0', { fontSize: '16px', fontFamily: 'monospace', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-        // 6. 正上方倒數計時器
+        // 正上方倒數計時器
         this.timerBg = this.add.rectangle(cx, 90, 200, 30, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 90, '連線中...', { fontSize: '15px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
@@ -135,7 +133,7 @@ class MyFarmScene extends Phaser.Scene {
     wanderHen() {
         if (this.isHenSitting || !this.hen || !this.hen.active) return;
         const targetX = Phaser.Math.Between(50, 340);
-        const targetY = Phaser.Math.Between(120, 450); // 避開下方大菜園
+        const targetY = Phaser.Math.Between(120, 450); 
         this.hen.setFlipX(targetX < this.hen.x);
         const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, targetX, targetY);
         this.walkTween = this.tweens.add({
@@ -187,7 +185,7 @@ class MyFarmScene extends Phaser.Scene {
         this.coopEgg.setVisible(this.farmData.eggsReady > 0);
     }
 
-    // 🌟 完全修復的生蛋時間軸邏輯
+    // 🌟 徹底修復時間債與上限問題 🌟
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -196,36 +194,46 @@ class MyFarmScene extends Phaser.Scene {
 
             const now = Date.now();
             let eggsReady = this.farmData.eggsReady || 0;
-            let lastLayTime = this.farmData.lastLayTime;
+            let lastLayTime = this.farmData.lastLayTime || now;
             let changed = false;
 
-            // 只要時間過了 4 小時，且中繼區還沒滿，就生一顆蛋放進中繼區 (eggsReady)
-            while (now - lastLayTime >= LAY_EGG_TIME_MS && eggsReady < MAX_EGGS_PER_DAY) {
+            // 1隻雞=6顆，2隻=12顆
+            const maxEggs = (this.farmData.hens || 1) * 6;
+
+            // 結算經過的時間能產生多少雞蛋放入中繼區
+            while (now - lastLayTime >= LAY_EGG_TIME_MS && eggsReady < maxEggs) {
                 eggsReady++;
-                lastLayTime += LAY_EGG_TIME_MS; // 重置下次下蛋的時間起點
+                lastLayTime += LAY_EGG_TIME_MS;
                 changed = true;
             }
 
-            // 如果有生出新的蛋，立刻寫入資料庫
+            // ⚠️ 核心防呆：如果中繼區滿了，捨棄剩下的累積時間債，強制重新開始倒數
+            if (eggsReady >= maxEggs) {
+                if (now - lastLayTime > 0) {
+                    lastLayTime = now;
+                    changed = true;
+                }
+            }
+
             if (changed) {
                 setDoc(myFarmRef, {
                     "farm.eggsReady": eggsReady,
                     "farm.lastLayTime": lastLayTime
                 }, { merge: true });
                 
-                // 本地預先更新，避免畫面閃爍
+                // 本地預先更新防畫面閃爍
                 this.farmData.eggsReady = eggsReady;
                 this.farmData.lastLayTime = lastLayTime;
                 this.updateUI(); 
             }
 
-            // 更新畫面上的倒數計時文字
-            if (eggsReady >= MAX_EGGS_PER_DAY) {
-                this.timerText.setText('🥚 產能已滿 (6/6)');
+            // UI 倒數顯示
+            if (eggsReady >= maxEggs) {
+                this.timerText.setText(`🥚 產能已滿 (${maxEggs}/${maxEggs})`);
                 this.timerText.setColor('#A5D6A7');
             } else {
                 let timeLeft = LAY_EGG_TIME_MS - (now - lastLayTime);
-                if (timeLeft < 0) timeLeft = 0; // 防呆安全鎖
+                if (timeLeft < 0) timeLeft = 0;
                 
                 const h = Math.floor(timeLeft / 3600000);
                 const m = Math.floor((timeLeft % 3600000) / 60000).toString().padStart(2, '0');
@@ -248,14 +256,14 @@ class MyFarmScene extends Phaser.Scene {
         const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
         const limit = this.farmData.warehouseLimit || 10;
         
-        // 🌟 機率系統： 1/500 = 蚯蚓， 2~6/500 = 菜蟲
         const rand = Phaser.Math.Between(1, 500);
         let foundType = null;
         let icon = null;
         
+        // 蚯蚓 1/500 (0.2%)，菜蟲 5/500 (1%)
         if (rand === 1) { foundType = 'earthworms'; icon = '蚯蚓'; }
         else if (rand >= 2 && rand <= 6) { foundType = 'worms'; icon = '菜蟲'; }
-        else return; // 沒中獎安靜結束
+        else return;
 
         if (usedSpace >= limit) {
             this.showFloatingText('倉庫已滿！', '#F44336', 16, cabSprite.x, cabSprite.y);
@@ -273,13 +281,15 @@ class MyFarmScene extends Phaser.Scene {
     }
 
     async harvestEgg() {
+        if (this.isHarvesting) return; // 防止狂點造成的非同步錯誤
+
         if (!this.farmData || this.farmData.eggsReady <= 0) {
             this.emptyClickCount++;
             if (this.emptyClickTimer) this.emptyClickTimer.remove();
             this.emptyClickTimer = this.time.delayedCall(2000, () => this.emptyClickCount = 0);
 
             if (this.emptyClickCount >= 5) {
-                this.showFloatingText('就跟你說沒有蛋了還一直點~咕咕💢', '#F44336', 16); 
+                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16); 
                 this.hen.setTint(0xff0000); 
                 this.time.delayedCall(500, () => this.hen.clearTint());
                 this.tweens.add({ targets: this.hen, y: this.hen.y - 25, duration: 100, yoyo: true, repeat: 1 });
@@ -290,14 +300,19 @@ class MyFarmScene extends Phaser.Scene {
             return;
         }
 
+        // 預先取得目前的雞蛋量，以顯示在畫面上
+        const eggsToHarvest = this.farmData.eggsReady;
         const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
         const limit = this.farmData.warehouseLimit || 10;
-        if (usedSpace + this.farmData.eggsReady > limit) {
+        
+        if (usedSpace + eggsToHarvest > limit) {
             this.showFloatingText('🎒 倉庫空間不足，請先擴充或販售！', '#F44336', 14);
             return;
         }
 
         this.emptyClickCount = 0;
+        this.isHarvesting = true; // 上鎖
+
         try {
             await runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
@@ -306,12 +321,16 @@ class MyFarmScene extends Phaser.Scene {
                     transaction.update(myFarmRef, {
                         "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
                         "farm.eggsReady": 0
-                        // 收成時，只把 eggsReady 歸零移到庫存，不影響 lastLayTime 倒數計時
+                        // 移除雞蛋後 eggsReady 會歸零，畫面小雞蛋圖示會在快照更新時自動消失
                     });
                 }
             });
-            this.showFloatingText(`+${this.farmData.eggsReady} 🥚`, '#FFD54F', 22);
-        } catch (e) { console.error(e); }
+            this.showFloatingText(`+${eggsToHarvest} 🥚`, '#FFD54F', 22);
+        } catch (e) { 
+            console.error(e); 
+        } finally {
+            this.isHarvesting = false; // 解鎖
+        }
     }
 
     showFloatingText(msg, color, fontSize = 22, x = this.hen.x, y = this.hen.y - 40) {
@@ -405,6 +424,7 @@ class VisitScene extends Phaser.Scene {
         const cy = this.cameras.main.centerY;
         this.emptyClickCount = 0;
         this.targetFarmData = null;
+        this.isStealing = false; // 防連點鎖
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.coop = this.add.image(cx, cy - 100, 'coop').setOrigin(0.5);
@@ -432,13 +452,14 @@ class VisitScene extends Phaser.Scene {
         this.unsubscribe = onSnapshot(targetRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
-                // 偷蛋場景也要顯示鄰居的雞舍小雞蛋
                 this.coopEgg.setVisible(this.targetFarmData.eggsReady > 0);
             }
         });
     }
 
     async attemptSteal() {
+        if (this.isStealing) return;
+
         const myDocSnap = await getDoc(myFarmRef);
         const myFarmData = myDocSnap.data()?.farm || {};
         
@@ -469,6 +490,7 @@ class VisitScene extends Phaser.Scene {
         }
 
         this.emptyClickCount = 0;
+        this.isStealing = true;
         const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
 
         try {
@@ -492,6 +514,8 @@ class VisitScene extends Phaser.Scene {
         } catch (error) {
             this.showFloatingText(`🐕 ${error}`, '#F44336', 16);
             this.cameras.main.shake(300, 0.01);
+        } finally {
+            this.isStealing = false;
         }
     }
 
@@ -604,6 +628,7 @@ class WarehouseScene extends Phaser.Scene {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         
         this.hen = this.add.image(195, 180, 'hen').setScale(1.5).setOrigin(0.5);
+        this.isFeeding = false;
 
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
         this.add.text(195, 60, '🎒 我的倉庫', { fontSize: '22px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
@@ -699,10 +724,11 @@ class WarehouseScene extends Phaser.Scene {
         this.btnDiscard.on('pointerdown', () => this.discardItem(key));
     }
 
-    // 🌟 完全修復的餵食邏輯
     async feedItem(key) {
+        if (this.isFeeding) return;
         if (!this.farmData || (this.farmData[key] || 0) <= 0) return;
         this.actionPanel.setVisible(false);
+        this.isFeeding = true; // 防連點
 
         const reduceMins = key === 'worms' ? 30 : 60;
         const reduceMs = reduceMins * 60 * 1000;
@@ -715,11 +741,15 @@ class WarehouseScene extends Phaser.Scene {
                     let newLastLayTime = farm.lastLayTime - reduceMs;
                     let newEggsReady = farm.eggsReady || 0;
                     const now = Date.now();
+                    const maxEggs = (farm.hens || 1) * 6;
                     
-                    // 檢查時光倒流後，是否足以立刻產生新雞蛋放進中繼區
-                    while (now - newLastLayTime >= LAY_EGG_TIME_MS && newEggsReady < MAX_EGGS_PER_DAY) {
+                    // 檢查餵食後是否直接產生了新的雞蛋
+                    while (now - newLastLayTime >= LAY_EGG_TIME_MS && newEggsReady < maxEggs) {
                         newEggsReady++;
                         newLastLayTime += LAY_EGG_TIME_MS;
+                    }
+                    if (newEggsReady >= maxEggs) {
+                        if (now - newLastLayTime > 0) newLastLayTime = now;
                     }
 
                     t.update(myFarmRef, { 
@@ -731,7 +761,11 @@ class WarehouseScene extends Phaser.Scene {
             });
             this.showHeartEffect(key === 'earthworms');
             this.showMsg(`母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e); 
+        } finally {
+            this.isFeeding = false;
+        }
     }
 
     async discardItem(key) {
