@@ -77,7 +77,7 @@ export default class MyFarmScene extends Phaser.Scene {
             }
             this.farmData = docSnap.data().farm;
             this.updateUI();
-            this.syncHens(); // 同步雞舍大小與母雞數量
+            this.syncHens(); 
             this.startEggTimer(); 
         });
     }
@@ -88,18 +88,15 @@ export default class MyFarmScene extends Phaser.Scene {
         this.coopEgg.setVisible(this.farmData.eggsReady > 0);
     }
 
-    // --- 🐔 核心：多隻母雞同步機制 ---
     syncHens() {
         if (!this.farmData) return;
         const henCount = this.farmData.hens || 1;
         const coopLevel = this.farmData.coopLevel || 1;
 
-        // 升級雞舍外觀比例
         if (coopLevel === 1) this.coop.setScale(1);
         else if (coopLevel === 2) this.coop.setScale(1.2);
         else if (coopLevel === 3) this.coop.setScale(1.5);
 
-        // 如果場上母雞少於資料庫紀錄，就生成新的母雞
         while (this.hensGroup.length < henCount) {
             let newHen = this.add.image(
                 this.cameras.main.centerX + Phaser.Math.Between(-30, 30), 
@@ -163,7 +160,6 @@ export default class MyFarmScene extends Phaser.Scene {
         });
     }
 
-    // --- 計時與資料邏輯 ---
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -174,11 +170,14 @@ export default class MyFarmScene extends Phaser.Scene {
             let lastLayTime = this.farmData.lastLayTime || now;
             let changed = false;
 
-            const maxEggs = (this.farmData.hens || 1) * 6;
+            const henCount = this.farmData.hens || 1;
+            // 🌟 多母雞加速機制：母雞越多，等待時間越短！
+            const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
+            const maxEggs = henCount * 6; // 最大容量一樣提升
 
-            while (now - lastLayTime >= LAY_EGG_TIME_MS && eggsReady < maxEggs) {
+            while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
                 eggsReady++;
-                lastLayTime += LAY_EGG_TIME_MS;
+                lastLayTime += currentLayTimeMs;
                 changed = true;
             }
 
@@ -196,7 +195,7 @@ export default class MyFarmScene extends Phaser.Scene {
             if (eggsReady >= maxEggs) {
                 this.timerText.setText(`📦 產能已滿 (${maxEggs}/${maxEggs})`).setColor('#A5D6A7');
             } else {
-                let timeLeft = LAY_EGG_TIME_MS - (now - lastLayTime);
+                let timeLeft = currentLayTimeMs - (now - lastLayTime);
                 if (timeLeft < 0) timeLeft = 0;
                 const h = Math.floor(timeLeft / 3600000);
                 const m = Math.floor((timeLeft % 3600000) / 60000).toString().padStart(2, '0');
