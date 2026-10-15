@@ -1,55 +1,57 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus 咕咕莊園</title>
-  <link rel="stylesheet" href="css/farmgame.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus 咕咕莊園 - Phaser 版</title>
+    <!-- 引入 Phaser 3 遊戲引擎 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #333; /* 網頁底色 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .top-nav {
+            width: 100%;
+            max-width: 480px; /* 配合手機版面 */
+            background: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+        .btn-back {
+            background: #e5e7eb;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        /* 遊戲畫布的容器 */
+        #game-container {
+            width: 100%;
+            max-width: 480px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+    </style>
 </head>
 <body>
-  <div class="app-container">
-    <header class="header">
-      <h1>咕咕莊園</h1>
-      <div class="user-stats">
-        <span class="stat-badge">🪙 <span id="my-coins">0</span></span>
-        <span class="stat-badge">🥚 <span id="my-eggs">0</span></span>
-      </div>
-    </header>
-
-    <!-- 自己的農場區塊 -->
-    <section class="card my-farm-card">
-      <h2>我的雞舍</h2>
-      <div class="coop-display">
-        <div class="hen-status">
-          <span class="hen-icon">🐔</span>
-          <p id="hen-count">母雞數量: 1</p>
+    <div class="top-nav">
+        <button class="btn-back" onclick="window.location.href='game.html'">❮ 返回遊戲區</button>
+        <div>
+            <strong id="playerName">載入中...</strong> 的農莊
         </div>
-        <div class="egg-status">
-          <p id="egg-timer">下蛋倒數: --:--</p>
-          <button id="btn-harvest" class="btn primary-btn" disabled>收成雞蛋</button>
-        </div>
-      </div>
-    </section>
+    </div>
 
-    <!-- 商店區塊 -->
-    <section class="card shop-card">
-      <h2>商店</h2>
-      <div class="shop-actions">
-        <button id="btn-sell-egg" class="btn secondary-btn">賣出雞蛋 (+10 🪙)</button>
-        <button id="btn-buy-hen" class="btn secondary-btn">買母雞 (-500 🪙)</button>
-      </div>
-    </section>
+    <!-- 遊戲會被渲染在這個 div 裡面 -->
+    <div id="game-container"></div>
 
-    <!-- 群組偷蛋區塊 -->
-    <section class="card group-farm-card">
-      <h2>群組成員農場 (偷偷來...)</h2>
-      <div id="group-list" class="group-list">
-        <!-- JS 動態生成群組成員 -->
-        <p class="loading-text">載入群組成員中...</p>
-      </div>
-    </section>
-  </div>
-
-  <script type="module" src="js/farmgame.js"></script>
+    <script type="module" src="js/phaser-farm.js"></script>
 </body>
 </html>
