@@ -56,6 +56,22 @@ class BootScene extends Phaser.Scene {
         this.textures.generate('worm', { data: ['9A9A'], pixelWidth: 5, palette: palette });
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
         this.textures.generate('heart', { data: ['.M.M.', 'MMMMM', 'MMMMM', '.MMM.', '..M..'], pixelWidth: 4, palette: palette });
+        
+        // 新增：木製告示牌
+        this.textures.generate('signboard', { 
+            data: [
+                '..GGGGGG..',
+                '.GFFFFFFG.',
+                'GFF4444FFG',
+                'GFF4444FFG',
+                'GFFFFFFFFG',
+                '.GFFFFFFG.',
+                '..GGGGGG..',
+                '....GG....',
+                '....GG....',
+                '....GG....'
+            ], pixelWidth: 3, palette: palette 
+        });
 
         this.scene.start('MyFarmScene');
     }
@@ -86,6 +102,12 @@ class MyFarmScene extends Phaser.Scene {
                 cab.on('pointerdown', () => this.searchCabbage(cab));
             }
         }
+
+        // 菜園左上角告示牌
+        const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
+        sign.on('pointerdown', () => {
+            this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
+        });
 
         this.hen = this.add.image(cx, cy - 30, 'hen').setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' }); 
         this.hen.on('pointerdown', () => {
@@ -185,7 +207,6 @@ class MyFarmScene extends Phaser.Scene {
         this.coopEgg.setVisible(this.farmData.eggsReady > 0);
     }
 
-    // 🌟 徹底修復時間債與中繼區 Bug 🌟
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -197,17 +218,14 @@ class MyFarmScene extends Phaser.Scene {
             let lastLayTime = this.farmData.lastLayTime || now;
             let changed = false;
 
-            // 1隻雞=6顆，2隻=12顆
             const maxEggs = (this.farmData.hens || 1) * 6;
 
-            // 結算經過的時間能產生多少雞蛋放入中繼區
             while (now - lastLayTime >= LAY_EGG_TIME_MS && eggsReady < maxEggs) {
                 eggsReady++;
                 lastLayTime += LAY_EGG_TIME_MS;
                 changed = true;
             }
 
-            // ⚠️ 核心防呆：如果中繼區滿了，捨棄剩下的累積時間債，強制把計算起點設為現在
             if (eggsReady >= maxEggs) {
                 if (now - lastLayTime > 0) {
                     lastLayTime = now;
@@ -216,19 +234,16 @@ class MyFarmScene extends Phaser.Scene {
             }
 
             if (changed) {
-                // ⚠️ BUG FIX：使用 updateDoc 正確更新嵌套欄位，避免覆蓋與字串解析錯誤
                 updateDoc(myFarmRef, {
                     "farm.eggsReady": eggsReady,
                     "farm.lastLayTime": lastLayTime
                 }).catch(e => console.error(e));
                 
-                // 本地預先更新防畫面閃爍
                 this.farmData.eggsReady = eggsReady;
                 this.farmData.lastLayTime = lastLayTime;
                 this.updateUI(); 
             }
 
-            // UI 倒數顯示
             if (eggsReady >= maxEggs) {
                 this.timerText.setText(`🥚 產能已滿 (${maxEggs}/${maxEggs})`);
                 this.timerText.setColor('#A5D6A7');
@@ -257,11 +272,10 @@ class MyFarmScene extends Phaser.Scene {
         const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
         const limit = this.farmData.warehouseLimit || 10;
         
-        const rand = Phaser.Math.Between(1, 150);
+        const rand = Phaser.Math.Between(1, 500);
         let foundType = null;
         let icon = null;
         
-        // 蚯蚓 1/500 (0.2%)，菜蟲 5/500 (1%)
         if (rand === 1) { foundType = 'earthworms'; icon = '蚯蚓'; }
         else if (rand >= 2 && rand <= 6) { foundType = 'worms'; icon = '菜蟲'; }
         else return;
@@ -282,7 +296,7 @@ class MyFarmScene extends Phaser.Scene {
     }
 
     async harvestEgg() {
-        if (this.isHarvesting) return; // 防止狂點造成的非同步錯誤
+        if (this.isHarvesting) return; 
 
         if (!this.farmData || this.farmData.eggsReady <= 0) {
             this.emptyClickCount++;
@@ -301,7 +315,6 @@ class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        // 預先取得目前的雞蛋量，以顯示在畫面上
         const eggsToHarvest = this.farmData.eggsReady;
         const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
         const limit = this.farmData.warehouseLimit || 10;
@@ -312,19 +325,17 @@ class MyFarmScene extends Phaser.Scene {
         }
 
         this.emptyClickCount = 0;
-        this.isHarvesting = true; // 上鎖
+        this.isHarvesting = true; 
 
         try {
             await runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
                 const farm = docSnap.data().farm;
                 
-                // 再次嚴格確認中繼區有蛋
                 if (farm.eggsReady > 0) {
                     transaction.update(myFarmRef, {
                         "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
                         "farm.eggsReady": 0
-                        // 收成時，把中繼的蛋歸零移到庫存，畫面快照更新時會自動拔掉雞舍內的雞蛋
                     });
                 }
             });
@@ -332,13 +343,24 @@ class MyFarmScene extends Phaser.Scene {
         } catch (e) { 
             console.error(e); 
         } finally {
-            this.isHarvesting = false; // 解鎖
+            this.isHarvesting = false; 
         }
     }
 
     showFloatingText(msg, color, fontSize = 22, x = this.hen.x, y = this.hen.y - 40) {
         const floatTxt = this.add.text(x, y, msg, { fontSize: `${fontSize}px`, fontFamily: 'monospace', color: color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3, align: 'center' }).setOrigin(0.5).setDepth(20);
         this.tweens.add({ targets: floatTxt, y: floatTxt.y - 40, alpha: 0, duration: 1200, onComplete: () => floatTxt.destroy() });
+    }
+
+    showNoticeText(msg, color, fontSize, x, y) {
+        if (this.noticeTxt) this.noticeTxt.destroy();
+        this.noticeTxt = this.add.text(x, y, msg, { 
+            fontSize: `${fontSize}px`, fontFamily: 'sans-serif', color: color, 
+            fontStyle: 'bold', stroke: '#000', strokeThickness: 2, 
+            align: 'left', backgroundColor: 'rgba(0,0,0,0.7)', 
+            padding: { x: 8, y: 8 } 
+        }).setOrigin(0.5).setDepth(20);
+        this.tweens.add({ targets: this.noticeTxt, alpha: 0, duration: 3500, delay: 2000, onComplete: () => { if(this.noticeTxt) this.noticeTxt.destroy(); } });
     }
 }
 
@@ -427,68 +449,154 @@ class VisitScene extends Phaser.Scene {
         const cy = this.cameras.main.centerY;
         this.emptyClickCount = 0;
         this.targetFarmData = null;
+        this.myFarmData = null; // 記錄自己的資料以判斷倉庫容量
         this.isStealing = false; 
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
-        this.coop = this.add.image(cx, cy - 100, 'coop').setOrigin(0.5);
-        this.coopEgg = this.add.image(cx, cy - 60, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
+        this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5);
+        this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
-        this.hen = this.add.image(cx, cy + 50, 'hen').setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' }); 
+        // 新增：別人家也有 10x10 菜園
+        const startX = cx - 135, startY = cy + 60, spacing = 30;
+        this.add.rectangle(cx, startY + 135, 300, 300, 0x5D4037, 0.4).setOrigin(0.5);
+        
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 10; c++) {
+                let cab = this.add.image(startX + c * spacing, startY + r * spacing, 'cabbage').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+                cab.on('pointerdown', () => this.searchCabbage(cab));
+            }
+        }
+
+        // 新增：別人家菜園告示牌
+        const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
+        sign.on('pointerdown', () => {
+            this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
+        });
+
+        // 母雞初始位置 (調高一點對齊 coop)
+        this.hen = this.add.image(cx, cy - 30, 'hen').setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' }); 
         this.hen.on('pointerdown', () => {
             this.tweens.add({ targets: this.hen, y: this.hen.y - 15, scaleX: 1.1, scaleY: 0.9, duration: 100, yoyo: true });
             this.attemptSteal(); 
         });
 
-        this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5);
-        this.add.text(195, 50, `潛入 [${this.targetName}] 的家`, { fontSize: '16px', fontFamily: 'sans-serif', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
+        this.add.text(195, 50, `潛入 [${this.targetName}] 的家`, { fontSize: '16px', fontFamily: 'sans-serif', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
 
-        const btnBack = this.add.rectangle(55, 50, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(55, 50, '❮ 溜走', { fontSize: '14px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const btnBack = this.add.rectangle(55, 50, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(30);
+        this.add.text(55, 50, '❮ 溜走', { fontSize: '14px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene'));
 
         this.initFirebase();
-        this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
+        this.startHenRoutine(); // 讓別人家的母雞也動起來！
+
+        this.events.on('shutdown', () => { 
+            if (this.unsubscribeTarget) this.unsubscribeTarget(); 
+            if (this.unsubscribeMyFarm) this.unsubscribeMyFarm(); 
+        });
+    }
+
+    startHenRoutine() {
+        this.wanderHen();
+    }
+    
+    wanderHen() {
+        if (!this.hen || !this.hen.active) return;
+        const targetX = Phaser.Math.Between(50, 340);
+        const targetY = Phaser.Math.Between(120, 450); // 避開菜園
+        this.hen.setFlipX(targetX < this.hen.x);
+        const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, targetX, targetY);
+        this.walkTween = this.tweens.add({
+            targets: this.hen, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
+            onComplete: () => {
+                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderHen());
+            }
+        });
+        this.waddleTween = this.tweens.add({ targets: this.hen, y: '-=6', duration: 150, yoyo: true, repeat: Math.floor((distance * 20) / 300) });
     }
 
     initFirebase() {
+        // 監聽別人的農場，更新蛋的圖示
         const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
-        this.unsubscribe = onSnapshot(targetRef, (docSnap) => {
+        this.unsubscribeTarget = onSnapshot(targetRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
                 this.coopEgg.setVisible(this.targetFarmData.eggsReady > 0);
             }
         });
+
+        // 監聽自己的農場，判斷偷竊/抓蟲時倉庫是否已滿
+        this.unsubscribeMyFarm = onSnapshot(myFarmRef, (docSnap) => {
+            if (docSnap.exists() && docSnap.data().farm) {
+                this.myFarmData = docSnap.data().farm;
+            }
+        });
+    }
+
+    // 在別人家抓蟲，會存入自己的倉庫
+    async searchCabbage(cabSprite) {
+        if (!this.myFarmData || cabSprite.isAnimating) return;
+        
+        cabSprite.isAnimating = true;
+        this.tweens.add({ 
+            targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true,
+            onComplete: () => cabSprite.isAnimating = false
+        });
+
+        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0);
+        const limit = this.myFarmData.warehouseLimit || 10;
+        
+        const rand = Phaser.Math.Between(1, 500);
+        let foundType = null;
+        let icon = null;
+        
+        if (rand === 1) { foundType = 'earthworms'; icon = '蚯蚓'; }
+        else if (rand >= 2 && rand <= 6) { foundType = 'worms'; icon = '菜蟲'; }
+        else return;
+
+        if (usedSpace >= limit) {
+            this.showFloatingText('我的倉庫滿了！', '#F44336', 16, cabSprite.x, cabSprite.y);
+            return;
+        }
+
+        try {
+            await runTransaction(db, async (t) => {
+                const snap = await t.get(myFarmRef);
+                const farm = snap.data().farm;
+                t.update(myFarmRef, { [`farm.${foundType}`]: (farm[foundType] || 0) + 1 });
+            });
+            this.showFloatingText(`+1 ${icon}`, '#A5D6A7', 16, cabSprite.x, cabSprite.y);
+        } catch (e) { console.error(e); }
     }
 
     async attemptSteal() {
         if (this.isStealing) return;
 
-        const myDocSnap = await getDoc(myFarmRef);
-        const myFarmData = myDocSnap.data()?.farm || {};
+        if (!this.myFarmData) return;
         
-        if (myFarmData.lastStealTime && Date.now() - myFarmData.lastStealTime < STEAL_COOLDOWN_MS) {
-            const leftMins = Math.ceil((STEAL_COOLDOWN_MS - (Date.now() - myFarmData.lastStealTime)) / 60000);
-            this.showFloatingText(`還在被警察追！請等 ${leftMins} 分鐘`, '#F44336', 15);
+        if (this.myFarmData.lastStealTime && Date.now() - this.myFarmData.lastStealTime < STEAL_COOLDOWN_MS) {
+            const leftMins = Math.ceil((STEAL_COOLDOWN_MS - (Date.now() - this.myFarmData.lastStealTime)) / 60000);
+            this.showFloatingText(`還在被警察追！請等 ${leftMins} 分鐘`, '#F44336', 15, this.hen.x, this.hen.y - 40);
             return;
         }
 
         if (!this.targetFarmData || this.targetFarmData.eggsReady <= 0) {
             this.emptyClickCount++;
             if (this.emptyClickCount >= 5) {
-                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16); 
+                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16, this.hen.x, this.hen.y - 40); 
                 this.hen.setTint(0xff0000); 
                 this.time.delayedCall(500, () => this.hen.clearTint());
                 this.tweens.add({ targets: this.hen, y: this.hen.y - 25, duration: 100, yoyo: true, repeat: 1 });
                 this.emptyClickCount = 0;
             } else {
-                this.showFloatingText('人家現在沒蛋啦！', '#ffffff', 18);
+                this.showFloatingText('人家現在沒蛋啦！', '#ffffff', 18, this.hen.x, this.hen.y - 40);
             }
             return;
         }
 
-        const usedSpace = (myFarmData.inventoryEggs || 0) + (myFarmData.worms || 0) + (myFarmData.earthworms || 0);
-        if (usedSpace >= (myFarmData.warehouseLimit || 10)) {
-            this.showFloatingText('你的倉庫滿了，偷不了！', '#F44336', 15);
+        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0);
+        if (usedSpace >= (this.myFarmData.warehouseLimit || 10)) {
+            this.showFloatingText('你的倉庫滿了，偷不了！', '#F44336', 15, this.hen.x, this.hen.y - 40);
             return;
         }
 
@@ -500,6 +608,9 @@ class VisitScene extends Phaser.Scene {
             await runTransaction(db, async (t) => {
                 const targetDoc = await t.get(targetRef);
                 const targetFarm = targetDoc.data().farm;
+                const myDoc = await t.get(myFarmRef);
+                const myCurrentFarm = myDoc.data().farm;
+
                 if (!targetFarm || targetFarm.eggsReady <= 0) throw "手腳太慢，蛋不見了！";
                 
                 if (Math.random() > STEAL_SUCCESS_RATE) {
@@ -509,22 +620,33 @@ class VisitScene extends Phaser.Scene {
 
                 t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 });
                 t.update(myFarmRef, { 
-                    "farm.inventoryEggs": (myFarmData.inventoryEggs || 0) + 1,
+                    "farm.inventoryEggs": (myCurrentFarm.inventoryEggs || 0) + 1,
                     "farm.lastStealTime": Date.now()
                 });
             });
-            this.showFloatingText('😎 偷到 +1 🥚', '#FFD54F', 18);
+            this.showFloatingText('😎 偷到 +1 🥚', '#FFD54F', 18, this.hen.x, this.hen.y - 40);
         } catch (error) {
-            this.showFloatingText(`🐕 ${error}`, '#F44336', 16);
+            this.showFloatingText(`🐕 ${error}`, '#F44336', 16, this.hen.x, this.hen.y - 40);
             this.cameras.main.shake(300, 0.01);
         } finally {
             this.isStealing = false;
         }
     }
 
-    showFloatingText(msg, color, fontSize = 22) {
-        const floatTxt = this.add.text(this.hen.x, this.hen.y - 40, msg, { fontSize: `${fontSize}px`, fontFamily: 'monospace', color: color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3, align: 'center' }).setOrigin(0.5).setDepth(20);
-        this.tweens.add({ targets: floatTxt, y: floatTxt.y - 60, alpha: 0, duration: 1500, onComplete: () => floatTxt.destroy() });
+    showFloatingText(msg, color, fontSize = 22, x, y) {
+        const floatTxt = this.add.text(x, y, msg, { fontSize: `${fontSize}px`, fontFamily: 'monospace', color: color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3, align: 'center' }).setOrigin(0.5).setDepth(20);
+        this.tweens.add({ targets: floatTxt, y: floatTxt.y - 40, alpha: 0, duration: 1500, onComplete: () => floatTxt.destroy() });
+    }
+
+    showNoticeText(msg, color, fontSize, x, y) {
+        if (this.noticeTxt) this.noticeTxt.destroy();
+        this.noticeTxt = this.add.text(x, y, msg, { 
+            fontSize: `${fontSize}px`, fontFamily: 'sans-serif', color: color, 
+            fontStyle: 'bold', stroke: '#000', strokeThickness: 2, 
+            align: 'left', backgroundColor: 'rgba(0,0,0,0.7)', 
+            padding: { x: 8, y: 8 } 
+        }).setOrigin(0.5).setDepth(20);
+        this.tweens.add({ targets: this.noticeTxt, alpha: 0, duration: 3500, delay: 2000, onComplete: () => { if(this.noticeTxt) this.noticeTxt.destroy(); } });
     }
 }
 
@@ -754,7 +876,6 @@ class WarehouseScene extends Phaser.Scene {
                         if (now - newLastLayTime > 0) newLastLayTime = now;
                     }
 
-                    // ⚠️ BUG FIX：在交易內同樣使用 update 安全地更新特定嵌套欄位
                     t.update(myFarmRef, { 
                         [`farm.${key}`]: farm[key] - 1,
                         "farm.lastLayTime": newLastLayTime,
