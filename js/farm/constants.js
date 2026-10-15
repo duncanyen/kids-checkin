@@ -28,7 +28,7 @@ export const STEAL_SUCCESS_RATE = 0.7;
 
 // 售價設定
 export const EGG_PRICE = 10;   
-export const HEN_PRICE = 500;  
+export const HEN_PRICE = 1000;  
 export const WORM_PRICE = 1;
 export const EARTHWORM_PRICE = 3;
 export const FANG_PRICE = 20;
