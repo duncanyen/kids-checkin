@@ -26,7 +26,7 @@ const STEAL_SUCCESS_RATE = 0.7;
 
 const EGG_PRICE = 10;   
 const HEN_PRICE = 500;  
-const WORM_PRICE = 1;
+const WORM_PRICE = 241;
 const EARTHWORM_PRICE = 5;
 const FANG_PRICE = 20;
 const EXPAND_SLOT_PRICE = 100;
