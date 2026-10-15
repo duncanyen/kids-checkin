@@ -11,7 +11,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.isFeeding = false;
 
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
-        this.add.text(195, 60, '🎒 我的倉庫', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(195, 60, '🎒 倉庫', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         const btnBack = this.add.rectangle(55, 60, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
@@ -52,7 +52,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.actionTitle = this.add.text(195, -25, '選擇動作', { fontSize: '18px', color: '#fff' }).setOrigin(0.5);
         
         this.btnFeed = this.add.rectangle(110, 20, 120, 40, 0x4CAF50, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(110, 20, '🍗 餵食母雞', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(110, 20, '🍗 餵食', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
         this.btnDiscard = this.add.rectangle(280, 20, 120, 40, 0xE53935, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(280, 20, '🗑️ 丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
@@ -119,11 +119,15 @@ export default class WarehouseScene extends Phaser.Scene {
                     let newLastLayTime = farm.lastLayTime - reduceMs;
                     let newEggsReady = farm.eggsReady || 0;
                     const now = Date.now();
-                    const maxEggs = (farm.hens || 1) * 6;
                     
-                    while (now - newLastLayTime >= LAY_EGG_TIME_MS && newEggsReady < maxEggs) {
+                    // 🌟 多雞折算：判斷目前真實的生產速度
+                    const henCount = farm.hens || 1;
+                    const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
+                    const maxEggs = henCount * 6;
+                    
+                    while (now - newLastLayTime >= currentLayTimeMs && newEggsReady < maxEggs) {
                         newEggsReady++;
-                        newLastLayTime += LAY_EGG_TIME_MS;
+                        newLastLayTime += currentLayTimeMs;
                     }
                     if (newEggsReady >= maxEggs && (now - newLastLayTime > 0)) { newLastLayTime = now; }
 
@@ -131,7 +135,7 @@ export default class WarehouseScene extends Phaser.Scene {
                 }
             });
             this.showHeartEffect(key === 'earthworms');
-            this.showMsg(`母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
+            this.showMsg(`全體母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
         } catch (e) { console.error(e); } 
         finally { this.isFeeding = false; }
     }
