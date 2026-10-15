@@ -105,7 +105,7 @@ function selectGame(gameType) {
         return;
     }
     if (gameType === 'farm' && myPermissions.farm === false) {
-        alert('🚫 您已被管理員禁止進入【咕咕莊園】！');
+        alert('🚫 您已被管理員禁止進入【咕咕村落】);
         return;
     }
 
