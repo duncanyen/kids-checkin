@@ -1,6 +1,7 @@
 import { db } from '../firebase-config.js';
-import { doc, onSnapshot, runTransaction, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, STEAL_SUCCESS_RATE } from './constants.js';
+// 🌟 確保引入所有需要的 Firestore 方法，包含 getDoc, updateDoc 與 serverTimestamp
+import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, STEAL_SUCCESS_RATE, playerName } from './constants.js';
 
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
@@ -61,6 +62,39 @@ export default class VisitScene extends Phaser.Scene {
         });
     }
 
+    // --- 📢 傳送系統通知到大廳設定的聊天室 ---
+    async sendSystemNotification(messageContent) {
+        try {
+            // 1. 讀取大廳儲存的遊戲推播設定
+            const configDoc = await getDoc(doc(db, "settings", "gameConfig"));
+            
+            if (configDoc.exists() && configDoc.data().targetRoomId) {
+                const targetRoomId = configDoc.data().targetRoomId;
+                
+                // 2. 將訊息寫入該聊天室的 messages 集合
+                await addDoc(collection(db, "messages"), { 
+                    roomId: targetRoomId, 
+                    sender: "莊園廣播", // 發送者顯示名稱
+                    text: messageContent, 
+                    timestamp: serverTimestamp(),
+                    isSystem: true // 可供前端判斷是否為系統訊息
+                });
+
+                // 3. 更新聊天室列表的最新訊息狀態，讓外面看得到未讀
+                await updateDoc(doc(db, "rooms", targetRoomId), { 
+                    lastMessage: `莊園廣播: ${messageContent}`, 
+                    lastMessageTime: serverTimestamp() 
+                });
+                
+                console.log("系統廣播已發送到頻道:", messageContent);
+            } else {
+                console.warn("管理員尚未設定遊戲推播頻道，略過通知發送。");
+            }
+        } catch (e) {
+            console.error("發送系統廣播失敗:", e);
+        }
+    }
+
     // --- 🐺 大野狼事件邏輯 ---
     spawnWolfEvent() {
         this.isWolfDefeated = false;
@@ -69,7 +103,6 @@ export default class VisitScene extends Phaser.Scene {
         const spawnX = this.cameras.main.centerX + 120;
         const spawnY = this.cameras.main.centerY + 220; 
         
-        // 使用放大版的新野狼
         this.wolf = this.add.image(spawnX, spawnY, 'wolf').setOrigin(0.5).setScale(1.5).setDepth(25).setInteractive({ cursor: 'pointer' });
         this.club = this.add.image(0, 0, 'club').setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
 
@@ -124,7 +157,11 @@ export default class VisitScene extends Phaser.Scene {
                 return true; 
             } else { return false; }
         }).then((success) => {
-            if (success) { this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); }
+            if (success) { 
+                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); 
+                // 🌟 發送擊退大野狼通知
+                this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
+            }
             else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了裝不下狼牙...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY)); }
         }).catch(e => console.error(e));
     }
@@ -150,7 +187,7 @@ export default class VisitScene extends Phaser.Scene {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
                 this.coopEgg.setVisible(this.targetFarmData.eggsReady > 0);
-                this.syncTargetHens(); // 同步鄰居的母雞群
+                this.syncTargetHens(); 
             }
         });
 
@@ -276,6 +313,10 @@ export default class VisitScene extends Phaser.Scene {
                 t.update(myFarmRef, { "farm.inventoryEggs": (myCurrentFarm.inventoryEggs || 0) + 1, "farm.lastStealTime": Date.now() });
             });
             this.showFloatingText('🕵️ 偷到 +1 🥚', '#FFD54F', 18, safeX, safeY);
+            
+            // 🌟 發送偷蛋通知
+            this.sendSystemNotification(`${playerName}偷了${this.targetName}蛋`);
+
         } catch (error) {
             this.showFloatingText(`❌ ${error}`, '#F44336', 16, safeX, safeY);
             this.cameras.main.shake(300, 0.01);
