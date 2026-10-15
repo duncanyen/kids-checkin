@@ -19,110 +19,107 @@ const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_I
 
 document.getElementById('playerName').innerText = CURRENT_ACCOUNT_ID;
 
-const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; 
+const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; // 4 小時
 const MAX_EGGS_PER_DAY = 6;
 
 // ==========================================
-// 2. Phaser 遊戲場景與「純程式像素畫」
+// 2. Phaser 遊戲場景
 // ==========================================
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' });
         this.farmData = null;
         this.farmInterval = null;
+        this.isHenSitting = false; // 判斷母雞狀態
     }
 
     preload() {
-        // 定義像素調色盤 (Palette) - 已微調為更接近麥塊的顏色
+        // 定義更豐富的像素調色盤 (Palette)
         const palette = {
             '1': '#FFFFFF', // 白 (母雞身體)
             '2': '#E53935', // 紅 (肉垂)
             '3': '#FBC02D', // 黃 (嘴/腳)
             '4': '#000000', // 黑 (眼睛)
-            '5': '#8D6E63', // 淺木頭 (雞舍)
-            '6': '#5D4037', // 深木頭 (雞舍陰影)
             '7': '#FDD835', // 金黃色 (金幣)
             '8': '#BDBDBD', // 灰白 (翅膀陰影)
             '9': '#7CB342', // 淺草地
-            'A': '#689F38'  // 深草地
+            'A': '#689F38', // 深草地
+            'C': '#D32F2F', // 紅色屋頂
+            'D': '#B71C1C', // 屋頂陰影
+            'E': '#FFF59D', // 乾草
+            'F': '#8D6E63', // 淺木頭
+            'G': '#5D4037', // 深木頭
+            'H': '#212121', // 雞舍內部黑影
+            'I': '#81D4FA'  // 窗戶玻璃
         };
 
         // 1. 生成草地
         this.textures.generate('grass', {
             data: [
-                '99999999',
-                '9A999999',
-                '9999A999',
-                '99999999',
-                '99A99999',
-                '999999A9',
-                '99999999',
-                '9999A999'
+                '99999999', '9A999999', '9999A999', '99999999',
+                '99A99999', '999999A9', '99999999', '9999A999'
             ],
             pixelWidth: 8,
             palette: palette
         });
 
-        // 2. 🌟 生成 Minecraft 完美還原版母雞 (側視圖)
+        // 2. 生成 Minecraft 母雞 (側視圖)
         this.textures.generate('hen', {
             data: [
-                '......1111..', // 頭頂
-                '......1411..', // 眼睛 (4是黑眼珠)
-                '......1111..', // 臉頰
-                '......111133', // 鳥喙 (3是黃色)
-                '....11111122', // 脖子與紅色肉垂 (2是紅色)
-                '....111111..', // 身體前端
-                '..11118811..', // 尾巴、身體與灰色翅膀 (8是灰色)
-                '..11118811..', // 尾巴、身體與灰色翅膀
-                '....118811..', // 身體底部與翅膀
-                '....111111..', // 身體最底部
-                '......3..3..', // 腳
-                '......3..3..'  // 腳
+                '......1111..', 
+                '......1411..', 
+                '......1111..', 
+                '......111133', 
+                '....11111122', 
+                '....111111..', 
+                '..11118811..', 
+                '..11118811..', 
+                '....118811..', 
+                '....111111..', 
+                '......3..3..', 
+                '......3..3..'  
             ],
-            pixelWidth: 6, // 放大倍率
+            pixelWidth: 6,
             palette: palette
         });
 
-        // 3. 生成雞舍 (Coop)
+        // 3. 生成精緻版雞舍 (紅色穀倉風格)
         this.textures.generate('coop', {
             data: [
-                '......5555......',
-                '....55666655....',
-                '...5666666665...',
-                '..565555555565..',
-                '.5655......5565.',
-                '.555........555.',
-                '.555........555.',
-                '.555..4444..555.',
-                '.555..4444..555.',
-                '.555555..555555.'
+                '......CCCC......',
+                '....CCCCCCCC....',
+                '..CCCCCCCCCCCC..',
+                '.CCCCCCCCCCCCCC.',
+                'DDDDDDDDDDDDDDDD',
+                '..FGFGFGFGFGFG..',
+                '..GFFGFGFGFFGF..',
+                '..FGFGIIIIFGFG..',
+                '..GFFGIIIIFFGF..',
+                '..FGFGFFFFFGFG..',
+                '..GFFGHHHHFFGF..',
+                '..FGFGHHHHFGFG..',
+                '..GFFHEEEEHFFG..',
+                '..FGFHEEEEFGFG..',
+                '..GFFGFGFGFFGF..'
             ],
             pixelWidth: 10,
             palette: palette
         });
 
-        // 4. 生成雞蛋 (Egg)
+        // 4. 生成雞蛋
         this.textures.generate('egg', {
             data: [
-                '..11..',
-                '.1111.',
-                '111111',
-                '111118',
-                '.1118.',
-                '..88..'
+                '..11..', '.1111.', '111111',
+                '111118', '.1118.', '..88..'
             ],
             pixelWidth: 6,
             palette: palette
         });
         
-        // 5. 生成金幣 (Coin)
+        // 5. 生成金幣
         this.textures.generate('coin', {
             data: [
-                '.777.',
-                '77177',
-                '71777',
-                '77777',
-                '.777.'
+                '.777.', '77177', '71777', '77777', '.777.'
             ],
             pixelWidth: 4,
             palette: palette
@@ -136,31 +133,36 @@ class MainScene extends Phaser.Scene {
         // 1. 鋪滿像素草地背景
         this.add.tileSprite(0, 0, 480, 640, 'grass').setOrigin(0, 0);
 
-        // 2. 放置木頭雞舍
+        // 2. 放置升級版雞舍
         this.coop = this.add.image(cx, cy - 80, 'coop').setOrigin(0.5);
 
-        // 3. 放置雞蛋 (預設隱藏，生蛋才顯示)
-        this.egg = this.add.image(cx + 40, cy + 40, 'egg').setOrigin(0.5);
+        // 3. 放置雞蛋 (預設隱藏)
+        this.egg = this.add.image(cx, cy - 10, 'egg').setOrigin(0.5);
+        this.egg.setDepth(5); // 確保顯示在母雞前面或適當位置
         this.egg.setVisible(false);
 
         // 4. 放置母雞
-        this.hen = this.add.image(cx - 20, cy + 20, 'hen').setOrigin(0.5);
+        this.hen = this.add.image(cx, cy + 60, 'hen').setOrigin(0.5);
+        this.hen.setDepth(10); // 確保母雞在最上層
         this.hen.setInteractive({ cursor: 'pointer' }); 
         
-        // 點擊母雞的互動特效
+        // 點擊母雞收成
         this.hen.on('pointerdown', () => {
-            this.tweens.add({
-                targets: this.hen,
-                y: this.hen.y - 15,
-                scaleX: 1.1,
-                scaleY: 0.9,
-                duration: 100,
-                yoyo: true
-            });
+            if (!this.isHenSitting) {
+                // 站立時的點擊特效
+                this.tweens.add({
+                    targets: this.hen,
+                    y: this.hen.y - 15,
+                    scaleX: 1.1,
+                    scaleY: 0.9,
+                    duration: 100,
+                    yoyo: true
+                });
+            }
             this.harvestEgg();
         });
 
-        // 5. 繪製 UI
+        // 5. 繪製 UI 
         this.add.rectangle(70, 30, 120, 70, 0x000000, 0.5).setOrigin(0.5);
         this.add.image(30, 20, 'coin').setOrigin(0.5);
         this.coinsText = this.add.text(50, 10, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
@@ -168,18 +170,130 @@ class MainScene extends Phaser.Scene {
         this.add.image(30, 45, 'egg').setScale(0.7).setOrigin(0.5);
         this.eggsText = this.add.text(50, 35, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
 
-        // 6. 狀態提示文字框
-        const promptBg = this.add.rectangle(cx, cy - 180, 260, 40, 0x000000, 0.6).setOrigin(0.5);
-        this.statusText = this.add.text(cx, cy - 180, '連線中...', { 
-            fontSize: '18px', 
-            fontFamily: 'sans-serif', 
-            color: '#ffffff'
+        // 6. 狀態提示文字框 (預設隱藏，有蛋才顯示)
+        this.promptBg = this.add.rectangle(cx, cy - 200, 280, 40, 0x000000, 0.6).setOrigin(0.5);
+        this.statusText = this.add.text(cx, cy - 200, '', { 
+            fontSize: '18px', fontFamily: 'sans-serif', color: '#A5D6A7'
         }).setOrigin(0.5);
+        this.promptBg.setVisible(false);
+        this.statusText.setVisible(false);
 
-        // 7. 啟動 Firebase
+        // 7. 啟動 Firebase 與母雞 AI 行為
         this.initFirebase();
+        this.startHenRoutine(); // 啟動自動走路 AI
     }
 
+    // ==========================================
+    // 母雞 AI 巡邏系統 (走路與下蛋動畫)
+    // ==========================================
+    startHenRoutine() {
+        // 每 30 秒強制母雞回雞舍「蹲下」
+        this.time.addEvent({
+            delay: 30000, 
+            callback: this.prepareToLayEgg,
+            callbackScope: this,
+            loop: true
+        });
+        
+        // 立即開始散步
+        this.wanderHen();
+    }
+
+    wanderHen() {
+        if (this.isHenSitting) return;
+
+        // 隨機決定草地上的目標位置
+        const targetX = Phaser.Math.Between(80, 400);
+        const targetY = Phaser.Math.Between(250, 550);
+
+        // 決定面向 (原圖頭朝右，若往左走則水平翻轉)
+        this.hen.setFlipX(targetX < this.hen.x);
+
+        // 計算距離以維持固定移動速度
+        const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, targetX, targetY);
+        const duration = distance * 20; // 調整這個數字可以改變走路速度
+
+        // 走路位移動畫
+        this.walkTween = this.tweens.add({
+            targets: this.hen,
+            x: targetX,
+            y: targetY,
+            duration: duration,
+            ease: 'Linear',
+            onComplete: () => {
+                if (this.isHenSitting) return;
+                // 到達定點後，隨機發呆 1~3 秒再繼續走
+                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => {
+                    this.wanderHen();
+                });
+            }
+        });
+
+        // 走路時可愛的上下搖晃特效 (Waddle)
+        this.waddleTween = this.tweens.add({
+            targets: this.hen,
+            y: '-=6',
+            duration: 150,
+            yoyo: true,
+            repeat: Math.floor(duration / 300)
+        });
+    }
+
+    prepareToLayEgg() {
+        this.isHenSitting = true;
+        
+        // 停止目前的走路與搖晃
+        if (this.walkTween) this.walkTween.stop();
+        if (this.waddleTween) this.waddleTween.stop();
+
+        // 目標：雞舍門口
+        const nestX = this.cameras.main.centerX;
+        const nestY = this.cameras.main.centerY - 20;
+
+        this.hen.setFlipX(nestX < this.hen.x);
+        const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, nestX, nestY);
+        
+        // 走向雞舍
+        this.tweens.add({
+            targets: this.hen,
+            x: nestX,
+            y: nestY,
+            duration: distance * 15,
+            ease: 'Linear',
+            onComplete: () => {
+                // 到達雞舍，蹲下準備生蛋
+                this.tweens.add({
+                    targets: this.hen,
+                    scaleY: 0.7,   // 壓扁
+                    scaleX: 1.15,  // 變寬
+                    y: nestY + 15, // 身體往下沉
+                    duration: 300,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        // 假裝生蛋蹲 5 秒鐘
+                        this.time.delayedCall(5000, () => {
+                            // 站起來繼續散步
+                            this.tweens.add({
+                                targets: this.hen,
+                                scaleY: 1,
+                                scaleX: 1,
+                                y: nestY,
+                                duration: 300,
+                                onComplete: () => {
+                                    this.isHenSitting = false;
+                                    this.wanderHen(); // 恢復散步
+                                }
+                            });
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // ==========================================
+    // Firebase 資料庫邏輯
+    // ==========================================
     initFirebase() {
         onSnapshot(myFarmRef, (docSnap) => {
             if (!docSnap.exists() || !docSnap.data().farm) {
@@ -190,7 +304,7 @@ class MainScene extends Phaser.Scene {
             }
             this.farmData = docSnap.data().farm;
             this.updateUI();
-            this.startEggTimer();
+            this.startEggTimer(); // 啟動背後計算
         });
     }
 
@@ -200,43 +314,39 @@ class MainScene extends Phaser.Scene {
         this.coinsText.setText(`${this.farmData.coins || 0}`);
         this.eggsText.setText(`${this.farmData.inventoryEggs || 0}`);
 
+        // 根據資料庫實際狀態更新畫面 (只顯示結果，不顯示倒數)
         if (this.farmData.eggsReady > 0) {
             this.egg.setVisible(true); 
             this.statusText.setText(`產了 ${this.farmData.eggsReady} 顆蛋！(點擊母雞收成)`);
-            this.statusText.setColor('#A5D6A7'); 
+            this.statusText.setVisible(true);
+            this.promptBg.setVisible(true);
         } else {
             this.egg.setVisible(false); 
-            this.statusText.setColor('#ffffff');
+            this.statusText.setVisible(false);
+            this.promptBg.setVisible(false);
         }
     }
 
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
+        // 這裡純粹在背後計算時間，不干擾畫面顯示
         this.farmInterval = setInterval(() => {
             if (!this.farmData) return;
             
             if (this.farmData.eggsReady > 0 || this.farmData.todayLaid >= MAX_EGGS_PER_DAY) {
-                if (this.farmData.todayLaid >= MAX_EGGS_PER_DAY && this.farmData.eggsReady === 0) {
-                    this.statusText.setText("今日產能已滿，休息中💤");
-                }
                 return; 
             }
 
             const timeLeft = LAY_EGG_TIME_MS - (Date.now() - this.farmData.lastLayTime);
             
+            // 時間到了，觸發資料庫寫入生蛋
             if (timeLeft <= 0) {
-                this.statusText.setText("正在下蛋...");
                 setDoc(myFarmRef, {
                     "farm.eggsReady": this.farmData.eggsReady + 1,
                     "farm.lastLayTime": Date.now()
                 }, { merge: true });
                 clearInterval(this.farmInterval);
-            } else {
-                const h = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-                const m = Math.floor((timeLeft / 1000 / 60) % 60);
-                const s = Math.floor((timeLeft / 1000) % 60);
-                this.statusText.setText(`下蛋倒數: ${h}時 ${m}分 ${s}秒`);
             }
         }, 1000);
     }
@@ -274,6 +384,7 @@ class MainScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 3
         }).setOrigin(0.5);
+        floatTxt.setDepth(20);
 
         this.tweens.add({
             targets: floatTxt,
