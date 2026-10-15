@@ -74,7 +74,7 @@ export default class VisitScene extends Phaser.Scene {
                 // 2. 將訊息寫入該聊天室的 messages 集合
                 await addDoc(collection(db, "messages"), { 
                     roomId: targetRoomId, 
-                    sender: "莊園廣播", // 發送者顯示名稱
+                    sender: "村落廣播", // 發送者顯示名稱
                     text: messageContent, 
                     timestamp: serverTimestamp(),
                     isSystem: true // 可供前端判斷是否為系統訊息
@@ -82,7 +82,7 @@ export default class VisitScene extends Phaser.Scene {
 
                 // 3. 更新聊天室列表的最新訊息狀態，讓外面看得到未讀
                 await updateDoc(doc(db, "rooms", targetRoomId), { 
-                    lastMessage: `莊園廣播: ${messageContent}`, 
+                    lastMessage: `村落廣播: ${messageContent}`, 
                     lastMessageTime: serverTimestamp() 
                 });
                 
