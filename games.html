@@ -9,6 +9,11 @@
     <meta name="apple-mobile-web-app-title" content="HomeBase">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="css/game.css">
+    <style>
+        /* 新增管理員設定區塊樣式 */
+        .config-box { background: white; padding: 16px; border-radius: 16px; margin: 10px 20px 20px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; border: 1px solid #e5e7eb; }
+        .config-box select { padding: 8px 12px; border-radius: 10px; border: 1px solid #d1d5db; font-weight: 600; outline: none; background: #f9fafb; }
+    </style>
 </head>
 <body>
     <div class="top-nav">
@@ -25,6 +30,14 @@
     <div class="mode-switch-container" id="modeSwitchContainer">
         <button class="btn-switch active" id="btnModeAdmin">🛡 權限管理</button>
         <button class="btn-switch" id="btnModePlay">🎮 親自遊玩</button>
+    </div>
+
+    <!-- 🌟 新增：管理員專屬的遊戲推播聊天室設定 -->
+    <div class="config-box" id="adminGameConfig" style="display: none;">
+        <span>📢 遊戲推播頻道：</span>
+        <select id="targetGameChatRoomSelect" onchange="saveTargetGameRoom(this.value)">
+            <option value="">-- 請選擇目標群組 --</option>
+        </select>
     </div>
 
     <!-- 遊戲選擇大廳 -->
