@@ -20,14 +20,15 @@ const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_I
 document.getElementById('playerName').innerText = currentUser.name || "我";
 
 // 遊戲邏輯常數
-const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; // 4 小時生一顆
-const STEAL_COOLDOWN_MS = 60 * 60 * 1000;   // 偷蛋 CD 1 小時
-const STEAL_SUCCESS_RATE = 0.7;             // 偷竊成功率 70%
+const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; 
+const STEAL_COOLDOWN_MS = 60 * 60 * 1000;   
+const STEAL_SUCCESS_RATE = 0.7;             
 
 const EGG_PRICE = 10;   
 const HEN_PRICE = 500;  
 const WORM_PRICE = 1;
 const EARTHWORM_PRICE = 5;
+const FANG_PRICE = 10;
 const EXPAND_SLOT_PRICE = 100;
 
 // ==========================================
@@ -57,20 +58,62 @@ class BootScene extends Phaser.Scene {
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
         this.textures.generate('heart', { data: ['.M.M.', 'MMMMM', 'MMMMM', '.MMM.', '..M..'], pixelWidth: 4, palette: palette });
         
-        // 新增：木製告示牌
-        this.textures.generate('signboard', { 
+        // 告示牌
+        this.textures.generate('signboard', { data: ['..GGGGGG..', '.GFFFFFFG.', 'GFF4444FFG', 'GFF4444FFG', 'GFFFFFFFFG', '.GFFFFFFG.', '..GGGGGG..', '....GG....', '....GG....', '....GG....'], pixelWidth: 3, palette: palette });
+        
+        // --- 🐺 Minecraft 風格：大野狼事件物件 ---
+        this.textures.generate('wolf', { 
             data: [
-                '..GGGGGG..',
-                '.GFFFFFFG.',
-                'GFF4444FFG',
-                'GFF4444FFG',
-                'GFFFFFFFFG',
-                '.GFFFFFFG.',
-                '..GGGGGG..',
-                '....GG....',
-                '....GG....',
-                '....GG....'
-            ], pixelWidth: 3, palette: palette 
+                '......4444......',
+                '....44888844....',
+                '..448888888844..',
+                '..488288882884..',
+                '.48882888828884.',
+                '.48888844888884.',
+                '.48888411488884.',
+                '.48888444488884.',
+                '..488888888884..',
+                '....44444444....'
+            ], pixelWidth: 4, palette: palette 
+        });
+        this.textures.generate('wolf_bump', { 
+            data: [
+                '..22........22..',
+                '.2222......2222.',
+                '..22........22..',
+                '......4444......',
+                '....44888844....',
+                '..448888888844..',
+                '..488488884884..',
+                '.48884888848884.',
+                '.48888844888884.',
+                '.48888411488884.',
+                '.48888444488884.',
+                '..488888888884..',
+                '....44444444....'
+            ], pixelWidth: 4, palette: palette 
+        });
+        this.textures.generate('club', { 
+            data: [
+                '..GG..',
+                '.GFFG.',
+                'GFFFFG',
+                'GFFFFG',
+                'GFFFFG',
+                '.GFFG.',
+                '.GFFG.',
+                '..GG..',
+                '..GG..'
+            ], pixelWidth: 4, palette: palette 
+        });
+        this.textures.generate('fang', { 
+            data: [
+                '..44..',
+                '.4114.',
+                '.4114.',
+                '..414.',
+                '..44..'
+            ], pixelWidth: 4, palette: palette 
         });
 
         this.scene.start('MyFarmScene');
@@ -103,7 +146,6 @@ class MyFarmScene extends Phaser.Scene {
             }
         }
 
-        // 菜園左上角告示牌
         const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
         sign.on('pointerdown', () => {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
@@ -117,7 +159,6 @@ class MyFarmScene extends Phaser.Scene {
             this.harvestEgg();
         });
 
-        // 左上角按鈕
         const btnLobby = this.add.rectangle(55, 40, 85, 40, 0x1976D2, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(55, 40, '🗺️ 村落', { fontSize: '14px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnLobby.on('pointerdown', () => this.scene.start('LobbyScene'));
@@ -130,12 +171,10 @@ class MyFarmScene extends Phaser.Scene {
         this.add.text(235, 40, '🎒 倉庫', { fontSize: '14px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnWarehouse.on('pointerdown', () => this.scene.start('WarehouseScene'));
 
-        // 右上角金幣
         this.add.rectangle(340, 40, 90, 40, 0x000000, 0.6).setOrigin(0.5);
         this.add.image(315, 40, 'coin').setScale(0.8).setOrigin(0.5);
         this.coinsText = this.add.text(345, 40, '0', { fontSize: '16px', fontFamily: 'monospace', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-        // 正上方倒數計時器
         this.timerBg = this.add.rectangle(cx, 90, 200, 30, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 90, '連線中...', { fontSize: '15px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
@@ -192,7 +231,7 @@ class MyFarmScene extends Phaser.Scene {
     initFirebase() {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
             if (!docSnap.exists() || !docSnap.data().farm) {
-                setDoc(myFarmRef, { farm: { coins: 0, inventoryEggs: 0, hens: 1, eggsReady: 0, lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0 } }, { merge: true });
+                setDoc(myFarmRef, { farm: { coins: 0, inventoryEggs: 0, hens: 1, eggsReady: 0, lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0, wolfFangs: 0 } }, { merge: true });
                 return;
             }
             this.farmData = docSnap.data().farm;
@@ -234,11 +273,7 @@ class MyFarmScene extends Phaser.Scene {
             }
 
             if (changed) {
-                updateDoc(myFarmRef, {
-                    "farm.eggsReady": eggsReady,
-                    "farm.lastLayTime": lastLayTime
-                }).catch(e => console.error(e));
-                
+                updateDoc(myFarmRef, { "farm.eggsReady": eggsReady, "farm.lastLayTime": lastLayTime }).catch(e => console.error(e));
                 this.farmData.eggsReady = eggsReady;
                 this.farmData.lastLayTime = lastLayTime;
                 this.updateUI(); 
@@ -262,14 +297,10 @@ class MyFarmScene extends Phaser.Scene {
 
     async searchCabbage(cabSprite) {
         if (!this.farmData || cabSprite.isAnimating) return;
-        
         cabSprite.isAnimating = true;
-        this.tweens.add({ 
-            targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true,
-            onComplete: () => cabSprite.isAnimating = false
-        });
+        this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
 
-        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
+        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
         const limit = this.farmData.warehouseLimit || 10;
         
         const rand = Phaser.Math.Between(1, 500);
@@ -316,7 +347,7 @@ class MyFarmScene extends Phaser.Scene {
         }
 
         const eggsToHarvest = this.farmData.eggsReady;
-        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
+        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
         const limit = this.farmData.warehouseLimit || 10;
         
         if (usedSpace + eggsToHarvest > limit) {
@@ -331,7 +362,6 @@ class MyFarmScene extends Phaser.Scene {
             await runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
                 const farm = docSnap.data().farm;
-                
                 if (farm.eggsReady > 0) {
                     transaction.update(myFarmRef, {
                         "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
@@ -340,11 +370,8 @@ class MyFarmScene extends Phaser.Scene {
                 }
             });
             this.showFloatingText(`+${eggsToHarvest} 🥚`, '#FFD54F', 22);
-        } catch (e) { 
-            console.error(e); 
-        } finally {
-            this.isHarvesting = false; 
-        }
+        } catch (e) { console.error(e); } 
+        finally { this.isHarvesting = false; }
     }
 
     showFloatingText(msg, color, fontSize = 22, x = this.hen.x, y = this.hen.y - 40) {
@@ -357,8 +384,7 @@ class MyFarmScene extends Phaser.Scene {
         this.noticeTxt = this.add.text(x, y, msg, { 
             fontSize: `${fontSize}px`, fontFamily: 'sans-serif', color: color, 
             fontStyle: 'bold', stroke: '#000', strokeThickness: 2, 
-            align: 'left', backgroundColor: 'rgba(0,0,0,0.7)', 
-            padding: { x: 8, y: 8 } 
+            align: 'left', backgroundColor: 'rgba(0,0,0,0.7)', padding: { x: 8, y: 8 } 
         }).setOrigin(0.5).setDepth(20);
         this.tweens.add({ targets: this.noticeTxt, alpha: 0, duration: 3500, delay: 2000, onComplete: () => { if(this.noticeTxt) this.noticeTxt.destroy(); } });
     }
@@ -370,7 +396,6 @@ class LobbyScene extends Phaser.Scene {
 
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
-
         this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5);
         this.add.text(195, 50, '🗺️ 咕咕村落', { fontSize: '24px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
@@ -413,7 +438,6 @@ class LobbyScene extends Phaser.Scene {
                     
                     const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", memberAccountId);
                     const targetSnap = await getDoc(targetRef);
-                    
                     if (targetSnap.exists() && targetSnap.data().farm) {
                         this.scene.start('VisitScene', { targetAccountId: memberAccountId, targetName: memberName });
                     } else {
@@ -422,7 +446,6 @@ class LobbyScene extends Phaser.Scene {
                 });
                 index++;
             });
-
             if (index === 0) this.add.text(195, 320, '群組內還沒有其他鄰居喔！', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
         } catch (e) {
             this.loadingText.setText('載入失敗，請檢查網路');
@@ -435,7 +458,7 @@ class LobbyScene extends Phaser.Scene {
     }
 }
 
-// --- 場景 D：拜訪偷蛋 (Visit) ---
+// --- 場景 D：拜訪偷蛋與大野狼事件 (Visit) ---
 class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
 
@@ -449,14 +472,13 @@ class VisitScene extends Phaser.Scene {
         const cy = this.cameras.main.centerY;
         this.emptyClickCount = 0;
         this.targetFarmData = null;
-        this.myFarmData = null; // 記錄自己的資料以判斷倉庫容量
+        this.myFarmData = null; 
         this.isStealing = false; 
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5);
         this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
-        // 新增：別人家也有 10x10 菜園
         const startX = cx - 135, startY = cy + 60, spacing = 30;
         this.add.rectangle(cx, startY + 135, 300, 300, 0x5D4037, 0.4).setOrigin(0.5);
         
@@ -467,13 +489,11 @@ class VisitScene extends Phaser.Scene {
             }
         }
 
-        // 新增：別人家菜園告示牌
         const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
         sign.on('pointerdown', () => {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
 
-        // 母雞初始位置 (調高一點對齊 coop)
         this.hen = this.add.image(cx, cy - 30, 'hen').setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' }); 
         this.hen.on('pointerdown', () => {
             this.tweens.add({ targets: this.hen, y: this.hen.y - 15, scaleX: 1.1, scaleY: 0.9, duration: 100, yoyo: true });
@@ -488,7 +508,12 @@ class VisitScene extends Phaser.Scene {
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene'));
 
         this.initFirebase();
-        this.startHenRoutine(); // 讓別人家的母雞也動起來！
+        this.startHenRoutine(); 
+
+        // 🐺 大野狼突發事件 (10% 機率)
+        if (Phaser.Math.Between(1, 10) === 1) {
+            this.spawnWolfEvent();
+        }
 
         this.events.on('shutdown', () => { 
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
@@ -496,27 +521,137 @@ class VisitScene extends Phaser.Scene {
         });
     }
 
-    startHenRoutine() {
-        this.wanderHen();
+    // --- 🐺 大野狼事件邏輯 ---
+    spawnWolfEvent() {
+        this.isWolfDefeated = false;
+        this.wolfHitCount = 0;
+
+        // 從菜園右下方生成
+        const spawnX = this.cameras.main.centerX + 120;
+        const spawnY = this.cameras.main.centerY + 220; 
+        
+        this.wolf = this.add.image(spawnX, spawnY, 'wolf').setOrigin(0.5).setScale(1.2).setDepth(25).setInteractive({ cursor: 'pointer' });
+        this.club = this.add.image(0, 0, 'club').setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
+
+        // 警告提示
+        const warnText = this.add.text(this.cameras.main.centerX, 120, '⚠️ 警告：大野狼來襲！\n快用木棒打退牠 (點擊200下)', { 
+            fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 
+        }).setOrigin(0.5).setDepth(30);
+        this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
+
+        // 大野狼花 60 秒緩慢移動到雞舍
+        this.wolfTween = this.tweens.add({
+            targets: this.wolf,
+            x: this.coop.x,
+            y: this.coop.y + 40, 
+            duration: 60000,
+            ease: 'Linear',
+            onComplete: () => {
+                warnText.destroy();
+                if (!this.isWolfDefeated) {
+                    this.wolfEscapes(); // 60秒沒打完：失敗！
+                }
+            }
+        });
+
+        // 點擊打狼
+        this.wolf.on('pointerdown', (pointer) => {
+            if (this.isWolfDefeated) return;
+            this.wolfHitCount++;
+
+            // 野狼受擊閃爍紅光
+            this.wolf.setTint(0xff0000);
+            this.time.delayedCall(50, () => this.wolf.clearTint());
+
+            // 顯示揮動木棒動畫
+            this.club.setPosition(pointer.x + 15, pointer.y - 15);
+            this.club.setVisible(true);
+            this.club.setAngle(-45);
+            this.tweens.add({
+                targets: this.club, angle: 45, duration: 50, yoyo: true,
+                onComplete: () => this.club.setVisible(false)
+            });
+
+            // 判斷勝利
+            if (this.wolfHitCount >= 200) {
+                warnText.destroy();
+                this.defeatWolf();
+            } else if (this.wolfHitCount % 20 === 0) {
+                this.showFloatingText(`還差 ${200 - this.wolfHitCount} 下!`, '#FF9800', 16, this.wolf.x, this.wolf.y - 40);
+            }
+        });
     }
-    
+
+    // 擊敗大野狼
+    defeatWolf() {
+        this.isWolfDefeated = true;
+        if (this.wolfTween) this.wolfTween.stop();
+        this.wolf.setTexture('wolf_bump'); // 換成頭上長包的圖
+        this.club.setVisible(false);
+
+        this.showFloatingText('🎉 成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
+
+        this.tweens.add({
+            targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000,
+            onComplete: () => this.wolf.destroy()
+        });
+
+        // 發送狼牙獎勵
+        runTransaction(db, async (t) => {
+            const snap = await t.get(myFarmRef);
+            const farm = snap.data().farm;
+            const usedSpace = (farm.inventoryEggs || 0) + (farm.worms || 0) + (farm.earthworms || 0) + (farm.wolfFangs || 0);
+            
+            if (usedSpace < (farm.warehouseLimit || 10)) {
+                t.update(myFarmRef, { "farm.wolfFangs": (farm.wolfFangs || 0) + 1 });
+                return true; 
+            } else {
+                return false; 
+            }
+        }).then((success) => {
+            if (success) {
+                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY));
+            } else {
+                this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了，裝不下狼牙...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY));
+            }
+        }).catch(e => console.error(e));
+    }
+
+    // 失敗懲罰：偷走鄰居一顆蛋
+    wolfEscapes() {
+        this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336', 18, this.wolf.x, this.wolf.y - 30);
+        this.tweens.add({
+            targets: this.wolf, alpha: 0, x: this.wolf.x + 100, duration: 1000,
+            onComplete: () => this.wolf.destroy()
+        });
+
+        // 扣除鄰居的蛋
+        runTransaction(db, async (t) => {
+            const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
+            const targetDoc = await t.get(targetRef);
+            const targetFarm = targetDoc.data().farm;
+            if (targetFarm && targetFarm.eggsReady > 0) {
+                t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 });
+            }
+        }).catch(e => console.error(e));
+    }
+    // ----------------------------
+
+    startHenRoutine() { this.wanderHen(); }
     wanderHen() {
         if (!this.hen || !this.hen.active) return;
         const targetX = Phaser.Math.Between(50, 340);
-        const targetY = Phaser.Math.Between(120, 450); // 避開菜園
+        const targetY = Phaser.Math.Between(120, 450); 
         this.hen.setFlipX(targetX < this.hen.x);
         const distance = Phaser.Math.Distance.Between(this.hen.x, this.hen.y, targetX, targetY);
         this.walkTween = this.tweens.add({
             targets: this.hen, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
-            onComplete: () => {
-                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderHen());
-            }
+            onComplete: () => { this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderHen()); }
         });
         this.waddleTween = this.tweens.add({ targets: this.hen, y: '-=6', duration: 150, yoyo: true, repeat: Math.floor((distance * 20) / 300) });
     }
 
     initFirebase() {
-        // 監聽別人的農場，更新蛋的圖示
         const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
         this.unsubscribeTarget = onSnapshot(targetRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
@@ -525,7 +660,6 @@ class VisitScene extends Phaser.Scene {
             }
         });
 
-        // 監聽自己的農場，判斷偷竊/抓蟲時倉庫是否已滿
         this.unsubscribeMyFarm = onSnapshot(myFarmRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.myFarmData = docSnap.data().farm;
@@ -533,17 +667,13 @@ class VisitScene extends Phaser.Scene {
         });
     }
 
-    // 在別人家抓蟲，會存入自己的倉庫
     async searchCabbage(cabSprite) {
         if (!this.myFarmData || cabSprite.isAnimating) return;
         
         cabSprite.isAnimating = true;
-        this.tweens.add({ 
-            targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true,
-            onComplete: () => cabSprite.isAnimating = false
-        });
+        this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
 
-        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0);
+        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0) + (this.myFarmData.wolfFangs || 0);
         const limit = this.myFarmData.warehouseLimit || 10;
         
         const rand = Phaser.Math.Between(1, 500);
@@ -571,7 +701,6 @@ class VisitScene extends Phaser.Scene {
 
     async attemptSteal() {
         if (this.isStealing) return;
-
         if (!this.myFarmData) return;
         
         if (this.myFarmData.lastStealTime && Date.now() - this.myFarmData.lastStealTime < STEAL_COOLDOWN_MS) {
@@ -594,7 +723,7 @@ class VisitScene extends Phaser.Scene {
             return;
         }
 
-        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0);
+        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0) + (this.myFarmData.wolfFangs || 0);
         if (usedSpace >= (this.myFarmData.warehouseLimit || 10)) {
             this.showFloatingText('你的倉庫滿了，偷不了！', '#F44336', 15, this.hen.x, this.hen.y - 40);
             return;
@@ -643,8 +772,7 @@ class VisitScene extends Phaser.Scene {
         this.noticeTxt = this.add.text(x, y, msg, { 
             fontSize: `${fontSize}px`, fontFamily: 'sans-serif', color: color, 
             fontStyle: 'bold', stroke: '#000', strokeThickness: 2, 
-            align: 'left', backgroundColor: 'rgba(0,0,0,0.7)', 
-            padding: { x: 8, y: 8 } 
+            align: 'left', backgroundColor: 'rgba(0,0,0,0.7)', padding: { x: 8, y: 8 } 
         }).setOrigin(0.5).setDepth(20);
         this.tweens.add({ targets: this.noticeTxt, alpha: 0, duration: 3500, delay: 2000, onComplete: () => { if(this.noticeTxt) this.noticeTxt.destroy(); } });
     }
@@ -656,7 +784,6 @@ class ShopScene extends Phaser.Scene {
 
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
-
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
         this.add.text(195, 60, '🛒 咕咕莊園商店', { fontSize: '22px', fontFamily: 'sans-serif', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
@@ -666,14 +793,15 @@ class ShopScene extends Phaser.Scene {
 
         this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'center', lineHeight: 1.5, backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
 
+        // 調整距離，加入販賣狼牙按鈕
         this.createShopBtn(195, 200, `🥚 賣出雞蛋 (+${EGG_PRICE} 🪙)`, 0x4CAF50, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋'));
         this.createShopBtn(195, 270, `🐛 賣出菜蟲 (+${WORM_PRICE} 🪙)`, 0x4CAF50, () => this.sellItem('worms', WORM_PRICE, '菜蟲'));
         this.createShopBtn(195, 340, `🪱 賣出蚯蚓 (+${EARTHWORM_PRICE} 🪙)`, 0x4CAF50, () => this.sellItem('earthworms', EARTHWORM_PRICE, '蚯蚓'));
+        this.createShopBtn(195, 410, `🐺 賣出狼牙 (+${FANG_PRICE} 🪙)`, 0x4CAF50, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙'));
+        this.createShopBtn(195, 480, `🐔 買進母雞 (-${HEN_PRICE} 🪙)`, 0xE53935, () => this.buyHen());
+        this.createShopBtn(195, 550, `📦 擴充容量10格 (-${EXPAND_SLOT_PRICE} 🪙)`, 0x1976D2, () => this.expandWarehouse());
 
-        this.createShopBtn(195, 430, `🐔 買進母雞 (-${HEN_PRICE} 🪙)`, 0xE53935, () => this.buyHen());
-        this.createShopBtn(195, 500, `📦 擴充容量10格 (-${EXPAND_SLOT_PRICE} 🪙)`, 0x1976D2, () => this.expandWarehouse());
-
-        this.msgText = this.add.text(195, 570, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        this.msgText = this.add.text(195, 620, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
 
         this.initFirebase();
         this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
@@ -689,7 +817,7 @@ class ShopScene extends Phaser.Scene {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.farmData = docSnap.data().farm;
-                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
+                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
                 this.assetText.setText(`持有金幣: ${this.farmData.coins || 0}\n庫存容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
             }
         });
@@ -751,7 +879,6 @@ class WarehouseScene extends Phaser.Scene {
 
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
-        
         this.hen = this.add.image(195, 180, 'hen').setScale(1.5).setOrigin(0.5);
         this.isFeeding = false;
 
@@ -771,7 +898,8 @@ class WarehouseScene extends Phaser.Scene {
             { key: 'coins', name: '金幣', icon: 'coin' },
             { key: 'inventoryEggs', name: '雞蛋', icon: 'egg' },
             { key: 'worms', name: '菜蟲', icon: 'worm' },
-            { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' }
+            { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' },
+            { key: 'wolfFangs', name: '狼牙', icon: 'fang' } // 新增狼牙
         ];
 
         let index = 0;
@@ -791,7 +919,8 @@ class WarehouseScene extends Phaser.Scene {
             index++;
         });
 
-        this.actionPanel = this.add.container(0, 480).setVisible(false);
+        // 位置下移，避免與第五個物品(狼牙)重疊
+        this.actionPanel = this.add.container(0, 530).setVisible(false);
         this.actionBg = this.add.rectangle(195, 0, 340, 100, 0x333333, 0.9).setOrigin(0.5);
         this.actionTitle = this.add.text(195, -25, '選擇動作', { fontSize: '18px', color: '#fff' }).setOrigin(0.5);
         
@@ -803,7 +932,7 @@ class WarehouseScene extends Phaser.Scene {
 
         this.actionPanel.add([this.actionBg, this.actionTitle, this.btnFeed, this.btnDiscard]);
 
-        this.msgText = this.add.text(195, 560, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        this.msgText = this.add.text(195, 650, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
 
         this.initFirebase();
         this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
@@ -813,13 +942,14 @@ class WarehouseScene extends Phaser.Scene {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.farmData = docSnap.data().farm;
-                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
+                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
                 this.capacityText.setText(`容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
 
                 this.itemSlots['coins'].setText(`金幣\nx ${this.farmData.coins || 0}`);
                 this.itemSlots['inventoryEggs'].setText(`雞蛋\nx ${this.farmData.inventoryEggs || 0}`);
                 this.itemSlots['worms'].setText(`菜蟲\nx ${this.farmData.worms || 0}`);
                 this.itemSlots['earthworms'].setText(`蚯蚓\nx ${this.farmData.earthworms || 0}`);
+                this.itemSlots['wolfFangs'].setText(`狼牙\nx ${this.farmData.wolfFangs || 0}`);
             }
         });
     }
@@ -828,9 +958,9 @@ class WarehouseScene extends Phaser.Scene {
         if (!this.farmData) return;
         const count = this.farmData[key] || 0;
         
-        if (key === 'coins' || key === 'inventoryEggs') {
+        if (key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs') {
             this.actionPanel.setVisible(false);
-            this.showMsg('此物品請至商店使用！', '#FFD54F');
+            this.showMsg('此物品請至商店販售！', '#FFD54F');
             return;
         }
 
