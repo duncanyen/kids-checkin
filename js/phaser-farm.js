@@ -257,7 +257,7 @@ class MyFarmScene extends Phaser.Scene {
         const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0);
         const limit = this.farmData.warehouseLimit || 10;
         
-        const rand = Phaser.Math.Between(1, 500);
+        const rand = Phaser.Math.Between(1, 150);
         let foundType = null;
         let icon = null;
         
