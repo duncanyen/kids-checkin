@@ -19,106 +19,195 @@ const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_I
 
 document.getElementById('playerName').innerText = CURRENT_ACCOUNT_ID;
 
-// 遊戲邏輯常數
 const LAY_EGG_TIME_MS = 4 * 60 * 60 * 1000; 
 const MAX_EGGS_PER_DAY = 6;
 
 // ==========================================
-// 2. Phaser 場景建構 (MainScene)
+// 2. Phaser 遊戲場景與「純程式像素畫」
 // ==========================================
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' });
-        this.farmData = null; // 儲存 Firebase 傳來的資料
+        this.farmData = null;
         this.farmInterval = null;
     }
 
-    // 預載入：若有真正的美術圖，會在這裡 load.image()
+    // 🌟 核心亮點：在這裡用「字串矩陣」畫出 Minecraft 風格像素圖
     preload() {
-        // 目前我們先用 Phaser 內建的 Text 繪製 Emoji 替代圖片
+        // 定義像素調色盤 (Palette)
+        const palette = {
+            '1': '#FFFFFF', // 白 (母雞/雞蛋)
+            '2': '#E53935', // 紅 (雞冠)
+            '3': '#FB8C00', // 橘 (嘴/腳)
+            '4': '#000000', // 黑 (眼睛)
+            '5': '#8D6E63', // 淺木頭 (雞舍)
+            '6': '#5D4037', // 深木頭 (雞舍陰影)
+            '7': '#FDD835', // 金黃色 (金幣)
+            '8': '#E0E0E0', // 灰白 (雞蛋陰影)
+            '9': '#7CB342', // 淺草地
+            'A': '#689F38'  // 深草地
+        };
+
+        // 1. 生成草地 (Grass Tile)
+        this.textures.generate('grass', {
+            data: [
+                '99999999',
+                '9A999999',
+                '9999A999',
+                '99999999',
+                '99A99999',
+                '999999A9',
+                '99999999',
+                '9999A999'
+            ],
+            pixelWidth: 8, // 每個像素放大 8 倍 (Minecraft 粗糙感)
+            palette: palette
+        });
+
+        // 2. 生成母雞 (Hen)
+        this.textures.generate('hen', {
+            data: [
+                '..22......',
+                '..111.2...',
+                '.114113...',
+                '.11111....',
+                '..111111..',
+                '..1111111.',
+                '...1111...',
+                '....3..3..'
+            ],
+            pixelWidth: 8,
+            palette: palette
+        });
+
+        // 3. 生成雞舍 (Coop)
+        this.textures.generate('coop', {
+            data: [
+                '......5555......',
+                '....55666655....',
+                '...5666666665...',
+                '..565555555565..',
+                '.5655......5565.',
+                '.555........555.',
+                '.555........555.',
+                '.555..4444..555.',
+                '.555..4444..555.',
+                '.555555..555555.'
+            ],
+            pixelWidth: 10,
+            palette: palette
+        });
+
+        // 4. 生成雞蛋 (Egg)
+        this.textures.generate('egg', {
+            data: [
+                '..11..',
+                '.1111.',
+                '111111',
+                '111118',
+                '.1118.',
+                '..88..'
+            ],
+            pixelWidth: 6,
+            palette: palette
+        });
+        
+        // 5. 生成金幣 (Coin)
+        this.textures.generate('coin', {
+            data: [
+                '.777.',
+                '77177',
+                '71777',
+                '77777',
+                '.777.'
+            ],
+            pixelWidth: 4,
+            palette: palette
+        });
     }
 
-    // 畫面建立與物件擺放
     create() {
-        // 1. 繪製吉卜力風格的翠綠草地背景色
-        this.cameras.main.setBackgroundColor('#7cb342'); // 柔和的草綠色
+        const cx = this.cameras.main.centerX;
+        const cy = this.cameras.main.centerY;
 
-        // 2. 建立 UI 文字 (金幣與庫存)
-        this.uiStyle = { fontSize: '20px', fontFamily: 'sans-serif', color: '#ffffff', fontStyle: 'bold' };
-        this.coinsText = this.add.text(16, 16, '🪙 0', this.uiStyle);
-        this.eggsText = this.add.text(16, 44, '🥚 0', this.uiStyle);
+        // 1. 鋪滿像素草地背景
+        this.add.tileSprite(0, 0, 480, 640, 'grass').setOrigin(0, 0);
 
-        // 3. 建立母雞與雞舍區域
-        // (如果有圖片，這會是 this.add.image(x, y, 'hen_sprite'))
-        this.hen = this.add.text(240, 350, '🐔', { fontSize: '80px' }).setOrigin(0.5);
-        this.nest = this.add.text(240, 400, '🪹', { fontSize: '60px' }).setOrigin(0.5); // 巢
+        // 2. 放置木頭雞舍
+        this.coop = this.add.image(cx, cy - 80, 'coop').setOrigin(0.5);
+
+        // 3. 放置雞蛋 (預設隱藏，生蛋才顯示)
+        this.egg = this.add.image(cx + 40, cy + 40, 'egg').setOrigin(0.5);
+        this.egg.setVisible(false);
+
+        // 4. 放置母雞
+        this.hen = this.add.image(cx - 20, cy + 20, 'hen').setOrigin(0.5);
+        this.hen.setInteractive({ cursor: 'pointer' }); // 讓滑鼠變成手指
         
-        // 將母雞設為可點擊 (Interactive)
-        this.hen.setInteractive();
-        
-        // 點擊母雞的互動邏輯 (收成或特效)
+        // 點擊母雞的互動特效
         this.hen.on('pointerdown', () => {
-            // 點擊時讓母雞稍微跳動一下 (Tween 動畫)
+            // 點擊縮放跳躍特效
             this.tweens.add({
                 targets: this.hen,
-                y: this.hen.y - 20,
+                y: this.hen.y - 15,
+                scaleX: 1.1,
+                scaleY: 0.9,
                 duration: 100,
-                yoyo: true // 自動彈回
+                yoyo: true
             });
             this.harvestEgg();
         });
 
-        // 4. 下蛋倒數與狀態提示
-        this.statusText = this.add.text(240, 250, '連線中...', { 
+        // 5. 繪製 UI (金幣與庫存)，加入深色半透明底框讓字體清楚
+        this.add.rectangle(70, 30, 120, 70, 0x000000, 0.5).setOrigin(0.5);
+        this.add.image(30, 20, 'coin').setOrigin(0.5);
+        this.coinsText = this.add.text(50, 10, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
+        
+        this.add.image(30, 45, 'egg').setScale(0.7).setOrigin(0.5);
+        this.eggsText = this.add.text(50, 35, '0', { fontSize: '20px', fontFamily: 'monospace', color: '#fff' });
+
+        // 6. 狀態提示文字框
+        const promptBg = this.add.rectangle(cx, cy - 180, 260, 40, 0x000000, 0.6).setOrigin(0.5);
+        this.statusText = this.add.text(cx, cy - 180, '連線中...', { 
             fontSize: '18px', 
             fontFamily: 'sans-serif', 
-            color: '#333333',
-            backgroundColor: 'rgba(255,255,255,0.8)',
-            padding: { x: 10, y: 5 }
+            color: '#ffffff'
         }).setOrigin(0.5);
-        this.statusText.setDepth(10); // 確保在最上層
 
-        // 5. 啟動 Firebase 監聽
+        // 7. 啟動 Firebase
         this.initFirebase();
     }
 
-    // 監聽 Firebase 資料
     initFirebase() {
         onSnapshot(myFarmRef, (docSnap) => {
             if (!docSnap.exists() || !docSnap.data().farm) {
-                // 初始化資料庫
                 setDoc(myFarmRef, {
                     farm: { coins: 0, inventoryEggs: 0, hens: 1, eggsReady: 0, todayLaid: 0, lastLayTime: Date.now() }
                 }, { merge: true });
                 return;
             }
-            
             this.farmData = docSnap.data().farm;
             this.updateUI();
             this.startEggTimer();
         });
     }
 
-    // 根據資料庫更新畫面
     updateUI() {
         if (!this.farmData) return;
 
-        // 更新左上角資源
-        this.coinsText.setText(`🪙 ${this.farmData.coins || 0}`);
-        this.eggsText.setText(`🥚 ${this.farmData.inventoryEggs || 0}`);
+        this.coinsText.setText(`${this.farmData.coins || 0}`);
+        this.eggsText.setText(`${this.farmData.inventoryEggs || 0}`);
 
-        // 判斷巢裡有沒有蛋
         if (this.farmData.eggsReady > 0) {
-            this.nest.setText('🪺'); // 有蛋的巢
-            this.statusText.setText(`產了 ${this.farmData.eggsReady} 顆蛋！\n(點擊母雞收成)`);
-            this.statusText.setStyle({ color: '#2e7d32' }); // 綠字提示可收成
+            this.egg.setVisible(true); // 顯示雞蛋
+            this.statusText.setText(`產了 ${this.farmData.eggsReady} 顆蛋！(點擊母雞收成)`);
+            this.statusText.setColor('#A5D6A7'); // 變成綠色字
         } else {
-            this.nest.setText('🪹'); // 空巢
-            this.statusText.setStyle({ color: '#333333' });
+            this.egg.setVisible(false); // 隱藏雞蛋
+            this.statusText.setColor('#ffffff');
         }
     }
 
-    // 計時器邏輯
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -150,12 +239,9 @@ class MainScene extends Phaser.Scene {
         }, 1000);
     }
 
-    // 點擊收成邏輯
     async harvestEgg() {
         if (!this.farmData || this.farmData.eggsReady <= 0) {
-            // 如果沒蛋，可以加個「咕咕！」的提示
-            this.statusText.setText("還沒有蛋可以收喔！咕！");
-            setTimeout(() => this.updateUI(), 1500); // 1.5秒後恢復原本文字
+            this.showFloatingText('沒蛋啦~ 咕咕！', '#ffffff');
             return;
         }
 
@@ -171,22 +257,28 @@ class MainScene extends Phaser.Scene {
                     });
                 }
             });
-            // 收成成功的飄字特效 (Floating Text)
-            this.showFloatingText('+1 🥚');
+            this.showFloatingText('+1 🥚', '#FFD54F');
         } catch (e) {
             console.error("收成失敗:", e);
         }
     }
 
-    // 小特效：在畫面上飄出文字
-    showFloatingText(msg) {
-        const floatTxt = this.add.text(this.hen.x, this.hen.y - 50, msg, { fontSize: '24px', color: '#ffeb3b', fontStyle: 'bold' }).setOrigin(0.5);
+    showFloatingText(msg, color) {
+        const floatTxt = this.add.text(this.hen.x, this.hen.y - 40, msg, { 
+            fontSize: '22px', 
+            fontFamily: 'monospace', 
+            color: color, 
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
         this.tweens.add({
             targets: floatTxt,
-            y: floatTxt.y - 80,
+            y: floatTxt.y - 60,
             alpha: 0,
-            duration: 1000,
-            onComplete: () => floatTxt.destroy() // 動畫結束後移除物件
+            duration: 1200,
+            onComplete: () => floatTxt.destroy()
         });
     }
 }
@@ -196,11 +288,11 @@ class MainScene extends Phaser.Scene {
 // ==========================================
 const config = {
     type: Phaser.AUTO,
-    width: 480,       // 配合手機直式螢幕寬度
-    height: 640,      // 直式高度
-    parent: 'game-container', // 掛載到 HTML 中的 div id
-    backgroundColor: '#333333',
-    scene: [MainScene] // 載入我們的農場場景
+    width: 480,       
+    height: 640,      
+    parent: 'game-container', 
+    pixelArt: true, // ⚠️ 關鍵：開啟像素模式，圖片放大時不會模糊
+    scene: [MainScene] 
 };
 
 const game = new Phaser.Game(config);
