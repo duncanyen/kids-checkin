@@ -160,7 +160,7 @@ export default class VisitScene extends Phaser.Scene {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); 
                 // 🌟 發送擊退大野狼通知
-                this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
+                this.sendSystemNotification(`${playerName}在${this.targetName}農莊裡擊退大野狼`);
             }
             else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了裝不下狼牙...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY)); }
         }).catch(e => console.error(e));
@@ -315,7 +315,7 @@ export default class VisitScene extends Phaser.Scene {
             this.showFloatingText('🕵️ 偷到 +1 🥚', '#FFD54F', 18, safeX, safeY);
             
             // 🌟 發送偷蛋通知
-            this.sendSystemNotification(`${playerName}偷了${this.targetName}蛋`);
+            this.sendSystemNotification(`${playerName}偷了${this.targetName}家的雞蛋`);
 
         } catch (error) {
             this.showFloatingText(`❌ ${error}`, '#F44336', 16, safeX, safeY);
