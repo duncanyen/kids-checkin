@@ -1,5 +1,4 @@
 import { db } from '../firebase-config.js';
-// 🌟 確保引入所有需要的 Firestore 方法，包含 getDoc, updateDoc 與 serverTimestamp
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, STEAL_SUCCESS_RATE, playerName } from './constants.js';
 
@@ -62,7 +61,7 @@ export default class VisitScene extends Phaser.Scene {
         });
     }
 
-    // --- 📢 傳送系統通知到大廳設定的聊天室 ---
+    // --- 📢 傳送系統通知到大廳設定的聊天室 (新增時間顯示) ---
     async sendSystemNotification(messageContent) {
         try {
             // 1. 讀取大廳儲存的遊戲推播設定
@@ -71,22 +70,30 @@ export default class VisitScene extends Phaser.Scene {
             if (configDoc.exists() && configDoc.data().targetRoomId) {
                 const targetRoomId = configDoc.data().targetRoomId;
                 
+                // 🌟 新增：取得當前時間，格式為 HH:mm
+                const now = new Date();
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                
+                // 🌟 組合包含時間的文字，利用 \n 讓時間顯示在訊息下方
+                const finalText = `${messageContent}\n🕒 ${timeStr}`;
+
                 // 2. 將訊息寫入該聊天室的 messages 集合
                 await addDoc(collection(db, "messages"), { 
                     roomId: targetRoomId, 
-                    sender: "村落廣播", // 發送者顯示名稱
-                    text: messageContent, 
+                    sender: "莊園廣播", // 發送者顯示名稱
+                    text: finalText, 
+                    time: timeStr,      // 同時增加 time 欄位，適應不同聊天室的資料讀取方式
                     timestamp: serverTimestamp(),
-                    isSystem: true // 可供前端判斷是否為系統訊息
+                    isSystem: true      // 可供前端判斷是否為系統訊息
                 });
 
-                // 3. 更新聊天室列表的最新訊息狀態，讓外面看得到未讀
+                // 3. 更新聊天室列表的最新訊息狀態，讓外面看得到未讀 (外面列表不要顯示時間，保持乾淨)
                 await updateDoc(doc(db, "rooms", targetRoomId), { 
-                    lastMessage: `村落廣播: ${messageContent}`, 
+                    lastMessage: `莊園廣播: ${messageContent}`, 
                     lastMessageTime: serverTimestamp() 
                 });
                 
-                console.log("系統廣播已發送到頻道:", messageContent);
+                console.log("系統廣播已發送到頻道:", finalText);
             } else {
                 console.warn("管理員尚未設定遊戲推播頻道，略過通知發送。");
             }
@@ -160,7 +167,7 @@ export default class VisitScene extends Phaser.Scene {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); 
                 // 🌟 發送擊退大野狼通知
-                this.sendSystemNotification(`${playerName}在${this.targetName}農莊裡擊退大野狼`);
+                this.sendSystemNotification(`${playerName}在${this.targetName}的農莊裡擊退大野狼`);
             }
             else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了裝不下狼牙...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY)); }
         }).catch(e => console.error(e));
@@ -315,7 +322,7 @@ export default class VisitScene extends Phaser.Scene {
             this.showFloatingText('🕵️ 偷到 +1 🥚', '#FFD54F', 18, safeX, safeY);
             
             // 🌟 發送偷蛋通知
-            this.sendSystemNotification(`${playerName}偷了${this.targetName}家的雞蛋`);
+            this.sendSystemNotification(`${playerName}偷走了${this.targetName}的雞蛋`);
 
         } catch (error) {
             this.showFloatingText(`❌ ${error}`, '#F44336', 16, safeX, safeY);
