@@ -18,7 +18,7 @@ export default class ShopScene extends Phaser.Scene {
 
         this.isProcessing = false; 
         
-        // 準備隱藏的確認視窗 (文字Bug已在此修正)
+        // 準備隱藏的確認視窗
         this.createConfirmDialog();
         // 準備買賣分頁與商品圖示
         this.createTabs();
@@ -62,11 +62,19 @@ export default class ShopScene extends Phaser.Scene {
         this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n(+${FANG_PRICE})`, 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙')));
     }
 
-    // 負責把圖示與文字組裝進方塊中
+    // 負責把圖示與文字組裝進方塊中，並加入防破版縮放機制
     addShopItem(container, x, y, iconKey, text, color, callback) {
         const bg = this.add.rectangle(x, y, 170, 80, color, 0.9).setInteractive({ cursor: 'pointer' });
-        const icon = this.add.image(x - 45, y, iconKey).setScale(1.5);
-        const txt = this.add.text(x + 15, y, text, { fontSize: '15px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        
+        // 動態縮放圖示：限制最大只能是 45x45 像素
+        const icon = this.add.image(x - 45, y, iconKey);
+        const maxIconSize = 45;
+        const scale = Math.min(maxIconSize / icon.width, maxIconSize / icon.height);
+        icon.setScale(scale);
+
+        // 文字稍微往右邊推，避免與圖示重疊
+        const txt = this.add.text(x + 18, y, text, { fontSize: '14px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        
         bg.on('pointerdown', callback);
         container.add([bg, icon, txt]);
     }
@@ -89,7 +97,6 @@ export default class ShopScene extends Phaser.Scene {
             if (this.confirmCallback) this.confirmCallback();
         });
 
-        // 正確將所有 UI 放入容器中，這樣隱藏時就不會漏掉文字
         this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, txtYes, btnNo, txtNo]);
     }
 
