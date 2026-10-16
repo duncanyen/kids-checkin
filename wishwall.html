@@ -267,7 +267,9 @@
             window.location.href = 'index.html';
         }
         
+        // 抓取 groupId 與 accountId
         const groupId = currentUser.groupId || 'default_group';
+        const accountId = currentUser.accountId || currentUser.id || 'unknown_account';
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent');
 
         document.getElementById('userNameDisplay').innerText = currentUser.name || '';
@@ -284,13 +286,11 @@
 
         let globalData = { scores: [], redeems: [], settings: { examRules: [], choreRules: [], gifts: [] } };
 
-        // 💡 修正：為了解決舊資料缺乏 timestamp 而被 orderBy 過濾消失的問題
-        // 改用這個幫助函式在抓到資料後，由 JavaScript 本地端安全排序
         function sortRecordsSafe(records) {
             return records.sort((a, b) => {
                 let timeA = (a.timestamp && a.timestamp.toMillis) ? a.timestamp.toMillis() : new Date(a.date || 0).getTime();
                 let timeB = (b.timestamp && b.timestamp.toMillis) ? b.timestamp.toMillis() : new Date(b.date || 0).getTime();
-                return timeA - timeB; // 升序排序 (舊 -> 新)
+                return timeA - timeB; 
             });
         }
 
@@ -313,7 +313,6 @@
                 calculatePointsAndRender(); 
             });
 
-            // 💡 移除原本會導致缺漏的 orderBy，改為抓取所有資料後用 JS 排序
             const scoresQuery = query(collection(db, "groups", groupId, "scores"));
             onSnapshot(scoresQuery, (snapshot) => {
                 let docsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -329,13 +328,11 @@
             });
         }
 
-        // --- 核心計算與渲染 (包含累積次數的邏輯) ---
         function calculatePointsAndRender() {
-            let memberPoints = {}; // { "姓名": 總分 }
-            let memberExamProgress = {}; // 追蹤每個人考試規則的次數 { "姓名": { "ruleId": 累積次數 } }
-            let examEarnedPointsMap = {}; // 紀錄每一筆考試紀錄實際獲得的點數 (用於 UI 顯示)
+            let memberPoints = {}; 
+            let memberExamProgress = {}; 
+            let examEarnedPointsMap = {}; 
 
-            // 計算得點 (動態結算)
             globalData.scores.forEach(item => {
                 const op = item.operator;
                 if (!memberPoints[op]) {
@@ -344,7 +341,6 @@
                 }
 
                 if (item.category === 'exam') {
-                    // 找出符合的最高規則 (分數高者優先)
                     const rules = globalData.settings.examRules
                         .filter(r => r.type === item.examType && item.score >= r.minScore)
                         .sort((a, b) => b.minScore - a.minScore);
@@ -354,13 +350,12 @@
                         const rule = rules[0];
                         if (!memberExamProgress[op][rule.id]) memberExamProgress[op][rule.id] = 0;
                         
-                        memberExamProgress[op][rule.id]++; // 累積次數+1
+                        memberExamProgress[op][rule.id]++; 
                         const req = rule.reqCount || 1;
                         
-                        // 若達到規定次數
                         if (memberExamProgress[op][rule.id] >= req) {
                             earned = Number(rule.points);
-                            memberExamProgress[op][rule.id] = 0; // 歸零重新計算
+                            memberExamProgress[op][rule.id] = 0; 
                         }
                     }
                     memberPoints[op] += earned;
@@ -370,7 +365,6 @@
                 }
             });
 
-            // 計算扣點 (排除已取消、已駁回)
             globalData.redeems.forEach(item => {
                 if (item.status !== '已取消' && item.status !== '已駁回') {
                     const op = item.operator;
@@ -381,14 +375,12 @@
 
             const myPoints = memberPoints[currentUser.name] || 0;
 
-            // 小孩介面更新
             if (!isAdmin) {
                 document.getElementById('userPointsDisplay').innerText = `✨ ${currentUser.name} 可用積分：${myPoints} 點`;
                 renderChildDynamicUI(myPoints);
                 const myScores = globalData.scores.filter(item => item.operator === currentUser.name);
                 renderScoreList(myScores, 'scoreListContainer', true, examEarnedPointsMap);
             } 
-            // 爸媽介面更新
             else {
                 const pointsHtml = Object.keys(memberPoints).map(name => 
                     `<div class="member-score-badge">👤 ${name}：${memberPoints[name]} 點</div>`
@@ -402,7 +394,6 @@
             renderRedeemList(displayRedeems);
         }
 
-        // --- 渲染得分清單 (支援顯示 累積中 / 獲得積分) ---
         function renderScoreList(scoreArray, containerId, canDelete, earnedMap) {
             const container = document.getElementById(containerId);
             if(!container) return;
@@ -447,7 +438,6 @@
             });
         }
 
-        // --- 渲染兌換清單 (加入駁回功能) ---
         function renderRedeemList(redeems) {
             const container = document.getElementById('redeemListContainer');
             container.innerHTML = '';
@@ -481,12 +471,10 @@
 
                 html += `<div class="admin-actions">`;
                 
-                // 所有人可取消「申請中」
                 if (req.status === '申請中' || !req.status) {
                     html += `<button class="btn-action btn-cancel-act" style="background:var(--cancel-color);" data-id="${req.id}" data-op="${req.operator}">取消申請</button>`;
                 }
                 
-                // 管理員動作
                 if (isAdmin && req.status !== '已取消' && req.status !== '已駁回') {
                     if (req.status === '申請中' || !req.status) {
                         html += `<button class="btn-action btn-status-act" style="background:#2196F3;" data-id="${req.id}" data-status="執行中" data-op="${req.operator}">準備中</button>`;
@@ -548,7 +536,7 @@
             }
         }
 
-        // 送出成績
+        // 送出成績 (增加 accountId, groupId)
         document.getElementById('btnSubmitScore')?.addEventListener('click', async () => {
             const date = document.getElementById('examDate').value;
             const examType = document.getElementById('examType').value;
@@ -566,6 +554,8 @@
                     category: 'exam',
                     date: date,
                     operator: currentUser.name,
+                    accountId: accountId,     // <--- 新增 accountId
+                    groupId: groupId,         // <--- 新增 groupId
                     examType: examType,
                     subject: subject,
                     score: scoreVal,
@@ -580,7 +570,7 @@
             }
         });
 
-        // 送出家事
+        // 送出家事 (增加 accountId, groupId)
         document.getElementById('btnSubmitChore')?.addEventListener('click', async () => {
             const choreId = document.getElementById('choreSelect').value;
             if(!choreId) { alert("請先選擇一個完成的家事或表現項目！"); return; }
@@ -594,6 +584,8 @@
                     category: 'chore',
                     date: date,
                     operator: currentUser.name,
+                    accountId: accountId,     // <--- 新增 accountId
+                    groupId: groupId,         // <--- 新增 groupId
                     choreName: choreRule.name,
                     points: Number(choreRule.points),
                     timestamp: serverTimestamp()
@@ -617,6 +609,7 @@
             }
         }
 
+        // 申請兌換 (增加 accountId, groupId)
         async function redeemWish(itemName, cost) {
             const detail = prompt(`你選擇了兌換【${itemName}】\n請輸入詳細內容 (例如：書名、口味等)：`);
             if (detail === null) return; 
@@ -632,6 +625,8 @@
                     await addDoc(collection(db, "groups", groupId, "redeems"), {
                         date: dateKey,
                         operator: currentUser.name,
+                        accountId: accountId,     // <--- 新增 accountId
+                        groupId: groupId,         // <--- 新增 groupId
                         item: itemName,
                         detail: detail.trim(),
                         cost: cost,
@@ -775,7 +770,7 @@
             });
         }
 
-        // 💡 新增：爸媽管理者端的收合紀錄功能
+        // 爸媽管理者端的收合紀錄功能
         const adminScoreListTitle = document.getElementById('adminScoreListTitle');
         if (adminScoreListTitle) {
             adminScoreListTitle.addEventListener('click', () => {
