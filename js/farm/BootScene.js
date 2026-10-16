@@ -6,6 +6,15 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
     create() {
+
+        const palette = {
+            '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
+            '7': '#FFCA28', '8': '#BDBDBD', '9': '#7CB342', 'A': '#388E3C', 
+            'C': '#D32F2F', 'D': '#B71C1C', 'E': '#FFF59D', 'F': '#8D6E63', 
+            'G': '#5D4037', 'H': '#212121', 'I': '#81D4FA', 'J': '#1976D2',
+            'K': '#FFA000', 'L': '#FFF9C4', 'M': '#FF4081', 'N': '#F48FB1'
+        };
+        
         const tigerPalette = {
             ".": "#00000000",
             "O": "#302521",
