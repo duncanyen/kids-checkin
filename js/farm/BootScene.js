@@ -1,354 +1,125 @@
-
 import { db } from '../firebase-config.js';
-import { onSnapshot } from
-  "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef } from './constants.js';
 
 export default class BootScene extends Phaser.Scene {
-    constructor() {
-        super({ key: 'BootScene' });
-    }
+    constructor() { super({ key: 'BootScene' }); }
 
     create() {
-        // 統一使用有層次的復古像素配色
-        const palette = {
-            '.': '#00000000',
-            '1': '#FFFDF5', // 羽毛高光
-            '2': '#D93636', // 屋頂紅
-            '3': '#FFD447', // 金黃
-            '4': '#211C1A', // 外輪廓
-            '5': '#F3E7CF', // 奶油白
-            '6': '#E5AD24', // 暖黃陰影
-            '7': '#FFCA28', // 金幣
-            '8': '#BFC5C4', // 淺灰
-            '9': '#83B94A', // 草地
-            'A': '#4E8A3B', // 深綠
-            'B': '#A5D66B', // 嫩綠
-            'C': '#E94B45', // 屋頂亮紅
-            'D': '#B92732', // 屋頂暗紅
-            'E': '#FFF1A8', // 溫暖亮部
-            'F': '#98705B', // 木頭亮面
-            'G': '#65483C', // 木頭暗面
-            'H': '#302521', // 深木色
-            'I': '#8DDCF5', // 窗戶天空藍
-            'J': '#2879B8', // 藍色
-            'K': '#F29A32', // 橘色
-            'L': '#FFF9DE', // 蛋殼
-            'M': '#E85B98', // 粉紅
-            'N': '#BA7B50', // 土壤
-            'O': '#80553C', // 深土
-            'P': '#D9A47C', // 淺土
-            'Q': '#70A83E', // 作物
-            'R': '#387D39', // 深作物
-            'S': '#F4F0E5', // 白羽陰影
-            'T': '#E8B7A2', // 雞冠／肉色
-            'U': '#3A302B', // 深色
-            'V': '#DCEBBA', // 淺綠
-            'W': '#FFFFFF',
-            'X': '#C6A3E8',
-            'Y': '#F5D86B',
-            'Z': '#D4A7F0'
-        };
+// 1. 在 palette 中擴充這隻母雞需要的新顏色
+const palette = {
+    '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
+    '7': '#FFCA28', '8': '#BDBDBD', '9': '#7CB342', 'A': '#388E3C', 
+    'C': '#D32F2F', 'D': '#B71C1C', 'E': '#FFF59D', 'F': '#8D6E63', 
+    'G': '#5D4037', 'H': '#212121', 'I': '#81D4FA', 'J': '#1976D2',
+    'K': '#FF9800', 'L': '#FFF9C4', 'M': '#FF4081', 'N': '#F48FB1',
+    // 新增母雞專用色
+    'a': '#E2E8F0', // 淺灰白 (羽毛陰影)
+    'b': '#CBD5E1', // 深灰 (腹部陰影)
+    'c': '#F87171', // 淺紅 (雞冠高光)
+    'd': '#DC2626', // 深紅 (雞冠)
+    'e': '#FDE047', // 亮黃 (嘴/腳)
+    'f': '#D97706', // 深橘 (腳部陰影)
+    'g': '#FCA5A5'  // 粉紅 (腳脛)
+};
 
-        // 讓重複啟動場景時不會重複建立同名素材
-        const make = (key, data, pixelWidth = 4) => {
-            if (this.textures.exists(key)) {
-                this.textures.remove(key);
-            }
-            this.textures.generate(key, {
-                data,
-                pixelWidth,
-                palette
-            });
-        };
+// 2. 替換 hen 的生成矩陣 (24x24 像素)
+this.textures.generate('hen', { 
+    data: [
+        '........444.............',
+        '.......4cdc4............',
+        '.......41dc4............',
+        '......411114............',
+        '...4..414114............',
+        '..4e4.411114........44..',
+        '.4ee44111114.......414..',
+        '.4ff4d411114......4114..',
+        '..44d41111144444441114..',
+        '...4d41111a11111111144..',
+        '...44111a1111111111114..',
+        '..41111a11a11111111144..',
+        '..4111a11a1111111144b4..',
+        '..411111a111111114bbb4..',
+        '..4111111111111114bb4...',
+        '...44111111111114bbb4...',
+        '.....44444444444b444....',
+        '....4bbbbbbbbbbbbb4.....',
+        '....4bbbbbbbbbbbb4......',
+        '.....444444444444.......',
+        '.......4g4...4g4........',
+        '.......4g4...4g4........',
+        '.....44ef4..44ef4.......',
+        '.....44444..44444.......'
+    ], 
+    pixelWidth: 3, // 可以調整這個數字來決定母雞在遊戲中的大小
+    palette: palette 
+});
 
-        // ------------------------------------------------
-        // 1. 草地：規律度降低，增加自然的方塊紋理
-        // ------------------------------------------------
-        make('grass', [
-            '99999999',
-            '99B99999',
-            '9999A999',
-            '99999999',
-            '9A999999',
-            '999999B9',
-            '99999999',
-            '999A9999'
-        ], 4);
+        this.textures.generate('grass', { data: ['99999999', '9A999999', '9999A999', '99999999', '99A99999', '999999A9', '99999999', '9999A999'], pixelWidth: 8, palette: palette });
+        this.textures.generate('coop', { data: ['......CCCC......', '....CCCCCCCC....', '..CCCCCCCCCCCC..', '.CCCCCCCCCCCCCC.', 'DDDDDDDDDDDDDDDD', '..FGFGFGFGFGFG..', '..GFFGFGFGFFGF..', '..FGFGIIIIFGFG..', '..GFFGIIIIFFGF..', '..FGFGFFFFFGFG..', '..GFFGHHHHFFGF..', '..FGFGHHHHFGFG..', '..GFFHEEEEHFFG..', '..FGFHEEEEFGFG..', '..GFFGFGFGFFGF..'], pixelWidth: 10, palette: palette });
+        this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
+        this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
+        this.textures.generate('coin', { data: ['.777.', '7L77K', '7777K', '777KK', '.7KK.'], pixelWidth: 5, palette: palette });
+        this.textures.generate('cabbage', { data: ['..AA..', '.A99A.', 'A9A99A', 'A999AA', '.AAAA.'], pixelWidth: 5, palette: palette });
+        this.textures.generate('worm', { data: ['9A9A'], pixelWidth: 5, palette: palette });
+        this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
+        this.textures.generate('heart', { data: ['.M.M.', 'MMMMM', 'MMMMM', '.MMM.', '..M..'], pixelWidth: 4, palette: palette });
+        this.textures.generate('signboard', { data: ['..GGGGGG..', '.GFFFFFFG.', 'GFF4444FFG', 'GFF4444FFG', 'GFFFFFFFFG', '.GFFFFFFG.', '..GGGGGG..', '....GG....', '....GG....', '....GG....'], pixelWidth: 3, palette: palette });
+        
+        this.textures.generate('wolf', { 
+            data: [
+                '.44............44.',
+                '4884..........4884',
+                '48884........48884',
+                '488844444444448884',
+                '488888888888888884',
+                '.4882288888822884.',
+                '.4882288888822884.',
+                '..48888444488884..',
+                '..48884888848884..',
+                '...488488884884...',
+                '...488444444884...',
+                '....4411111144....',
+                '....4141111414....',
+                '....4444444444....',
+                '.....48888884.....',
+                '......44..44......'
+            ], pixelWidth: 6, palette: palette 
+        });
 
-        // 農地底土
-        make('soil', [
-            'NNNNNNNN',
-            'NNONNNNN',
-            'NNNNPNNN',
-            'NNNNNNNN',
-            'NNNNONNN',
-            'PNNNNNNN',
-            'NNNNNNNN',
-            'NNONNNNN'
-        ], 4);
+        this.textures.generate('wolf_bump', { 
+            data: [
+                '......22..........',
+                '.44..2222....44...',
+                '4884..22....4884..',
+                '48884444444448884.',
+                '488888888888888884',
+                '.4884888888884884.',
+                '.4888488888848884.',
+                '..48888444488884..',
+                '..48884888848884..',
+                '...488488884884...',
+                '...488444444884...',
+                '....4411111144....',
+                '....4141111414....',
+                '....4444444444....',
+                '.....48888884.....',
+                '......44..44......'
+            ], pixelWidth: 6, palette: palette 
+        });
 
-        // 農地嫩芽
-        make('crop_seed', [
-            '....Q...',
-            '....Q...',
-            '...QQQ..',
-            '..QQQQQ.',
-            '....Q...',
-            '....Q...',
-            '........',
-            '........'
-        ], 4);
+        this.textures.generate('club', { data: ['..GG..', '.GFFG.', 'GFFFFG', 'GFFFFG', 'GFFFFG', '.GFFG.', '.GFFG.', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
+        this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
 
-        // 農地生長中的作物
-        make('crop_growing', [
-            '...Q....',
-            '..QQQ...',
-            '...Q.Q..',
-            '..QQQQ..',
-            '...Q....',
-            '..QQQ...',
-            '.QQQQQ..',
-            '........'
-        ], 4);
-
-        // 成熟作物
-        make('crop_ready', [
-            '..QQ.Q..',
-            '.QQQQQQ.',
-            '..QQQQ..',
-            '.QQQQQQ.',
-            '..QQ.Q..',
-            '...QQ...',
-            '..QQQQ..',
-            '........'
-        ], 4);
-
-        // ------------------------------------------------
-        // 2. 小雞：輪廓、眼睛、嘴巴、雞冠及腳部更清楚
-        // ------------------------------------------------
-        make('hen', [
-            '......TT......',
-            '.....TTTT.....',
-            '....111111....',
-            '...11111111...',
-            '..1141111111..',
-            '..1111111111..',
-            '.111111111111.',
-            '.111111111111K',
-            '.11111111111KK',
-            '.11111881111..',
-            '..111188111...',
-            '..111111111...',
-            '...11111111...',
-            '....66..66....',
-            '....33..33....',
-            '..............'
-        ], 4);
-
-        // ------------------------------------------------
-        // 3. 雞舍：屋頂有層次、牆面有木紋、窗戶更明顯
-        // ------------------------------------------------
-        make('coop', [
-            '........CCCC........',
-            '......CCCCCCCC......',
-            '....CCCCCCCCCCCC....',
-            '..CCCCCCCCCCCCCCCC..',
-            'DDDDDDDDDDDDDDDDDDDD',
-            'DDDDDDDDDDDDDDDDDDDD',
-            '...FGGFFGGFFGGFF...',
-            '...FGHFFGHFFGHFF...',
-            '...FGGFFGGFFGGFF...',
-            '...GGGGIIIIFFGGG...',
-            '...FGGGIIIIFFGGF...',
-            '...FGGFFGGFFGGFF...',
-            '...FGHHHHHHHHHGG...',
-            '...FGH4444444HGG...',
-            '...FGH4LLLLL4HGG...',
-            '...FGH4LLLLL4HGG...',
-            '...FGGHHHHHHHGGF...',
-            '...GGGGGGGGGGGGG...'
-        ], 4);
-
-        // ------------------------------------------------
-        // 4. 雞蛋：加入蛋殼陰影，方便收成時顯示
-        // ------------------------------------------------
-        make('egg', [
-            '......LL......',
-            '....LLLLLL....',
-            '...LLLLLLLL...',
-            '..LLLLLLLLLL..',
-            '..L5LLLLLLLL..',
-            '.LL55LLLLLLL..',
-            '.LLLLLLLLLLL..',
-            '..LLLLLLLLL...',
-            '...LLLLLLL....',
-            '....88888.....',
-            '..............'
-        ], 4);
-
-        // ------------------------------------------------
-        // 5. 小屋：保留既有素材名稱
-        // ------------------------------------------------
-        make('mini_house', [
-            '....JJJJ....',
-            '...JJJJJJ...',
-            '..JJJJJJJJ..',
-            '.JJJJJJJJJJ.',
-            'DDDDDDDDDDDD',
-            '...FGFGFG...',
-            '...GH44FG...',
-            '...FGH4FG...',
-            '...FGFGFG...',
-            '...GGGGGG...',
-            '...GH44HG...',
-            '...GGGGGG...'
-        ], 4);
-
-        // ------------------------------------------------
-        // 6. 金幣：金色外框、亮面及暗面
-        // ------------------------------------------------
-        make('coin', [
-            '..7777..',
-            '.733337.',
-            '73YYY337',
-            '73Y77737',
-            '73Y77737',
-            '73YYY337',
-            '.733337.',
-            '..7777..'
-        ], 4);
-
-        // ------------------------------------------------
-        // 7. 高麗菜：增加葉片層次
-        // ------------------------------------------------
-        make('cabbage', [
-            '...QQ...',
-            '..QQQQ..',
-            '.QQRQQQ.',
-            'QQQQRQQQ',
-            'QQRQQQQQ',
-            '.QQQQQQ.',
-            '..QQQQ..',
-            '...RR...'
-        ], 4);
-
-        // ------------------------------------------------
-        // 8. 農場互動物件
-        // ------------------------------------------------
-        make('worm', [
-            '.QQ.',
-            'QQQQ',
-            '.QQ.',
-            '..Q.'
-        ], 4);
-
-        make('earthworm', [
-            '.MM.',
-            'M22M',
-            '.MM.',
-            '..M.'
-        ], 4);
-
-        make('heart', [
-            '.MM..MM.',
-            'MMMMMMMM',
-            'MMMMMMMM',
-            '.MMMMMM.',
-            '..MMMM..',
-            '...MM...'
-        ], 4);
-
-        make('signboard', [
-            '...GGGGGG...',
-            '..GFFFFFFG..',
-            '.GFFFFFFFFG.',
-            'GFFHHHHHHFFG',
-            'GFFHHHHHHFFG',
-            'GFFFFFFFFFFG',
-            '.GFFFFFFFFG.',
-            '..GGGGGGGG..',
-            '.....GG.....',
-            '.....GG.....',
-            '.....GG.....'
-        ], 4);
-
-        // ------------------------------------------------
-        // 9. 偷蛋事件角色：狼
-        // ------------------------------------------------
-        make('wolf', [
-            '...44......44...',
-            '..4884....4884..',
-            '..48884..48884..',
-            '..488844448888..',
-            '.48888888888884.',
-            '.48822888882284.',
-            '.48822888882284.',
-            '..488888888884..',
-            '..4888488884884..',
-            '...488488884884...',
-            '...488444444884...',
-            '....4411111144....',
-            '....4141111414....',
-            '....4444444444....',
-            '.....48888884.....',
-            '......44..44......'
-        ], 4);
-
-        make('wolf_bump', [
-            '...44......44...',
-            '.44 22....22 44.',
-            '..4884....4884..',
-            '..488844448888..',
-            '.48888888888884.',
-            '.48848888884884.',
-            '.48884888884884.',
-            '..488888888884..',
-            '..4888488884884..',
-            '...488488884884...',
-            '...488444444884...',
-            '....4411111144....',
-            '....4141111414....',
-            '....4444444444....',
-            '.....48888884.....',
-            '......44..44......'
-        ], 4);
-
-        make('club', [
-            '..GG..',
-            '.GFFG.',
-            'GFFFFG',
-            'GFFFFG',
-            'GFFFFG',
-            '.GFFG.',
-            '.GFFG.',
-            '..GG..',
-            '..GG..'
-        ], 4);
-
-        make('fang', [
-            '..44..',
-            '.4114.',
-            '.4114.',
-            '..414.',
-            '..44..'
-        ], 4);
-
-        // Firebase 監聽保留原本的單一訂閱設計
+        // 🌟 核心優化：遊戲啟動時建立「唯一」的自己的農場監聽器
         if (!this.game.registry.has('isListeningFarm')) {
             this.game.registry.set('isListeningFarm', true);
-
-            this.game.myFarmUnsubscribe = onSnapshot(
-                myFarmRef,
-                (docSnap) => {
-                    if (docSnap.exists() && docSnap.data().farm) {
-                        this.game.registry.set(
-                            'myFarmData',
-                            docSnap.data().farm
-                        );
-                    }
+            this.game.myFarmUnsubscribe = onSnapshot(myFarmRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().farm) {
+                    // 每次 Firebase 有更新，就寫入全域變數，會自動觸發各場景的 changedata 事件
+                    this.game.registry.set('myFarmData', docSnap.data().farm);
                 }
-            );
+            });
         }
 
         this.scene.start('MyFarmScene');
