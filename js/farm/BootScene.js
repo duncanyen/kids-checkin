@@ -6,16 +6,50 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
     create() {
-        const palette = {
-            '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
-            '7': '#FFCA28', '8': '#BDBDBD', '9': '#7CB342', 'A': '#388E3C', 
-            'C': '#D32F2F', 'D': '#B71C1C', 'E': '#FFF59D', 'F': '#8D6E63', 
-            'G': '#5D4037', 'H': '#212121', 'I': '#81D4FA', 'J': '#1976D2',
-            'K': '#FFA000', 'L': '#FFF9C4', 'M': '#FF4081', 'N': '#F48FB1'
+        const tigerPalette = {
+            ".": "#00000000",
+            "O": "#302521",
+            "T": "#F5A33B",
+            "W": "#FFF1D6",
+            "B": "#211C1A",
+            "P": "#E85B98"
         };
 
+        const tigerData = [
+            "........................",
+            "........................",
+            "....OOO..........OOO....",
+            "...OPPPO........OPPPO...",
+            "...OPPPO.OOOOOO.OPPPO...",
+            "...OPPPTTOTTTOTTTPPPO...",
+            "....TTTTTTOTOTOTTTTT....",
+            ".....TTOTTTOTTTTOTT.....",
+            ".....TTTOTTTTTTOTTT.....",
+            "....OTOWWWWWWWWWWOTO....",
+            ".....TWWBWWWWWWBWWT.....",
+            ".....WWWBWWPPWWBWWTO....",
+            "......WWWWWOOWWWWWT.O...",
+            ".......WWWOTTTTTW..OT...",
+            ".........OWWWWOTT...O...",
+            ".........OWWWWTOTT.O....",
+            ".........TOWWOTTTTO.....",
+            "........TTWWWWTOTT......",
+            ".........TWWOWTTTT......",
+            ".......TTTTTTTTTTT......",
+            ".......TTTTTTTTTTT......",
+            ".......WWW....WWWW......",
+            "........................",
+            "........................"
+        ];
+
+       // 為了在測試畫面上看清楚，將 pixelWidth 稍微調大至 8
+        this.textures.generate("hen", {
+            data: tigerData,
+            pixelWidth: 8,
+            palette: tigerPalette
+        });
+
         this.textures.generate('grass', { data: ['99999999', '9A999999', '9999A999', '99999999', '99A99999', '999999A9', '99999999', '9999A999'], pixelWidth: 8, palette: palette });
-        this.textures.generate('hen', { data: ['......1111..', '......1411..', '......1111..', '......111133', '....11111122', '....111111..', '..11118811..', '..11118811..', '....118811..', '....111111..', '......3..3..', '......3..3..'], pixelWidth: 6, palette: palette });
         this.textures.generate('coop', { data: ['......CCCC......', '....CCCCCCCC....', '..CCCCCCCCCCCC..', '.CCCCCCCCCCCCCC.', 'DDDDDDDDDDDDDDDD', '..FGFGFGFGFGFG..', '..GFFGFGFGFFGF..', '..FGFGIIIIFGFG..', '..GFFGIIIIFFGF..', '..FGFGFFFFFGFG..', '..GFFGHHHHFFGF..', '..FGFGHHHHFGFG..', '..GFFHEEEEHFFG..', '..FGFHEEEEFGFG..', '..GFFGFGFGFFGF..'], pixelWidth: 10, palette: palette });
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
         this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
