@@ -6,56 +6,16 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
     create() {
-// 1. 在 palette 中擴充這隻母雞需要的新顏色
-const palette = {
-    '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
-    '7': '#FFCA28', '8': '#BDBDBD', '9': '#7CB342', 'A': '#388E3C', 
-    'C': '#D32F2F', 'D': '#B71C1C', 'E': '#FFF59D', 'F': '#8D6E63', 
-    'G': '#5D4037', 'H': '#212121', 'I': '#81D4FA', 'J': '#1976D2',
-    'K': '#FF9800', 'L': '#FFF9C4', 'M': '#FF4081', 'N': '#F48FB1',
-    // 新增母雞專用色
-    'a': '#E2E8F0', // 淺灰白 (羽毛陰影)
-    'b': '#CBD5E1', // 深灰 (腹部陰影)
-    'c': '#F87171', // 淺紅 (雞冠高光)
-    'd': '#DC2626', // 深紅 (雞冠)
-    'e': '#FDE047', // 亮黃 (嘴/腳)
-    'f': '#D97706', // 深橘 (腳部陰影)
-    'g': '#FCA5A5'  // 粉紅 (腳脛)
-};
-
-// 2. 替換 hen 的生成矩陣 (24x24 像素)
-this.textures.generate('hen', { 
-    data: [
-        '........444.............',
-        '.......4cdc4............',
-        '.......41dc4............',
-        '......411114............',
-        '...4..414114............',
-        '..4e4.411114........44..',
-        '.4ee44111114.......414..',
-        '.4ff4d411114......4114..',
-        '..44d41111144444441114..',
-        '...4d41111a11111111144..',
-        '...44111a1111111111114..',
-        '..41111a11a11111111144..',
-        '..4111a11a1111111144b4..',
-        '..411111a111111114bbb4..',
-        '..4111111111111114bb4...',
-        '...44111111111114bbb4...',
-        '.....44444444444b444....',
-        '....4bbbbbbbbbbbbb4.....',
-        '....4bbbbbbbbbbbb4......',
-        '.....444444444444.......',
-        '.......4g4...4g4........',
-        '.......4g4...4g4........',
-        '.....44ef4..44ef4.......',
-        '.....44444..44444.......'
-    ], 
-    pixelWidth: 3, // 可以調整這個數字來決定母雞在遊戲中的大小
-    palette: palette 
-});
+        const palette = {
+            '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
+            '7': '#FFCA28', '8': '#BDBDBD', '9': '#7CB342', 'A': '#388E3C', 
+            'C': '#D32F2F', 'D': '#B71C1C', 'E': '#FFF59D', 'F': '#8D6E63', 
+            'G': '#5D4037', 'H': '#212121', 'I': '#81D4FA', 'J': '#1976D2',
+            'K': '#FFA000', 'L': '#FFF9C4', 'M': '#FF4081', 'N': '#F48FB1'
+        };
 
         this.textures.generate('grass', { data: ['99999999', '9A999999', '9999A999', '99999999', '99A99999', '999999A9', '99999999', '9999A999'], pixelWidth: 8, palette: palette });
+        this.textures.generate('hen', { data: ['......1111..', '......1411..', '......1111..', '......111133', '....11111122', '....111111..', '..11118811..', '..11118811..', '....118811..', '....111111..', '......3..3..', '......3..3..'], pixelWidth: 6, palette: palette });
         this.textures.generate('coop', { data: ['......CCCC......', '....CCCCCCCC....', '..CCCCCCCCCCCC..', '.CCCCCCCCCCCCCC.', 'DDDDDDDDDDDDDDDD', '..FGFGFGFGFGFG..', '..GFFGFGFGFFGF..', '..FGFGIIIIFGFG..', '..GFFGIIIIFFGF..', '..FGFGFFFFFGFG..', '..GFFGHHHHFFGF..', '..FGFGHHHHFGFG..', '..GFFHEEEEHFFG..', '..FGFHEEEEFGFG..', '..GFFGFGFGFFGF..'], pixelWidth: 10, palette: palette });
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
         this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
