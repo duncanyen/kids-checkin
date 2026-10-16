@@ -1,3 +1,7 @@
+import { db } from '../firebase-config.js';
+import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { myFarmRef } from './constants.js';
+
 export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
@@ -22,7 +26,6 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('heart', { data: ['.M.M.', 'MMMMM', 'MMMMM', '.MMM.', '..M..'], pixelWidth: 4, palette: palette });
         this.textures.generate('signboard', { data: ['..GGGGGG..', '.GFFFFFFG.', 'GFF4444FFG', 'GFF4444FFG', 'GFFFFFFFFG', '.GFFFFFFG.', '..GGGGGG..', '....GG....', '....GG....', '....GG....'], pixelWidth: 3, palette: palette });
         
-        // 🐺 全新設計：大野狼 (加入明顯的尖耳朵與凸出的長嘴巴及尖牙)
         this.textures.generate('wolf', { 
             data: [
                 '.44............44.',
@@ -44,7 +47,6 @@ export default class BootScene extends Phaser.Scene {
             ], pixelWidth: 6, palette: palette 
         });
 
-        // 🤕 戰敗大野狼 (頭上腫包，眼睛打叉昏迷，保留尖耳朵與長嘴巴)
         this.textures.generate('wolf_bump', { 
             data: [
                 '......22..........',
@@ -68,6 +70,17 @@ export default class BootScene extends Phaser.Scene {
 
         this.textures.generate('club', { data: ['..GG..', '.GFFG.', 'GFFFFG', 'GFFFFG', 'GFFFFG', '.GFFG.', '.GFFG.', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
+
+        // 🌟 核心優化：遊戲啟動時建立「唯一」的自己的農場監聽器
+        if (!this.game.registry.has('isListeningFarm')) {
+            this.game.registry.set('isListeningFarm', true);
+            this.game.myFarmUnsubscribe = onSnapshot(myFarmRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().farm) {
+                    // 每次 Firebase 有更新，就寫入全域變數，會自動觸發各場景的 changedata 事件
+                    this.game.registry.set('myFarmData', docSnap.data().farm);
+                }
+            });
+        }
 
         this.scene.start('MyFarmScene');
     }
