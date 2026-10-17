@@ -74,7 +74,7 @@ export default class BootScene extends Phaser.Scene {
             ], pixelWidth: 4, palette: palette
         });
 
-        // 🐺 野狼 & 老虎等其餘貼圖
+        // 🐺 野狼貼圖
         this.textures.generate('wolf', { 
             data: [
                 '.44............44.',
@@ -116,8 +116,59 @@ export default class BootScene extends Phaser.Scene {
                 '......44..44......'
             ], pixelWidth: 6, palette: palette 
         });
-       this.textures.generate('tiger', { data: ['..4K4........4K4..', '.4KKK4......4KKK4.', '4KKKKK444444KKKKK4', '4KK44KKKKKKKK44KK4', '4KKKKK44KK44KKKKK4', '.4K22K444444K22K4.', '.4K22K444444K22K4.', '..4KKKK4444KKKK4..', '..4KK4K4444K4KK4..', '...4KK444444KK4...', '...4K11144111K4...', '....4141111414....', '....4112222114....', '.....4K4444K4.....', '......44..44......'], pixelWidth: 7, palette: palette });
-        this.textures.generate('tiger_bump', { data: ['.......22.........', '.4K4..2222...4K4..', '4KKK4..22...4KKK4.', '4KKKKK444444KKKKK4', '4KKKKK44KK44KKKKK4', '.4K44K444444K44K4.', '.4KK4K444444K4KK4.', '..4KKKK4444KKKK4..', '..4KK4K4444K4KK4..', '...4KK444444KK4...', '...4K11144111K4...', '....4141111414....', '....4112222114....', '.....4K4II4K4.....', '......44..44......'], pixelWidth: 7, palette: palette });
+
+        // 🐅 專業級精細老虎 (包含耳廓、額頭「王」字紋、銳利綠眼與斑紋)
+        this.textures.generate('tiger', { 
+            data: [
+                '..444..............444..',
+                '.4KKK4............4KKK4.',
+                '4KK11K4..........4K11KK4',
+                '4K111KK4444444444KK111K4',
+                '4KK1KKKKKKKKKKKKKKKK1KK4',
+                '.4KKKKKK444444KKKKKKKK4.',
+                '..4KKKKK444444KKKKKKK4..',
+                '..4K44KKKK44KKKK44KKK4..',
+                '.4KK44KKK4444KKK44KKKK4.',
+                '.4KKKKKKK4444KKKKKKKKK4.',
+                '.4KK44194KKKK49144KKKK4.',
+                '.4KKK4144KKKK4441KKKKK4.',
+                '.4KK44111KKKK11144KKKK4.',
+                '..4KKKKK114411KKKKKKK4..',
+                '..44KKKK11M111KKKKK44..',
+                '...4KKK11111111KKKK4...',
+                '....4KK11411411KK4....',
+                '....4KKK111111KKK4....',
+                '.....44KKKKKKKK44.....',
+                '.......44444444.......'
+            ], pixelWidth: 5, palette: palette 
+        });
+
+        // 🐅 猛虎被打暈/滿頭包型態 (`tiger_bump`)
+        this.textures.generate('tiger_bump', { 
+            data: [
+                '.........2222...........',
+                '..444...22CC22...444....',
+                '.4KKK4...2222...4KKK4...',
+                '4KK11K4444444444K11KK4..',
+                '4K111KKKKKKKKKKKK111K4..',
+                '4KK1KKKKKKKKKKKKKK1KK4..',
+                '.4KKKKKK444444KKKKKK4...',
+                '..4KKKKK444444KKKKKK4...',
+                '..4K44KKKK44KKKK44KK4...',
+                '.4KK44K44K44K44K44KK4...',
+                '.4KKKKK44K44K44KKKKK4...',
+                '.4KK441444KKKK4444KK4...',
+                '.4KKK41444KKKK4441KK4...',
+                '.4KK44111KKKK11144KK4...',
+                '..4KKKKK114411KKKKKK4...',
+                '..44KKKK11M111KKKKK4....',
+                '...4KKK11111111KKKK4...',
+                '....4KK11411411KK4....',
+                '....4KKK111111KKK4....',
+                '.....44KKKKKKKK44.....'
+            ], pixelWidth: 5, palette: palette 
+        });
+
         this.textures.generate('tiger_pelt', { data: ['......4K4K4.......', '.....4KKKKK4......', '...444K444K444....', '..4KKKKKKKKKKK4...', '.4KK4KK444KK4KK4..', '.4KKKKKKKKKKKKK4..', '..44KK44444KK44...', '...4KKKKKKKKK4....', '..4KK4444444KK4...', '.4KKKKKKKKKKKKK4..', '.4K44K4...4K44K4..', '..4444.....4444...'], pixelWidth: 4, palette: palette });
         this.textures.generate('club', { data: ['..GG..', '.GFFG.', 'GFFFFG', 'GFFFFG', 'GFFFFG', '.GFFG.', '.GFFG.', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
