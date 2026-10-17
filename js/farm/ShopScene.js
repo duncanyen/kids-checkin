@@ -48,12 +48,12 @@ export default class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        // 買進清單 (包含咕咕活力散 10 金幣)
+        // 買進清單 (排版與位置修正)
         this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
         this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
         this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n(-10)`, 0x333333, () => this.askConfirm('咕咕活力散', 10, () => this.buyMedicine()));
         this.addShopItem(this.buyContainer, 295, 140, 'coop', `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
-        this.addShopItem(this.buyContainer, 295, 140, 'coop', `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
+        this.addShopItem(this.buyContainer, 95, 240, 'coop', `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
 
         // 賣出清單
         this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
@@ -73,6 +73,7 @@ export default class ShopScene extends Phaser.Scene {
         container.add([bg, icon, txt]);
     }
 
+    // 🔒 修正確認對話框：將「確認」與「取消」文字完全加入 container 中
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
@@ -80,17 +81,19 @@ export default class ShopScene extends Phaser.Scene {
         this.dialogText = this.add.text(195, 380, '確定要購買嗎？', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
         
         const btnYes = this.add.rectangle(120, 460, 100, 40, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const textYes = this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
         const btnNo = this.add.rectangle(270, 460, 100, 40, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const textNo = this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
         btnYes.on('pointerdown', () => {
             this.dialogContainer.setVisible(false);
             if (this.confirmCallback) this.confirmCallback();
         });
-        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, btnNo]);
+
+        // 將按鈕與文字全部加至 dialogContainer，確保開啟時呈現文字，關閉時一併隱藏
+        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
     askConfirm(itemName, price, callback) {
