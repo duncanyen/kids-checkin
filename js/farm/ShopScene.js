@@ -51,8 +51,9 @@ export default class ShopScene extends Phaser.Scene {
         // 買進清單 (包含咕咕活力散 10 金幣)
         this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
         this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
-        this.addShopItem(this.buyContainer, 95, 140, 'medicine', `活力散\n(-10)`, 0x333333, () => this.askConfirm('咕咕活力散', 10, () => this.buyMedicine()));
+        this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n(-10)`, 0x333333, () => this.askConfirm('咕咕活力散', 10, () => this.buyMedicine()));
         this.addShopItem(this.buyContainer, 295, 140, 'coop', `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
+        this.addShopItem(this.buyContainer, 295, 140, 'coop', `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
 
         // 賣出清單
         this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
