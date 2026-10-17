@@ -114,7 +114,7 @@ export default class VisitScene extends Phaser.Scene {
                 t.update(myFarmRef, { "farm.moral": newMoral });
             });
 
-            this.showFloatingText('🧹 幫忙打掃完成！道德值 +3 😇', '#81D4FA', 18, this.cameras.main.centerX, 150);
+            this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, this.cameras.main.centerX, 150);
             this.sendSystemNotification(`${playerName}幫${this.targetName}打掃了雞舍`);
         } catch (e) { console.error(e); }
     }
@@ -189,11 +189,11 @@ export default class VisitScene extends Phaser.Scene {
                 const finalText = `${messageContent}\n🕒 ${timeStr}`;
 
                 await addDoc(collection(db, "messages"), { 
-                    roomId: targetRoomId, sender: "莊園廣播", text: finalText, time: timeStr,
+                    roomId: targetRoomId, sender: "村落廣播", text: finalText, time: timeStr,
                     timestamp: serverTimestamp(), isSystem: true 
                 });
                 await updateDoc(doc(db, "rooms", targetRoomId), { 
-                    lastMessage: `莊園廣播: ${messageContent}`, lastMessageTime: serverTimestamp() 
+                    lastMessage: `村落廣播: ${messageContent}`, lastMessageTime: serverTimestamp() 
                 });
             }
         } catch (e) { console.error("發送廣播失敗:", e); }
@@ -239,13 +239,13 @@ export default class VisitScene extends Phaser.Scene {
         }).then((success) => {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1 🐅', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); 
-                this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大老虎`);
+                this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
             } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY)); }
         }).catch(e => console.error(e));
     }
 
     tigerEscapes() {
-        this.showFloatingText('猛虎把你身上的蛋吃光，還搶走 5 元！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
+        this.showFloatingText('老虎在你身上搶走5枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
         runTransaction(db, async (t) => {
             const snap = await t.get(myFarmRef);
@@ -397,8 +397,8 @@ export default class VisitScene extends Phaser.Scene {
                     "farm.moral": newMoral
                 });
             });
-            this.showFloatingText('🕵️ 偷到 +1 🥚 (道德 -5)', '#FFD54F', 18, safeX, safeY);
-            this.sendSystemNotification(`${playerName}偷了${this.targetName}蛋`);
+            this.showFloatingText('🕵️ 偷到雞蛋', '#FFD54F', 18, safeX, safeY);
+            this.sendSystemNotification(`${playerName}偷了${this.targetName}的雞蛋`);
 
         } catch (error) {
             this.showFloatingText(`❌ ${error}`, '#F44336', 16, safeX, safeY);
