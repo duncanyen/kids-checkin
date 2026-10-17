@@ -139,6 +139,7 @@ export default class WarehouseScene extends Phaser.Scene {
                 if (farm[key] > 0) {
                     let newLastLayTime = farm.lastLayTime - reduceMs;
                     let newEggsReady = farm.eggsReady || 0;
+                    let newCleanliness = farm.cleanliness || 0;
                     const now = Date.now();
                     
                     const henCount = farm.hens || 1;
@@ -148,13 +149,16 @@ export default class WarehouseScene extends Phaser.Scene {
                     while (now - newLastLayTime >= currentLayTimeMs && newEggsReady < maxEggs) {
                         newEggsReady++;
                         newLastLayTime += currentLayTimeMs;
+                        // 🌟 每產出一顆雞蛋，同步增加髒亂值 (上限 100)
+                        newCleanliness = Math.min(100, newCleanliness + 10);
                     }
                     if (newEggsReady >= maxEggs && (now - newLastLayTime > 0)) { newLastLayTime = now; }
 
                     t.update(myFarmRef, { 
                         [`farm.${key}`]: farm[key] - 1, 
                         "farm.lastLayTime": newLastLayTime, 
-                        "farm.eggsReady": newEggsReady 
+                        "farm.eggsReady": newEggsReady,
+                        "farm.cleanliness": newCleanliness
                     });
                 }
             });
