@@ -47,28 +47,47 @@ export default class WarehouseScene extends Phaser.Scene {
             index++;
         });
 
-        this.actionPanel = this.add.container(0, 530).setVisible(false);
-        this.actionBg = this.add.rectangle(195, 0, 340, 100, 0x333333, 0.9).setOrigin(0.5);
-        this.actionTitle = this.add.text(195, -25, '選擇動作', { fontSize: '18px', color: '#fff' }).setOrigin(0.5);
-        
-        this.btnFeed = this.add.rectangle(110, 20, 120, 40, 0x4CAF50, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(110, 20, '🍗 餵食母雞', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        
-        this.btnDiscard = this.add.rectangle(280, 20, 120, 40, 0xE53935, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(280, 20, '🗑️ 丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        // 建立動作面板 (詢問是否餵食，含「是」、「否」、「丟棄」三個按鈕)
+        this.createActionPanel();
 
-        this.actionPanel.add([this.actionBg, this.actionTitle, this.btnFeed, this.btnDiscard]);
-        this.msgText = this.add.text(195, 650, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
+        this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
         this.initFirebase();
         this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
+    }
+
+    createActionPanel() {
+        this.actionPanel = this.add.container(195, 530).setDepth(50).setVisible(false);
+        this.actionBg = this.add.rectangle(0, 0, 350, 130, 0x222222, 0.95).setOrigin(0.5);
+        this.actionTitle = this.add.text(0, -38, '是否要餵食母雞？', { fontSize: '16px', color: '#FFF', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        
+        // 按鈕：是 (餵食)
+        this.btnFeed = this.add.rectangle(-105, 20, 95, 38, 0x4CAF50, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.textFeed = this.add.text(-105, 20, '是(餵食)', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        // 按鈕：否 (取消/離開)
+        this.btnCancel = this.add.rectangle(0, 20, 95, 38, 0x757575, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.textCancel = this.add.text(0, 20, '否(離開)', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        
+        // 按鈕：丟棄
+        this.btnDiscard = this.add.rectangle(105, 20, 95, 38, 0xE53935, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.textDiscard = this.add.text(105, 20, '🗑️ 丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        this.btnCancel.on('pointerdown', () => this.actionPanel.setVisible(false));
+
+        this.actionPanel.add([
+            this.actionBg, this.actionTitle, 
+            this.btnFeed, this.textFeed, 
+            this.btnCancel, this.textCancel, 
+            this.btnDiscard, this.textDiscard
+        ]);
     }
 
     initFirebase() {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.farmData = docSnap.data().farm;
-                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0);
+                const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0) + (this.farmData.tigerPelts || 0) + (this.farmData.medicines || 0);
                 this.capacityText.setText(`容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
                 this.itemSlots['coins'].setText(`金幣\nx ${this.farmData.coins || 0}`);
                 this.itemSlots['inventoryEggs'].setText(`雞蛋\nx ${this.farmData.inventoryEggs || 0}`);
@@ -91,13 +110,15 @@ export default class WarehouseScene extends Phaser.Scene {
 
         if (count <= 0) {
             this.actionPanel.setVisible(false);
-            this.showMsg(`沒有${name}可以操作！`, '#F44336'); return;
+            this.showMsg(`沒有${name}可以操作！`, '#F44336'); 
+            return;
         }
 
-        this.actionTitle.setText(`對 ${name} 進行操作`);
+        this.actionTitle.setText(`是否要餵食母雞 [${name}]？`);
         this.actionPanel.setVisible(true);
-        this.btnFeed.removeAllListeners();
-        this.btnDiscard.removeAllListeners();
+
+        this.btnFeed.off('pointerdown');
+        this.btnDiscard.off('pointerdown');
 
         this.btnFeed.on('pointerdown', () => this.feedItem(key));
         this.btnDiscard.on('pointerdown', () => this.discardItem(key));
@@ -120,7 +141,6 @@ export default class WarehouseScene extends Phaser.Scene {
                     let newEggsReady = farm.eggsReady || 0;
                     const now = Date.now();
                     
-                    // 🌟 多雞折算：判斷目前真實的生產速度
                     const henCount = farm.hens || 1;
                     const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
                     const maxEggs = henCount * 6;
@@ -131,11 +151,15 @@ export default class WarehouseScene extends Phaser.Scene {
                     }
                     if (newEggsReady >= maxEggs && (now - newLastLayTime > 0)) { newLastLayTime = now; }
 
-                    t.update(myFarmRef, { [`farm.${key}`]: farm[key] - 1, "farm.lastLayTime": newLastLayTime, "farm.eggsReady": newEggsReady });
+                    t.update(myFarmRef, { 
+                        [`farm.${key}`]: farm[key] - 1, 
+                        "farm.lastLayTime": newLastLayTime, 
+                        "farm.eggsReady": newEggsReady 
+                    });
                 }
             });
             this.showHeartEffect(key === 'earthworms');
-            this.showMsg(`全體母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
+            this.showMsg(`母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
         } catch (e) { console.error(e); } 
         finally { this.isFeeding = false; }
     }
@@ -153,11 +177,26 @@ export default class WarehouseScene extends Phaser.Scene {
         } catch (e) { console.error(e); }
     }
 
+    // 💖 愛心動態效果 (直接以文字粒子生成，保證絕不失真或無法呈現)
     showHeartEffect(isBig) {
         this.tweens.add({ targets: this.hen, y: this.hen.y - 15, duration: 150, yoyo: true });
-        const heart = this.add.image(this.hen.x, this.hen.y - 30, 'heart').setScale(isBig ? 2 : 1).setDepth(20);
-        this.tweens.add({ targets: heart, y: heart.y - 50, alpha: 0, duration: 1500, onComplete: () => heart.destroy() });
+
+        const heartIcon = isBig ? '💖' : '❤️';
+        const fontSize = isBig ? 32 : 22;
+
+        const heart = this.add.text(this.hen.x, this.hen.y - 30, heartIcon, { fontSize: `${fontSize}px` }).setOrigin(0.5).setDepth(30);
+        this.tweens.add({
+            targets: heart,
+            y: heart.y - 60,
+            scaleX: 1.3,
+            scaleY: 1.3,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Power1',
+            onComplete: () => heart.destroy()
+        });
     }
+
     showMsg(msg, color) {
         this.msgText.setText(msg).setColor(color).setAlpha(1);
         this.tweens.add({ targets: this.msgText, alpha: 0, duration: 2500, delay: 1000 });
