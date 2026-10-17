@@ -52,7 +52,8 @@ export default class MyFarmScene extends Phaser.Scene {
         this.add.rectangle(320, 52, 115, 68, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
         this.coinsText = this.add.text(270, 24, '💰 0', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
         this.cleanText = this.add.text(270, 42, '🗑️ 0/100', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
-        
+        this.moralText = this.add.text(270, 60, '😇 道德: 100', { fontSize: '12px', color: '#81D4FA', fontStyle: 'bold' }).setDepth(31);
+
         this.timerBg = this.add.rectangle(cx, 120, 200, 26, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 120, '連線中...', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
