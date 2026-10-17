@@ -19,7 +19,11 @@ export default class VisitScene extends Phaser.Scene {
         this.isStealing = false; 
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
-        this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5);
+
+        // 🏠 雞舍改為可點擊互動，點擊後觸發幫忙打掃詢問
+        this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.coop.on('pointerdown', () => this.askCleanTargetFarm());
+
         this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
         this.hensGroup = []; 
@@ -35,7 +39,7 @@ export default class VisitScene extends Phaser.Scene {
         }
 
         const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
-        sign.on('pointerdown', () => { this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20); });
+        sign.on('pointerdown', () => { this.showNoticeText('幫忙抓菜園里的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20); });
 
         this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
         this.add.text(195, 50, `潛入 [${this.targetName}] 的家`, { fontSize: '16px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
@@ -44,10 +48,8 @@ export default class VisitScene extends Phaser.Scene {
         this.add.text(55, 50, '🏃 溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene'));
 
-        // 🧹 幫鄰居打掃按鈕
-        const btnHelper = this.add.rectangle(335, 50, 80, 40, 0x4CAF50, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(30);
-        this.add.text(335, 50, '🧹 幫打掃', { fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
-        btnHelper.on('pointerdown', () => this.cleanTargetFarm());
+        // 建立通用確認對話框
+        this.createConfirmDialog();
 
         this.initFirebase();
 
@@ -85,12 +87,18 @@ export default class VisitScene extends Phaser.Scene {
 
     onMyFarmDataChanged(parent, value) { this.myFarmData = value; }
 
-    async cleanTargetFarm() {
+    // 點擊鄰居雞舍彈出確認提示
+    askCleanTargetFarm() {
         if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
             this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, this.cameras.main.centerX, 150);
             return;
         }
 
+        this.dialogText.setText(`[${this.targetName}] 的雞舍有點髒亂\n是否要幫忙打掃雞舍？`);
+        this.dialogContainer.setVisible(true);
+    }
+
+    async cleanTargetFarm() {
         const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
         try {
             await runTransaction(db, async (t) => {
@@ -113,7 +121,7 @@ export default class VisitScene extends Phaser.Scene {
 
     renderTargetCleanliness() {
         this.rubbishGroup.clear(true, true);
-        const cleanVal = this.targetFarmData.cleanliness || 0;
+        const cleanVal = this.targetFarmData ? (this.targetFarmData.cleanliness || 0) : 0;
         if (cleanVal > 50) {
             const count = Math.min(12, Math.floor((cleanVal - 50) / 4) + 2);
             for (let i = 0; i < count; i++) {
@@ -396,6 +404,28 @@ export default class VisitScene extends Phaser.Scene {
             this.showFloatingText(`❌ ${error}`, '#F44336', 16, safeX, safeY);
             this.cameras.main.shake(300, 0.01);
         } finally { this.isStealing = false; }
+    }
+
+    // 🔒 建立確認對話框 (完整收納按鈕與文字，預設隱藏)
+    createConfirmDialog() {
+        this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
+        const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
+        const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
+        this.dialogText = this.add.text(195, 380, '', { fontSize: '15px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
+        
+        const btnYes = this.add.rectangle(130, 450, 90, 36, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
+        const textYes = this.add.text(130, 450, '是', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        
+        const btnNo = this.add.rectangle(260, 450, 90, 36, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
+        const textNo = this.add.text(260, 450, '否', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
+        btnYes.on('pointerdown', () => {
+            this.dialogContainer.setVisible(false);
+            this.cleanTargetFarm();
+        });
+
+        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
     showFloatingText(msg, color, fontSize = 22, x, y) {
