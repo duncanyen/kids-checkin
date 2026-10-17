@@ -16,7 +16,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         
-        // 🏠 雞舍改為可點擊互動，點擊後觸發打掃流程
+        // 🏠 雞舍可點擊互動，點擊後觸發打掃流程
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.coop.on('pointerdown', () => this.askCleanMyFarm());
 
@@ -55,7 +55,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.timerBg = this.add.rectangle(cx, 90, 200, 26, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 90, '連線中...', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
-        // 建立通用對話框 (預設隱藏且無文字殘留)
+        // 建立通用對話框 (預設隱藏且完全收納於 Container 內)
         this.createConfirmDialog();
         
         // 綁定連線與對話監聽
@@ -96,7 +96,7 @@ export default class MyFarmScene extends Phaser.Scene {
             }
             this.farmData = docSnap.data().farm;
 
-            // 自動修補缺少防禦屬性
+            // 自動修補欄位
             if (this.farmData.cleanliness === undefined) this.farmData.cleanliness = 0;
             if (!Array.isArray(this.farmData.hensState)) {
                 this.farmData.hensState = Array.from({ length: this.farmData.hens || 1 }, () => ({ isSick: false }));
@@ -117,7 +117,7 @@ export default class MyFarmScene extends Phaser.Scene {
         const cleanVal = this.farmData.cleanliness || 0;
         this.cleanText.setText(`🗑️ ${cleanVal}/100`);
 
-        // 髒亂警示文字顏色變更
+        // 髒亂警示顏色
         if (this.cleanFlashTween) this.cleanFlashTween.stop();
         if (cleanVal <= 50) {
             this.cleanText.setColor('#FFFFFF').setAlpha(1);
@@ -129,7 +129,6 @@ export default class MyFarmScene extends Phaser.Scene {
         }
     }
 
-    // 動態髒亂視覺（>50 呈現垃圾圖示）
     renderCleanlinessVisual() {
         this.rubbishGroup.clear(true, true);
         const cleanVal = this.farmData ? (this.farmData.cleanliness || 0) : 0;
@@ -143,7 +142,6 @@ export default class MyFarmScene extends Phaser.Scene {
         }
     }
 
-    // 點擊雞舍彈出打掃詢問
     askCleanMyFarm() {
         if (!this.farmData || (this.farmData.cleanliness || 0) === 0) {
             this.showFloatingText('雞舍非常乾淨，不需要打掃～', '#FFFFFF', 16);
@@ -155,7 +153,6 @@ export default class MyFarmScene extends Phaser.Scene {
         this.dialogContainer.setVisible(true);
     }
 
-    // 執行打掃清空髒亂值
     async cleanMyFarm() {
         try {
             await runTransaction(db, async (t) => {
@@ -176,7 +173,7 @@ export default class MyFarmScene extends Phaser.Scene {
         else if (coopLevel === 2) this.coop.setScale(1.2);
         else if (coopLevel === 3) this.coop.setScale(1.5);
 
-        // 檢查生病超過 48 小時病逝的母雞
+        // 病逝判定 (>48小時)
         let needsDeadCleanup = false;
         const validHensState = hensState.filter(h => {
             if (h && h.isSick && h.sickTimestamp && (now - h.sickTimestamp > 48 * 3600 * 1000)) {
@@ -191,7 +188,6 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        // 清除舊母雞 Sprites 並重新繪製
         this.hensGroup.forEach(hen => {
             if (hen.statusIcon) hen.statusIcon.destroy();
             hen.destroy();
@@ -322,6 +318,7 @@ export default class MyFarmScene extends Phaser.Scene {
         });
     }
 
+    // ⏱️ 正確計算生蛋產能演算法 (一隻雞 4 小時產 1 顆，多隻雞依比例精確縮短週期)
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -334,13 +331,18 @@ export default class MyFarmScene extends Phaser.Scene {
             let hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
             let changed = false;
 
-            const henCount = this.farmData.hens || 1;
-            const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
-            const maxEggs = henCount * 6; 
+            const totalHens = this.farmData.hens || 1;
+            // 計算健康的母雞數量，生病的母雞不參與生產
+            const healthyHens = hensState.filter(h => !h.isSick).length;
+            const activeHens = Math.max(1, healthyHens > 0 ? healthyHens : totalHens);
 
-            while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
+            // 每隻雞 4 小時，則 N 隻健康的雞生產 1 顆蛋所需時間為 4小時 / N
+            const currentLayIntervalMs = Math.floor(LAY_EGG_TIME_MS / activeHens);
+            const maxEggs = totalHens * 6; 
+
+            while (now - lastLayTime >= currentLayIntervalMs && eggsReady < maxEggs) {
                 eggsReady++;
-                lastLayTime += currentLayTimeMs;
+                lastLayTime += currentLayIntervalMs;
                 cleanliness = Math.min(100, cleanliness + 2);
                 
                 let sickProb = 0;
@@ -348,7 +350,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 else if (cleanliness > 50) sickProb = 0.2;
 
                 if (sickProb > 0) {
-                    for (let i = 0; i < henCount; i++) {
+                    for (let i = 0; i < totalHens; i++) {
                         if (!hensState[i]) hensState[i] = { isSick: false };
                         if (!hensState[i].isSick && Math.random() < sickProb) {
                             hensState[i].isSick = true;
@@ -382,7 +384,7 @@ export default class MyFarmScene extends Phaser.Scene {
             if (eggsReady >= maxEggs) {
                 this.timerText.setText(`📦 產能已滿 (${maxEggs}/${maxEggs})`).setColor('#A5D6A7');
             } else {
-                let timeLeft = currentLayTimeMs - (now - lastLayTime);
+                let timeLeft = currentLayIntervalMs - (now - lastLayTime);
                 if (timeLeft < 0) timeLeft = 0;
                 const h = Math.floor(timeLeft / 3600000);
                 const m = Math.floor((timeLeft % 3600000) / 60000).toString().padStart(2, '0');
@@ -471,18 +473,19 @@ export default class MyFarmScene extends Phaser.Scene {
         finally { this.isHarvesting = false; }
     }
 
-    // 🛠️ 對話框（純圖層與非多餘文字）
+    // 🔒 乾淨的確認對話框 (全物件完全收納於 Container 內)
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
+        
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
         const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
         this.dialogText = this.add.text(195, 380, '', { fontSize: '15px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
         
         const btnYes = this.add.rectangle(130, 450, 90, 36, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(130, 450, '是', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const textYes = this.add.text(130, 450, '是', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
         const btnNo = this.add.rectangle(260, 450, 90, 36, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(260, 450, '否', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const textNo = this.add.text(260, 450, '否', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         btnNo.on('pointerdown', () => {
             this.dialogContainer.setVisible(false);
@@ -499,7 +502,8 @@ export default class MyFarmScene extends Phaser.Scene {
             this.dialogActionType = null;
         });
 
-        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, btnNo]);
+        // 將所有相關物件收納至 Container 中統一隱藏/顯示
+        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
     showFloatingText(msg, color, fontSize = 22, x = this.cameras.main.centerX, y = this.cameras.main.centerY - 60) {
