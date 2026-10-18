@@ -1,6 +1,6 @@
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, playerName } from './constants.js';
+import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName } from './constants.js';
 
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
@@ -78,11 +78,82 @@ export default class VisitScene extends Phaser.Scene {
         this.unsubscribeTarget = onSnapshot(targetRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
+                
+                // 🌟 當訪客進入鄰居家時，若發現鄰居離線且應生蛋時間已過，協助進行離線生蛋與髒亂值計算
+                this.checkAndUpdateTargetEggLaying(targetRef, this.targetFarmData);
+
                 this.coopEgg.setVisible(this.targetFarmData.eggsReady > 0);
                 this.syncTargetHens(); 
                 this.renderTargetCleanliness();
             }
         });
+    }
+
+    // 🌟 計算目標玩家的離線生蛋進度並更新至 Firestore
+    async checkAndUpdateTargetEggLaying(targetRef, farm) {
+        if (!farm || farm.lastLayTime === undefined) return;
+
+        const now = Date.now();
+        const henCount = farm.hens || 1;
+        const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
+        const maxEggs = henCount * 6;
+
+        let lastLayTime = farm.lastLayTime;
+        let eggsReady = farm.eggsReady || 0;
+        let cleanliness = farm.cleanliness || 0;
+        let hasChanged = false;
+
+        while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
+            eggsReady++;
+            lastLayTime += currentLayTimeMs;
+            cleanliness = Math.min(100, cleanliness + 10);
+            hasChanged = true;
+        }
+
+        if (eggsReady >= maxEggs && (now - lastLayTime > 0) && lastLayTime !== now) {
+            lastLayTime = now;
+            hasChanged = true;
+        }
+
+        // 若時間已跨越週期且有新的雞蛋產生，同步更新目標資料庫
+        if (hasChanged && !this.isUpdatingTargetEggs) {
+            this.isUpdatingTargetEggs = true;
+            try {
+                await runTransaction(db, async (t) => {
+                    const docSnap = await t.get(targetRef);
+                    if (!docSnap.exists()) return;
+                    const latestFarm = docSnap.data().farm;
+                    
+                    let lTime = latestFarm.lastLayTime;
+                    let eReady = latestFarm.eggsReady || 0;
+                    let cVal = latestFarm.cleanliness || 0;
+                    let updated = false;
+
+                    while (now - lTime >= currentLayTimeMs && eReady < maxEggs) {
+                        eReady++;
+                        lTime += currentLayTimeMs;
+                        cVal = Math.min(100, cVal + 10);
+                        updated = true;
+                    }
+                    if (eReady >= maxEggs && (now - lTime > 0)) {
+                        lTime = now;
+                        updated = true;
+                    }
+
+                    if (updated) {
+                        t.update(targetRef, {
+                            "farm.lastLayTime": lTime,
+                            "farm.eggsReady": eReady,
+                            "farm.cleanliness": cVal
+                        });
+                    }
+                });
+            } catch (e) {
+                console.error("更新目標玩家生蛋進度失敗:", e);
+            } finally {
+                this.isUpdatingTargetEggs = false;
+            }
+        }
     }
 
     onMyFarmDataChanged(parent, value) { this.myFarmData = value; }
