@@ -82,19 +82,19 @@ export default class VisitScene extends Phaser.Scene {
                 // 🌟 當訪客進入鄰居家時，若發現鄰居離線且應生蛋時間已過，協助進行離線生蛋與髒亂值計算
                 this.checkAndUpdateTargetEggLaying(targetRef, this.targetFarmData);
 
-                this.coopEgg.setVisible(this.targetFarmData.eggsReady > 0);
+                this.coopEgg.setVisible((this.targetFarmData.eggsReady || 0) > 0);
                 this.syncTargetHens(); 
                 this.renderTargetCleanliness();
             }
         });
     }
 
-    // 🌟 計算目標玩家的離線生蛋進度並更新至 Firestore
+    // 🛡️ 關鍵安全修正：計算目標玩家離線生蛋，並安全寫回 Firestore (防止全物件歸零與髒亂值過度暴增)
     async checkAndUpdateTargetEggLaying(targetRef, farm) {
         if (!farm || farm.lastLayTime === undefined) return;
 
         const now = Date.now();
-        const henCount = farm.hens || 1;
+        const henCount = Math.max(1, farm.hens || 1);
         const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
         const maxEggs = henCount * 6;
 
@@ -106,7 +106,7 @@ export default class VisitScene extends Phaser.Scene {
         while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
             eggsReady++;
             lastLayTime += currentLayTimeMs;
-            cleanliness = Math.min(100, cleanliness + 10);
+            cleanliness = Math.min(100, cleanliness + 2); // 🌟 恢復為每顆蛋 +2 髒亂值
             hasChanged = true;
         }
 
@@ -115,16 +115,15 @@ export default class VisitScene extends Phaser.Scene {
             hasChanged = true;
         }
 
-        // 若時間已跨越週期且有新的雞蛋產生，同步更新目標資料庫
         if (hasChanged && !this.isUpdatingTargetEggs) {
             this.isUpdatingTargetEggs = true;
             try {
                 await runTransaction(db, async (t) => {
                     const docSnap = await t.get(targetRef);
-                    if (!docSnap.exists()) return;
-                    const latestFarm = docSnap.data().farm;
+                    if (!docSnap.exists() || !docSnap.data()?.farm) return; // 🛡️ 安全防禦
                     
-                    let lTime = latestFarm.lastLayTime;
+                    const latestFarm = docSnap.data().farm;
+                    let lTime = latestFarm.lastLayTime || now;
                     let eReady = latestFarm.eggsReady || 0;
                     let cVal = latestFarm.cleanliness || 0;
                     let updated = false;
@@ -132,7 +131,7 @@ export default class VisitScene extends Phaser.Scene {
                     while (now - lTime >= currentLayTimeMs && eReady < maxEggs) {
                         eReady++;
                         lTime += currentLayTimeMs;
-                        cVal = Math.min(100, cVal + 10);
+                        cVal = Math.min(100, cVal + 2); // 🌟 恢復為每顆蛋 +2 髒亂值
                         updated = true;
                     }
                     if (eReady >= maxEggs && (now - lTime > 0)) {
@@ -141,6 +140,7 @@ export default class VisitScene extends Phaser.Scene {
                     }
 
                     if (updated) {
+                        // 🛡️ 嚴禁覆蓋整個 farm 物件，僅指定點號子欄位更新
                         t.update(targetRef, {
                             "farm.lastLayTime": lTime,
                             "farm.eggsReady": eReady,
@@ -174,10 +174,14 @@ export default class VisitScene extends Phaser.Scene {
         try {
             await runTransaction(db, async (t) => {
                 const targetDoc = await t.get(targetRef);
+                if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
+
                 const targetClean = targetDoc.data().farm.cleanliness || 0;
                 const newClean = Math.max(0, targetClean - 30);
 
                 const myDoc = await t.get(myFarmRef);
+                if (!myDoc.exists() || !myDoc.data()?.farm) return;
+
                 const myMoral = myDoc.data().farm.moral !== undefined ? myDoc.data().farm.moral : 100;
                 const newMoral = Math.min(100, myMoral + 3);
 
@@ -205,8 +209,8 @@ export default class VisitScene extends Phaser.Scene {
 
     syncTargetHens() {
         if (!this.targetFarmData) return;
-        const henCount = this.targetFarmData.hens || 1;
-        const hensState = this.targetFarmData.hensState || [];
+        const henCount = Math.max(1, this.targetFarmData.hens || 1);
+        const hensState = Array.isArray(this.targetFarmData.hensState) ? this.targetFarmData.hensState : [];
         const now = Date.now();
 
         this.hensGroup.forEach(h => { if(h.statusIcon) h.statusIcon.destroy(); h.destroy(); });
@@ -270,7 +274,7 @@ export default class VisitScene extends Phaser.Scene {
         } catch (e) { console.error("發送廣播失敗:", e); }
     }
 
-    // --- 野狼與老虎事件邏輯維持不變 ---
+    // --- 野狼與老虎事件邏輯 ---
     spawnTigerEvent() {
         this.isTigerDefeated = false; this.tigerHitCount = 0;
         this.tiger = this.add.image(-20, this.cameras.main.height - 50, 'tiger').setOrigin(0.5).setScale(1.6).setDepth(25).setInteractive({ cursor: 'pointer' });
@@ -302,6 +306,7 @@ export default class VisitScene extends Phaser.Scene {
 
         runTransaction(db, async (t) => {
             const snap = await t.get(myFarmRef);
+            if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
             const usedSpace = (farm.inventoryEggs || 0) + (farm.worms || 0) + (farm.earthworms || 0) + (farm.wolfFangs || 0) + (farm.tigerPelts || 0) + (farm.medicines || 0);
             if (usedSpace < (farm.warehouseLimit || 10)) {
@@ -315,13 +320,15 @@ export default class VisitScene extends Phaser.Scene {
         }).catch(e => console.error(e));
     }
 
+    // 🛡️ 安全修正：老虎逃跑時只合理扣除少量金幣，絕不直接清空庫存雞蛋！
     tigerEscapes() {
-        this.showFloatingText('老虎在你身上搶走5枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
+        this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
         runTransaction(db, async (t) => {
             const snap = await t.get(myFarmRef);
+            if (!snap.exists() || !snap.data()?.farm) return;
             const farm = snap.data().farm;
-            t.update(myFarmRef, { "farm.coins": Math.max(0, (farm.coins || 0) - 5), "farm.inventoryEggs": 0 });
+            t.update(myFarmRef, { "farm.coins": Math.max(0, (farm.coins || 0) - 5) });
         }).catch(e => console.error(e));
     }
 
@@ -356,6 +363,7 @@ export default class VisitScene extends Phaser.Scene {
 
         runTransaction(db, async (t) => {
             const snap = await t.get(myFarmRef);
+            if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
             const usedSpace = (farm.inventoryEggs || 0) + (farm.worms || 0) + (farm.earthworms || 0) + (farm.wolfFangs || 0) + (farm.tigerPelts || 0) + (farm.medicines || 0);
             if (usedSpace < (farm.warehouseLimit || 10)) {
@@ -375,8 +383,9 @@ export default class VisitScene extends Phaser.Scene {
         runTransaction(db, async (t) => {
             const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
             const targetDoc = await t.get(targetRef);
+            if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
             const targetFarm = targetDoc.data().farm;
-            if (targetFarm && targetFarm.eggsReady > 0) {
+            if (targetFarm && (targetFarm.eggsReady || 0) > 0) {
                 t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 });
             }
         }).catch(e => console.error(e));
@@ -400,6 +409,7 @@ export default class VisitScene extends Phaser.Scene {
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
+                if (!snap.exists() || !snap.data()?.farm) return;
                 const farm = snap.data().farm;
                 t.update(myFarmRef, { [`farm.${foundType}`]: (farm[foundType] || 0) + 1 });
             });
@@ -407,12 +417,11 @@ export default class VisitScene extends Phaser.Scene {
         } catch (e) { console.error(e); }
     }
 
-    // 偷蛋邏輯：依「目標玩家」獨立計算 1 小時冷卻，扣 5 點道德值並判定成功率
+    // 偷蛋邏輯：依「目標玩家」獨立計算冷卻，扣 5 點道德值並判定成功率
     async attemptSteal() {
         if (this.isStealing || !this.myFarmData) return;
         const safeX = this.cameras.main.centerX, safeY = this.cameras.main.centerY - 60;
         
-        // 抓取針對當前目標玩家的冷卻時間點 (不影響對其他鄰居的偷蛋權利)
         const stealCooldowns = this.myFarmData.stealCooldowns || {};
         const lastTargetStealTime = stealCooldowns[this.targetAccountId] || 0;
 
@@ -422,7 +431,7 @@ export default class VisitScene extends Phaser.Scene {
             return;
         }
 
-        if (!this.targetFarmData || this.targetFarmData.eggsReady <= 0) {
+        if (!this.targetFarmData || (this.targetFarmData.eggsReady || 0) <= 0) {
             this.emptyClickCount++;
             if (this.emptyClickCount >= 5) {
                 this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16, safeX, safeY); 
@@ -445,21 +454,23 @@ export default class VisitScene extends Phaser.Scene {
         this.isStealing = true;
         const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
 
-        // 依據道德值計算成功率 (低於 50 道德成功率降為 0.4)
         const myMoral = this.myFarmData.moral !== undefined ? this.myFarmData.moral : 100;
         const successRate = myMoral < 50 ? 0.4 : 0.7;
 
         try {
             await runTransaction(db, async (t) => {
                 const targetDoc = await t.get(targetRef);
+                if (!targetDoc.exists() || !targetDoc.data()?.farm) throw "手腳太慢，蛋不見了！";
                 const targetFarm = targetDoc.data().farm;
+
                 const myDoc = await t.get(myFarmRef);
+                if (!myDoc.exists() || !myDoc.data()?.farm) throw "資料錯誤";
                 const myCurrentFarm = myDoc.data().farm;
 
-                if (!targetFarm || targetFarm.eggsReady <= 0) throw "手腳太慢，蛋不見了！";
+                if (!targetFarm || (targetFarm.eggsReady || 0) <= 0) throw "手腳太慢，蛋不見了！";
                 
                 const currentMoral = myCurrentFarm.moral !== undefined ? myCurrentFarm.moral : 100;
-                const newMoral = Math.max(0, currentMoral - 5); // 偷蛋扣 5 道德
+                const newMoral = Math.max(0, currentMoral - 5);
 
                 if (Math.random() > successRate) {
                     t.update(myFarmRef, { 
@@ -485,7 +496,7 @@ export default class VisitScene extends Phaser.Scene {
         } finally { this.isStealing = false; }
     }
 
-    // 🔒 建立確認對話框 (完整收納按鈕與文字，預設隱藏)
+    // 🔒 建立確認對話框
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
