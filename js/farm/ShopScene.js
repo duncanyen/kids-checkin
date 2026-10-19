@@ -48,7 +48,7 @@ export default class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        // 📥 買進清單 (標價改成「多少金幣」與「容量(+10)100金幣」格式)
+        // 📥 買進清單
         this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n${HEN_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'hen', '母雞', HEN_PRICE));
         this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE));
         this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n10金幣`, 0x333333, () => this.openTradeModal('buy', 'medicine', '咕咕活力散', 10));
@@ -73,35 +73,39 @@ export default class ShopScene extends Phaser.Scene {
         container.add([bg, icon, txt]);
     }
 
-    // 🔒 數量選擇與交易對話框
+    // 🔒 數量選擇與交易對話框 (明確設定 Depth 確保文字不被矩形遮蓋)
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
         const bg = this.add.rectangle(195, 422, 320, 220, 0xffffff, 1).setOrigin(0.5);
         
-        this.dialogTitle = this.add.text(195, 335, '交易名稱', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
-        this.dialogSubText = this.add.text(195, 365, '單價: 0 金幣', { fontSize: '14px', color: '#666', fontStyle: 'bold' }).setOrigin(0.5);
+        this.dialogTitle = this.add.text(195, 335, '交易名稱', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5).setDepth(105);
+        this.dialogSubText = this.add.text(195, 365, '單價: 0 金幣', { fontSize: '14px', color: '#666', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
-        // 數量選擇UI控制項 ( - [數量] + [MAX] )
+        // 減號按鈕
         const btnMinus = this.add.rectangle(110, 410, 40, 36, 0x424242, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(110, 410, '➖', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+        const txtMinus = this.add.text(110, 410, '➖', { fontSize: '16px', color: '#ffffff' }).setOrigin(0.5).setDepth(105);
 
-        this.textQty = this.add.text(170, 410, '1', { fontSize: '20px', color: '#000', fontStyle: 'bold' }).setOrigin(0.5);
+        // 數字顯示
+        this.textQty = this.add.text(170, 410, '1', { fontSize: '20px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
+        // 加號按鈕
         const btnPlus = this.add.rectangle(230, 410, 40, 36, 0x424242, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(230, 410, '➕', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+        const txtPlus = this.add.text(230, 410, '➕', { fontSize: '16px', color: '#ffffff' }).setOrigin(0.5).setDepth(105);
 
+        // MAX 按鈕
         const btnMax = this.add.rectangle(280, 410, 45, 36, 0xFF9800, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(280, 410, 'MAX', { fontSize: '12px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const txtMax = this.add.text(280, 410, 'MAX', { fontSize: '12px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
-        this.dialogTotalText = this.add.text(195, 460, '總計: 0 金幣', { fontSize: '16px', color: '#E53935', fontStyle: 'bold' }).setOrigin(0.5);
+        // 總計金額
+        this.dialogTotalText = this.add.text(195, 460, '總計: 0 金幣', { fontSize: '16px', color: '#E53935', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         // 按鈕：確認與取消
         const btnYes = this.add.rectangle(130, 505, 100, 38, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        const textYes = this.add.text(130, 505, '確認交易', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const textYes = this.add.text(130, 505, '確認交易', { fontSize: '15px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
         
         const btnNo = this.add.rectangle(260, 505, 100, 38, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        const textNo = this.add.text(260, 505, '取消', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const textNo = this.add.text(260, 505, '取消', { fontSize: '15px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         // 事件綁定
         btnMinus.on('pointerdown', () => this.updateQuantity(-1));
@@ -114,10 +118,13 @@ export default class ShopScene extends Phaser.Scene {
             if (this.confirmTradeCallback) this.confirmTradeCallback(this.currentQty);
         });
 
+        // 加入 Container 陣列（確保底圖在最前，按鈕矩形在中，所有文字在最後）
         this.dialogContainer.add([
-            overlay, bg, this.dialogTitle, this.dialogSubText,
-            btnMinus, this.textQty, btnPlus, btnMax,
-            this.dialogTotalText, btnYes, textYes, btnNo, textNo
+            overlay, bg, 
+            btnMinus, btnPlus, btnMax, btnYes, btnNo,
+            this.dialogTitle, this.dialogSubText,
+            txtMinus, this.textQty, txtPlus, txtMax,
+            this.dialogTotalText, textYes, textNo
         ]);
     }
 
