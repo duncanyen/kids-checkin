@@ -1,6 +1,6 @@
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName } from './constants.js';
+import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
 
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
@@ -20,7 +20,6 @@ export default class VisitScene extends Phaser.Scene {
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
 
-        // 🏠 雞舍改為可點擊互動，點擊後觸發幫忙打掃詢問
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.coop.on('pointerdown', () => this.askCleanTargetFarm());
 
@@ -48,9 +47,7 @@ export default class VisitScene extends Phaser.Scene {
         this.add.text(55, 50, '🏃 溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene'));
 
-        // 建立通用確認對話框
         this.createConfirmDialog();
-
         this.initFirebase();
 
         if (Phaser.Math.Between(1, 30) === 1) {
@@ -78,10 +75,7 @@ export default class VisitScene extends Phaser.Scene {
         this.unsubscribeTarget = onSnapshot(targetRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
-                
-                // 🌟 當訪客進入鄰居家時，若發現鄰居離線且應生蛋時間已過，協助進行離線生蛋與髒亂值計算
                 this.checkAndUpdateTargetEggLaying(targetRef, this.targetFarmData);
-
                 this.coopEgg.setVisible((this.targetFarmData.eggsReady || 0) > 0);
                 this.syncTargetHens(); 
                 this.renderTargetCleanliness();
@@ -89,10 +83,8 @@ export default class VisitScene extends Phaser.Scene {
         });
     }
 
-    // 🛡️ 關鍵安全修正：計算目標玩家離線生蛋，並安全寫回 Firestore (防止全物件歸零與髒亂值過度暴增)
     async checkAndUpdateTargetEggLaying(targetRef, farm) {
         if (!farm || farm.lastLayTime === undefined) return;
-
         const now = Date.now();
         const henCount = Math.max(1, farm.hens || 1);
         const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
@@ -106,7 +98,7 @@ export default class VisitScene extends Phaser.Scene {
         while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
             eggsReady++;
             lastLayTime += currentLayTimeMs;
-            cleanliness = Math.min(100, cleanliness + 2); // 🌟 恢復為每顆蛋 +2 髒亂值
+            cleanliness = Math.min(100, cleanliness + 2);
             hasChanged = true;
         }
 
@@ -120,7 +112,7 @@ export default class VisitScene extends Phaser.Scene {
             try {
                 await runTransaction(db, async (t) => {
                     const docSnap = await t.get(targetRef);
-                    if (!docSnap.exists() || !docSnap.data()?.farm) return; // 🛡️ 安全防禦
+                    if (!docSnap.exists() || !docSnap.data()?.farm) return; 
                     
                     const latestFarm = docSnap.data().farm;
                     let lTime = latestFarm.lastLayTime || now;
@@ -131,7 +123,7 @@ export default class VisitScene extends Phaser.Scene {
                     while (now - lTime >= currentLayTimeMs && eReady < maxEggs) {
                         eReady++;
                         lTime += currentLayTimeMs;
-                        cVal = Math.min(100, cVal + 2); // 🌟 恢復為每顆蛋 +2 髒亂值
+                        cVal = Math.min(100, cVal + 2);
                         updated = true;
                     }
                     if (eReady >= maxEggs && (now - lTime > 0)) {
@@ -140,7 +132,6 @@ export default class VisitScene extends Phaser.Scene {
                     }
 
                     if (updated) {
-                        // 🛡️ 嚴禁覆蓋整個 farm 物件，僅指定點號子欄位更新
                         t.update(targetRef, {
                             "farm.lastLayTime": lTime,
                             "farm.eggsReady": eReady,
@@ -158,13 +149,11 @@ export default class VisitScene extends Phaser.Scene {
 
     onMyFarmDataChanged(parent, value) { this.myFarmData = value; }
 
-    // 點擊鄰居雞舍彈出確認提示
     askCleanTargetFarm() {
         if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
             this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, this.cameras.main.centerX, 150);
             return;
         }
-
         this.dialogText.setText(`[${this.targetName}] 的雞舍有點髒亂\n是否要幫忙打掃雞舍？`);
         this.dialogContainer.setVisible(true);
     }
@@ -274,12 +263,34 @@ export default class VisitScene extends Phaser.Scene {
         } catch (e) { console.error("發送廣播失敗:", e); }
     }
 
+    showDizzyEffect(x, y) {
+        const star1 = this.add.image(x - 15, y - 10, 'star').setDepth(40);
+        const star2 = this.add.image(x + 15, y - 20, 'star').setDepth(40);
+        const star3 = this.add.image(x, y - 30, 'star').setDepth(40);
+        
+        [star1, star2, star3].forEach(star => {
+            this.tweens.add({
+                targets: star,
+                y: star.y - 30,
+                angle: 360,
+                alpha: 0,
+                duration: 600 + Phaser.Math.Between(0, 300),
+                onComplete: () => star.destroy()
+            });
+        });
+    }
+
     // --- 野狼與老虎事件邏輯 ---
     spawnTigerEvent() {
         this.isTigerDefeated = false; this.tigerHitCount = 0;
+        
+        const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
+        const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
+        const totalHitsNeeded = Math.ceil(200 / weapon.damage);
+
         this.tiger = this.add.image(-20, this.cameras.main.height - 50, 'tiger').setOrigin(0.5).setScale(1.6).setDepth(25).setInteractive({ cursor: 'pointer' });
-        this.club = this.add.image(0, 0, 'club').setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
-        const warnText = this.add.text(this.cameras.main.centerX, 120, '🚨 危機：猛虎出閘！\n快用木棒打退牠 (點擊200下)', { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
+        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
+        const warnText = this.add.text(this.cameras.main.centerX, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
 
         this.tigerTween = this.tweens.add({
@@ -289,12 +300,23 @@ export default class VisitScene extends Phaser.Scene {
 
         this.tiger.on('pointerdown', (pointer) => {
             if (this.isTigerDefeated) return;
-            this.tigerHitCount++;
+            this.tigerHitCount += weapon.damage;
             this.tiger.setTint(0xff0000); this.time.delayedCall(50, () => this.tiger.clearTint());
+            
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
+            
+            if (weapon.damage > 1) {
+                this.showDizzyEffect(pointer.x, pointer.y - 30);
+            }
+
             if (this.tigerHitCount >= 200) { warnText.destroy(); this.defeatTiger(); }
-            else if (this.tigerHitCount % 20 === 0) { this.showFloatingText(`還差 ${200 - this.tigerHitCount} 下!`, '#FF9800', 16, this.tiger.x, this.tiger.y - 50); }
+            else {
+                const hitsLeft = Math.ceil(Math.max(0, 200 - this.tigerHitCount) / weapon.damage);
+                if (this.tigerHitCount % 20 === 0 || weapon.damage > 1) { 
+                    this.showFloatingText(`還差 ${hitsLeft} 下!`, '#FF9800', 16, this.tiger.x, this.tiger.y - 50); 
+                }
+            }
         });
     }
 
@@ -308,8 +330,7 @@ export default class VisitScene extends Phaser.Scene {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
-            const usedSpace = (farm.inventoryEggs || 0) + (farm.worms || 0) + (farm.earthworms || 0) + (farm.wolfFangs || 0) + (farm.tigerPelts || 0) + (farm.medicines || 0);
-            if (usedSpace < (farm.warehouseLimit || 10)) {
+            if (getUsedSpace(farm) < (farm.warehouseLimit || 10)) {
                 t.update(myFarmRef, { "farm.tigerPelts": (farm.tigerPelts || 0) + 1 }); return true; 
             } else return false; 
         }).then((success) => {
@@ -320,7 +341,6 @@ export default class VisitScene extends Phaser.Scene {
         }).catch(e => console.error(e));
     }
 
-    // 🛡️ 安全修正：老虎逃跑時只合理扣除少量金幣，絕不直接清空庫存雞蛋！
     tigerEscapes() {
         this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
@@ -334,9 +354,14 @@ export default class VisitScene extends Phaser.Scene {
 
     spawnWolfEvent() {
         this.isWolfDefeated = false; this.wolfHitCount = 0;
+
+        const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
+        const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
+        const totalHitsNeeded = Math.ceil(200 / weapon.damage);
+
         this.wolf = this.add.image(this.cameras.main.centerX + 120, this.cameras.main.centerY + 220, 'wolf').setOrigin(0.5).setScale(1.5).setDepth(25).setInteractive({ cursor: 'pointer' });
-        this.club = this.add.image(0, 0, 'club').setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
-        const warnText = this.add.text(this.cameras.main.centerX, 120, '⚠️ 警告：大野狼來襲！\n快用木棒打退牠 (點擊200下)', { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
+        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
+        const warnText = this.add.text(this.cameras.main.centerX, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
 
         this.wolfTween = this.tweens.add({
@@ -346,12 +371,23 @@ export default class VisitScene extends Phaser.Scene {
 
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated) return;
-            this.wolfHitCount++;
+            this.wolfHitCount += weapon.damage;
             this.wolf.setTint(0xff0000); this.time.delayedCall(50, () => this.wolf.clearTint());
+            
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
+            
+            if (weapon.damage > 1) {
+                this.showDizzyEffect(pointer.x, pointer.y - 30);
+            }
+
             if (this.wolfHitCount >= 200) { warnText.destroy(); this.defeatWolf(); }
-            else if (this.wolfHitCount % 20 === 0) { this.showFloatingText(`還差 ${200 - this.wolfHitCount} 下!`, '#FF9800', 16, this.wolf.x, this.wolf.y - 40); }
+            else {
+                const hitsLeft = Math.ceil(Math.max(0, 200 - this.wolfHitCount) / weapon.damage);
+                if (this.wolfHitCount % 20 === 0 || weapon.damage > 1) { 
+                    this.showFloatingText(`還差 ${hitsLeft} 下!`, '#FF9800', 16, this.wolf.x, this.wolf.y - 40); 
+                }
+            }
         });
     }
 
@@ -365,8 +401,7 @@ export default class VisitScene extends Phaser.Scene {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
-            const usedSpace = (farm.inventoryEggs || 0) + (farm.worms || 0) + (farm.earthworms || 0) + (farm.wolfFangs || 0) + (farm.tigerPelts || 0) + (farm.medicines || 0);
-            if (usedSpace < (farm.warehouseLimit || 10)) {
+            if (getUsedSpace(farm) < (farm.warehouseLimit || 10)) {
                 t.update(myFarmRef, { "farm.wolfFangs": (farm.wolfFangs || 0) + 1 }); return true; 
             } else return false; 
         }).then((success) => {
@@ -396,7 +431,7 @@ export default class VisitScene extends Phaser.Scene {
         cabSprite.isAnimating = true;
         this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
 
-        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0) + (this.myFarmData.wolfFangs || 0) + (this.myFarmData.tigerPelts || 0) + (this.myFarmData.medicines || 0);
+        const usedSpace = getUsedSpace(this.myFarmData);
         const limit = this.myFarmData.warehouseLimit || 10;
         const rand = Phaser.Math.Between(1, 500);
         let foundType = null, icon = null;
@@ -417,7 +452,6 @@ export default class VisitScene extends Phaser.Scene {
         } catch (e) { console.error(e); }
     }
 
-    // 偷蛋邏輯：依「目標玩家」獨立計算冷卻，扣 5 點道德值並判定成功率
     async attemptSteal() {
         if (this.isStealing || !this.myFarmData) return;
         const safeX = this.cameras.main.centerX, safeY = this.cameras.main.centerY - 60;
@@ -445,8 +479,7 @@ export default class VisitScene extends Phaser.Scene {
             return;
         }
 
-        const usedSpace = (this.myFarmData.inventoryEggs || 0) + (this.myFarmData.worms || 0) + (this.myFarmData.earthworms || 0) + (this.myFarmData.wolfFangs || 0) + (this.myFarmData.tigerPelts || 0) + (this.myFarmData.medicines || 0);
-        if (usedSpace >= (this.myFarmData.warehouseLimit || 10)) {
+        if (getUsedSpace(this.myFarmData) >= (this.myFarmData.warehouseLimit || 10)) {
             this.showFloatingText('你的倉庫滿了，偷不了！', '#F44336', 15, safeX, safeY); return;
         }
 
@@ -496,7 +529,6 @@ export default class VisitScene extends Phaser.Scene {
         } finally { this.isStealing = false; }
     }
 
-    // 🔒 建立確認對話框
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
