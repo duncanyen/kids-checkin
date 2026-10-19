@@ -83,7 +83,8 @@ export default class MyFarmScene extends Phaser.Scene {
 
     initFirebase() {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
-            if (!docSnap.exists() || !docSnap.data().farm) {
+            // 🛡️ 防禦修正 1：嚴格驗證文件與 farm 物件，只有在【文件完全不存在】時才進行初始化
+            if (!docSnap.exists()) {
                 setDoc(myFarmRef, { 
                     farm: { 
                         coins: 0, inventoryEggs: 0, hens: 1, coopLevel: 1, eggsReady: 0, 
@@ -94,12 +95,30 @@ export default class MyFarmScene extends Phaser.Scene {
                 }, { merge: true });
                 return;
             }
-            this.farmData = docSnap.data().farm;
 
-            // 自動修補欄位
-            if (this.farmData.cleanliness === undefined) this.farmData.cleanliness = 0;
-            if (!Array.isArray(this.farmData.hensState)) {
-                this.farmData.hensState = Array.from({ length: this.farmData.hens || 1 }, () => ({ isSick: false }));
+            const rawData = docSnap.data();
+            if (!rawData || !rawData.farm) {
+                console.warn("⚠️ Farm 欄位未即時載入，等待快取或同步，暫不重置資料庫！");
+                return; // 防護：不要直接重置整個資料庫，避免快取延遲時誤刪！
+            }
+
+            this.farmData = rawData.farm;
+
+            // 🛡️ 防禦修正 2：安全補齊缺漏欄位（以原本的進度為底，絕不歸零）
+            const safeHens = Math.max(1, this.farmData.hens || 1);
+            this.farmData.hens = safeHens;
+            this.farmData.coins = this.farmData.coins !== undefined ? this.farmData.coins : 0;
+            this.farmData.cleanliness = this.farmData.cleanliness !== undefined ? this.farmData.cleanliness : 0;
+            this.farmData.warehouseLimit = this.farmData.warehouseLimit || 10;
+            this.farmData.coopLevel = this.farmData.coopLevel || 1;
+            
+            if (!Array.isArray(this.farmData.hensState) || this.farmData.hensState.length === 0) {
+                this.farmData.hensState = Array.from({ length: safeHens }, () => ({ isSick: false }));
+            } else if (this.farmData.hensState.length < safeHens) {
+                // 補足缺少狀態的母雞
+                while (this.farmData.hensState.length < safeHens) {
+                    this.farmData.hensState.push({ isSick: false });
+                }
             }
 
             this.updateUI();
@@ -112,7 +131,7 @@ export default class MyFarmScene extends Phaser.Scene {
     updateUI() {
         if (!this.farmData) return;
         this.coinsText.setText(`💰 ${this.farmData.coins || 0}`);
-        this.coopEgg.setVisible(this.farmData.eggsReady > 0);
+        this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
 
         const cleanVal = this.farmData.cleanliness || 0;
         this.cleanText.setText(`🗑️ ${cleanVal}/100`);
@@ -164,7 +183,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     syncHens() {
         if (!this.farmData) return;
-        const henCount = this.farmData.hens || 1;
+        const henCount = Math.max(1, this.farmData.hens || 1);
         const coopLevel = this.farmData.coopLevel || 1;
         const hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
         const now = Date.now();
@@ -228,11 +247,16 @@ export default class MyFarmScene extends Phaser.Scene {
         }
     }
 
+    // 🛡️ 防禦修正 3：防止清理死雞時將母雞數量扣到 0 或造成資料歸零
     async cleanupDeadHens(newHensState) {
         try {
             await runTransaction(db, async (t) => {
+                const snap = await t.get(myFarmRef);
+                if (!snap.exists() || !snap.data().farm) return;
+                
+                const safeCount = Math.max(1, newHensState.length); // 至少保留 1 隻
                 t.update(myFarmRef, { 
-                    "farm.hens": Math.max(0, newHensState.length),
+                    "farm.hens": safeCount,
                     "farm.hensState": newHensState 
                 });
             });
@@ -318,7 +342,7 @@ export default class MyFarmScene extends Phaser.Scene {
         });
     }
 
-    // ⏱️ 正確計算生蛋產能演算法 (一隻雞 4 小時產 1 顆，多隻雞依比例精確縮短週期)
+    // ⏱️ 生蛋計時器與生產演算
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -331,12 +355,10 @@ export default class MyFarmScene extends Phaser.Scene {
             let hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
             let changed = false;
 
-            const totalHens = this.farmData.hens || 1;
-            // 計算健康的母雞數量，生病的母雞不參與生產
+            const totalHens = Math.max(1, this.farmData.hens || 1);
             const healthyHens = hensState.filter(h => !h.isSick).length;
             const activeHens = Math.max(1, healthyHens > 0 ? healthyHens : totalHens);
 
-            // 每隻雞 4 小時，則 N 隻健康的雞生產 1 顆蛋所需時間為 4小時 / N
             const currentLayIntervalMs = Math.floor(LAY_EGG_TIME_MS / activeHens);
             const maxEggs = totalHens * 6; 
 
@@ -361,24 +383,19 @@ export default class MyFarmScene extends Phaser.Scene {
                 changed = true;
             }
 
-            if (eggsReady >= maxEggs) {
-                if (now - lastLayTime > 0) { lastLayTime = now; changed = true; }
+            if (eggsReady >= maxEggs && (now - lastLayTime > 0)) {
+                lastLayTime = now;
+                changed = true;
             }
 
+            // 🛡️ 防禦修正 4：避免頻繁直寫數據，採用安全獨立欄位 updateDoc
             if (changed) {
                 updateDoc(myFarmRef, { 
                     "farm.eggsReady": eggsReady, 
                     "farm.lastLayTime": lastLayTime,
                     "farm.cleanliness": cleanliness,
                     "farm.hensState": hensState
-                }).catch(e => console.error(e));
-
-                this.farmData.eggsReady = eggsReady;
-                this.farmData.lastLayTime = lastLayTime;
-                this.farmData.cleanliness = cleanliness;
-                this.farmData.hensState = hensState;
-                this.updateUI(); 
-                this.renderCleanlinessVisual();
+                }).catch(e => console.error("生蛋計時更新失敗:", e));
             }
 
             if (eggsReady >= maxEggs) {
@@ -416,6 +433,7 @@ export default class MyFarmScene extends Phaser.Scene {
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
+                if (!snap.exists() || !snap.data().farm) return;
                 const farm = snap.data().farm;
                 t.update(myFarmRef, { [`farm.${foundType}`]: (farm[foundType] || 0) + 1 });
             });
@@ -426,7 +444,7 @@ export default class MyFarmScene extends Phaser.Scene {
     async harvestEgg() {
         if (this.isHarvesting) return; 
 
-        if (!this.farmData || this.farmData.eggsReady <= 0) {
+        if (!this.farmData || (this.farmData.eggsReady || 0) <= 0) {
             this.emptyClickCount++;
             if (this.emptyClickTimer) this.emptyClickTimer.remove();
             this.emptyClickTimer = this.time.delayedCall(2000, () => this.emptyClickCount = 0);
@@ -460,8 +478,9 @@ export default class MyFarmScene extends Phaser.Scene {
         try {
             await runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
+                if (!docSnap.exists() || !docSnap.data().farm) return;
                 const farm = docSnap.data().farm;
-                if (farm.eggsReady > 0) {
+                if ((farm.eggsReady || 0) > 0) {
                     transaction.update(myFarmRef, {
                         "farm.inventoryEggs": (farm.inventoryEggs || 0) + farm.eggsReady,
                         "farm.eggsReady": 0
@@ -473,7 +492,7 @@ export default class MyFarmScene extends Phaser.Scene {
         finally { this.isHarvesting = false; }
     }
 
-    // 🔒 乾淨的確認對話框 (全物件完全收納於 Container 內)
+    // 🔒 確認對話框
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         
@@ -502,7 +521,6 @@ export default class MyFarmScene extends Phaser.Scene {
             this.dialogActionType = null;
         });
 
-        // 將所有相關物件收納至 Container 中統一隱藏/顯示
         this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
