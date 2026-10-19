@@ -35,8 +35,25 @@ export const FANG_PRICE = 20;
 export const EXPAND_SLOT_PRICE = 100;
 export const COOP_LV2_PRICE = 3000;
 export const COOP_LV3_PRICE = 10000;
+export const MACE_PRICE = 2000; // 狼牙棒售價
 
 // 容量設定
 export const COOP_LV1_MAX = 3;
 export const COOP_LV2_MAX = 10;
 export const COOP_LV3_MAX = 20;
+
+// ==========================================
+// 擴充性武器與庫存系統配置
+// ==========================================
+export const WEAPONS_CONFIG = {
+    'club': { name: '木棒', damage: 1, icon: 'club' },
+    'mace': { name: '狼牙棒', damage: 10, icon: 'mace' }
+};
+
+export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'medicines', 'mace'];
+
+// 動態計算倉庫目前使用容量
+export const getUsedSpace = (farm) => {
+    if (!farm) return 0;
+    return INVENTORY_KEYS.reduce((sum, key) => sum + (farm[key] || 0), 0);
+};
