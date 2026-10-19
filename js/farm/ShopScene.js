@@ -48,19 +48,19 @@ export default class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        // 買進清單 (排版與位置修正)
-        this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n(-${HEN_PRICE})`, 0x333333, () => this.askConfirm('母雞', HEN_PRICE, () => this.buyHen()));
-        this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `容量+10\n(-${EXPAND_SLOT_PRICE})`, 0x333333, () => this.askConfirm('倉庫擴充', EXPAND_SLOT_PRICE, () => this.expandWarehouse()));
-        this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n(-10)`, 0x333333, () => this.askConfirm('咕咕活力散', 10, () => this.buyMedicine()));
-        this.addShopItem(this.buyContainer, 295, 140, 'coop', `中雞舍\n(-${COOP_LV2_PRICE})`, 0x1976D2, () => this.askConfirm('中型雞舍', COOP_LV2_PRICE, () => this.upgradeCoop(2, COOP_LV2_PRICE)));
-        this.addShopItem(this.buyContainer, 95, 240, 'coop', `大雞舍\n(-${COOP_LV3_PRICE})`, 0x1976D2, () => this.askConfirm('大型雞舍', COOP_LV3_PRICE, () => this.upgradeCoop(3, COOP_LV3_PRICE)));
+        // 📥 買進清單 (標價改成「多少金幣」與「容量(+10)100金幣」格式)
+        this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n${HEN_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'hen', '母雞', HEN_PRICE));
+        this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE));
+        this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n10金幣`, 0x333333, () => this.openTradeModal('buy', 'medicine', '咕咕活力散', 10));
+        this.addShopItem(this.buyContainer, 295, 140, 'coop', `中雞舍\n${COOP_LV2_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop2', '中型雞舍', COOP_LV2_PRICE, true));
+        this.addShopItem(this.buyContainer, 95, 240, 'coop', `大雞舍\n${COOP_LV3_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop3', '大型雞舍', COOP_LV3_PRICE, true));
 
-        // 賣出清單
-        this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n(+${EGG_PRICE})`, 0x333333, () => this.askConfirm('賣出雞蛋', 0, () => this.sellItem('inventoryEggs', EGG_PRICE, '雞蛋')));
-        this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n(+${WORM_PRICE})`, 0x333333, () => this.askConfirm('賣出菜蟲', 0, () => this.sellItem('worms', WORM_PRICE, '菜蟲')));
-        this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n(+${EARTHWORM_PRICE})`, 0x333333, () => this.askConfirm('賣出蚯蚓', 0, () => this.sellItem('earthworms', EARTHWORM_PRICE, '蚯蚓')));
-        this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n(+${FANG_PRICE})`, 0x333333, () => this.askConfirm('賣出狼牙', 0, () => this.sellItem('wolfFangs', FANG_PRICE, '狼牙')));
-        this.addShopItem(this.sellContainer, 195, 240, 'tiger_pelt', `虎皮\n(+50)`, 0x333333, () => this.askConfirm('賣出虎皮', 0, () => this.sellItem('tigerPelts', 50, '虎皮')));
+        // 📤 賣出清單
+        this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n${EGG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'inventoryEggs', '雞蛋', EGG_PRICE));
+        this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n${WORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'worms', '菜蟲', WORM_PRICE));
+        this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n${EARTHWORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'earthworms', '蚯蚓', EARTHWORM_PRICE));
+        this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n${FANG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'wolfFangs', '狼牙', FANG_PRICE));
+        this.addShopItem(this.sellContainer, 195, 240, 'tiger_pelt', `虎皮\n50金幣`, 0x333333, () => this.openTradeModal('sell', 'tigerPelts', '虎皮', 50));
     }
 
     addShopItem(container, x, y, iconKey, text, color, callback) {
@@ -68,39 +68,133 @@ export default class ShopScene extends Phaser.Scene {
         const icon = this.add.image(x - 45, y, iconKey);
         const scale = Math.min(45 / icon.width, 45 / icon.height);
         icon.setScale(scale);
-        const txt = this.add.text(x + 18, y, text, { fontSize: '14px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        const txt = this.add.text(x + 18, y, text, { fontSize: '13px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
         bg.on('pointerdown', callback);
         container.add([bg, icon, txt]);
     }
 
-    // 🔒 修正確認對話框：將「確認」與「取消」文字完全加入 container 中
+    // 🔒 數量選擇與交易對話框
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
-        const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
-        this.dialogText = this.add.text(195, 380, '確定要購買嗎？', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
+        const bg = this.add.rectangle(195, 422, 320, 220, 0xffffff, 1).setOrigin(0.5);
         
-        const btnYes = this.add.rectangle(120, 460, 100, 40, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        const textYes = this.add.text(120, 460, '確認', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.dialogTitle = this.add.text(195, 335, '交易名稱', { fontSize: '18px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
+        this.dialogSubText = this.add.text(195, 365, '單價: 0 金幣', { fontSize: '14px', color: '#666', fontStyle: 'bold' }).setOrigin(0.5);
+
+        // 數量選擇UI控制項 ( - [數量] + [MAX] )
+        const btnMinus = this.add.rectangle(110, 410, 40, 36, 0x424242, 1).setInteractive({ cursor: 'pointer' });
+        this.add.text(110, 410, '➖', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+
+        this.textQty = this.add.text(170, 410, '1', { fontSize: '20px', color: '#000', fontStyle: 'bold' }).setOrigin(0.5);
+
+        const btnPlus = this.add.rectangle(230, 410, 40, 36, 0x424242, 1).setInteractive({ cursor: 'pointer' });
+        this.add.text(230, 410, '➕', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
+
+        const btnMax = this.add.rectangle(280, 410, 45, 36, 0xFF9800, 1).setInteractive({ cursor: 'pointer' });
+        this.add.text(280, 410, 'MAX', { fontSize: '12px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        this.dialogTotalText = this.add.text(195, 460, '總計: 0 金幣', { fontSize: '16px', color: '#E53935', fontStyle: 'bold' }).setOrigin(0.5);
+
+        // 按鈕：確認與取消
+        const btnYes = this.add.rectangle(130, 505, 100, 38, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
+        const textYes = this.add.text(130, 505, '確認交易', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
-        const btnNo = this.add.rectangle(270, 460, 100, 40, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        const textNo = this.add.text(270, 460, '取消', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const btnNo = this.add.rectangle(260, 505, 100, 38, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
+        const textNo = this.add.text(260, 505, '取消', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        // 事件綁定
+        btnMinus.on('pointerdown', () => this.updateQuantity(-1));
+        btnPlus.on('pointerdown', () => this.updateQuantity(1));
+        btnMax.on('pointerdown', () => this.setQuantity(this.currentMaxQty));
 
         btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
         btnYes.on('pointerdown', () => {
             this.dialogContainer.setVisible(false);
-            if (this.confirmCallback) this.confirmCallback();
+            if (this.confirmTradeCallback) this.confirmTradeCallback(this.currentQty);
         });
 
-        // 將按鈕與文字全部加至 dialogContainer，確保開啟時呈現文字，關閉時一併隱藏
-        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
+        this.dialogContainer.add([
+            overlay, bg, this.dialogTitle, this.dialogSubText,
+            btnMinus, this.textQty, btnPlus, btnMax,
+            this.dialogTotalText, btnYes, textYes, btnNo, textNo
+        ]);
     }
 
-    askConfirm(itemName, price, callback) {
-        if (this.isProcessing) return; 
-        this.dialogText.setText(price > 0 ? `確定花費 ${price} 購買\n[${itemName}] 嗎？` : `確定要執行\n[${itemName}] 嗎？`);
-        this.confirmCallback = callback;
+    // 計算當前可買賣的最大數量
+    openTradeModal(type, itemKey, itemName, unitPrice, isSingleOnly = false) {
+        if (this.isProcessing || !this.farmData) return;
+
+        this.tradeType = type;
+        this.tradeUnitPrice = unitPrice;
+        this.currentQty = 1;
+
+        const coins = this.farmData.coins || 0;
+        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0) + (this.farmData.tigerPelts || 0) + (this.farmData.medicines || 0);
+        const freeSpace = Math.max(0, (this.farmData.warehouseLimit || 10) - usedSpace);
+
+        if (type === 'buy') {
+            if (isSingleOnly) {
+                this.currentMaxQty = 1;
+            } else if (itemKey === 'hen') {
+                const coopLevel = this.farmData.coopLevel || 1;
+                const maxHens = (coopLevel === 3) ? COOP_LV3_MAX : (coopLevel === 2 ? COOP_LV2_MAX : 3);
+                const currentHens = this.farmData.hens || 1;
+                const spaceForHens = Math.max(0, maxHens - currentHens);
+                const maxByCoins = Math.floor(coins / unitPrice);
+                this.currentMaxQty = Math.min(spaceForHens, maxByCoins);
+            } else if (itemKey === 'expand') {
+                this.currentMaxQty = Math.floor(coins / unitPrice);
+            } else if (itemKey === 'medicine') {
+                const maxByCoins = Math.floor(coins / unitPrice);
+                this.currentMaxQty = Math.min(freeSpace, maxByCoins);
+            }
+        } else {
+            // 賣出數量上限以倉庫擁有的數量為準
+            this.currentMaxQty = this.farmData[itemKey] || 0;
+        }
+
+        if (this.currentMaxQty <= 0) {
+            if (type === 'buy') {
+                this.showMsg('金幣不足或達到購買上限！', '#F44336');
+            } else {
+                this.showMsg(`${itemName}不足，無法賣出！`, '#F44336');
+            }
+            return;
+        }
+
+        this.dialogTitle.setText(`${type === 'buy' ? '買進' : '賣出'} [${itemName}]`);
+        this.dialogSubText.setText(`單價: ${unitPrice} 金幣`);
+        this.updateQuantity(0); // 刷新UI數字與總金額
+
+        // 綁定點擊交易後的邏輯
+        this.confirmTradeCallback = (qty) => {
+            if (type === 'buy') {
+                if (itemKey === 'hen') this.executeBuyHen(qty);
+                else if (itemKey === 'expand') this.executeExpandWarehouse(qty);
+                else if (itemKey === 'medicine') this.executeBuyMedicine(qty);
+                else if (itemKey === 'coop2') this.executeUpgradeCoop(2, unitPrice);
+                else if (itemKey === 'coop3') this.executeUpgradeCoop(3, unitPrice);
+            } else {
+                this.executeSellItem(itemKey, unitPrice, itemName, qty);
+            }
+        };
+
         this.dialogContainer.setVisible(true);
+    }
+
+    updateQuantity(delta) {
+        this.currentQty = Phaser.Math.Clamp(this.currentQty + delta, 1, Math.max(1, this.currentMaxQty));
+        this.textQty.setText(`${this.currentQty}`);
+        const total = this.currentQty * this.tradeUnitPrice;
+        this.dialogTotalText.setText(`總計: ${total} 金幣`).setColor(this.tradeType === 'buy' ? '#E53935' : '#4CAF50');
+    }
+
+    setQuantity(qty) {
+        this.currentQty = Phaser.Math.Clamp(qty, 1, Math.max(1, this.currentMaxQty));
+        this.textQty.setText(`${this.currentQty}`);
+        const total = this.currentQty * this.tradeUnitPrice;
+        this.dialogTotalText.setText(`總計: ${total} 金幣`).setColor(this.tradeType === 'buy' ? '#E53935' : '#4CAF50');
     }
 
     showMsg(msg, color) {
@@ -120,73 +214,82 @@ export default class ShopScene extends Phaser.Scene {
         this.assetText.setText(`持有金幣: ${this.farmData.coins || 0}\n庫存容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
     }
 
-    async buyMedicine() {
+    // 📦 批量買藥水
+    async executeBuyMedicine(qty) {
         if (this.isProcessing) return;
-        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0) + (this.farmData.tigerPelts || 0) + (this.farmData.medicines || 0);
-        if (usedSpace >= (this.farmData.warehouseLimit || 10)) { this.showMsg('倉庫容量不足！', '#F44336'); return; }
-        if ((this.farmData.coins || 0) < 10) { this.showMsg('金幣不足！', '#F44336'); return; }
-
         this.isProcessing = true;
+        const totalPrice = qty * 10;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
-                if ((farm.coins || 0) < 10) throw "金幣不足！";
+                const usedSpace = (farm.inventoryEggs || 0) + (farm.worms || 0) + (farm.earthworms || 0) + (farm.wolfFangs || 0) + (farm.tigerPelts || 0) + (farm.medicines || 0);
+                if (usedSpace + qty > (farm.warehouseLimit || 10)) throw "倉庫容量不足！";
+                if ((farm.coins || 0) < totalPrice) throw "金幣不足！";
+
                 t.update(myFarmRef, { 
-                    "farm.coins": farm.coins - 10, 
-                    "farm.medicines": (farm.medicines || 0) + 1 
+                    "farm.coins": farm.coins - totalPrice, 
+                    "farm.medicines": (farm.medicines || 0) + qty 
                 });
             });
-            this.showMsg('購買成功！獲得 咕咕活力散 +1 💊', '#4CAF50');
+            this.showMsg(`購買成功！獲得 咕咕活力散 +${qty} 💊`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "購買失敗", '#F44336'); }
         finally { this.isProcessing = false; }
     }
 
-    async sellItem(itemKey, price, itemName) {
+    // 📦 批量賣物品
+    async executeSellItem(itemKey, unitPrice, itemName, qty) {
         if (this.isProcessing) return;
-        if (!this.farmData || (this.farmData[itemKey] || 0) < 1) { this.showMsg(`${itemName}不足！`, '#F44336'); return; }
         this.isProcessing = true;
+        const totalPrice = qty * unitPrice;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
-                if (farm[itemKey] > 0) {
-                    t.update(myFarmRef, { [`farm.${itemKey}`]: farm[itemKey] - 1, "farm.coins": (farm.coins || 0) + price });
-                } else throw `${itemName}不足！`;
+                if ((farm[itemKey] || 0) >= qty) {
+                    t.update(myFarmRef, { 
+                        [`farm.${itemKey}`]: farm[itemKey] - qty, 
+                        "farm.coins": (farm.coins || 0) + totalPrice 
+                    });
+                } else throw `${itemName}數量不足！`;
             });
-            this.showMsg(`賣出成功！獲得 ${price} 金幣`, '#4CAF50');
+            this.showMsg(`賣出成功！獲得 ${totalPrice} 金幣`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
         finally { this.isProcessing = false; }
     }
 
-    async buyHen() {
+    // 🐔 批量買母雞
+    async executeBuyHen(qty) {
         if (this.isProcessing) return;
-        if (!this.farmData || (this.farmData.coins || 0) < HEN_PRICE) { this.showMsg(`金幣不足！`, '#F44336'); return; }
         this.isProcessing = true;
+        const totalPrice = qty * HEN_PRICE;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 const coopLevel = farm.coopLevel || 1; 
                 let maxHens = (coopLevel === 3) ? COOP_LV3_MAX : (coopLevel === 2 ? COOP_LV2_MAX : 3);
-                if ((farm.hens || 1) >= maxHens) throw `雞舍已滿 (${maxHens}隻)！`;
-                if ((farm.coins || 0) < HEN_PRICE) throw "金幣不足！";
+                if ((farm.hens || 1) + qty > maxHens) throw `母雞數量將超過雞舍限制 (${maxHens}隻)！`;
+                if ((farm.coins || 0) < totalPrice) throw "金幣不足！";
 
                 let states = farm.hensState || [];
-                states.push({ isSick: false });
+                for (let i = 0; i < qty; i++) {
+                    states.push({ isSick: false });
+                }
 
                 t.update(myFarmRef, { 
-                    "farm.coins": farm.coins - HEN_PRICE, 
-                    "farm.hens": (farm.hens || 1) + 1,
+                    "farm.coins": farm.coins - totalPrice, 
+                    "farm.hens": (farm.hens || 1) + qty,
                     "farm.hensState": states
                 });
             });
-            this.showMsg('購買成功！母雞數量 +1', '#FFD54F');
+            this.showMsg(`購買成功！母雞數量 +${qty}`, '#FFD54F');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
         finally { this.isProcessing = false; }
     }
 
-    async upgradeCoop(level, price) {
+    // 🏠 升級雞舍 (單次)
+    async executeUpgradeCoop(level, price) {
         if (this.isProcessing) return;
         this.isProcessing = true;
         try {
@@ -202,17 +305,22 @@ export default class ShopScene extends Phaser.Scene {
         finally { this.isProcessing = false; }
     }
 
-    async expandWarehouse() {
+    // 📦 批量擴充倉庫
+    async executeExpandWarehouse(qty) {
         if (this.isProcessing) return;
         this.isProcessing = true;
+        const totalPrice = qty * EXPAND_SLOT_PRICE;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
-                if ((farm.coins || 0) < EXPAND_SLOT_PRICE) throw "金幣不足！";
-                t.update(myFarmRef, { "farm.coins": farm.coins - EXPAND_SLOT_PRICE, "farm.warehouseLimit": (farm.warehouseLimit || 10) + 10 });
+                if ((farm.coins || 0) < totalPrice) throw "金幣不足！";
+                t.update(myFarmRef, { 
+                    "farm.coins": farm.coins - totalPrice, 
+                    "farm.warehouseLimit": (farm.warehouseLimit || 10) + (qty * 10) 
+                });
             });
-            this.showMsg('擴充成功！容量 +10', '#FFD54F');
+            this.showMsg(`擴充成功！容量 +${qty * 10}`, '#FFD54F');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
         finally { this.isProcessing = false; }
     }
