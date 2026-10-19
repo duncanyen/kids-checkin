@@ -2,209 +2,148 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus - 管理者後台</title>
-    <link rel="icon" href="Nexus.png" type="image/jpeg">
-    <link rel="apple-touch-icon" href="Nexus.png">
-    <meta name="apple-mobile-web-app-title" content="Nexus">
+    <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <meta name="mobile-web-app-capable" content="yes">
-
     <style>
-        :root {
-            --primary: #10b981;
-            --primary-dark: #059669;
-            --primary-light: #ecfdf5;
-            --danger: #ef4444;
-            --weekend-color: #ef4444;
-            --text-main: #1f2937;
-            --text-sub: #6b7280;
-            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-            --bg-color: #f8fafc;
-            --today-bg: #fffbeb;
-            --public-event: #3b82f6;
-            --private-event: #8b5cf6;
-            --border-color: #e5e7eb;
+        :root { 
+            --primary-color: #1565c0; 
+            --primary-light: #e3f2fd;
+            --accent-color: #4caf50;
+            --danger-color: #e53935;
+            --warning-color: #f57c00;
+            --bg-color: #f0f4f8; 
+            --text-sub: #666;
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: var(--bg-color); margin: 0; padding: 12px; color: var(--text-main); 
-            height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 15px auto; align-items: center; }
+        .btn-back { background: #e0e0e0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; color: #555; }
+        .panel { background: white; max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .system-title { color: var(--primary-color); font-size: 20px; margin-top: 0; margin-bottom: 15px; text-align: center; }
         
-        /* 導覽列 */
-        .top-nav { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; max-width: 600px; width: 100%; margin-left: auto; margin-right: auto; flex-shrink: 0; }
-        .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
+        .filter-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: var(--primary-light); padding: 10px; border-radius: 8px; flex-wrap: wrap; }
+        .filter-group select, .filter-group input[type="date"] { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; min-width: 130px; }
+        .btn-query { background: var(--primary-color); color: white; border: none; padding: 9px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%; }
+        .btn-query:active { opacity: 0.9; }
+
+        .user-reset-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding: 5px;}
+        .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; flex-wrap: wrap; gap: 10px;}
+        .user-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 150px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); background: white; display: flex; justify-content: center; align-items: center; font-size: 20px;}
+        .user-name { font-weight: bold; font-size: 16px; color: #333; }
+        .user-subtext { font-size: 13px; color: #666; margin-top: 4px; line-height: 1.4; }
+        .user-features { font-size: 12px; color: var(--primary-color); font-weight: 600; margin-top: 4px; }
         
-        /* 右上角功能區 */
-        .nav-actions { display: flex; gap: 10px; }
-        .btn-icon-nav { background: white; border: 1px solid #e5e7eb; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: var(--shadow-sm); font-size: 18px; }
+        .action-buttons { display: flex; gap: 8px; }
+        .btn-edit, .btn-remove, .btn-add, .btn-save-group, .btn-approve, .btn-reject { color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-edit { background: var(--primary-color); }
+        .btn-remove { background: var(--warning-color); }
+        .btn-approve { background: var(--accent-color); }
+        .btn-reject { background: var(--danger-color); }
+        .btn-add, .btn-save-group { background: var(--accent-color); width: 100%; padding: 12px; font-size: 15px;}
+        .btn-edit:disabled, .btn-remove:disabled, .btn-add:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* 主要容器 */
-        .view-container { max-width: 600px; width: 100%; margin: 0 auto; background: white; border-radius: 22px; flex: 1; overflow-y: auto; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 12px; position: relative;}
+        .toggle-form-btn { background: #e3f2fd; color: var(--primary-color); border: 1px dashed var(--primary-color); padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; transition: background 0.2s;}
+        .toggle-form-btn:hover { background: #bbdefb; }
+
+        .form-group { display: none; flex-direction: column; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; animation: fadeIn 0.3s ease;}
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 月曆區塊標題 */
-        .calendar-header { display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; flex-shrink: 0;}
+        .form-row { display: flex; flex-direction: column; gap: 4px; }
+        .form-row label { font-size: 13px; font-weight: bold; color: #555; }
+        .form-row input, .form-row select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
+        .form-row input[readonly] { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; border-style: dashed; }
         
-        /* Grid 共用設定 */
-        .calendar-grid { 
-            display: grid; 
-            grid-template-columns: repeat(7, 1fr); 
-            gap: 0; 
-            border-top: 1px solid var(--border-color);
-            border-left: 1px solid var(--border-color);
-        }
-        #monthViewContainer, #weekViewContainer { flex: 0 0 auto; }
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: white; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0; }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; color: #333;}
+        .checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;}
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-header { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #e0e0e0; color: #333; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-save { background: var(--primary-color); color: white; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        /* 🌟 遊戲進入權限管理專屬 CSS */
+        .config-box { background: #f8fafc; padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; }
+        .config-box select { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; outline: none; background: white; }
         
-        .weekday { font-weight: 700; background-color: #f8fafc; padding: 8px 0; color: var(--text-sub); font-size: 13px; text-align: center; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);}
-        .weekday.weekend { color: var(--weekend-color); }
-
-        .day-cell { 
-            border-right: 1px solid var(--border-color); 
-            border-bottom: 1px solid var(--border-color); 
-            min-height: 80px; 
-            padding: 4px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-start; 
-            align-items: stretch; 
-            background-color: #fff; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            position: relative; 
-        }
-        .day-cell:active { background-color: #f8fafc; }
-        
-        .week-day-cell { align-items: center; }
-        .week-day-cell .event-badge { text-align: center; width: 90%; }
-
-        .day-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; width: 100%; }
-        .day-cell .date-num { font-size: 13px; font-weight: 800; color: var(--text-sub); margin-left: 2px; }
-        .day-cell.is-weekend .date-num, .day-cell.is-holiday .date-num { color: var(--weekend-color); }
-
-        .holiday-tag { font-size: 8px; background: #fee2e2; color: #dc2626; padding: 1px 3px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
-
-        .day-cell.today { box-shadow: inset 0 0 0 2px var(--primary); background-color: var(--today-bg); }
-        .day-cell.today .date-num { color: var(--primary-dark); }
-        .day-cell.past-day { opacity: 0.6; background-color: #fafafa; }
-
-        .event-badge { font-size: 10px; border-radius: 4px; padding: 3px 4px; margin-bottom: 3px; text-align: left; white-space: normal; word-break: break-all; color: white; line-height: 1.3; font-weight: 600; display: block; }
-        .event-badge.public { background-color: var(--public-event); }
-        .event-badge.private { background-color: var(--private-event); }
-        .event-badge.expired { opacity: 0.5; filter: grayscale(100%); }
-
-        .more-badge { font-size: 9px; color: var(--text-sub); font-weight: 800; text-align: right; margin-top: auto; padding-right: 2px; }
-
-        #monthViewContainer, #weekViewContainer, #dayViewContainer { display: none; flex-direction: column; }
-        #dayViewContainer { flex: 1; height: 100%; }
-
-        .day-timeline-container { position: relative; flex: 1; overflow-y: auto; padding-top: 10px; }
-        .time-slot { display: flex; border-bottom: 1px solid #f1f5f9; min-height: 60px; position: relative; }
-        .time-label { width: 50px; font-size: 12px; color: var(--text-sub); text-align: right; padding-right: 8px; transform: translateY(-50%); font-weight: 600; }
-        .time-content { flex: 1; border-left: 1px solid #e5e7eb; position: relative; padding: 2px 8px; }
-        
-        .current-time-line { position: absolute; left: 50px; right: 0; height: 2px; background-color: var(--danger); z-index: 10; display: flex; align-items: center; pointer-events: none; }
-        .current-time-line::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background-color: var(--danger); position: absolute; left: -4px; }
-        
-        .day-view-event { background-color: var(--public-event); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 600; margin-bottom: 4px; display: inline-block; width: 100%; }
-        .day-view-event.private { background-color: var(--private-event); }
-
-        /* 🌟 遊戲權限管理樣式 */
-        .admin-panel { background: #f9fafb; border-radius: 16px; padding: 16px; margin-top: 20px; border: 1px solid #e5e7eb; }
-        .admin-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; }
-        .config-box { background: white; padding: 12px 16px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; }
-        .config-box select { padding: 6px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-weight: 600; outline: none; background: #f9fafb; }
-        
-        .section-label { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 8px; }
+        .section-label { font-size: 13px; font-weight: bold; color: #64748b; margin-bottom: 8px; }
         .member-chips-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; }
-        .member-chip { background: white; border: 1px solid #d1d5db; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; color: var(--text-main); }
-        .member-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .member-chip { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; color: #334155; transition: all 0.2s; }
+        .member-chip.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
-        .member-games-container { background: white; border-radius: 12px; padding: 12px; border: 1px solid #e5e7eb; }
-        .selected-member-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; font-weight: 800; font-size: 14px; }
+        .member-games-container { background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; }
+        .selected-member-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 14px; }
         
-        .game-perm-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e5e7eb; }
+        .game-perm-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #cbd5e1; }
         .game-perm-row:last-child { border-bottom: none; }
-        .game-perm-info { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+        .game-perm-info { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; }
         .perm-action-group { display: flex; gap: 6px; }
-        .btn-perm { padding: 5px 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #f3f4f6; color: #6b7280; font-size: 12px; font-weight: 700; cursor: pointer; }
-        .btn-perm.allow-active { background: #d1fae5; color: #065f46; border-color: #10b981; }
-        .btn-perm.ban-active { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
-
-        /* Modal */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 3000; justify-content: center; align-items: flex-end; }
-        .modal-content { background: white; padding: 24px 20px; border-radius: 24px 24px 0 0; text-align: left; width: 100%; max-width: 600px; box-shadow: var(--shadow-lg); max-height: 85vh; display: flex; flex-direction: column; animation: slideUp 0.3s ease-out; margin: 0; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-top: 0; margin-bottom: 16px; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
-        .modal-body { overflow-y: auto; flex: 1; padding-right: 5px; }
-
-        .day-event-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .event-item { background: #f8fafc; padding: 14px; border-radius: 12px; border-left: 4px solid var(--public-event); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .event-item.private { border-left-color: var(--private-event); }
-        .event-item-main { flex: 1; }
-        .event-item-title { font-weight: 800; font-size: 15px; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-        .event-item-meta { font-size: 12px; color: var(--text-sub); margin-top: 4px; font-weight: 600; display: flex; gap: 10px; flex-wrap: wrap; }
-        .event-actions { display: flex; gap: 8px; margin-left: 10px; }
-        .btn-icon { background: white; border: 1px solid #e5e7eb; color: var(--text-main); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; font-weight: bold; }
-        .btn-icon.del { color: var(--danger); border-color: #fecaca; background: #fef2f2; }
-
-        .btn-add-new { background: var(--primary-light); color: var(--primary-dark); border: none; padding: 12px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; margin-top: 10px; }
-
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
-        .form-group input[type="text"], .form-group textarea, .form-group select, .form-group input[type="time"], .form-group input[type="number"] { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; box-sizing: border-box; font-size: 14px; background: #f8fafc; font-family: inherit; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); background: white; }
-        
-        .row-group { display: flex; gap: 10px; align-items: center; }
-        .row-group .form-group { flex: 1; margin-bottom: 0; }
-        .checkbox-label { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--text-main); cursor: pointer; margin-bottom: 10px;}
-        .checkbox-label input { width: 18px; height: 18px; accent-color: var(--primary); }
-
-        .modal-btns { display: flex; gap: 10px; margin-top: 20px; flex-shrink: 0; }
-        .btn-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px; }
-        .btn-save { flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
+        .btn-perm { padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #e2e8f0; color: #64748b; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-perm.allow-active { background: #dcfce7; color: #15803d; border-color: #22c55e; }
+        .btn-perm.ban-active { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
     </style>
 </head>
 <body>
     <div class="top-nav">
-        <button class="btn-back" id="btnBack">❮ 返回</button>
-        <div class="nav-actions">
-            <button class="btn-icon-nav" id="btnToggleView" title="切換視圖">🔄</button>
-            <button class="btn-icon-nav" id="btnSettings" title="視圖設定">⚙️</button>
+        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
+        <span style="font-weight: bold; color: var(--primary-color);">🛡️ 管理者專區</span>
+    </div>
+
+    <!-- 1. 系統/群組設定專區 -->
+    <div class="panel">
+        <h2 class="system-title">⚙️ 系統與群組設定</h2>
+        
+        <button class="toggle-form-btn" id="btnToggleGroupSettings">
+            <span>🏠 更改群組名稱</span>
+            <span id="toggleIconGroupSettings">▼</span>
+        </button>
+
+        <div class="form-group" id="groupSettingsForm">
+            <div class="form-row">
+                <label>群組名稱 (注意：每 24 小時僅能更改一次)</label>
+                <input type="text" id="editGroupName" placeholder="例如：我們的家">
+            </div>
+            <button class="btn-save-group" id="btnSaveGroupName" style="margin-top: 10px;">儲存群組名稱</button>
         </div>
     </div>
 
-    <!-- 支援左右滑動切換的容器 -->
-    <div class="view-container" id="calendarSwipeContainer">
-        <div class="calendar-header">
-            <span id="calendarTitle">載入中...</span>
+    <!-- 1.5 入群審核管理專區 -->
+    <div class="panel">
+        <h2 class="system-title">📥 入群審核管理</h2>
+        
+        <button class="toggle-form-btn" id="btnToggleRequests">
+            <span>📋 審核待加入申請</span>
+            <span id="toggleIconRequests">▼</span>
+        </button>
+
+        <div id="requestsSection" style="display: none; margin-top: 10px;">
+            <div style="margin-bottom: 10px;">
+                <button class="btn-query" id="btnRefreshRequests">🔄 重新整理審核清單</button>
+            </div>
+            <div class="user-reset-list" id="requestsContainer">
+                <div style="text-align:center; color:#888; padding: 15px;">點擊上方按鈕載入待審核名單</div>
+            </div>
         </div>
+    </div>
 
-        <!-- 月視圖區塊 -->
-        <div id="monthViewContainer">
-            <div class="calendar-grid" id="calendarGrid"></div>
-        </div>
+    <!-- 2. 遊戲進入權限管理專區 -->
+    <div class="panel">
+        <h2 class="system-title">🎮 遊戲進入權限管理</h2>
 
-        <!-- 週視圖區塊 -->
-        <div id="weekViewContainer">
-            <div class="calendar-grid" id="weekGrid"></div>
-        </div>
+        <button class="toggle-form-btn" id="btnToggleGamePanel">
+            <span>🛡️ 設定遊戲開放與通知</span>
+            <span id="toggleIconGamePanel">▼</span>
+        </button>
 
-        <!-- 日視圖區塊 -->
-        <div id="dayViewContainer">
-            <div class="day-timeline-container" id="dayTimeline"></div>
-        </div>
-
-        <!-- 🌟 新增：管理者後台專屬「遊戲進入權限管理」區塊 -->
-        <div class="admin-panel" id="adminGamePanel">
-            <div class="admin-title">🛡️ 遊戲進入權限管理</div>
-
+        <div id="adminGameSection" style="display: none; margin-top: 10px;">
             <!-- 推播聊天室設定 -->
             <div class="config-box">
                 <span>📢 遊戲推播頻道：</span>
-                <select id="targetGameChatRoomSelect" onchange="saveTargetGameRoom(this.value)">
+                <select id="targetGameChatRoomSelect">
                     <option value="">-- 請選擇目標群組 --</option>
                 </select>
             </div>
@@ -227,8 +166,8 @@
                             <span>🐔 咕咕村落</span>
                         </div>
                         <div class="perm-action-group">
-                            <button class="btn-perm" id="btnFarmAllow" onclick="setMemberPermission('farm', true)">允許進入</button>
-                            <button class="btn-perm" id="btnFarmBan" onclick="setMemberPermission('farm', false)">禁止進入</button>
+                            <button class="btn-perm" id="btnFarmAllow">允許進入</button>
+                            <button class="btn-perm" id="btnFarmBan">禁止進入</button>
                         </div>
                     </div>
 
@@ -238,8 +177,8 @@
                             <span>✊ 剪刀石頭布對決</span>
                         </div>
                         <div class="perm-action-group">
-                            <button class="btn-perm" id="btnRpsAllow" onclick="setMemberPermission('rps', true)">允許進入</button>
-                            <button class="btn-perm" id="btnRpsBan" onclick="setMemberPermission('rps', false)">禁止進入</button>
+                            <button class="btn-perm" id="btnRpsAllow">允許進入</button>
+                            <button class="btn-perm" id="btnRpsBan">禁止進入</button>
                         </div>
                     </div>
 
@@ -249,8 +188,8 @@
                             <span>🔢 2048 數字方塊</span>
                         </div>
                         <div class="perm-action-group">
-                            <button class="btn-perm" id="btn2048Allow" onclick="setMemberPermission('g2048', true)">允許進入</button>
-                            <button class="btn-perm" id="btn2048Ban" onclick="setMemberPermission('g2048', false)">禁止進入</button>
+                            <button class="btn-perm" id="btn2048Allow">允許進入</button>
+                            <button class="btn-perm" id="btn2048Ban">禁止進入</button>
                         </div>
                     </div>
                 </div>
@@ -258,864 +197,138 @@
         </div>
     </div>
 
-    <!-- 視圖設定 Modal -->
-    <div class="modal" id="settingsModal">
-        <div class="modal-content" style="max-height: 50vh;">
-            <h3 class="modal-title">日曆視圖設定</h3>
-            <div class="modal-body">
-                <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 15px;">請勾選希望啟用的視圖模式：</p>
-                <label class="checkbox-label"><input type="checkbox" id="settingViewMonth" checked> 顯示 月視圖</label>
-                <label class="checkbox-label"><input type="checkbox" id="settingViewWeek" checked> 顯示 週視圖</label>
-                <label class="checkbox-label"><input type="checkbox" id="settingViewDay" checked> 顯示 日視圖</label>
+    <!-- 3. 人員管理專區 -->
+    <div class="panel">
+        <h2 class="system-title">👥 家族成員管理</h2>
+        
+        <button class="toggle-form-btn" id="btnToggleAddForm">
+            <span>➕ 新增成員帳號</span>
+            <span id="toggleIconAdd">▼</span>
+        </button>
+
+        <div class="form-group" id="addUserForm">
+            <div class="form-row">
+                <label>帳號 ID (唯一值，英文或數字)</label>
+                <input type="text" id="newUserId" placeholder="例: papa123" autocomplete="off">
             </div>
-            <div class="modal-btns">
-                <button class="btn-save" id="btnSaveSettings">確定</button>
+            <div class="form-row">
+                <label>成員稱呼 (顯示名稱，家族內不可重複)</label>
+                <input type="text" id="newUserName" placeholder="例: 爸爸" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>登入密碼 (4位數字)</label>
+                <input type="text" id="newUserPin" placeholder="例: 1234" maxlength="4" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>電子郵件 (選填)</label>
+                <input type="email" id="newUserEmail" placeholder="例: user@example.com" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <label>系統角色權限</label>
+                <select id="newUserRole">
+                    <option value="member">一般成員</option>
+                    <option value="parent">家長 (同管理員權限)</option>
+                    <option value="admin">系統管理者</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>主選單功能開放設定 (打勾才允許該成員使用)</label>
+                <div class="checkbox-group" id="newMenusContainer">
+                    <div style="color:#888; font-size:12px; grid-column: 1 / -1;">載入選單中...</div>
+                </div>
+            </div>
+
+            <button class="btn-add" id="btnAddUser" style="margin-top: 10px;">確認新增成員</button>
+        </div>
+
+        <button class="toggle-form-btn" id="btnToggleUserList">
+            <span>📋 現有成員名單</span>
+            <span id="toggleIconUserList">▼</span>
+        </button>
+
+        <div class="user-reset-list" id="userListContainer" style="display: none;">
+            <div style="text-align:center; color:#888;">載入成員名單中...</div>
+        </div>
+    </div>
+
+    <!-- 4. 成員操作紀錄 (Logs) -->
+    <div class="panel">
+        <h2 class="system-title">📜 系統操作紀錄</h2>
+        
+        <button class="toggle-form-btn" id="btnToggleLogs">
+            <span>🔍 展開成員操作紀錄</span>
+            <span id="toggleIconLogs">▼</span>
+        </button>
+        
+        <div id="logsSection" style="display: none; margin-top: 10px;">
+            <div class="filter-group">
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; display: block; margin-bottom: 2px; font-weight: bold;">選擇日期：</label>
+                    <input type="date" id="logDateFilter">
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                    <label style="font-size: 12px; display: block; margin-bottom: 2px; font-weight: bold;">篩選人員：</label>
+                    <select id="userFilter">
+                        <option value="all">全部人員</option>
+                    </select>
+                </div>
+                <div style="width: 100%; margin-top: 4px;">
+                    <button class="btn-query" id="btnQueryLogs">🔍 查詢紀錄</button>
+                </div>
+            </div>
+
+            <div class="user-reset-list" id="logContainer">
+                <div style="text-align:center; color:#888; padding: 15px;">請選擇日期後點擊「查詢紀錄」</div>
             </div>
         </div>
     </div>
 
-    <!-- 行程共用 Modal (BottomSheet) -->
-    <div class="modal" id="eventModal">
+    <!-- 編輯成員 Modal -->
+    <div class="modal-overlay" id="editModal">
         <div class="modal-content">
-            <h3 class="modal-title" id="modalDateTitle">2026-09-16</h3>
+            <div class="modal-header">✏️ 編輯成員資料</div>
             
-            <div class="modal-body">
-                <!-- 視圖 1：當日待辦清單 -->
-                <div id="listView">
-                    <div class="day-event-list" id="dayEventsContainer"></div>
-                    <button class="btn-add-new" id="btnShowAddForm">➕ 新增待辦事項</button>
+            <input type="hidden" id="editDocId">
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="form-row">
+                    <label>帳號 ID (建立後不可更改)</label>
+                    <input type="text" id="editAccountId" placeholder="設定唯一的帳號ID" autocomplete="off">
                 </div>
-
-                <!-- 視圖 2：新增/編輯表單 -->
-                <div id="formView" style="display: none;">
-                    <div class="form-group">
-                        <label>行程標題</label>
-                        <input type="text" id="evTitle" placeholder="例如: 班親會、繳電話費">
-                    </div>
-                    
-                    <div class="row-group" style="margin-bottom: 14px;">
-                        <div class="form-group">
-                            <label>分類圖示</label>
-                            <select id="evCategory">
-                                <option value="school">🏫 學校</option>
-                                <option value="company">💼 公司</option>
-                                <option value="restaurant">🍽️ 餐廳</option>
-                                <option value="birthday">🎂 生日</option>
-                                <option value="personal">👤 個人</option>
-                                <option value="other">📌 其他</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>權限</label>
-                            <select id="evVisibility">
-                                <option value="public">🌐 全體</option>
-                                <option value="private">🔒 僅自己</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="evIsAllDay" checked> 這是全天活動
-                        </label>
-                    </div>
-
-                    <div class="row-group" id="timeInputsGroup" style="display: none; margin-bottom: 14px;">
-                        <div class="form-group">
-                            <label>開始時間</label>
-                            <input type="time" id="evStartTime" value="09:00">
-                        </div>
-                        <div class="form-group">
-                            <label>結束時間</label>
-                            <input type="time" id="evEndTime" value="10:00">
-                        </div>
-                    </div>
-
-                    <div class="row-group" style="margin-bottom: 14px;">
-                        <div class="form-group" style="flex: 0.6;">
-                            <label>提前提醒</label>
-                            <input type="number" id="evReminderVal" value="" min="1" disabled placeholder="無">
-                        </div>
-                        <div class="form-group">
-                            <label>單位</label>
-                            <select id="evReminderUnit">
-                                <option value="none">不提醒</option>
-                                <option value="minutes">分鐘</option>
-                                <option value="hours">小時</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>備註說明 (選填)</label>
-                        <textarea id="evDesc" rows="2" placeholder="詳細內容..."></textarea>
-                    </div>
+                <div class="form-row">
+                    <label>成員稱呼 (顯示名稱，不可重複)</label>
+                    <input type="text" id="editName" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>登入密碼 (4位數字)</label>
+                    <input type="text" id="editPin" maxlength="4" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>電子郵件 (選填)</label>
+                    <input type="email" id="editEmail" placeholder="選填" autocomplete="off">
+                </div>
+                <div class="form-row">
+                    <label>系統角色權限</label>
+                    <select id="editRole">
+                        <option value="member">一般成員</option>
+                        <option value="parent">家長 (同管理員權限)</option>
+                        <option value="admin">系統管理者</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>主選單功能開放設定 (限制該成員可使用的功能)</label>
+                    <div class="checkbox-group" id="editMenusContainer"></div>
                 </div>
             </div>
 
-            <!-- 按鈕區塊 -->
-            <div class="modal-btns">
-                <button class="btn-cancel" id="btnCloseModal">關閉</button>
-                <button class="btn-cancel" id="btnCancelForm" style="display:none;">取消編輯</button>
-                <button class="btn-save" id="btnSaveEvent" style="display:none;">儲存</button>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="btnCancelEditModal">取消</button>
+                <button class="btn-save" id="btnSaveEditUser">儲存修改</button>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { 
-            getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, getDocs,
-            onSnapshot, serverTimestamp, query, where 
-        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-            authDomain: "homebasedb.firebaseapp.com",
-            projectId: "homebasedb",
-            storageBucket: "homebasedb.firebasestorage.app",
-            messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        let currentUser = null;
-        let currentGroupId = localStorage.getItem('lastGroupId');
-        
-        let currentView = 'month';
-        let enabledViews = ['month', 'week', 'day'];
-        
-        let viewDate = new Date();
-        let selectedDateKey = '';
-        let allFetchedEvents = [];
-        let editingEventId = null;
-
-        const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
-
-        const publicHolidays = {
-            "01-01": "元旦", "02-28": "和平紀念日", "04-04": "兒童節", 
-            "04-05": "清明節", "05-01": "勞動節", "10-10": "國慶日"
-        };
-
-        const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-        if (!savedUserStr || !currentGroupId) {
-            alert('找不到登入狀態或群組資訊，請重新登入！'); window.location.href = 'index.html';
-        } else {
-            currentUser = JSON.parse(savedUserStr);
-            initCalendar();
-            listenToEvents();
-            // 🌟 初始化遊戲權限管理邏輯
-            initAdminGameManagement();
-        }
-
-        async function recordLog(actionType, detailsText) {
-            try {
-                const now = new Date();
-                const datetimeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-                await addDoc(collection(db, "logs"), { 
-                    groupId: currentGroupId, datetime: datetimeStr, 
-                    operator: currentUser.name, actionType, details: detailsText, timestamp: serverTimestamp() 
-                });
-            } catch (e) { console.error("寫入 Log 失敗:", e); }
-        }
-        window.onload = async function() { await recordLog('功能瀏覽', '進入〈管理者後台〉'); };
-
-        function listenToEvents() {
-            const q = query(
-                collection(db, "events"), 
-                where("groupId", "==", currentGroupId)
-            );
-
-            onSnapshot(q, (snapshot) => {
-                allFetchedEvents = [];
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (data.visibility === 'public' || data.operator === currentUser.name) {
-                        allFetchedEvents.push({ id: docSnap.id, ...data });
-                    }
-                });
-                
-                renderCurrentView();
-
-                const targetDate = localStorage.getItem('calendar_target_date');
-                if (targetDate) {
-                    localStorage.removeItem('calendar_target_date');
-                    const [tYear, tMonth] = targetDate.split('-');
-                    viewDate = new Date(parseInt(tYear), parseInt(tMonth) - 1, 1);
-                    currentView = 'month';
-                    renderCurrentView();
-                    openEventModal(targetDate);
-                }
-
-                if (document.getElementById('eventModal').style.display === 'flex' && !editingEventId) {
-                    renderDayEvents(selectedDateKey);
-                }
-            });
-        }
-
-        function initCalendar() {
-            const swipeContainer = document.getElementById('calendarSwipeContainer');
-            let touchStartX = 0;
-            let touchEndX = 0;
-
-            swipeContainer.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, { passive: true });
-
-            swipeContainer.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipeGesture();
-            }, { passive: true });
-
-            function handleSwipeGesture() {
-                const threshold = 50; 
-                if (touchEndX - touchStartX > threshold) {
-                    if(currentView === 'month') viewDate.setMonth(viewDate.getMonth() - 1);
-                    if(currentView === 'week') viewDate.setDate(viewDate.getDate() - 7);
-                    if(currentView === 'day') viewDate.setDate(viewDate.getDate() - 1);
-                    renderCurrentView();
-                } else if (touchStartX - touchEndX > threshold) {
-                    if(currentView === 'month') viewDate.setMonth(viewDate.getMonth() + 1);
-                    if(currentView === 'week') viewDate.setDate(viewDate.getDate() + 7);
-                    if(currentView === 'day') viewDate.setDate(viewDate.getDate() + 1);
-                    renderCurrentView();
-                }
-            }
-            
-            loadSettings();
-            renderCurrentView();
-        }
-
-        function renderCurrentView() {
-            document.getElementById('monthViewContainer').style.display = 'none';
-            document.getElementById('weekViewContainer').style.display = 'none';
-            document.getElementById('dayViewContainer').style.display = 'none';
-
-            const year = viewDate.getFullYear();
-            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-
-            if (currentView === 'month') {
-                document.getElementById('calendarTitle').innerText = `${year} 年 ${monthNames[viewDate.getMonth()]}`;
-                document.getElementById('monthViewContainer').style.display = 'flex';
-                renderMonthView();
-            } else if (currentView === 'week') {
-                document.getElementById('calendarTitle').innerText = `${year} 年 ${monthNames[viewDate.getMonth()]}`;
-                document.getElementById('weekViewContainer').style.display = 'flex';
-                renderWeekView();
-            } else if (currentView === 'day') {
-                const dayStr = `${year}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(viewDate.getDate()).padStart(2, '0')}`;
-                document.getElementById('calendarTitle').innerText = dayStr;
-                document.getElementById('dayViewContainer').style.display = 'flex';
-                renderDayView();
-            }
-        }
-
-        function renderMonthView() {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth();
-            const grid = document.getElementById('calendarGrid');
-            grid.innerHTML = '';
-
-            const weekdays = [
-                { name: '週日', className: 'weekend' }, { name: '週一', className: '' },
-                { name: '週二', className: '' }, { name: '週三', className: '' },
-                { name: '週四', className: '' }, { name: '週五', className: '' },
-                { name: '週六', className: 'weekend' }
-            ];
-            weekdays.forEach(w => {
-                const div = document.createElement('div'); 
-                div.className = `weekday ${w.className}`; div.innerText = w.name; grid.appendChild(div);
-            });
-
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const totalDays = new Date(year, month + 1, 0).getDate();
-            const todayStr = getFormattedDate(new Date());
-
-            for (let i = 0; i < firstDayIndex; i++) {
-                const div = document.createElement('div');
-                div.style.borderRight = "1px solid var(--border-color)";
-                div.style.borderBottom = "1px solid var(--border-color)";
-                grid.appendChild(div);
-            }
-
-            for (let day = 1; day <= totalDays; day++) {
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const cell = createDayCell(dateKey, year, month, day, todayStr);
-                grid.appendChild(cell);
-            }
-        }
-
-        function renderWeekView() {
-            const grid = document.getElementById('weekGrid');
-            grid.innerHTML = '';
-            
-            const currentDay = viewDate.getDay(); 
-            const startOfWeek = new Date(viewDate);
-            startOfWeek.setDate(viewDate.getDate() - currentDay);
-            
-            const todayStr = getFormattedDate(new Date());
-
-            const weekdays = [
-                { name: '週日', className: 'weekend' }, { name: '週一', className: '' },
-                { name: '週二', className: '' }, { name: '週三', className: '' },
-                { name: '週四', className: '' }, { name: '週五', className: '' },
-                { name: '週六', className: 'weekend' }
-            ];
-            weekdays.forEach(w => {
-                const div = document.createElement('div'); 
-                div.className = `weekday ${w.className}`; div.innerText = w.name; grid.appendChild(div);
-            });
-
-            for (let i = 0; i < 7; i++) {
-                const cellDate = new Date(startOfWeek);
-                cellDate.setDate(startOfWeek.getDate() + i);
-                const year = cellDate.getFullYear();
-                const month = cellDate.getMonth();
-                const day = cellDate.getDate();
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                const cell = createDayCell(dateKey, year, month, day, todayStr);
-                cell.classList.add('week-day-cell');
-                grid.appendChild(cell);
-            }
-        }
-
-        function createDayCell(dateKey, year, month, day, todayStr) {
-            const dayCell = document.createElement('div');
-            dayCell.className = 'day-cell';
-            
-            const cellDate = new Date(year, month, day);
-            const dayOfWeek = cellDate.getDay(); 
-            const mmdd = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const holidayName = publicHolidays[mmdd];
-
-            if (dayOfWeek === 0 || dayOfWeek === 6) dayCell.classList.add('is-weekend');
-            if (holidayName) dayCell.classList.add('is-holiday');
-            if (dateKey === todayStr) dayCell.classList.add('today');
-            else if (new Date(dateKey) < new Date(todayStr)) dayCell.classList.add('past-day');
-
-            const headerRow = document.createElement('div');
-            headerRow.className = 'day-header-row';
-
-            const numSpan = document.createElement('span');
-            numSpan.className = 'date-num'; numSpan.innerText = day;
-            headerRow.appendChild(numSpan);
-
-            if (holidayName) {
-                const tag = document.createElement('span');
-                tag.className = 'holiday-tag'; tag.innerText = holidayName; headerRow.appendChild(tag);
-            }
-
-            dayCell.appendChild(headerRow);
-
-            const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
-            
-            dayEvts.slice(0, 3).forEach(evt => {
-                const badge = document.createElement('span');
-                const isExpired = isEventExpired(evt, dateKey);
-                badge.className = `event-badge ${evt.visibility || 'public'} ${isExpired ? 'expired' : ''}`;
-                badge.innerText = `${evt.title}`;
-                dayCell.appendChild(badge);
-            });
-
-            if (dayEvts.length > 3) {
-                const moreBadge = document.createElement('div');
-                moreBadge.className = 'more-badge';
-                moreBadge.innerText = `+${dayEvts.length - 3}`;
-                dayCell.appendChild(moreBadge);
-            }
-
-            dayCell.addEventListener('click', () => openEventModal(dateKey));
-            return dayCell;
-        }
-
-        function renderDayView() {
-            const timeline = document.getElementById('dayTimeline');
-            timeline.innerHTML = '';
-            
-            const dateKey = getFormattedDate(viewDate);
-            const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
-
-            for (let i = 0; i < 24; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'time-slot';
-                
-                const label = document.createElement('div');
-                label.className = 'time-label';
-                label.innerText = `${i === 0 ? '12 AM' : i < 12 ? i + ' AM' : i === 12 ? '12 PM' : (i - 12) + ' PM'}`;
-                
-                const content = document.createElement('div');
-                content.className = 'time-content';
-                
-                dayEvts.forEach(evt => {
-                    if (evt.isAllDay !== false && i === 0) {
-                        const evDiv = document.createElement('div');
-                        evDiv.className = `day-view-event ${evt.visibility || 'public'}`;
-                        evDiv.innerText = `[全天] ${evt.title}`;
-                        evDiv.onclick = () => openEventModal(dateKey);
-                        content.appendChild(evDiv);
-                    } else if (evt.isAllDay === false && evt.startTime) {
-                        const evtHour = parseInt(evt.startTime.split(':')[0]);
-                        if (evtHour === i) {
-                            const evDiv = document.createElement('div');
-                            evDiv.className = `day-view-event ${evt.visibility || 'public'}`;
-                            evDiv.innerText = `${evt.startTime} ${evt.title}`;
-                            evDiv.onclick = () => openEventModal(dateKey);
-                            content.appendChild(evDiv);
-                        }
-                    }
-                });
-
-                slot.appendChild(label);
-                slot.appendChild(content);
-                timeline.appendChild(slot);
-            }
-
-            if (dateKey === getFormattedDate(new Date())) {
-                const now = new Date();
-                const currentHour = now.getHours();
-                const currentMin = now.getMinutes();
-                const topPos = (currentHour * 60) + currentMin; 
-                
-                const line = document.createElement('div');
-                line.className = 'current-time-line';
-                line.style.top = `${topPos}px`;
-                timeline.appendChild(line);
-
-                setTimeout(() => {
-                    timeline.scrollTop = topPos - (timeline.clientHeight / 2);
-                }, 100);
-            } else {
-                timeline.scrollTop = 0;
-            }
-        }
-
-        document.getElementById('btnToggleView').addEventListener('click', () => {
-            if (enabledViews.length === 0) {
-                alert('請至設定勾選至少一種視圖'); return;
-            }
-            
-            const order = ['month', 'week', 'day'];
-            let currentIndex = order.indexOf(currentView);
-            
-            let found = false;
-            for(let i = 1; i <= 3; i++) {
-                let nextIndex = (currentIndex + i) % 3;
-                if (enabledViews.includes(order[nextIndex])) {
-                    currentView = order[nextIndex];
-                    found = true;
-                    break;
-                }
-            }
-            
-            if(found) renderCurrentView();
-        });
-
-        function loadSettings() {
-            const saved = localStorage.getItem('calendar_views');
-            if (saved) {
-                enabledViews = JSON.parse(saved);
-                document.getElementById('settingViewMonth').checked = enabledViews.includes('month');
-                document.getElementById('settingViewWeek').checked = enabledViews.includes('week');
-                document.getElementById('settingViewDay').checked = enabledViews.includes('day');
-            }
-        }
-
-        document.getElementById('btnSettings').addEventListener('click', () => {
-            document.getElementById('settingsModal').style.display = 'flex';
-        });
-
-        document.getElementById('btnSaveSettings').addEventListener('click', () => {
-            enabledViews = [];
-            if(document.getElementById('settingViewMonth').checked) enabledViews.push('month');
-            if(document.getElementById('settingViewWeek').checked) enabledViews.push('week');
-            if(document.getElementById('settingViewDay').checked) enabledViews.push('day');
-            
-            if (enabledViews.length === 0) {
-                alert('請至少保留一個視圖模式！');
-                return;
-            }
-            
-            localStorage.setItem('calendar_views', JSON.stringify(enabledViews));
-            document.getElementById('settingsModal').style.display = 'none';
-            
-            if (!enabledViews.includes(currentView)) {
-                currentView = enabledViews[0];
-            }
-            renderCurrentView();
-        });
-
-        function getFormattedDate(d) {
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
-
-        function isEventExpired(evt, dateKey) {
-            const now = new Date();
-            const evtDate = new Date(dateKey);
-            if (evt.isAllDay !== false) { 
-                evtDate.setHours(23, 59, 59); return now > evtDate;
-            } else {
-                if(!evt.endTime) return false;
-                const [h, m] = evt.endTime.split(':');
-                evtDate.setHours(h, m, 0); return now > evtDate;
-            }
-        }
-
-        function openEventModal(dateKey) {
-            selectedDateKey = dateKey;
-            document.getElementById('modalDateTitle').innerText = `${dateKey} 行程`;
-            showListView();
-            document.getElementById('eventModal').style.display = 'flex';
-        }
-
-        function showListView() {
-            editingEventId = null;
-            document.getElementById('listView').style.display = 'block';
-            document.getElementById('formView').style.display = 'none';
-            document.getElementById('btnCloseModal').style.display = 'block';
-            document.getElementById('btnCancelForm').style.display = 'none';
-            document.getElementById('btnSaveEvent').style.display = 'none';
-            renderDayEvents(selectedDateKey);
-        }
-
-        function showFormView(evtData = null) {
-            document.getElementById('listView').style.display = 'none';
-            document.getElementById('formView').style.display = 'block';
-            document.getElementById('btnCloseModal').style.display = 'none';
-            document.getElementById('btnCancelForm').style.display = 'block';
-            document.getElementById('btnSaveEvent').style.display = 'block';
-
-            if (evtData) {
-                editingEventId = evtData.id;
-                document.getElementById('evTitle').value = evtData.title || '';
-                document.getElementById('evDesc').value = evtData.desc || '';
-                document.getElementById('evCategory').value = evtData.category || 'other';
-                document.getElementById('evVisibility').value = evtData.visibility || 'public';
-                document.getElementById('evIsAllDay').checked = evtData.isAllDay !== false;
-                document.getElementById('evStartTime').value = evtData.startTime || '09:00';
-                document.getElementById('evEndTime').value = evtData.endTime || '10:00';
-                
-                const rUnit = evtData.reminderUnit || 'none';
-                document.getElementById('evReminderUnit').value = rUnit;
-                document.getElementById('evReminderVal').value = evtData.reminderValue || '';
-                document.getElementById('evReminderVal').disabled = (rUnit === 'none');
-            } else {
-                editingEventId = null;
-                document.getElementById('evTitle').value = '';
-                document.getElementById('evDesc').value = '';
-                document.getElementById('evCategory').value = 'other';
-                document.getElementById('evVisibility').value = 'public';
-                document.getElementById('evIsAllDay').checked = true;
-                document.getElementById('evStartTime').value = '09:00';
-                document.getElementById('evEndTime').value = '10:00';
-                document.getElementById('evReminderUnit').value = 'none';
-                document.getElementById('evReminderVal').value = '';
-                document.getElementById('evReminderVal').disabled = true;
-            }
-            toggleTimeInputs();
-        }
-
-        function renderDayEvents(dateKey) {
-            const container = document.getElementById('dayEventsContainer');
-            container.innerHTML = '';
-            const dayEvts = allFetchedEvents.filter(e => e.date === dateKey);
-
-            if (dayEvts.length === 0) {
-                container.innerHTML = '<div style="color:var(--text-sub); text-align:center; padding:20px 0; font-weight:600;">當日無待辦事項</div>';
-                return;
-            }
-
-            dayEvts.forEach(evt => {
-                const item = document.createElement('div');
-                item.className = `event-item ${evt.visibility || 'public'}`;
-                
-                const isOwnerOrAdmin = (evt.operator === currentUser.name || currentUser.role === 'admin' || currentUser.role === '家長');
-                const icon = categoryIcons[evt.category] || '📌';
-                const timeStr = (evt.isAllDay !== false) ? '🕒 全天' : `🕒 ${evt.startTime} - ${evt.endTime}`;
-                
-                let reminderStr = '無提醒';
-                if (evt.reminderUnit === 'minutes') reminderStr = `提前 ${evt.reminderValue} 分鐘提醒`;
-                if (evt.reminderUnit === 'hours') reminderStr = `提前 ${evt.reminderValue} 小時提醒`;
-                if (isEventExpired(evt, dateKey)) reminderStr = '✅ 已結束';
-
-                item.innerHTML = `
-                    <div class="event-item-main">
-                        <div class="event-item-title">
-                            ${evt.visibility === 'private' ? '🔒' : ''} ${icon} ${evt.title}
-                        </div>
-                        <div class="event-item-meta">
-                            <span>${timeStr}</span> | <span>🔔 ${reminderStr}</span>
-                        </div>
-                        ${evt.desc ? `<div style="font-size:12px; color:var(--text-sub); margin-top:6px;">${evt.desc}</div>` : ''}
-                    </div>
-                    ${isOwnerOrAdmin ? `
-                    <div class="event-actions">
-                        <button class="btn-icon edit" data-id="${evt.id}">✏️</button>
-                        <button class="btn-icon del" data-id="${evt.id}">🗑️</button>
-                    </div>` : ''}
-                `;
-                container.appendChild(item);
-            });
-
-            container.querySelectorAll('.btn-icon.edit').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.getAttribute('data-id');
-                    const targetEvt = allFetchedEvents.find(ev => ev.id === id);
-                    if(targetEvt) showFormView(targetEvt);
-                });
-            });
-            container.querySelectorAll('.btn-icon.del').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.getAttribute('data-id');
-                    deleteEvent(id);
-                });
-            });
-        }
-
-        const evIsAllDay = document.getElementById('evIsAllDay');
-        const timeInputsGroup = document.getElementById('timeInputsGroup');
-        const evReminderUnit = document.getElementById('evReminderUnit');
-        const evReminderVal = document.getElementById('evReminderVal');
-
-        function toggleTimeInputs() { timeInputsGroup.style.display = evIsAllDay.checked ? 'none' : 'flex'; }
-        evIsAllDay.addEventListener('change', toggleTimeInputs);
-
-        evReminderUnit.addEventListener('change', (e) => {
-            if (e.target.value === 'none') {
-                evReminderVal.disabled = true; evReminderVal.value = '';
-            } else {
-                evReminderVal.disabled = false;
-                if (!evReminderVal.value) evReminderVal.value = '30';
-            }
-        });
-
-        document.getElementById('btnShowAddForm').addEventListener('click', () => showFormView(null));
-        document.getElementById('btnCancelForm').addEventListener('click', showListView);
-        
-        window.addEventListener('click', (e) => {
-            const eventModal = document.getElementById('eventModal');
-            const settingsModal = document.getElementById('settingsModal');
-            if (e.target === eventModal) eventModal.style.display = 'none';
-            if (e.target === settingsModal) settingsModal.style.display = 'none';
-        });
-        document.getElementById('btnCloseModal').addEventListener('click', () => { document.getElementById('eventModal').style.display = 'none'; });
-
-        async function saveEvent() {
-            const title = document.getElementById('evTitle').value.trim();
-            if (!title) return alert('請輸入行程標題！');
-
-            const isAllDay = document.getElementById('evIsAllDay').checked;
-            const startTime = document.getElementById('evStartTime').value;
-            const endTime = document.getElementById('evEndTime').value;
-            
-            if (!isAllDay && startTime >= endTime) return alert('結束時間必須晚於開始時間！');
-
-            const evtData = {
-                groupId: currentGroupId,
-                date: selectedDateKey,
-                title: title,
-                desc: document.getElementById('evDesc').value.trim(),
-                category: document.getElementById('evCategory').value,
-                visibility: document.getElementById('evVisibility').value,
-                isAllDay: isAllDay,
-                startTime: isAllDay ? null : startTime,
-                endTime: isAllDay ? null : endTime,
-                reminderValue: parseInt(document.getElementById('evReminderVal').value) || 0,
-                reminderUnit: document.getElementById('evReminderUnit').value,
-                operator: currentUser.name,
-                timestamp: serverTimestamp()
-            };
-
-            try {
-                document.getElementById('btnSaveEvent').disabled = true;
-                if (editingEventId) {
-                    await updateDoc(doc(db, "events", editingEventId), evtData);
-                } else {
-                    await addDoc(collection(db, "events"), evtData);
-                }
-                showListView(); 
-            } catch (error) {
-                alert("儲存失敗，請檢查網路。");
-            } finally {
-                document.getElementById('btnSaveEvent').disabled = false;
-            }
-        }
-        document.getElementById('btnSaveEvent').addEventListener('click', saveEvent);
-
-        async function deleteEvent(id) {
-            if (confirm('確定要刪除此待辦事項嗎？')) {
-                try { await deleteDoc(doc(db, "events", id)); } 
-                catch (error) { alert("刪除失敗，請檢查網路。"); }
-            }
-        }
-
-        document.getElementById('btnBack').addEventListener('click', () => window.location.href = 'index.html');
-
-        // ==========================================
-        // 🌟 遊戲權限管理邏輯 (搬移至此，嚴格限制目前群組)
-        // ==========================================
-        let groupMembers = [];
-        let kidsPermissions = {};
-        let selectedMember = null;
-
-        async function initAdminGameManagement() {
-            await loadGameChatRoomsForSelect();
-            await loadParentAdminData();
-        }
-
-        async function loadGameChatRoomsForSelect() {
-            try {
-                const select = document.getElementById('targetGameChatRoomSelect');
-                if (!select) return;
-                select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
-                
-                const querySnapshot = await getDocs(collection(db, "rooms"));
-                querySnapshot.forEach(docSnap => {
-                    const room = docSnap.data();
-                    const opt = document.createElement('option');
-                    opt.value = docSnap.id;
-                    opt.innerText = room.name;
-                    select.appendChild(opt);
-                });
-                
-                const configDoc = await getDoc(doc(db, "settings", "gameConfig"));
-                if (configDoc.exists()) {
-                    const targetRoomId = configDoc.data().targetRoomId;
-                    if (targetRoomId) select.value = targetRoomId;
-                }
-            } catch (e) { 
-                console.error("載入聊天室清單失敗", e); 
-            }
-        }
-
-        window.saveTargetGameRoom = async function(roomId) {
-            try {
-                await setDoc(doc(db, "settings", "gameConfig"), { targetRoomId: roomId, updatedAt: serverTimestamp() }, { merge: true });
-                alert('已成功設定遊戲通知發送的聊天室！');
-            } catch (e) { 
-                console.error("儲存設定失敗", e); 
-                alert('設定儲存失敗'); 
-            }
-        };
-
-        async function loadParentAdminData() {
-            const chipsContainer = document.getElementById('memberChipsList');
-            if (!chipsContainer) return;
-            
-            chipsContainer.innerHTML = '<div style="padding:10px; font-size:12px; color:var(--text-sub);">載入「目前群組」成員中...</div>';
-
-            try {
-                // 🌟 關鍵修正：精準加上 where("groupId", "==", currentGroupId) 條件，僅查詢「目前群組」成員！
-                const q = query(collection(db, "users"), where("groupId", "==", currentGroupId));
-                const querySnapshot = await getDocs(q);
-                
-                groupMembers = [];
-                querySnapshot.forEach((doc) => {
-                    const userData = doc.data();
-                    if (userData.name) groupMembers.push(userData.name);
-                });
-
-                if (groupMembers.length === 0 && currentUser.name) {
-                    groupMembers.push(currentUser.name);
-                }
-
-                groupMembers.forEach(memberName => {
-                    const targetDocId = `${currentGroupId}_${memberName}`;
-                    onSnapshot(doc(db, "game_permissions", targetDocId), (docSnap) => {
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            kidsPermissions[memberName] = {
-                                rps: data.rps !== false,
-                                g2048: data.g2048 !== false,
-                                farm: data.farm !== false
-                            };
-                        } else {
-                            kidsPermissions[memberName] = { rps: true, g2048: true, farm: true };
-                        }
-                        if (selectedMember === memberName) {
-                            renderMemberPermissionDetails();
-                        }
-                    });
-                });
-                renderMemberChips();
-            } catch (error) {
-                chipsContainer.innerHTML = '<div style="color:red; font-size:12px;">載入成員失敗</div>';
-            }
-        }
-
-        function renderMemberChips() {
-            const chipsContainer = document.getElementById('memberChipsList');
-            if (!chipsContainer) return;
-            
-            chipsContainer.innerHTML = '';
-            if (groupMembers.length === 0) {
-                chipsContainer.innerHTML = '<div style="font-size:12px; color:var(--text-sub);">尚無其他成員</div>';
-                return;
-            }
-
-            groupMembers.forEach((memberName) => {
-                const chip = document.createElement('div');
-                chip.className = `member-chip ${selectedMember === memberName ? 'active' : ''}`;
-                chip.innerHTML = `👤 ${memberName}`;
-                chip.onclick = () => selectMemberToManage(memberName);
-                chipsContainer.appendChild(chip);
-            });
-
-            if (!selectedMember && groupMembers.length > 0) {
-                selectMemberToManage(groupMembers[0]);
-            }
-        }
-
-        function selectMemberToManage(memberName) {
-            selectedMember = memberName;
-            const titleEl = document.getElementById('selectedMemberTitle');
-            const sectionEl = document.getElementById('memberPermissionSection');
-            
-            if (titleEl) titleEl.innerText = `管理 ${memberName} 的遊戲權限`;
-            if (sectionEl) sectionEl.style.display = 'block';
-            
-            document.querySelectorAll('.member-chip').forEach(el => {
-                el.classList.toggle('active', el.innerText.includes(memberName));
-            });
-            renderMemberPermissionDetails();
-        }
-
-        function renderMemberPermissionDetails() {
-            if (!selectedMember) return;
-            const perms = kidsPermissions[selectedMember] || { rps: true, g2048: true, farm: true };
-
-            const btnRpsAllow = document.getElementById('btnRpsAllow');
-            const btnRpsBan = document.getElementById('btnRpsBan');
-            if (btnRpsAllow) btnRpsAllow.className = `btn-perm ${perms.rps !== false ? 'allow-active' : ''}`;
-            if (btnRpsBan) btnRpsBan.className = `btn-perm ${perms.rps === false ? 'ban-active' : ''}`;
-
-            const btn2048Allow = document.getElementById('btn2048Allow');
-            const btn2048Ban = document.getElementById('btn2048Ban');
-            if (btn2048Allow) btn2048Allow.className = `btn-perm ${perms.g2048 !== false ? 'allow-active' : ''}`;
-            if (btn2048Ban) btn2048Ban.className = `btn-perm ${perms.g2048 === false ? 'ban-active' : ''}`;
-
-            const btnFarmAllow = document.getElementById('btnFarmAllow');
-            const btnFarmBan = document.getElementById('btnFarmBan');
-            if (btnFarmAllow) btnFarmAllow.className = `btn-perm ${perms.farm !== false ? 'allow-active' : ''}`;
-            if (btnFarmBan) btnFarmBan.className = `btn-perm ${perms.farm === false ? 'ban-active' : ''}`;
-        }
-
-        window.setMemberPermission = async function(gameType, allow) {
-            if (!selectedMember) return;
-            try {
-                const targetDocId = `${currentGroupId}_${selectedMember}`;
-                const docRef = doc(db, "game_permissions", targetDocId);
-                const currentPerms = kidsPermissions[selectedMember] || { rps: true, g2048: true, farm: true };
-                currentPerms[gameType] = allow;
-                await setDoc(docRef, currentPerms, { merge: true });
-            } catch (error) {
-                alert("更新權限失敗，請檢查網路。");
-            }
-        };
-
-        window.selectMemberToManage = selectMemberToManage;
-    </script>
+    <!-- 引入外部 JS 檔案 -->
+    <script type="module" src="js/admin.js"></script>
 </body>
 </html>
