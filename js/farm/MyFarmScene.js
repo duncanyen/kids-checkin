@@ -1,6 +1,6 @@
 import { db } from '../firebase-config.js';
 import { onSnapshot, setDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, LAY_EGG_TIME_MS, playerName } from './constants.js';
+import { myFarmRef, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
 
 export default class MyFarmScene extends Phaser.Scene {
     constructor() { super({ key: 'MyFarmScene' }); }
@@ -55,7 +55,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.timerBg = this.add.rectangle(cx, 90, 200, 26, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 90, '連線中...', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
-        // 建立通用對話框 (預設隱藏且完全收納於 Container 內)
+        // 建立通用對話框
         this.createConfirmDialog();
         
         // 綁定連線與對話監聽
@@ -83,13 +83,13 @@ export default class MyFarmScene extends Phaser.Scene {
 
     initFirebase() {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
-            // 🛡️ 防禦修正 1：嚴格驗證文件與 farm 物件，只有在【文件完全不存在】時才進行初始化
             if (!docSnap.exists()) {
                 setDoc(myFarmRef, { 
                     farm: { 
                         coins: 0, inventoryEggs: 0, hens: 1, coopLevel: 1, eggsReady: 0, 
                         lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0, 
                         wolfFangs: 0, tigerPelts: 0, medicines: 0, cleanliness: 0, moral: 100,
+                        equippedWeapon: 'club', // 預設武器
                         hensState: [{ isSick: false }] 
                     } 
                 }, { merge: true });
@@ -99,12 +99,13 @@ export default class MyFarmScene extends Phaser.Scene {
             const rawData = docSnap.data();
             if (!rawData || !rawData.farm) {
                 console.warn("⚠️ Farm 欄位未即時載入，等待快取或同步，暫不重置資料庫！");
-                return; // 防護：不要直接重置整個資料庫，避免快取延遲時誤刪！
+                return;
             }
 
             this.farmData = rawData.farm;
+            // 補齊武器預設值
+            if (!this.farmData.equippedWeapon) this.farmData.equippedWeapon = 'club';
 
-            // 🛡️ 防禦修正 2：安全補齊缺漏欄位（以原本的進度為底，絕不歸零）
             const safeHens = Math.max(1, this.farmData.hens || 1);
             this.farmData.hens = safeHens;
             this.farmData.coins = this.farmData.coins !== undefined ? this.farmData.coins : 0;
@@ -115,7 +116,6 @@ export default class MyFarmScene extends Phaser.Scene {
             if (!Array.isArray(this.farmData.hensState) || this.farmData.hensState.length === 0) {
                 this.farmData.hensState = Array.from({ length: safeHens }, () => ({ isSick: false }));
             } else if (this.farmData.hensState.length < safeHens) {
-                // 補足缺少狀態的母雞
                 while (this.farmData.hensState.length < safeHens) {
                     this.farmData.hensState.push({ isSick: false });
                 }
@@ -136,7 +136,6 @@ export default class MyFarmScene extends Phaser.Scene {
         const cleanVal = this.farmData.cleanliness || 0;
         this.cleanText.setText(`🗑️ ${cleanVal}/100`);
 
-        // 髒亂警示顏色
         if (this.cleanFlashTween) this.cleanFlashTween.stop();
         if (cleanVal <= 50) {
             this.cleanText.setColor('#FFFFFF').setAlpha(1);
@@ -192,7 +191,6 @@ export default class MyFarmScene extends Phaser.Scene {
         else if (coopLevel === 2) this.coop.setScale(1.2);
         else if (coopLevel === 3) this.coop.setScale(1.5);
 
-        // 病逝判定 (>48小時)
         let needsDeadCleanup = false;
         const validHensState = hensState.filter(h => {
             if (h && h.isSick && h.sickTimestamp && (now - h.sickTimestamp > 48 * 3600 * 1000)) {
@@ -247,14 +245,13 @@ export default class MyFarmScene extends Phaser.Scene {
         }
     }
 
-    // 🛡️ 防禦修正 3：防止清理死雞時將母雞數量扣到 0 或造成資料歸零
     async cleanupDeadHens(newHensState) {
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 if (!snap.exists() || !snap.data().farm) return;
                 
-                const safeCount = Math.max(1, newHensState.length); // 至少保留 1 隻
+                const safeCount = Math.max(1, newHensState.length); 
                 t.update(myFarmRef, { 
                     "farm.hens": safeCount,
                     "farm.hensState": newHensState 
@@ -342,7 +339,6 @@ export default class MyFarmScene extends Phaser.Scene {
         });
     }
 
-    // ⏱️ 生蛋計時器與生產演算
     startEggTimer() {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
@@ -388,7 +384,6 @@ export default class MyFarmScene extends Phaser.Scene {
                 changed = true;
             }
 
-            // 🛡️ 防禦修正 4：避免頻繁直寫數據，採用安全獨立欄位 updateDoc
             if (changed) {
                 updateDoc(myFarmRef, { 
                     "farm.eggsReady": eggsReady, 
@@ -416,7 +411,7 @@ export default class MyFarmScene extends Phaser.Scene {
         cabSprite.isAnimating = true;
         this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
 
-        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0) + (this.farmData.tigerPelts || 0) + (this.farmData.medicines || 0);
+        const usedSpace = getUsedSpace(this.farmData);
         const limit = this.farmData.warehouseLimit || 10;
         const rand = Phaser.Math.Between(1, 500);
         let foundType = null, icon = null;
@@ -464,7 +459,7 @@ export default class MyFarmScene extends Phaser.Scene {
         }
 
         const eggsToHarvest = this.farmData.eggsReady;
-        const usedSpace = (this.farmData.inventoryEggs || 0) + (this.farmData.worms || 0) + (this.farmData.earthworms || 0) + (this.farmData.wolfFangs || 0) + (this.farmData.tigerPelts || 0) + (this.farmData.medicines || 0);
+        const usedSpace = getUsedSpace(this.farmData);
         const limit = this.farmData.warehouseLimit || 10;
         
         if (usedSpace + eggsToHarvest > limit) {
@@ -492,7 +487,6 @@ export default class MyFarmScene extends Phaser.Scene {
         finally { this.isHarvesting = false; }
     }
 
-    // 🔒 確認對話框
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         
