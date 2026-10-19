@@ -117,7 +117,7 @@ export default class BootScene extends Phaser.Scene {
             ], pixelWidth: 6, palette: palette 
         });
 
-        // 🐅 專業級精細老虎 (包含耳廓、額頭「王」字紋、銳利綠眼與斑紋)
+        // 🐅 專業級精細老虎
         this.textures.generate('tiger', { 
             data: [
                 '..444..............444..',
@@ -143,7 +143,6 @@ export default class BootScene extends Phaser.Scene {
             ], pixelWidth: 5, palette: palette 
         });
 
-        // 🐅 猛虎被打暈/滿頭包型態 (`tiger_bump`)
         this.textures.generate('tiger_bump', { 
             data: [
                 '.........2222...........',
@@ -172,6 +171,30 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('tiger_pelt', { data: ['......4K4K4.......', '.....4KKKKK4......', '...444K444K444....', '..4KKKKKKKKKKK4...', '.4KK4KK444KK4KK4..', '.4KKKKKKKKKKKKK4..', '..44KK44444KK44...', '...4KKKKKKKKK4....', '..4KK4444444KK4...', '.4KKKKKKKKKKKKK4..', '.4K44K4...4K44K4..', '..4444.....4444...'], pixelWidth: 4, palette: palette });
         this.textures.generate('club', { data: ['..GG..', '.GFFG.', 'GFFFFG', 'GFFFFG', 'GFFFFG', '.GFFG.', '.GFFG.', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
+        
+        // 🔨 狼牙棒貼圖
+        this.textures.generate('mace', {
+            data: [
+                '..88..',
+                '.8448.',
+                '848848',
+                '848848',
+                '.8448.',
+                '..GG..',
+                '..GG..',
+                '..GG..',
+                '..GG..'
+            ], pixelWidth: 4, palette: palette
+        });
+
+        // ✨ 暈眩星星貼圖 (頭冒金星)
+        this.textures.generate('star', {
+            data: [
+                '.E.',
+                'EEE',
+                '.E.'
+            ], pixelWidth: 4, palette: palette
+        });
 
         // 全域監聽設定
         if (!this.game.registry.has('isListeningFarm')) {
