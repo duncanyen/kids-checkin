@@ -1,20 +1,18 @@
 // 1. 從 firebase-config.js 引入共用 db
 import { db } from './firebase-config.js'; 
 import { 
-    doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp, getDoc,
+    doc, setDoc, addDoc, collection, onSnapshot, serverTimestamp,
     getDocs, query, where, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const RPS_ICONS = ["✊", "✋", "✌️"];
 let isGameLocked = false;
-let isParent = false;
 
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
 let userGroupId = 'default_group';
 let userDocId = '';
-// 新增 farm 預設權限
 let myPermissions = { rps: true, g2048: true, farm: true };
 
 if (!currentUser) {
@@ -30,7 +28,6 @@ if (!currentUser) {
     const nameEl = document.getElementById('gameUserName');
     if (nameEl) nameEl.innerText = currentUser.name || '';
     
-    isParent = (currentUser.role === 'admin' || currentUser.role === 'parent' || currentUser.name === '爸爸' || currentUser.name === '媽咪');
     setupView();
     listenMyPermissions();
 }
@@ -50,95 +47,14 @@ function listenMyPermissions() {
     });
 }
 
-async function setupView() {
-    const modeSwitchContainer = document.getElementById('modeSwitchContainer');
+function setupView() {
     const gameZoneTitle = document.getElementById('gameZoneTitle');
-    const adminConfig = document.getElementById('adminGameConfig');
-
-    if (isParent) {
-        if (modeSwitchContainer) modeSwitchContainer.style.display = 'flex';
-        // 只有家長可以看到推播頻道設定
-        if (adminConfig) {
-            adminConfig.style.display = 'flex';
-            await loadGameChatRoomsForSelect();
-        }
-        switchParentView('admin');
-    } else {
-        if (modeSwitchContainer) modeSwitchContainer.style.display = 'none';
-        if (adminConfig) adminConfig.style.display = 'none';
-        if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
-        returnToLobby();
-        listenKidGameData(userDocId);
-        listen2048UserData(userDocId);
-    }
-}
-
-// 🌟 新增：讀取聊天室列表供下拉選單選擇
-async function loadGameChatRoomsForSelect() {
-    try {
-        const select = document.getElementById('targetGameChatRoomSelect');
-        if (!select) return;
-        select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
-        
-        // 讀取所有房間 (這裡要根據你的房間架構來調整，這邊參考你打卡的房間讀取)
-        const querySnapshot = await getDocs(collection(db, "rooms"));
-        querySnapshot.forEach(docSnap => {
-            const room = docSnap.data();
-            const opt = document.createElement('option');
-            opt.value = docSnap.id;
-            opt.innerText = room.name;
-            select.appendChild(opt);
-        });
-        
-        // 讀取目前設定的頻道
-        const configDoc = await getDoc(doc(db, "settings", "gameConfig"));
-        if (configDoc.exists()) {
-            const targetRoomId = configDoc.data().targetRoomId;
-            if (targetRoomId) select.value = targetRoomId;
-        }
-    } catch (e) { 
-        console.error("載入聊天室清單失敗", e); 
-    }
-}
-
-// 🌟 新增：儲存選定的推播聊天室
-window.saveTargetGameRoom = async function(roomId) {
-    try {
-        await setDoc(doc(db, "settings", "gameConfig"), { targetRoomId: roomId, updatedAt: serverTimestamp() }, { merge: true });
-        alert('已成功設定遊戲通知發送的聊天室！');
-    } catch (e) { 
-        console.error("儲存設定失敗", e); 
-        alert('設定儲存失敗'); 
-    }
-};
-
-function switchParentView(mode) {
-    const btnAdmin = document.getElementById('btnModeAdmin');
-    const btnPlay = document.getElementById('btnModePlay');
-    const gameZoneTitle = document.getElementById('gameZoneTitle');
-    const parentAdminContainer = document.getElementById('parentAdminContainer');
-    const gameLobby = document.getElementById('gameLobby');
-    const kidGameContainer = document.getElementById('kidGameContainer');
-    const g2048Container = document.getElementById('g2048Container');
-
-    if (mode === 'admin') {
-        if (btnAdmin) btnAdmin.classList.add('active');
-        if (btnPlay) btnPlay.classList.remove('active');
-        if (gameZoneTitle) gameZoneTitle.innerText = "🛡️ 權限管理中心";
-        if (parentAdminContainer) parentAdminContainer.style.display = 'block';
-        if (gameLobby) gameLobby.style.display = 'none';
-        if (kidGameContainer) kidGameContainer.style.display = 'none';
-        if (g2048Container) g2048Container.style.display = 'none';
-        loadParentAdminData();
-    } else {
-        if (btnPlay) btnPlay.classList.add('active');
-        if (btnAdmin) btnAdmin.classList.remove('active');
-        if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區 (親自遊玩)";
-        if (parentAdminContainer) parentAdminContainer.style.display = 'none';
-        returnToLobby();
-        listenKidGameData(userDocId);
-        listen2048UserData(userDocId);
-    }
+    if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
+    
+    // 所有成員（包含管理者）統一進入遊戲大廳
+    returnToLobby();
+    listenKidGameData(userDocId);
+    listen2048UserData(userDocId);
 }
 
 function selectGame(gameType) {
@@ -155,7 +71,6 @@ function selectGame(gameType) {
         return;
     }
 
-    // 👉 如果是咕咕莊園，直接跳轉到獨立頁面
     if (gameType === 'farm') {
         window.location.href = 'farmgame.html';
         return;
@@ -179,132 +94,11 @@ function returnToLobby() {
     const g2048Container = document.getElementById('g2048Container');
     const gameLobby = document.getElementById('gameLobby');
     const gameZoneTitle = document.getElementById('gameZoneTitle');
-    const btnModePlay = document.getElementById('btnModePlay');
 
     if (kidGameContainer) kidGameContainer.style.display = 'none';
     if (g2048Container) g2048Container.style.display = 'none';
     if (gameLobby) gameLobby.style.display = 'flex';
-    
-    if (gameZoneTitle) {
-        gameZoneTitle.innerText = (isParent && btnModePlay && btnModePlay.classList.contains('active')) ? "🎮 遊戲區 (親自遊玩)" : "🎮 遊戲區";
-    }
-}
-
-let groupMembers = [];
-let kidsPermissions = {};
-let selectedMember = null;
-
-async function loadParentAdminData() {
-    const chipsContainer = document.getElementById('memberChipsList');
-    if (!chipsContainer) return;
-    
-    chipsContainer.innerHTML = '<div class="lb-loading" style="padding:10px;">載入群組成員中...</div>';
-
-    try {
-        const q = query(collection(db, "users"), where("groupId", "==", userGroupId));
-        const querySnapshot = await getDocs(q);
-        
-        groupMembers = [];
-        querySnapshot.forEach((doc) => {
-            const userData = doc.data();
-            if (userData.name) groupMembers.push(userData.name);
-        });
-
-        if (!groupMembers.includes(currentUser.name)) {
-            groupMembers.push(currentUser.name);
-        }
-
-        groupMembers.forEach(memberName => {
-            const targetDocId = `${userGroupId}_${memberName}`;
-            onSnapshot(doc(db, "game_permissions", targetDocId), (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    kidsPermissions[memberName] = {
-                        rps: data.rps !== false,
-                        g2048: data.g2048 !== false,
-                        farm: data.farm !== false
-                    };
-                } else {
-                    kidsPermissions[memberName] = { rps: true, g2048: true, farm: true };
-                }
-                if (selectedMember === memberName) {
-                    renderMemberPermissionDetails();
-                }
-            });
-        });
-        renderMemberChips();
-    } catch (error) {
-        chipsContainer.innerHTML = '<div class="lb-loading" style="color:red;">載入失敗</div>';
-    }
-}
-
-function renderMemberChips() {
-    const chipsContainer = document.getElementById('memberChipsList');
-    if (!chipsContainer) return;
-    
-    chipsContainer.innerHTML = '';
-    if (groupMembers.length === 0) {
-        chipsContainer.innerHTML = '<div class="lb-loading">尚無其他成員</div>';
-        return;
-    }
-
-    groupMembers.forEach((memberName) => {
-        const chip = document.createElement('div');
-        chip.className = `member-chip ${selectedMember === memberName ? 'active' : ''}`;
-        chip.innerHTML = `👤 ${memberName}`;
-        chip.onclick = () => selectMemberToManage(memberName);
-        chipsContainer.appendChild(chip);
-    });
-    if (!selectedMember && groupMembers.length > 0) {
-        selectMemberToManage(groupMembers[0]);
-    }
-}
-
-function selectMemberToManage(memberName) {
-    selectedMember = memberName;
-    const titleEl = document.getElementById('selectedMemberTitle');
-    const sectionEl = document.getElementById('memberPermissionSection');
-    
-    if (titleEl) titleEl.innerText = `管理 ${memberName} 的遊戲權限`;
-    if (sectionEl) sectionEl.style.display = 'block';
-    
-    document.querySelectorAll('.member-chip').forEach(el => {
-        el.classList.toggle('active', el.innerText.includes(memberName));
-    });
-    renderMemberPermissionDetails();
-}
-
-function renderMemberPermissionDetails() {
-    if (!selectedMember) return;
-    const perms = kidsPermissions[selectedMember] || { rps: true, g2048: true, farm: true };
-
-    const btnRpsAllow = document.getElementById('btnRpsAllow');
-    const btnRpsBan = document.getElementById('btnRpsBan');
-    if (btnRpsAllow) btnRpsAllow.className = `btn-perm ${perms.rps !== false ? 'allow-active' : ''}`;
-    if (btnRpsBan) btnRpsBan.className = `btn-perm ${perms.rps === false ? 'ban-active' : ''}`;
-
-    const btn2048Allow = document.getElementById('btn2048Allow');
-    const btn2048Ban = document.getElementById('btn2048Ban');
-    if (btn2048Allow) btn2048Allow.className = `btn-perm ${perms.g2048 !== false ? 'allow-active' : ''}`;
-    if (btn2048Ban) btn2048Ban.className = `btn-perm ${perms.g2048 === false ? 'ban-active' : ''}`;
-
-    const btnFarmAllow = document.getElementById('btnFarmAllow');
-    const btnFarmBan = document.getElementById('btnFarmBan');
-    if (btnFarmAllow) btnFarmAllow.className = `btn-perm ${perms.farm !== false ? 'allow-active' : ''}`;
-    if (btnFarmBan) btnFarmBan.className = `btn-perm ${perms.farm === false ? 'ban-active' : ''}`;
-}
-
-async function setMemberPermission(gameType, allow) {
-    if (!selectedMember) return;
-    try {
-        const targetDocId = `${userGroupId}_${selectedMember}`;
-        const docRef = doc(db, "game_permissions", targetDocId);
-        const currentPerms = kidsPermissions[selectedMember] || { rps: true, g2048: true, farm: true };
-        currentPerms[gameType] = allow;
-        await setDoc(docRef, currentPerms, { merge: true });
-    } catch (error) {
-        alert("更新權限失敗，請檢查網路。");
-    }
+    if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
 }
 
 // ---------------------------
@@ -690,8 +484,6 @@ async function loadLeaderboard(tabType) {
 // --- 暴露給 window 供 HTML onClick 綁定 ---
 window.selectGame = selectGame;
 window.returnToLobby = returnToLobby;
-window.selectMemberToManage = selectMemberToManage;
-window.setMemberPermission = setMemberPermission;
 window.init2048Game = init2048Game;
 window.openLeaderboard = openLeaderboard;
 window.closeLeaderboard = closeLeaderboard;
@@ -745,17 +537,9 @@ document.querySelectorAll('.p-card').forEach(card => {
     });
 });
 
-const btnModeAdmin = document.getElementById('btnModeAdmin');
-const btnModePlay = document.getElementById('btnModePlay');
 const btnBack = document.getElementById('btnBack');
 const btnLogout = document.getElementById('btnLogout');
 
-if (btnModeAdmin) {
-    btnModeAdmin.addEventListener('click', () => switchParentView('admin'));
-}
-if (btnModePlay) {
-    btnModePlay.addEventListener('click', () => switchParentView('play'));
-}
 if (btnBack) {
     btnBack.addEventListener('click', () => window.location.href = 'index.html');
 }
