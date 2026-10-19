@@ -73,7 +73,7 @@ export default class ShopScene extends Phaser.Scene {
         container.add([bg, icon, txt]);
     }
 
-    // 🔒 數量選擇與交易對話框 (強性將按鈕文字顏色設定為亮白色 #FFFFFF)
+    // 🔒 數量選擇與交易對話框 (按鈕改為白色，符號改為黑色)
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
@@ -82,18 +82,18 @@ export default class ShopScene extends Phaser.Scene {
         this.dialogTitle = this.add.text(195, 335, '交易名稱', { fontSize: '18px', color: '#000000', fontStyle: 'bold', align:'center' }).setOrigin(0.5).setDepth(105);
         this.dialogSubText = this.add.text(195, 365, '單價: 0 金幣', { fontSize: '14px', color: '#666666', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
-        // ➖ 減號按鈕 (黑色背景，白色加粗文字)
-        const btnMinus = this.add.rectangle(110, 410, 40, 36, 0x333333, 1).setInteractive({ cursor: 'pointer' });
-        const txtMinus = this.add.text(110, 410, '➖', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
+        // ➖ 減號按鈕 (白色背景，黑色加粗文字)
+        const btnMinus = this.add.rectangle(110, 410, 40, 36, 0xFFFFFF, 1).setStrokeStyle(1, 0xCCCCCC).setInteractive({ cursor: 'pointer' });
+        const txtMinus = this.add.text(110, 410, '➖', { fontSize: '18px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         // 數量顯示
         this.textQty = this.add.text(170, 410, '1', { fontSize: '20px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
-        // ➕ 加號按鈕 (黑色背景，白色加粗文字)
-        const btnPlus = this.add.rectangle(230, 410, 40, 36, 0x333333, 1).setInteractive({ cursor: 'pointer' });
-        const txtPlus = this.add.text(230, 410, '➕', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
+        // ➕ 加號按鈕 (白色背景，黑色加粗文字)
+        const btnPlus = this.add.rectangle(230, 410, 40, 36, 0xFFFFFF, 1).setStrokeStyle(1, 0xCCCCCC).setInteractive({ cursor: 'pointer' });
+        const txtPlus = this.add.text(230, 410, '➕', { fontSize: '18px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
-        // 🌟 MAX 按鈕 (橘色背景，白色加粗文字)
+        // 🌟 MAX 按鈕 (維持橘色背景，白色加粗文字)
         const btnMax = this.add.rectangle(280, 410, 45, 36, 0xFF9800, 1).setInteractive({ cursor: 'pointer' });
         const txtMax = this.add.text(280, 410, 'MAX', { fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
@@ -118,7 +118,7 @@ export default class ShopScene extends Phaser.Scene {
             if (this.confirmTradeCallback) this.confirmTradeCallback(this.currentQty);
         });
 
-        // 容器層級排列：底圖 -> 矩形按鈕 -> 文字
+        // 容器層級排列
         this.dialogContainer.add([
             overlay, bg, 
             btnMinus, btnPlus, btnMax, btnYes, btnNo,
