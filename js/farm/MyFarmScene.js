@@ -17,7 +17,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         
         // 🏠 使用新圖集 coop_sprite，大小依需求可調整 scale
-        this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(2.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.coop = this.add.sprite(cx, cy - 90, 'coop_sprite').setScale(2.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.coop.on('pointerdown', () => this.askCleanMyFarm());
 
         this.hensGroup = []; 
