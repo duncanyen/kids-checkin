@@ -6,11 +6,10 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
     preload() {
-        // 載入母雞
         this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
         
-        // 🏠 載入新雞舍圖集 (裁切掉文字後，單格應為 32x32)
-        this.load.spritesheet('coop_sprite', 'henshouse.png', { frameWidth: 32, frameHeight: 32 });
+        // 🏠 載入 4x6 雞舍圖集 (請依實際圖片總寬高除以 4 與 6 來設定 frameWidth/Height)
+        this.load.spritesheet('coop_sprite', 'henshouse.png', { frameWidth: 64, frameHeight: 64 });
     }
 
     create() {
@@ -24,7 +23,6 @@ export default class BootScene extends Phaser.Scene {
             'e': '#FDE047', 'f': '#D97706', 'g': '#FCA5A5', 'P': '#8BC34A'
         };
 
-        // 保留其他環境物件
         this.textures.generate('grass', { data: ['99999999', '9A999999', '9999A999', '99999999', '99A99999', '999999A9', '99999999', '9999A999'], pixelWidth: 8, palette: palette });
         this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
         this.textures.generate('coin', { data: ['.777.', '7L77K', '7777K', '777KK', '.7KK.'], pixelWidth: 5, palette: palette });
@@ -32,7 +30,6 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('worm', { data: ['9A9A'], pixelWidth: 5, palette: palette });
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
         this.textures.generate('signboard', { data: ['..GGGGGG..', '.GFFFFFFG.', 'GFF4444FFG', 'GFF4444FFG', 'GFFFFFFFFG', '.GFFFFFFG.', '..GGGGGG..', '....GG....', '....GG....', '....GG....'], pixelWidth: 3, palette: palette });
-        
         this.textures.generate('rubbish', { data: ['..FGFG..', '.GFFFFG.', 'FGHHHHGF', 'G444444G', 'FH4444HF', '.GFFFFG.', '..FGFG..'], pixelWidth: 3, palette: palette });
         this.textures.generate('sick_pelt', { data: ['..PP..', '.P99P.', 'P9PP9P', '.P99P.', '..PP..'], pixelWidth: 3, palette: palette });
         this.textures.generate('skull', { data: ['.1111.', '141411', '111111', '.1414.', '..11..'], pixelWidth: 3, palette: palette });
