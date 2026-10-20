@@ -9,7 +9,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
         
         // 🏠 載入 4x6 雞舍圖集 (請依實際圖片總寬高除以 4 與 6 來設定 frameWidth/Height)
-        this.load.spritesheet('coop_sprite', 'henshouse.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('coop_sprite', 'henshouse.png', { frameWidth: 32,frameHeight: 32});
     }
 
     create() {
