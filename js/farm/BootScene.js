@@ -5,6 +5,12 @@ import { myFarmRef } from './constants.js';
 export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
+    preload() {
+        // ⚠️ 重要：請依照「下載.png」的實際總解析度，除以 6(欄) 與 8(列) 來設定 frameWidth 與 frameHeight
+        // 這裡假設單格寬高為 32x32
+        this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
+    }
+
     create() {
         const palette = {
             '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
@@ -16,8 +22,8 @@ export default class BootScene extends Phaser.Scene {
             'e': '#FDE047', 'f': '#D97706', 'g': '#FCA5A5', 'P': '#8BC34A'
         };
 
+        // 移除原本的 hen 貼圖生成，保留其他環境物件
         this.textures.generate('grass', { data: ['99999999', '9A999999', '9999A999', '99999999', '99A99999', '999999A9', '99999999', '9999A999'], pixelWidth: 8, palette: palette });
-        this.textures.generate('hen', { data: ['......1111..', '......1411..', '......1111..', '......111133', '....11111122', '....111111..', '..11118811..', '..11118811..', '....118811..', '....111111..', '......3..3..', '......3..3..'], pixelWidth: 6, palette: palette });
         this.textures.generate('coop', { data: ['......CCCC......', '....CCCCCCCC....', '..CCCCCCCCCCCC..', '.CCCCCCCCCCCCCC.', 'DDDDDDDDDDDDDDDD', '..FGFGFGFGFGFG..', '..GFFGFGFGFFGF..', '..FGFGIIIIFGFG..', '..GFFGIIIIFFGF..', '..FGFGFFFFFGFG..', '..GFFGHHHHFFGF..', '..FGFGHHHHFGFG..', '..GFFHEEEEHFFG..', '..FGFHEEEEFGFG..', '..GFFGFGFGFFGF..'], pixelWidth: 10, palette: palette });
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
         this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
@@ -27,173 +33,41 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
         this.textures.generate('signboard', { data: ['..GGGGGG..', '.GFFFFFFG.', 'GFF4444FFG', 'GFF4444FFG', 'GFFFFFFFFG', '.GFFFFFFG.', '..GGGGGG..', '....GG....', '....GG....', '....GG....'], pixelWidth: 3, palette: palette });
         
-        // 🗑️ 垃圾貼圖 (髒亂視覺)
-        this.textures.generate('rubbish', {
-            data: [
-                '..FGFG..',
-                '.GFFFFG.',
-                'FGHHHHGF',
-                'G444444G',
-                'FH4444HF',
-                '.GFFFFG.',
-                '..FGFG..'
-            ], pixelWidth: 3, palette: palette
-        });
-
-        // 🟢 病氣漩渦標誌 (生病 < 24h)
-        this.textures.generate('sick_pelt', {
-            data: [
-                '..PP..',
-                '.P99P.',
-                'P9PP9P',
-                '.P99P.',
-                '..PP..'
-            ], pixelWidth: 3, palette: palette
-        });
-
-        // 💀 骷髏標誌 (生病危急 24~48h)
-        this.textures.generate('skull', {
-            data: [
-                '.1111.',
-                '141411',
-                '111111',
-                '.1414.',
-                '..11..'
-            ], pixelWidth: 3, palette: palette
-        });
-
-        // 💊 咕咕活力散藥包
-        this.textures.generate('medicine', {
-            data: [
-                '..2222..',
-                '.211112.',
-                '21222212',
-                '21222212',
-                '.211112.',
-                '..2222..'
-            ], pixelWidth: 4, palette: palette
-        });
-
-        // 🐺 野狼貼圖
-        this.textures.generate('wolf', { 
-            data: [
-                '.44............44.',
-                '4884..........4884',
-                '48884........48884',
-                '488844444444448884',
-                '488888888888888884',
-                '.4882288888822884.',
-                '.4882288888822884.',
-                '..48888444488884..',
-                '..48884888848884..',
-                '...488488884884...',
-                '...488444444884...',
-                '....4411111144....',
-                '....4141111414....',
-                '....4444444444....',
-                '.....48888884.....',
-                '......44..44......'
-            ], pixelWidth: 6, palette: palette 
-        });
-
-        this.textures.generate('wolf_bump', { 
-            data: [
-                '......22..........',
-                '.44..2222....44...',
-                '4884..22....4884..',
-                '48884444444448884.',
-                '488888888888888884',
-                '.4884888888884884.',
-                '.4888488888848884.',
-                '..48888444488884..',
-                '..48884888848884..',
-                '...488488884884...',
-                '...488444444884...',
-                '....4411111144....',
-                '....4141111414....',
-                '....4444444444....',
-                '.....48888884.....',
-                '......44..44......'
-            ], pixelWidth: 6, palette: palette 
-        });
-
-        // 🐅 專業級精細老虎
-        this.textures.generate('tiger', { 
-            data: [
-                '..444..............444..',
-                '.4KKK4............4KKK4.',
-                '4KK11K4..........4K11KK4',
-                '4K111KK4444444444KK111K4',
-                '4KK1KKKKKKKKKKKKKKKK1KK4',
-                '.4KKKKKK444444KKKKKKKK4.',
-                '..4KKKKK444444KKKKKKK4..',
-                '..4K44KKKK44KKKK44KKK4..',
-                '.4KK44KKK4444KKK44KKKK4.',
-                '.4KKKKKKK4444KKKKKKKKK4.',
-                '.4KK44194KKKK49144KKKK4.',
-                '.4KKK4144KKKK4441KKKKK4.',
-                '.4KK44111KKKK11144KKKK4.',
-                '..4KKKKK114411KKKKKKK4..',
-                '..44KKKK11M111KKKKK44..',
-                '...4KKK11111111KKKK4...',
-                '....4KK11411411KK4....',
-                '....4KKK111111KKK4....',
-                '.....44KKKKKKKK44.....',
-                '.......44444444.......'
-            ], pixelWidth: 5, palette: palette 
-        });
-
-        this.textures.generate('tiger_bump', { 
-            data: [
-                '.........2222...........',
-                '..444...22CC22...444....',
-                '.4KKK4...2222...4KKK4...',
-                '4KK11K4444444444K11KK4..',
-                '4K111KKKKKKKKKKKK111K4..',
-                '4KK1KKKKKKKKKKKKKK1KK4..',
-                '.4KKKKKK444444KKKKKK4...',
-                '..4KKKKK444444KKKKKK4...',
-                '..4K44KKKK44KKKK44KK4...',
-                '.4KK44K44K44K44K44KK4...',
-                '.4KKKKK44K44K44KKKKK4...',
-                '.4KK441444KKKK4444KK4...',
-                '.4KKK41444KKKK4441KK4...',
-                '.4KK44111KKKK11144KK4...',
-                '..4KKKKK114411KKKKKK4...',
-                '..44KKKK11M111KKKKK4....',
-                '...4KKK11111111KKKK4...',
-                '....4KK11411411KK4....',
-                '....4KKK111111KKK4....',
-                '.....44KKKKKKKK44.....'
-            ], pixelWidth: 5, palette: palette 
-        });
-
+        this.textures.generate('rubbish', { data: ['..FGFG..', '.GFFFFG.', 'FGHHHHGF', 'G444444G', 'FH4444HF', '.GFFFFG.', '..FGFG..'], pixelWidth: 3, palette: palette });
+        this.textures.generate('sick_pelt', { data: ['..PP..', '.P99P.', 'P9PP9P', '.P99P.', '..PP..'], pixelWidth: 3, palette: palette });
+        this.textures.generate('skull', { data: ['.1111.', '141411', '111111', '.1414.', '..11..'], pixelWidth: 3, palette: palette });
+        this.textures.generate('medicine', { data: ['..2222..', '.211112.', '21222212', '21222212', '.211112.', '..2222..'], pixelWidth: 4, palette: palette });
+        
+        this.textures.generate('wolf', { data: ['.44............44.', '4884..........4884', '48884........48884', '488844444444448884', '488888888888888884', '.4882288888822884.', '.4882288888822884.', '..48888444488884..', '..48884888848884..', '...488488884884...', '...488444444884...', '....4411111144....', '....4141111414....', '....4444444444....', '.....48888884.....', '......44..44......'], pixelWidth: 6, palette: palette });
+        this.textures.generate('wolf_bump', { data: ['......22..........', '.44..2222....44...', '4884..22....4884..', '48884444444448884.', '488888888888888884', '.4884888888884884.', '.4888488888848884.', '..48888444488884..', '..48884888848884..', '...488488884884...', '...488444444884...', '....4411111144....', '....4141111414....', '....4444444444....', '.....48888884.....', '......44..44......'], pixelWidth: 6, palette: palette });
+        this.textures.generate('tiger', { data: ['..444..............444..', '.4KKK4............4KKK4.', '4KK11K4..........4K11KK4', '4K111KK4444444444KK111K4', '4KK1KKKKKKKKKKKKKKKK1KK4', '.4KKKKKK444444KKKKKKKK4.', '..4KKKKK444444KKKKKKK4..', '..4K44KKKK44KKKK44KKK4..', '.4KK44KKK4444KKK44KKKK4.', '.4KKKKKKK4444KKKKKKKKK4.', '.4KK44194KKKK49144KKKK4.', '.4KKK4144KKKK4441KKKKK4.', '.4KK44111KKKK11144KKKK4.', '..4KKKKK114411KKKKKKK4..', '..44KKKK11M111KKKKK44..', '...4KKK11111111KKKK4...', '....4KK11411411KK4....', '....4KKK111111KKK4....', '.....44KKKKKKKK44.....', '.......44444444.......'], pixelWidth: 5, palette: palette });
+        this.textures.generate('tiger_bump', { data: ['.........2222...........', '..444...22CC22...444....', '.4KKK4...2222...4KKK4...', '4KK11K4444444444K11KK4..', '4K111KKKKKKKKKKKK111K4..', '4KK1KKKKKKKKKKKKKK1KK4..', '.4KKKKKK444444KKKKKK4...', '..4KKKKK444444KKKKKK4...', '..4K44KKKK44KKKK44KK4...', '.4KK44K44K44K44K44KK4...', '.4KKKKK44K44K44KKKKK4...', '.4KK441444KKKK4444KK4...', '.4KKK41444KKKK4441KK4...', '.4KK44111KKKK11144KK4...', '..4KKKKK114411KKKKKK4...', '..44KKKK11M111KKKKK4....', '...4KKK11111111KKKK4...', '....4KK11411411KK4....', '....4KKK111111KKK4....', '.....44KKKKKKKK44.....'], pixelWidth: 5, palette: palette });
         this.textures.generate('tiger_pelt', { data: ['......4K4K4.......', '.....4KKKKK4......', '...444K444K444....', '..4KKKKKKKKKKK4...', '.4KK4KK444KK4KK4..', '.4KKKKKKKKKKKKK4..', '..44KK44444KK44...', '...4KKKKKKKKK4....', '..4KK4444444KK4...', '.4KKKKKKKKKKKKK4..', '.4K44K4...4K44K4..', '..4444.....4444...'], pixelWidth: 4, palette: palette });
         this.textures.generate('club', { data: ['..GG..', '.GFFG.', 'GFFFFG', 'GFFFFG', 'GFFFFG', '.GFFG.', '.GFFG.', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
+        this.textures.generate('mace', { data: ['..88..', '.8448.', '848848', '848848', '.8448.', '..GG..', '..GG..', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
+        this.textures.generate('star', { data: ['.E.', 'EEE', '.E.'], pixelWidth: 4, palette: palette });
+
+        // 註冊母雞動畫 (對應素材表的影格位置)
+        this.anims.create({
+            key: 'hen_idle',
+            frames: this.anims.generateFrameNumbers('hen', { start: 0, end: 1 }),
+            frameRate: 3,
+            repeat: -1
+        });
         
-        // 🔨 狼牙棒貼圖
-        this.textures.generate('mace', {
-            data: [
-                '..88..',
-                '.8448.',
-                '848848',
-                '848848',
-                '.8448.',
-                '..GG..',
-                '..GG..',
-                '..GG..',
-                '..GG..'
-            ], pixelWidth: 4, palette: palette
+        this.anims.create({
+            key: 'hen_walk',
+            frames: this.anims.generateFrameNumbers('hen', { start: 6, end: 11 }), // 第二排為走動
+            frameRate: 8,
+            repeat: -1
         });
 
-        // ✨ 暈眩星星貼圖 (頭冒金星)
-        this.textures.generate('star', {
-            data: [
-                '.E.',
-                'EEE',
-                '.E.'
-            ], pixelWidth: 4, palette: palette
+        this.anims.create({
+            key: 'hen_sleep',
+            frames: this.anims.generateFrameNumbers('hen', { start: 42, end: 45 }), // 最後一排為睡覺(生病使用)
+            frameRate: 3,
+            repeat: -1
         });
 
         // 全域監聽設定
