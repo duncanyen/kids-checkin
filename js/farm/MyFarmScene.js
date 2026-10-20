@@ -197,18 +197,17 @@ export default class MyFarmScene extends Phaser.Scene {
         for (let i = 0; i < henCount; i++) {
             const hState = hensState[i] || { isSick: false };
             
-            // 🐔 改用 sprite 並預設播放 idle 動畫
+            // 🐔 加入 setScale(2) 放大一倍
             let newHen = this.add.sprite(
                 this.cameras.main.centerX + Phaser.Math.Between(-30, 30), 
                 this.cameras.main.centerY - 30 + Phaser.Math.Between(-20, 20), 
                 'hen'
-            ).setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' });
+            ).setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
             
             newHen.henIndex = i;
             newHen.hState = hState;
 
             if (hState.isSick) {
-                // 生病狀態改播放睡覺/虛弱動畫
                 newHen.play('hen_sleep', true);
                 const sickDuration = hState.sickTimestamp ? (now - hState.sickTimestamp) : 0;
                 let iconKey = (sickDuration > 24 * 3600 * 1000) ? 'skull' : 'sick_pelt';
@@ -222,7 +221,8 @@ export default class MyFarmScene extends Phaser.Scene {
                 newHen.play('hen_idle', true);
                 newHen.on('pointerdown', () => {
                     if (!this.isHenSitting && this.emptyClickCount < 4) {
-                        this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 1.1, scaleY: 0.9, duration: 100, yoyo: true });
+                        // 🌟 同步放大點擊時的動畫比例 (原本是 1.1 / 0.9，改成基準值 2 乘上去，也就是 2.2 / 1.8)
+                        this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 2.2, scaleY: 1.8, duration: 100, yoyo: true });
                     }
                     this.harvestEgg();
                 });
@@ -281,7 +281,6 @@ export default class MyFarmScene extends Phaser.Scene {
         const targetY = Phaser.Math.Between(120, 450); 
         henSprite.setFlipX(targetX < henSprite.x);
         
-        // 播放走動動畫
         henSprite.play('hen_walk', true);
 
         const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, targetX, targetY);
@@ -290,7 +289,7 @@ export default class MyFarmScene extends Phaser.Scene {
             targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
             onComplete: () => {
                 if (this.isHenSitting) return;
-                henSprite.play('hen_idle', true); // 到達定點恢復站立
+                henSprite.play('hen_idle', true);
                 this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite));
             }
         });
@@ -310,11 +309,13 @@ export default class MyFarmScene extends Phaser.Scene {
                 targets: hen, x: nestX + Phaser.Math.Between(-20, 20), y: nestY + Phaser.Math.Between(-10, 10), duration: 2000, ease: 'Power2',
                 onComplete: () => {
                     hen.play('hen_idle', true);
+                    // 🌟 同步放大生蛋時的壓扁特效 (原本是 0.7 / 1.15，改成 1.4 / 2.3)
                     this.tweens.add({
-                        targets: hen, scaleY: 0.7, scaleX: 1.15, y: hen.y + 10, duration: 300, ease: 'Power2',
+                        targets: hen, scaleY: 1.4, scaleX: 2.3, y: hen.y + 10, duration: 300, ease: 'Power2',
                         onComplete: () => {
                             this.time.delayedCall(3000, () => {
-                                this.tweens.add({ targets: hen, scaleY: 1, scaleX: 1, y: hen.y - 10, duration: 300, onComplete: () => { 
+                                // 🌟 恢復時必須恢復成 2 倍大小
+                                this.tweens.add({ targets: hen, scaleY: 2, scaleX: 2, y: hen.y - 10, duration: 300, onComplete: () => { 
                                     this.isHenSitting = false; this.wanderSingleHen(hen); 
                                 } });
                             });
@@ -405,7 +406,8 @@ export default class MyFarmScene extends Phaser.Scene {
         else return;
 
         if (usedSpace >= limit) {
-            this.showFloatingText('倉庫已滿！', '#F44336', 16, cabSprite.x, cabSprite.y); return;
+            this.showFloatingText('倉庫已滿！', '#F44336', 16, cabSprite.x, cabSprite.y);
+            return;
         }
 
         try {
@@ -446,7 +448,8 @@ export default class MyFarmScene extends Phaser.Scene {
         const limit = this.farmData.warehouseLimit || 10;
         
         if (usedSpace + eggsToHarvest > limit) {
-            this.showFloatingText('⚠️ 倉庫空間不足，請先擴充！', '#F44336', 14); return;
+            this.showFloatingText('⚠️ 倉庫空間不足，請先擴充！', '#F44336', 14);
+            return;
         }
 
         this.emptyClickCount = 0;
@@ -471,6 +474,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     createConfirmDialog() {
         this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
+        
         const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
         const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
         this.dialogText = this.add.text(195, 380, '', { fontSize: '15px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
