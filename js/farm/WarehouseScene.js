@@ -7,7 +7,9 @@ export default class WarehouseScene extends Phaser.Scene {
 
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
-        this.hen = this.add.image(195, 180, 'hen').setScale(1.5).setOrigin(0.5);
+        
+        // 將中心裝飾用的雞改為播放預設動畫
+        this.hen = this.add.sprite(195, 180, 'hen').setScale(1.5).setOrigin(0.5).play('hen_idle');
         this.isFeeding = false;
 
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
@@ -18,12 +20,9 @@ export default class WarehouseScene extends Phaser.Scene {
         btnBack.on('pointerdown', () => this.scene.start('MyFarmScene'));
 
         this.capacityText = this.add.text(195, 110, '容量: 0/10', { fontSize: '16px', color: '#fff', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
-
         this.itemsPanel = this.add.container(0, 260);
-
         this.emptyText = this.add.text(195, 340, '倉庫空空如也～', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold', backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 10, y: 8 } }).setOrigin(0.5).setVisible(false);
 
-        // 包含武器在內的完整物品清單設定
         this.allConfigItems = [
             { key: 'coins', name: '金幣', icon: 'coin' },
             { key: 'inventoryEggs', name: '雞蛋', icon: 'egg' },
@@ -36,7 +35,6 @@ export default class WarehouseScene extends Phaser.Scene {
         ];
 
         this.createActionPanel();
-
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
         this.initFirebase();
@@ -48,15 +46,12 @@ export default class WarehouseScene extends Phaser.Scene {
         this.actionBg = this.add.rectangle(0, 0, 350, 130, 0x222222, 0.95).setOrigin(0.5);
         this.actionTitle = this.add.text(0, -38, '是否要餵食母雞？', { fontSize: '16px', color: '#FFF', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
         
-        // 按鈕：是 (餵食/配備)
         this.btnFeed = this.add.rectangle(-105, 20, 95, 38, 0x4CAF50, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.textFeed = this.add.text(-105, 20, '是(餵食)', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-        // 按鈕：否 (取消/離開)
         this.btnCancel = this.add.rectangle(0, 20, 95, 38, 0x757575, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.textCancel = this.add.text(0, 20, '否(離開)', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
-        // 按鈕：丟棄
         this.btnDiscard = this.add.rectangle(105, 20, 95, 38, 0xE53935, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.textDiscard = this.add.text(105, 20, '🗑️ 丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
@@ -103,13 +98,14 @@ export default class WarehouseScene extends Phaser.Scene {
             const count = this.farmData[item.key] || 0;
 
             const bg = this.add.rectangle(x, y, 160, 80, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+            
+            // 商店圖標如果是母雞，可以保持使用 image，會預設抓第一格
             const img = this.add.image(x - 45, y, item.icon);
             
             const scale = Math.min(45 / img.width, 45 / img.height);
             img.setScale(scale);
 
             let displayTxt = `${item.name}\nx ${count}`;
-            // 如果是已裝備的武器，增加標示
             if (item.type === 'weapon' && this.farmData.equippedWeapon === item.key) {
                 displayTxt = `[裝備中]\n${displayTxt}`;
             }
@@ -234,7 +230,6 @@ export default class WarehouseScene extends Phaser.Scene {
                 if (farm[key] > 0) {
                     const updates = { [`farm.${key}`]: farm[key] - 1 };
                     
-                    // 🛡️ 防禦：如果丟棄的是正在裝備的武器，且丟棄後數量歸零，自動卸下裝備
                     if (farm.equippedWeapon === key && (farm[key] - 1) === 0) {
                         updates["farm.equippedWeapon"] = 'club';
                     }
@@ -254,13 +249,7 @@ export default class WarehouseScene extends Phaser.Scene {
 
         const heart = this.add.text(this.hen.x, this.hen.y - 30, heartIcon, { fontSize: `${fontSize}px` }).setOrigin(0.5).setDepth(30);
         this.tweens.add({
-            targets: heart,
-            y: heart.y - 60,
-            scaleX: 1.3,
-            scaleY: 1.3,
-            alpha: 0,
-            duration: 1500,
-            ease: 'Power1',
+            targets: heart, y: heart.y - 60, scaleX: 1.3, scaleY: 1.3, alpha: 0, duration: 1500, ease: 'Power1',
             onComplete: () => heart.destroy()
         });
     }
