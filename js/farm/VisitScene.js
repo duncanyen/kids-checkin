@@ -62,7 +62,6 @@ export default class VisitScene extends Phaser.Scene {
             this.hensGroup.forEach(h => {
                 if (h.statusIcon) h.statusIcon.destroy();
                 if (h.walkTween) h.walkTween.stop();
-                if (h.waddleTween) h.waddleTween.stop();
             });
         });
     }
@@ -96,15 +95,10 @@ export default class VisitScene extends Phaser.Scene {
         let hasChanged = false;
 
         while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
-            eggsReady++;
-            lastLayTime += currentLayTimeMs;
-            cleanliness = Math.min(100, cleanliness + 2);
-            hasChanged = true;
+            eggsReady++; lastLayTime += currentLayTimeMs; cleanliness = Math.min(100, cleanliness + 2); hasChanged = true;
         }
-
         if (eggsReady >= maxEggs && (now - lastLayTime > 0) && lastLayTime !== now) {
-            lastLayTime = now;
-            hasChanged = true;
+            lastLayTime = now; hasChanged = true;
         }
 
         if (hasChanged && !this.isUpdatingTargetEggs) {
@@ -121,29 +115,16 @@ export default class VisitScene extends Phaser.Scene {
                     let updated = false;
 
                     while (now - lTime >= currentLayTimeMs && eReady < maxEggs) {
-                        eReady++;
-                        lTime += currentLayTimeMs;
-                        cVal = Math.min(100, cVal + 2);
-                        updated = true;
+                        eReady++; lTime += currentLayTimeMs; cVal = Math.min(100, cVal + 2); updated = true;
                     }
-                    if (eReady >= maxEggs && (now - lTime > 0)) {
-                        lTime = now;
-                        updated = true;
-                    }
+                    if (eReady >= maxEggs && (now - lTime > 0)) { lTime = now; updated = true; }
 
                     if (updated) {
-                        t.update(targetRef, {
-                            "farm.lastLayTime": lTime,
-                            "farm.eggsReady": eReady,
-                            "farm.cleanliness": cVal
-                        });
+                        t.update(targetRef, { "farm.lastLayTime": lTime, "farm.eggsReady": eReady, "farm.cleanliness": cVal });
                     }
                 });
-            } catch (e) {
-                console.error("更新目標玩家生蛋進度失敗:", e);
-            } finally {
-                this.isUpdatingTargetEggs = false;
-            }
+            } catch (e) { console.error("更新目標玩家生蛋進度失敗:", e); } 
+            finally { this.isUpdatingTargetEggs = false; }
         }
     }
 
@@ -151,8 +132,7 @@ export default class VisitScene extends Phaser.Scene {
 
     askCleanTargetFarm() {
         if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
-            this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, this.cameras.main.centerX, 150);
-            return;
+            this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, this.cameras.main.centerX, 150); return;
         }
         this.dialogText.setText(`[${this.targetName}] 的雞舍有點髒亂\n是否要幫忙打掃雞舍？`);
         this.dialogContainer.setVisible(true);
@@ -164,20 +144,16 @@ export default class VisitScene extends Phaser.Scene {
             await runTransaction(db, async (t) => {
                 const targetDoc = await t.get(targetRef);
                 if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
-
                 const targetClean = targetDoc.data().farm.cleanliness || 0;
                 const newClean = Math.max(0, targetClean - 30);
-
                 const myDoc = await t.get(myFarmRef);
                 if (!myDoc.exists() || !myDoc.data()?.farm) return;
-
                 const myMoral = myDoc.data().farm.moral !== undefined ? myDoc.data().farm.moral : 100;
                 const newMoral = Math.min(100, myMoral + 3);
 
                 t.update(targetRef, { "farm.cleanliness": newClean });
                 t.update(myFarmRef, { "farm.moral": newMoral });
             });
-
             this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, this.cameras.main.centerX, 150);
             this.sendSystemNotification(`${playerName}幫${this.targetName}打掃了雞舍`);
         } catch (e) { console.error(e); }
@@ -208,19 +184,24 @@ export default class VisitScene extends Phaser.Scene {
         for (let i = 0; i < henCount; i++) {
             let cx = this.cameras.main.centerX + Phaser.Math.Between(-30, 30);
             let cy = this.cameras.main.centerY - 30 + Phaser.Math.Between(-20, 20);
-            let newHen = this.add.image(cx, cy, 'hen').setOrigin(0.5).setDepth(10).setInteractive({ cursor: 'pointer' });
+            // 🐔 加入 setScale(2)
+            let newHen = this.add.sprite(cx, cy, 'hen').setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
 
             const hState = hensState[i] || {};
             if (hState.isSick) {
+                newHen.play('hen_sleep', true);
                 const sickDuration = hState.sickTimestamp ? (now - hState.sickTimestamp) : 0;
                 let iconKey = (sickDuration > 24 * 3600 * 1000) ? 'skull' : 'sick_pelt';
                 let icon = this.add.image(cx, cy - 25, iconKey).setDepth(11);
                 this.tweens.add({ targets: icon, y: cy - 28, duration: 600, yoyo: true, repeat: -1 });
                 newHen.statusIcon = icon;
+            } else {
+                newHen.play('hen_idle', true);
             }
 
             newHen.on('pointerdown', () => {
-                this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 1.1, scaleY: 0.9, duration: 100, yoyo: true });
+                // 🌟 同步放大偷蛋點擊時的比例
+                this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 2.2, scaleY: 1.8, duration: 100, yoyo: true });
                 this.attemptSteal(); 
             });
 
@@ -234,13 +215,17 @@ export default class VisitScene extends Phaser.Scene {
         const targetX = Phaser.Math.Between(50, 340);
         const targetY = Phaser.Math.Between(120, 450); 
         henSprite.setFlipX(targetX < henSprite.x);
+        
+        henSprite.play('hen_walk', true);
         const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, targetX, targetY);
         
         henSprite.walkTween = this.tweens.add({
             targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
-            onComplete: () => { this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite)); }
+            onComplete: () => { 
+                henSprite.play('hen_idle', true);
+                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite)); 
+            }
         });
-        henSprite.waddleTween = this.tweens.add({ targets: henSprite, y: '-=6', duration: 150, yoyo: true, repeat: Math.floor((distance * 20) / 300) });
     }
 
     async sendSystemNotification(messageContent) {
@@ -251,14 +236,8 @@ export default class VisitScene extends Phaser.Scene {
                 const now = new Date();
                 const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                 const finalText = `${messageContent}\n🕒 ${timeStr}`;
-
-                await addDoc(collection(db, "messages"), { 
-                    roomId: targetRoomId, sender: "村落廣播", text: finalText, time: timeStr,
-                    timestamp: serverTimestamp(), isSystem: true 
-                });
-                await updateDoc(doc(db, "rooms", targetRoomId), { 
-                    lastMessage: `村落廣播: ${messageContent}`, lastMessageTime: serverTimestamp() 
-                });
+                await addDoc(collection(db, "messages"), { roomId: targetRoomId, sender: "村落廣播", text: finalText, time: timeStr, timestamp: serverTimestamp(), isSystem: true });
+                await updateDoc(doc(db, "rooms", targetRoomId), { lastMessage: `村落廣播: ${messageContent}`, lastMessageTime: serverTimestamp() });
             }
         } catch (e) { console.error("發送廣播失敗:", e); }
     }
@@ -270,24 +249,18 @@ export default class VisitScene extends Phaser.Scene {
         
         [star1, star2, star3].forEach(star => {
             this.tweens.add({
-                targets: star,
-                y: star.y - 30,
-                angle: 360,
-                alpha: 0,
+                targets: star, y: star.y - 30, angle: 360, alpha: 0,
                 duration: 600 + Phaser.Math.Between(0, 300),
                 onComplete: () => star.destroy()
             });
         });
     }
 
-    // --- 野狼與老虎事件邏輯 ---
     spawnTigerEvent() {
         this.isTigerDefeated = false; this.tigerHitCount = 0;
-        
         const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
         const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
         const totalHitsNeeded = Math.ceil(200 / weapon.damage);
-
         this.tiger = this.add.image(-20, this.cameras.main.height - 50, 'tiger').setOrigin(0.5).setScale(1.6).setDepth(25).setInteractive({ cursor: 'pointer' });
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
@@ -302,14 +275,10 @@ export default class VisitScene extends Phaser.Scene {
             if (this.isTigerDefeated) return;
             this.tigerHitCount += weapon.damage;
             this.tiger.setTint(0xff0000); this.time.delayedCall(50, () => this.tiger.clearTint());
-            
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
-            if (weapon.damage > 1) {
-                this.showDizzyEffect(pointer.x, pointer.y - 30);
-            }
-
+            if (weapon.damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
             if (this.tigerHitCount >= 200) { warnText.destroy(); this.defeatTiger(); }
             else {
                 const hitsLeft = Math.ceil(Math.max(0, 200 - this.tigerHitCount) / weapon.damage);
@@ -354,7 +323,6 @@ export default class VisitScene extends Phaser.Scene {
 
     spawnWolfEvent() {
         this.isWolfDefeated = false; this.wolfHitCount = 0;
-
         const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
         const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
         const totalHitsNeeded = Math.ceil(200 / weapon.damage);
@@ -377,10 +345,7 @@ export default class VisitScene extends Phaser.Scene {
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
-            if (weapon.damage > 1) {
-                this.showDizzyEffect(pointer.x, pointer.y - 30);
-            }
-
+            if (weapon.damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
             if (this.wolfHitCount >= 200) { warnText.destroy(); this.defeatWolf(); }
             else {
                 const hitsLeft = Math.ceil(Math.max(0, 200 - this.wolfHitCount) / weapon.damage);
@@ -420,9 +385,7 @@ export default class VisitScene extends Phaser.Scene {
             const targetDoc = await t.get(targetRef);
             if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
             const targetFarm = targetDoc.data().farm;
-            if (targetFarm && (targetFarm.eggsReady || 0) > 0) {
-                t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 });
-            }
+            if (targetFarm && (targetFarm.eggsReady || 0) > 0) { t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 }); }
         }).catch(e => console.error(e));
     }
 
@@ -461,8 +424,7 @@ export default class VisitScene extends Phaser.Scene {
 
         if (lastTargetStealTime && Date.now() - lastTargetStealTime < STEAL_COOLDOWN_MS) {
             const leftMins = Math.ceil((STEAL_COOLDOWN_MS - (Date.now() - lastTargetStealTime)) / 60000);
-            this.showFloatingText(`剛偷過 [${this.targetName}]！請等 ${leftMins} 分鐘`, '#F44336', 15, safeX, safeY); 
-            return;
+            this.showFloatingText(`剛偷過 [${this.targetName}]！請等 ${leftMins} 分鐘`, '#F44336', 15, safeX, safeY); return;
         }
 
         if (!this.targetFarmData || (this.targetFarmData.eggsReady || 0) <= 0) {
@@ -495,7 +457,6 @@ export default class VisitScene extends Phaser.Scene {
                 const targetDoc = await t.get(targetRef);
                 if (!targetDoc.exists() || !targetDoc.data()?.farm) throw "手腳太慢，蛋不見了！";
                 const targetFarm = targetDoc.data().farm;
-
                 const myDoc = await t.get(myFarmRef);
                 if (!myDoc.exists() || !myDoc.data()?.farm) throw "資料錯誤";
                 const myCurrentFarm = myDoc.data().farm;
@@ -506,10 +467,7 @@ export default class VisitScene extends Phaser.Scene {
                 const newMoral = Math.max(0, currentMoral - 5);
 
                 if (Math.random() > successRate) {
-                    t.update(myFarmRef, { 
-                        [`farm.stealCooldowns.${this.targetAccountId}`]: Date.now(), 
-                        "farm.moral": newMoral 
-                    });
+                    t.update(myFarmRef, { [`farm.stealCooldowns.${this.targetAccountId}`]: Date.now(), "farm.moral": newMoral });
                     throw "被狗咬了！偷竊失敗！";
                 }
 
@@ -541,7 +499,11 @@ export default class VisitScene extends Phaser.Scene {
         const btnNo = this.add.rectangle(260, 450, 90, 36, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
         const textNo = this.add.text(260, 450, '否', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-        btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
+        btnNo.on('pointerdown', () => {
+            this.dialogContainer.setVisible(false);
+            this.dialogActionType = null;
+        });
+
         btnYes.on('pointerdown', () => {
             this.dialogContainer.setVisible(false);
             this.cleanTargetFarm();
