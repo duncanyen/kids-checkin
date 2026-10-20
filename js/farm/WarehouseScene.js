@@ -8,8 +8,8 @@ export default class WarehouseScene extends Phaser.Scene {
     create() {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         
-        // 將中心裝飾用的雞改為播放預設動畫
-        this.hen = this.add.sprite(195, 180, 'hen').setScale(1.5).setOrigin(0.5).play('hen_idle');
+        // 🌟 倉庫的母雞展示也同步放大一倍 (原本 1.5 改為 3)
+        this.hen = this.add.sprite(195, 180, 'hen').setScale(3).setOrigin(0.5).play('hen_idle');
         this.isFeeding = false;
 
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
@@ -99,7 +99,6 @@ export default class WarehouseScene extends Phaser.Scene {
 
             const bg = this.add.rectangle(x, y, 160, 80, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
             
-            // 商店圖標如果是母雞，可以保持使用 image，會預設抓第一格
             const img = this.add.image(x - 45, y, item.icon);
             
             const scale = Math.min(45 / img.width, 45 / img.height);
