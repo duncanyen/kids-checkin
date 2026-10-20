@@ -16,11 +16,9 @@ export default class MyFarmScene extends Phaser.Scene {
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         
-        // 🏠 替換為雞舍 sprite，並設定預設大小
-        this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        // 🏠 使用新圖集 coop_sprite，大小依需求可調整 scale
+        this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(2.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.coop.on('pointerdown', () => this.askCleanMyFarm());
-
-        // 移除 this.coopEgg (因為新素材已經包含生蛋狀態)
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
@@ -119,18 +117,14 @@ export default class MyFarmScene extends Phaser.Scene {
         if (!this.farmData) return;
         this.coinsText.setText(`💰 ${this.farmData.coins || 0}`);
 
-        // 🏠 根據等級與生蛋狀態切換雞舍影格
+        // 🏠 依據 4x6 圖集動態切換影格：
         const level = this.farmData.coopLevel || 1;
         const hasEggs = (this.farmData.eggsReady || 0) > 0;
         let frameIndex = 0;
         
-        // 依據裁切後的 6x6 圖集：
-        // level 1 (小型) -> 第1排無蛋(0), 第2排有蛋(6)
-        // level 2 (中型) -> 第3排無蛋(12), 第4排有蛋(18)
-        // level 3 (大型) -> 第5排無蛋(24), 第6排有蛋(30)
-        if (level === 1) frameIndex = hasEggs ? 6 : 0;
-        else if (level === 2) frameIndex = hasEggs ? 18 : 12;
-        else if (level === 3) frameIndex = hasEggs ? 30 : 24;
+        if (level === 1) frameIndex = hasEggs ? 4 : 0;
+        else if (level === 2) frameIndex = hasEggs ? 12 : 8;
+        else if (level === 3) frameIndex = hasEggs ? 17 : 16;
         
         this.coop.setFrame(frameIndex);
 
@@ -186,8 +180,6 @@ export default class MyFarmScene extends Phaser.Scene {
         const henCount = Math.max(1, this.farmData.hens || 1);
         const hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
         const now = Date.now();
-
-        // 移除舊版用程式碼手動放大的邏輯 (新素材本身就有大小差異)
 
         let needsDeadCleanup = false;
         const validHensState = hensState.filter(h => {
