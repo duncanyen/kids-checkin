@@ -21,7 +21,7 @@ export default class VisitScene extends Phaser.Scene {
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
 
         // 🏠 替換為雞舍 sprite
-        this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(2.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.coop.on('pointerdown', () => this.askCleanTargetFarm());
 
         this.hensGroup = []; 
@@ -75,13 +75,15 @@ export default class VisitScene extends Phaser.Scene {
                 this.targetFarmData = docSnap.data().farm;
                 this.checkAndUpdateTargetEggLaying(targetRef, this.targetFarmData);
                 
-                // 🏠 根據鄰居等級切換雞舍外觀
+                // 🏠 依據 4x6 圖集動態切換影格：
                 const level = this.targetFarmData.coopLevel || 1;
                 const hasEggs = (this.targetFarmData.eggsReady || 0) > 0;
                 let frameIndex = 0;
-                if (level === 1) frameIndex = hasEggs ? 6 : 0;
-                else if (level === 2) frameIndex = hasEggs ? 18 : 12;
-                else if (level === 3) frameIndex = hasEggs ? 30 : 24;
+                
+                if (level === 1) frameIndex = hasEggs ? 4 : 0;
+                else if (level === 2) frameIndex = hasEggs ? 12 : 8;
+                else if (level === 3) frameIndex = hasEggs ? 17 : 16;
+                
                 this.coop.setFrame(frameIndex);
 
                 this.syncTargetHens(); 
