@@ -20,9 +20,10 @@ export default class VisitScene extends Phaser.Scene {
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
 
-        // 🏠 替換為雞舍 sprite
-        this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(2.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.coop.on('pointerdown', () => this.askCleanTargetFarm());
+
+        this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
@@ -74,18 +75,7 @@ export default class VisitScene extends Phaser.Scene {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
                 this.checkAndUpdateTargetEggLaying(targetRef, this.targetFarmData);
-                
-                // 🏠 依據 4x6 圖集動態切換影格：
-                const level = this.targetFarmData.coopLevel || 1;
-                const hasEggs = (this.targetFarmData.eggsReady || 0) > 0;
-                let frameIndex = 0;
-                
-                if (level === 1) frameIndex = hasEggs ? 4 : 0;
-                else if (level === 2) frameIndex = hasEggs ? 12 : 8;
-                else if (level === 3) frameIndex = hasEggs ? 17 : 16;
-                
-                this.coop.setFrame(frameIndex);
-
+                this.coopEgg.setVisible((this.targetFarmData.eggsReady || 0) > 0);
                 this.syncTargetHens(); 
                 this.renderTargetCleanliness();
             }
@@ -194,6 +184,7 @@ export default class VisitScene extends Phaser.Scene {
         for (let i = 0; i < henCount; i++) {
             let cx = this.cameras.main.centerX + Phaser.Math.Between(-30, 30);
             let cy = this.cameras.main.centerY - 30 + Phaser.Math.Between(-20, 20);
+            // 🐔 加入 setScale(2)
             let newHen = this.add.sprite(cx, cy, 'hen').setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
 
             const hState = hensState[i] || {};
@@ -209,6 +200,7 @@ export default class VisitScene extends Phaser.Scene {
             }
 
             newHen.on('pointerdown', () => {
+                // 🌟 同步放大偷蛋點擊時的比例
                 this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 2.2, scaleY: 1.8, duration: 100, yoyo: true });
                 this.attemptSteal(); 
             });
@@ -507,7 +499,11 @@ export default class VisitScene extends Phaser.Scene {
         const btnNo = this.add.rectangle(260, 450, 90, 36, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
         const textNo = this.add.text(260, 450, '否', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-        btnNo.on('pointerdown', () => this.dialogContainer.setVisible(false));
+        btnNo.on('pointerdown', () => {
+            this.dialogContainer.setVisible(false);
+            this.dialogActionType = null;
+        });
+
         btnYes.on('pointerdown', () => {
             this.dialogContainer.setVisible(false);
             this.cleanTargetFarm();
