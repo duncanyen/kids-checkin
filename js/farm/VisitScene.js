@@ -1,4 +1,4 @@
-import { createPredator, hitPredator, finishPredator } from './predators.js';
+import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint } from './predators.js';
 import { addFarmBackground, addVegetableGarden, setCoopSize, randomHenPosition } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -265,14 +265,15 @@ export default class VisitScene extends Phaser.Scene {
         const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
         const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
         const totalHitsNeeded = Math.ceil(200 / weapon.damage);
-        this.tiger = createPredator(this, 'tiger', 70, this.cameras.main.height - 60);
+        const spawn = predatorSpawnPoint(this, 'tiger');
+        this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
         this.tiger.warning = warnText;
 
         this.tigerTween = this.tweens.add({
-            targets: this.tiger, x: this.coop.x, y: this.coop.y + this.coop.displayHeight / 2 + 65, duration: 50000, ease: 'Linear',
+            targets: this.tiger, ...predatorDestination(this), duration: 50000, ease: 'Linear',
             onComplete: () => { if (!this.isTigerDefeated) this.tigerEscapes(); }
         });
 
@@ -336,14 +337,15 @@ export default class VisitScene extends Phaser.Scene {
         const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
         const totalHitsNeeded = Math.ceil(200 / weapon.damage);
 
-        this.wolf = createPredator(this, 'wolf', this.cameras.main.centerX + 120, this.cameras.main.centerY + 220);
+        const spawn = predatorSpawnPoint(this, 'wolf');
+        this.wolf = createPredator(this, 'wolf', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
         this.wolf.warning = warnText;
 
         this.wolfTween = this.tweens.add({
-            targets: this.wolf, x: this.coop.x, y: this.coop.y + this.coop.displayHeight / 2 + 65, duration: 60000, ease: 'Linear',
+            targets: this.wolf, ...predatorDestination(this), duration: 60000, ease: 'Linear',
             onComplete: () => { if (!this.isWolfDefeated) this.wolfEscapes(); }
         });
 

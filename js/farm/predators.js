@@ -1,7 +1,7 @@
 export function registerPredatorAnimations(scene) {
     for (const kind of ['wolf', 'tiger']) {
         for (const [action, start, rate, repeat] of [
-            ['walk', 0, 7, -1], ['run', 4, 12, -1],
+            ['walk', 0, 4, -1], ['run', 4, 10, -1],
             ['hit', 8, 8, 0], ['dead', 12, 7, 0],
         ]) {
             const key = `${kind}_${action}`;
@@ -19,18 +19,17 @@ export function registerPredatorAnimations(scene) {
 
 export function createPredator(scene, kind, x, y) {
     const sprite = scene.add.sprite(x, y, kind, 0)
-        .setDisplaySize(144, 144).setDepth(25)
-        .setInteractive({ cursor: 'pointer' });
+        .setOrigin(0.5, 0.875).setDisplaySize(96, 96).setDepth(25)
+        .setInteractive({
+            cursor: 'pointer',
+            hitArea: new Phaser.Geom.Rectangle(6, 4, 52, 56),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        });
+    // The sheet faces northeast; mirroring it produces northwest travel.
     sprite.setFlipX(scene.coop.x < x);
-    sprite.play(`${kind}_run`);
-    scene.time.delayedCall(900, () => {
-        if (sprite.active && !sprite.getData('resolved') && sprite.anims.currentAnim?.key === `${kind}_run`) {
-            sprite.play(`${kind}_walk`);
-        }
-    });
+    sprite.play(`${kind}_walk`);
     sprite.on('animationcomplete', animation => {
         if (animation.key === `${kind}_hit` && sprite.active && !sprite.getData('resolved')) {
-            sprite.moveTween?.resume();
             sprite.play(`${kind}_walk`);
         }
     });
@@ -39,7 +38,7 @@ export function createPredator(scene, kind, x, y) {
 
 export function hitPredator(sprite) {
     if (!sprite.active || sprite.getData('resolved')) return;
-    sprite.moveTween?.pause();
+    // A hit changes the pose, never the 50/60-second approach clock or path.
     sprite.play(`${sprite.texture.key}_hit`);
 }
 
@@ -54,4 +53,15 @@ export function finishPredator(sprite, action) {
     if (action === 'run') sprite.setFlipX(false);
     sprite.play(`${sprite.texture.key}_${action}`);
     return true;
+}
+
+export function predatorDestination(scene) {
+    return { x: scene.coop.x, y: scene.coop.y + scene.coop.displayHeight / 2 + 20 };
+}
+
+export function predatorSpawnPoint(scene, kind) {
+    const destination = predatorDestination(scene);
+    const x = kind === 'wolf' ? scene.scale.width - 70 : 70;
+    // Equal horizontal/vertical travel matches the sheet's 45-degree heading.
+    return { x, y: destination.y + Math.abs(destination.x - x) };
 }

@@ -40,9 +40,10 @@ export default class LobbyScene extends Phaser.Scene {
                 const x = startX + col * spacingX;
                 const y = startY + row * spacingY;
 
-                const house = this.add.image(x, y, 'mini_house').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-                this.add.rectangle(x, y + 40, 80, 22, 0x000000, 0.5).setOrigin(0.5);
-                this.add.text(x, y + 40, memberName, { fontSize: '13px', color: '#fff' }).setOrigin(0.5);
+                const house = this.add.image(x, y, 'coop').setOrigin(0.5)
+                    .setDisplaySize(96, 90).setInteractive({ cursor: 'pointer' });
+                this.add.rectangle(x, y + 56, 96, 24, 0x000000, 0.5).setOrigin(0.5);
+                this.add.text(x, y + 56, memberName, { fontSize: '13px', color: '#fff' }).setOrigin(0.5);
 
                 house.on('pointerdown', async () => {
                     house.setTint(0xcccccc);

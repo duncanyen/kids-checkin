@@ -16,7 +16,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('cabbage', 'assets/farm/cabbage.webp');
         this.load.image('signboard', 'assets/farm/signboard.webp');
         for (const kind of ['wolf', 'tiger']) {
-            this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 256, frameHeight: 256 });
+            this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 64, frameHeight: 64 });
         }
     }
 
@@ -33,8 +33,10 @@ export default class BootScene extends Phaser.Scene {
 
         // 手繪場景由 preload 載入；母雞保留原有像素圖的銳利邊緣。
         this.textures.get('hen').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        for (const kind of ['wolf', 'tiger']) {
+            this.textures.get(kind).setFilter(Phaser.Textures.FilterMode.NEAREST);
+        }
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
-        this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
         this.textures.generate('coin', { data: ['.777.', '7L77K', '7777K', '777KK', '.7KK.'], pixelWidth: 5, palette: palette });
         this.textures.generate('worm', { data: ['9A9A'], pixelWidth: 5, palette: palette });
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });

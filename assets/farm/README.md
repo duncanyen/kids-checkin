@@ -11,22 +11,30 @@ The WebP files are optimized runtime exports; transparent props retain alpha.
 | `garden-bed.webp` | 660 × 660 | Soil and timber border, drawn at 330 × 330 |
 | `cabbage.webp` | 64 × 64 | Individual interactive plants, drawn at 24 × 24 |
 | `signboard.webp` | 88 × 100 | Cabbage sign, drawn at 44 × 50 with the existing help action |
-| `wolf-sheet.webp` | 1024 × 1024 | 4 × 4 sprite grid, 256 × 256 per frame |
-| `tiger-sheet.webp` | 1024 × 1024 | 4 × 4 sprite grid, 256 × 256 per frame |
+| `wolf-sheet.webp` | 256 × 256 | Pixel art matching the hen, 4 × 4 grid, 64 × 64 per frame |
+| `tiger-sheet.webp` | 256 × 256 | Pixel art matching the hen, 4 × 4 grid, 64 × 64 per frame |
 
 `js/farm/scenery.js` shares the layout between the home and visiting farms.
-Planting uses the existing 100 interactive plants and game logic. Coop sizes
+The village member list reuses the painted coop at 96 × 90. Planting uses
+the existing 100 interactive plants and game logic. Coop sizes
 remain 1×, 1.2× and 1.5× for the three upgrade levels. The other farm scenes
 reuse the landscape; shop icons reuse the coop texture.
 
-Painted textures use linear filtering. The existing hen spritesheet explicitly
-uses nearest filtering so its animation frames remain sharp.
+Painted textures use linear filtering. The hen, wolf and tiger spritesheets
+use nearest filtering so their pixel outlines remain sharp.
 
 The predator sheets contain four walk frames (0–3), four run frames (4–7),
 four stunned frames with golden stars (8–11), and four non-graphic defeat
 frames (12–15). `js/farm/predators.js` registers and controls these states;
 the final defeat pose stays visible before the existing fade-out. Repeated
-hits restart the stun; resolved events cannot resume walking or resolve twice.
+hits restart the hit pose without pausing travel. Resolved events cannot
+resume walking or resolve twice.
+
+Predators have three-quarter rear views facing northeast, mirrored for northwest.
+Spawn points and the coop-front destination form a 45-degree diagonal matching
+that view. Their grounded origins keep feet on the path. Approaches walk from
+the first frame and take 60 seconds for wolves or 50 seconds for tigers, including
+time spent playing hit poses. Run poses are used for escape.
 
 Hen spawn points and wander destinations share a rectangular clearing in front
 of the coop. Its upper edge follows the coop's upgraded height, with clearance
@@ -37,3 +45,5 @@ server in the repository, then run `node tests/farm-hen-lifecycle.cjs` and
 `node tests/farm-actors.cjs`. Set `FARM_BASE_URL` if using a port other than 8000.
 Both suites mock Firebase; actor tests count transactions without executing
 their callbacks or writing remote data.
+`node tests/farm-predator-timing.cjs` additionally checks actual 50/60-second
+arrivals after repeated attacks; allow about one minute for that test.
