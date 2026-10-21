@@ -16,8 +16,10 @@ export default class MyFarmScene extends Phaser.Scene {
 
         this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
         
-        //this.coop = this.add.sprite(cx, cy - 180, 'coop_sprite').setScale(2.5).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        //this.coop.on('pointerdown', () => this.askCleanMyFarm());
+        this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        this.coop.on('pointerdown', () => this.askCleanMyFarm());
+
+        this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
@@ -115,16 +117,7 @@ export default class MyFarmScene extends Phaser.Scene {
     updateUI() {
         if (!this.farmData) return;
         this.coinsText.setText(`💰 ${this.farmData.coins || 0}`);
-
-        const level = this.farmData.coopLevel || 1;
-        const hasEggs = (this.farmData.eggsReady || 0) > 0;
-        let frameIndex = 0;
-        
-        if (level === 1) frameIndex = hasEggs ? 4 : 0;
-        else if (level === 2) frameIndex = hasEggs ? 12 : 8;
-        else if (level === 3) frameIndex = hasEggs ? 17 : 16;
-        
-        this.coop.setFrame(frameIndex);
+        this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
 
         const cleanVal = this.farmData.cleanliness || 0;
         this.cleanText.setText(`🗑️ ${cleanVal}/100`);
@@ -176,8 +169,13 @@ export default class MyFarmScene extends Phaser.Scene {
     syncHens() {
         if (!this.farmData) return;
         const henCount = Math.max(1, this.farmData.hens || 1);
+        const coopLevel = this.farmData.coopLevel || 1;
         const hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
         const now = Date.now();
+
+        if (coopLevel === 1) this.coop.setScale(1);
+        else if (coopLevel === 2) this.coop.setScale(1.2);
+        else if (coopLevel === 3) this.coop.setScale(1.5);
 
         let needsDeadCleanup = false;
         const validHensState = hensState.filter(h => {
@@ -199,6 +197,7 @@ export default class MyFarmScene extends Phaser.Scene {
         for (let i = 0; i < henCount; i++) {
             const hState = hensState[i] || { isSick: false };
             
+            // 🐔 加入 setScale(2) 放大一倍
             let newHen = this.add.sprite(
                 this.cameras.main.centerX + Phaser.Math.Between(-30, 30), 
                 this.cameras.main.centerY - 30 + Phaser.Math.Between(-20, 20), 
@@ -222,6 +221,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 newHen.play('hen_idle', true);
                 newHen.on('pointerdown', () => {
                     if (!this.isHenSitting && this.emptyClickCount < 4) {
+                        // 🌟 同步放大點擊時的動畫比例 (原本是 1.1 / 0.9，改成基準值 2 乘上去，也就是 2.2 / 1.8)
                         this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 2.2, scaleY: 1.8, duration: 100, yoyo: true });
                     }
                     this.harvestEgg();
@@ -277,7 +277,6 @@ export default class MyFarmScene extends Phaser.Scene {
 
     wanderSingleHen(henSprite) {
         if (this.isHenSitting || !henSprite || !henSprite.active || (henSprite.hState && henSprite.hState.isSick)) return;
-        
         const targetX = Phaser.Math.Between(50, 340);
         const targetY = Phaser.Math.Between(120, 450); 
         henSprite.setFlipX(targetX < henSprite.x);
@@ -290,16 +289,8 @@ export default class MyFarmScene extends Phaser.Scene {
             targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
             onComplete: () => {
                 if (this.isHenSitting) return;
-                
-                // 雞到達定點後，隨機決定要待命(Idle)還是吃蟲(Peck)
-                const action = Phaser.Math.Between(0, 1);
-                if (action === 0) {
-                    henSprite.play('hen_idle', true);
-                } else {
-                    henSprite.play('hen_peck', true);
-                }
-
-                this.time.delayedCall(Phaser.Math.Between(1500, 4000), () => this.wanderSingleHen(henSprite));
+                henSprite.play('hen_idle', true);
+                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite));
             }
         });
     }
@@ -318,10 +309,12 @@ export default class MyFarmScene extends Phaser.Scene {
                 targets: hen, x: nestX + Phaser.Math.Between(-20, 20), y: nestY + Phaser.Math.Between(-10, 10), duration: 2000, ease: 'Power2',
                 onComplete: () => {
                     hen.play('hen_idle', true);
+                    // 🌟 同步放大生蛋時的壓扁特效 (原本是 0.7 / 1.15，改成 1.4 / 2.3)
                     this.tweens.add({
                         targets: hen, scaleY: 1.4, scaleX: 2.3, y: hen.y + 10, duration: 300, ease: 'Power2',
                         onComplete: () => {
                             this.time.delayedCall(3000, () => {
+                                // 🌟 恢復時必須恢復成 2 倍大小
                                 this.tweens.add({ targets: hen, scaleY: 2, scaleX: 2, y: hen.y - 10, duration: 300, onComplete: () => { 
                                     this.isHenSitting = false; this.wanderSingleHen(hen); 
                                 } });
