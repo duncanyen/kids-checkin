@@ -16,7 +16,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('cabbage', 'assets/farm/cabbage.webp');
         this.load.image('signboard', 'assets/farm/signboard.webp');
         for (const kind of ['wolf', 'tiger']) {
-            this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 64, frameHeight: 64 });
+            this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 256, frameHeight: 256 });
         }
     }
 

@@ -1,5 +1,6 @@
 import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint } from './predators.js';
-import { addFarmBackground, addVegetableGarden, setCoopSize, randomHenPosition } from './scenery.js';
+import { addFarmBackground, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
+import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
@@ -19,6 +20,7 @@ export default class VisitScene extends Phaser.Scene {
         this.targetFarmData = null;
         this.myFarmData = null; 
         this.isStealing = false; 
+        this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this);
 
@@ -56,10 +58,32 @@ export default class VisitScene extends Phaser.Scene {
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
             this.registry.events.off('changedata-myFarmData', this.onMyFarmDataChanged, this);
             this.hensGroup.forEach(h => {
+                h.walkTimer?.remove();
                 if (h.statusIcon) h.statusIcon.destroy();
                 if (h.walkTween) h.walkTween.stop();
             });
         });
+    }
+
+    update(time) {
+        for (const hen of this.hensGroup || []) {
+            if (hen.statusIcon?.active) {
+                hen.statusIcon.setPosition(hen.x, hen.y - 26 + Math.sin(time / 200) * 2);
+            }
+        }
+        if (time < this.nextHenAvoidanceAt) return;
+        this.nextHenAvoidanceAt = time + 200;
+        this.avoidPredators();
+    }
+
+    avoidPredators() {
+        if (!getThreatZones(this).length) return;
+        for (const hen of this.hensGroup || []) {
+            if (!hen.active || henRouteIsSafe(this, hen)) continue;
+            this.tweens.killTweensOf(hen);
+            hen.walkTimer?.remove();
+            this.wanderSingleHen(hen, true);
+        }
     }
 
     initFirebase() {
@@ -176,6 +200,7 @@ export default class VisitScene extends Phaser.Scene {
         setCoopSize(this.coop, this.targetFarmData.coopLevel);
 
         this.hensGroup.forEach(h => {
+            h.walkTimer?.remove();
             this.tweens.killTweensOf(h);
             if (h.statusIcon) {
                 this.tweens.killTweensOf(h.statusIcon);
@@ -197,7 +222,6 @@ export default class VisitScene extends Phaser.Scene {
                 const sickDuration = hState.sickTimestamp ? (now - hState.sickTimestamp) : 0;
                 let iconKey = (sickDuration > 24 * 3600 * 1000) ? 'skull' : 'sick_pelt';
                 let icon = this.add.image(cx, cy - 25, iconKey).setDepth(11);
-                this.tweens.add({ targets: icon, y: cy - 28, duration: 600, yoyo: true, repeat: -1 });
                 newHen.statusIcon = icon;
             } else {
                 newHen.play('hen_idle', true);
@@ -214,22 +238,36 @@ export default class VisitScene extends Phaser.Scene {
         }
     }
 
-    wanderSingleHen(henSprite) {
-        if (!henSprite || !henSprite.active || (henSprite.hState && henSprite.hState.isSick)) return;
-        const { x: targetX, y: targetY } = randomHenPosition(this);
-        henSprite.setFlipX(targetX < henSprite.x);
-        
-        henSprite.play('hen_walk', true);
-        const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, targetX, targetY);
-        
-        henSprite.walkTween = this.tweens.add({
-            targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
-            onComplete: () => { 
-                if (!henSprite.active) return;
+    wanderSingleHen(henSprite, fleeing = false) {
+        if (!henSprite?.active || (henSprite.hState?.isSick && !fleeing)) return;
+        const route = planHenPath(this, henSprite, getHenWalkArea(this));
+        henSprite.walkPath = route.points;
+        henSprite.isEvading = route.evading;
+        const step = () => {
+            if (!henSprite.active) return;
+            const target = henSprite.walkPath[0];
+            if (!target) {
+                henSprite.walkTween = null;
+                henSprite.isEvading = false;
                 henSprite.play('hen_idle', true);
-                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite)); 
+                henSprite.walkTimer = this.time.delayedCall(
+                    getThreatZones(this).length ? 500 : Phaser.Math.Between(1000, 3000),
+                    () => this.wanderSingleHen(henSprite));
+                return;
             }
-        });
+            henSprite.setFlipX(target.x < henSprite.x).play('hen_walk', true);
+            const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, target.x, target.y);
+            henSprite.walkTween = this.tweens.add({
+                targets: henSprite, x: target.x, y: target.y,
+                duration: Math.max(100, distance * (route.evading ? 7 : 20)), ease: 'Linear',
+                onComplete: () => {
+                    if (!henSprite.active) return;
+                    henSprite.walkPath.shift();
+                    step();
+                }
+            });
+        };
+        step();
     }
 
     async sendSystemNotification(messageContent) {
@@ -294,6 +332,7 @@ export default class VisitScene extends Phaser.Scene {
                 }
             }
         });
+        this.avoidPredators();
     }
 
     defeatTiger() {
@@ -367,6 +406,7 @@ export default class VisitScene extends Phaser.Scene {
                 }
             }
         });
+        this.avoidPredators();
     }
 
     defeatWolf() {

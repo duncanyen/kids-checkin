@@ -1,3 +1,5 @@
+import { chooseHenPosition } from './hen-navigation.js';
+
 // Shared scenery keeps the home and visiting farms aligned with the same artwork.
 export function addFarmBackground(scene) {
     return scene.add.image(0, 0, 'farm_background')
@@ -23,11 +25,7 @@ export function getHenWalkArea(scene) {
 }
 
 export function randomHenPosition(scene) {
-    const area = getHenWalkArea(scene);
-    return {
-        x: Phaser.Math.Between(area.left, area.right),
-        y: Phaser.Math.Between(area.top, Math.max(area.top, area.bottom)),
-    };
+    return chooseHenPosition(scene, getHenWalkArea(scene));
 }
 
 export function addVegetableGarden(scene, onPlantClick) {

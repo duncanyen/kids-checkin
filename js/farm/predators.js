@@ -19,10 +19,10 @@ export function registerPredatorAnimations(scene) {
 
 export function createPredator(scene, kind, x, y) {
     const sprite = scene.add.sprite(x, y, kind, 0)
-        .setOrigin(0.5, 0.875).setDisplaySize(96, 96).setDepth(25)
+        .setOrigin(0.5, 0.875).setDisplaySize(192, 192).setDepth(25)
         .setInteractive({
             cursor: 'pointer',
-            hitArea: new Phaser.Geom.Rectangle(6, 4, 52, 56),
+            hitArea: new Phaser.Geom.Rectangle(24, 16, 208, 224),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
     // The sheet faces northeast; mirroring it produces northwest travel.

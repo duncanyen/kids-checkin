@@ -64,7 +64,7 @@ const {execFileSync}=require('node:child_process');
    const animal=s[kind],duration=kind==='wolf'?60000:50000;
    if(animal.moveTween.duration!==duration)throw Error('Wrong approach duration');
    const expectedFlip=kind==='wolf';
-   if(animal.flipX!==expectedFlip || animal.frame.width!==64)throw Error('Pixel frame or direction mismatch');
+   if(animal.flipX!==expectedFlip || animal.frame.width!==256 || animal.displayWidth!==192)throw Error('Pixel frame or direction mismatch');
    for(const action of ['walk','run','hit','dead']) if(s.anims.get(kind+'_'+action).frames.length!==4)throw Error('Missing animation frames');
   },{kind,cap});
   await p.waitForTimeout(1100);
