@@ -178,7 +178,14 @@ export default class VisitScene extends Phaser.Scene {
         const hensState = Array.isArray(this.targetFarmData.hensState) ? this.targetFarmData.hensState : [];
         const now = Date.now();
 
-        this.hensGroup.forEach(h => { if(h.statusIcon) h.statusIcon.destroy(); h.destroy(); });
+        this.hensGroup.forEach(h => {
+            this.tweens.killTweensOf(h);
+            if (h.statusIcon) {
+                this.tweens.killTweensOf(h.statusIcon);
+                h.statusIcon.destroy();
+            }
+            h.destroy();
+        });
         this.hensGroup = [];
 
         for (let i = 0; i < henCount; i++) {
@@ -188,6 +195,7 @@ export default class VisitScene extends Phaser.Scene {
             let newHen = this.add.sprite(cx, cy, 'hen').setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
 
             const hState = hensState[i] || {};
+            newHen.hState = hState;
             if (hState.isSick) {
                 newHen.play('hen_idle', true);
                 const sickDuration = hState.sickTimestamp ? (now - hState.sickTimestamp) : 0;
@@ -211,7 +219,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     wanderSingleHen(henSprite) {
-        if (!henSprite || !henSprite.active) return;
+        if (!henSprite || !henSprite.active || (henSprite.hState && henSprite.hState.isSick)) return;
         const targetX = Phaser.Math.Between(50, 340);
         const targetY = Phaser.Math.Between(120, 450); 
         henSprite.setFlipX(targetX < henSprite.x);
@@ -222,6 +230,7 @@ export default class VisitScene extends Phaser.Scene {
         henSprite.walkTween = this.tweens.add({
             targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
             onComplete: () => { 
+                if (!henSprite.active) return;
                 henSprite.play('hen_idle', true);
                 this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite)); 
             }

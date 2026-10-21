@@ -188,8 +188,13 @@ export default class MyFarmScene extends Phaser.Scene {
             this.cleanupDeadHens(validHensState); return;
         }
 
+        this.isHenSitting = false;
         this.hensGroup.forEach(hen => {
-            if (hen.statusIcon) hen.statusIcon.destroy();
+            this.tweens.killTweensOf(hen);
+            if (hen.statusIcon) {
+                this.tweens.killTweensOf(hen.statusIcon);
+                hen.statusIcon.destroy();
+            }
             hen.destroy();
         });
         this.hensGroup = [];
@@ -288,7 +293,7 @@ export default class MyFarmScene extends Phaser.Scene {
         henSprite.walkTween = this.tweens.add({
             targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
             onComplete: () => {
-                if (this.isHenSitting) return;
+                if (!henSprite.active || this.isHenSitting) return;
                 henSprite.play('hen_idle', true);
                 this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite));
             }
@@ -308,12 +313,14 @@ export default class MyFarmScene extends Phaser.Scene {
             this.tweens.add({
                 targets: hen, x: nestX + Phaser.Math.Between(-20, 20), y: nestY + Phaser.Math.Between(-10, 10), duration: 2000, ease: 'Power2',
                 onComplete: () => {
+                    if (!hen.active) return;
                     hen.play('hen_idle', true);
                     // 🌟 同步放大生蛋時的壓扁特效 (原本是 0.7 / 1.15，改成 1.4 / 2.3)
                     this.tweens.add({
                         targets: hen, scaleY: 1.4, scaleX: 2.3, y: hen.y + 10, duration: 300, ease: 'Power2',
                         onComplete: () => {
                             this.time.delayedCall(3000, () => {
+                                if (!hen.active) return;
                                 // 🌟 恢復時必須恢復成 2 倍大小
                                 this.tweens.add({ targets: hen, scaleY: 2, scaleX: 2, y: hen.y - 10, duration: 300, onComplete: () => { 
                                     this.isHenSitting = false; this.wanderSingleHen(hen); 
