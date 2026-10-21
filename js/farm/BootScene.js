@@ -6,9 +6,10 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
     preload() {
-        // ⚠️ 重要：請依照「下載.png」的實際總解析度，除以 6(欄) 與 8(列) 來設定 frameWidth 與 frameHeight
-        // 這裡假設單格寬高為 32x32
+        // 載入母雞 (請確認 32 這個數字是你實際圖片總寬高除以欄列計算出來的)
         this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
+        // 載入雞舍
+        //this.load.spritesheet('coop_sprite', 'henshouse.png', { frameWidth: 64, frameHeight: 64 });
     }
 
     create() {
@@ -22,22 +23,17 @@ export default class BootScene extends Phaser.Scene {
             'e': '#FDE047', 'f': '#D97706', 'g': '#FCA5A5', 'P': '#8BC34A'
         };
 
-        // 移除原本的 hen 貼圖生成，保留其他環境物件
         this.textures.generate('grass', { data: ['99999999', '9A999999', '9999A999', '99999999', '99A99999', '999999A9', '99999999', '9999A999'], pixelWidth: 8, palette: palette });
-        this.textures.generate('coop', { data: ['......CCCC......', '....CCCCCCCC....', '..CCCCCCCCCCCC..', '.CCCCCCCCCCCCCC.', 'DDDDDDDDDDDDDDDD', '..FGFGFGFGFGFG..', '..GFFGFGFGFFGF..', '..FGFGIIIIFGFG..', '..GFFGIIIIFFGF..', '..FGFGFFFFFGFG..', '..GFFGHHHHFFGF..', '..FGFGHHHHFGFG..', '..GFFHEEEEHFFG..', '..FGFHEEEEFGFG..', '..GFFGFGFGFFGF..'], pixelWidth: 10, palette: palette });
-        this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
         this.textures.generate('mini_house', { data: ['....JJJJ....', '...JJJJJJ...', '..JJJJJJJJ..', '.JJJJJJJJJJ.', 'DDDDDDDDDDDD', '...FGFGFG...', '...GFF4FG...', '...FGFGFG...', '...GFFGFG...'], pixelWidth: 8, palette: palette });
         this.textures.generate('coin', { data: ['.777.', '7L77K', '7777K', '777KK', '.7KK.'], pixelWidth: 5, palette: palette });
         this.textures.generate('cabbage', { data: ['..AA..', '.A99A.', 'A9A99A', 'A999AA', '.AAAA.'], pixelWidth: 5, palette: palette });
         this.textures.generate('worm', { data: ['9A9A'], pixelWidth: 5, palette: palette });
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
         this.textures.generate('signboard', { data: ['..GGGGGG..', '.GFFFFFFG.', 'GFF4444FFG', 'GFF4444FFG', 'GFFFFFFFFG', '.GFFFFFFG.', '..GGGGGG..', '....GG....', '....GG....', '....GG....'], pixelWidth: 3, palette: palette });
-        
         this.textures.generate('rubbish', { data: ['..FGFG..', '.GFFFFG.', 'FGHHHHGF', 'G444444G', 'FH4444HF', '.GFFFFG.', '..FGFG..'], pixelWidth: 3, palette: palette });
         this.textures.generate('sick_pelt', { data: ['..PP..', '.P99P.', 'P9PP9P', '.P99P.', '..PP..'], pixelWidth: 3, palette: palette });
         this.textures.generate('skull', { data: ['.1111.', '141411', '111111', '.1414.', '..11..'], pixelWidth: 3, palette: palette });
         this.textures.generate('medicine', { data: ['..2222..', '.211112.', '21222212', '21222212', '.211112.', '..2222..'], pixelWidth: 4, palette: palette });
-        
         this.textures.generate('wolf', { data: ['.44............44.', '4884..........4884', '48884........48884', '488844444444448884', '488888888888888884', '.4882288888822884.', '.4882288888822884.', '..48888444488884..', '..48884888848884..', '...488488884884...', '...488444444884...', '....4411111144....', '....4141111414....', '....4444444444....', '.....48888884.....', '......44..44......'], pixelWidth: 6, palette: palette });
         this.textures.generate('wolf_bump', { data: ['......22..........', '.44..2222....44...', '4884..22....4884..', '48884444444448884.', '488888888888888884', '.4884888888884884.', '.4888488888848884.', '..48888444488884..', '..48884888848884..', '...488488884884...', '...488444444884...', '....4411111144....', '....4141111414....', '....4444444444....', '.....48888884.....', '......44..44......'], pixelWidth: 6, palette: palette });
         this.textures.generate('tiger', { data: ['..444..............444..', '.4KKK4............4KKK4.', '4KK11K4..........4K11KK4', '4K111KK4444444444KK111K4', '4KK1KKKKKKKKKKKKKKKK1KK4', '.4KKKKKK444444KKKKKKKK4.', '..4KKKKK444444KKKKKKK4..', '..4K44KKKK44KKKK44KKK4..', '.4KK44KKK4444KKK44KKKK4.', '.4KKKKKKK4444KKKKKKKKK4.', '.4KK44194KKKK49144KKKK4.', '.4KKK4144KKKK4441KKKKK4.', '.4KK44111KKKK11144KKKK4.', '..4KKKKK114411KKKKKKK4..', '..44KKKK11M111KKKKK44..', '...4KKK11111111KKKK4...', '....4KK11411411KK4....', '....4KKK111111KKK4....', '.....44KKKKKKKK44.....', '.......44444444.......'], pixelWidth: 5, palette: palette });
@@ -48,29 +44,20 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('mace', { data: ['..88..', '.8448.', '848848', '848848', '.8448.', '..GG..', '..GG..', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('star', { data: ['.E.', 'EEE', '.E.'], pixelWidth: 4, palette: palette });
 
-        // 註冊母雞動畫 (對應素材表的影格位置)
-        this.anims.create({
-            key: 'hen_idle',
-            frames: this.anims.generateFrameNumbers('hen', { start: 0, end: 1 }),
-            frameRate: 3,
-            repeat: -1
-        });
-        
-        this.anims.create({
-            key: 'hen_walk',
-            frames: this.anims.generateFrameNumbers('hen', { start: 6, end: 11 }), // 第二排為走動
-            frameRate: 8,
-            repeat: -1
-        });
+        // 🚨 檢查精靈圖切割狀態，避免當機
+        const henTexture = this.textures.get('hen');
+        if (henTexture && henTexture.frameTotal < 46) {
+            console.error(`精靈圖切割錯誤！目前只切出 ${henTexture.frameTotal} 格，請檢查 frameWidth 與 frameHeight。`);
+            this.add.text(10, 50, '素材尺寸設定錯誤，請按 F12 查看 Console', { color: '#ff0000', fontSize: '18px', backgroundColor: '#000' });
+            return; // 終止後續動畫建立與場景跳轉，保護遊戲不當機
+        }
 
-        this.anims.create({
-            key: 'hen_sleep',
-            frames: this.anims.generateFrameNumbers('hen', { start: 42, end: 45 }), // 最後一排為睡覺(生病使用)
-            frameRate: 3,
-            repeat: -1
-        });
+        // 建立整合後的新版動畫
+        this.anims.create({ key: 'hen_idle', frames: this.anims.generateFrameNumbers('hen', { start: 0, end: 1 }), frameRate: 3, repeat: -1 });
+        this.anims.create({ key: 'hen_walk', frames: this.anims.generateFrameNumbers('hen', { start: 0, end: 5 }), frameRate: 8, repeat: -1 }); // 使用前 6 格走路
+        this.anims.create({ key: 'hen_peck', frames: this.anims.generateFrameNumbers('hen', { start: 12, end: 17 }), frameRate: 8, repeat: 2 }); // 吃蟲/啄地動畫
+        this.anims.create({ key: 'hen_sleep', frames: this.anims.generateFrameNumbers('hen', { start: 42, end: 45 }), frameRate: 4, repeat: -1 }); // 睡覺動畫
 
-        // 全域監聽設定
         if (!this.game.registry.has('isListeningFarm')) {
             this.game.registry.set('isListeningFarm', true);
             this.game.myFarmUnsubscribe = onSnapshot(myFarmRef, (docSnap) => {
