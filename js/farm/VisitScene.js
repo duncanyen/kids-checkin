@@ -189,7 +189,7 @@ export default class VisitScene extends Phaser.Scene {
 
             const hState = hensState[i] || {};
             if (hState.isSick) {
-                newHen.play('hen_sleep', true);
+                newHen.play('hen_idle', true);
                 const sickDuration = hState.sickTimestamp ? (now - hState.sickTimestamp) : 0;
                 let iconKey = (sickDuration > 24 * 3600 * 1000) ? 'skull' : 'sick_pelt';
                 let icon = this.add.image(cx, cy - 25, iconKey).setDepth(11);
