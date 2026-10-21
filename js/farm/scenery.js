@@ -11,6 +11,25 @@ export function setCoopSize(coop, level = 1) {
     coop.setDisplaySize(160 * scale, 150 * scale);
 }
 
+// All points lie in a convex clearing below the largest visible edge of the
+// coop. Straight tween segments between them cannot cut through the building.
+export function getHenWalkArea(scene) {
+    return {
+        left: 60,
+        right: scene.scale.width - 60,
+        top: Math.ceil(scene.coop.y + scene.coop.displayHeight / 2 + 40),
+        bottom: scene.cameras.main.centerY,
+    };
+}
+
+export function randomHenPosition(scene) {
+    const area = getHenWalkArea(scene);
+    return {
+        x: Phaser.Math.Between(area.left, area.right),
+        y: Phaser.Math.Between(area.top, Math.max(area.top, area.bottom)),
+    };
+}
+
 export function addVegetableGarden(scene, onPlantClick) {
     const startX = scene.cameras.main.centerX - 117;
     const startY = scene.cameras.main.centerY + 80;

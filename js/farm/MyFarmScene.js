@@ -1,4 +1,4 @@
-import { addFarmBackground, addVegetableGarden, setCoopSize } from './scenery.js';
+import { addFarmBackground, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, setDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
@@ -28,7 +28,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
         const { startX, startY } = addVegetableGarden(this, plant => this.searchCabbage(plant));
 
-        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
+        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setDisplaySize(44, 50).setInteractive({ cursor: 'pointer' }).setDepth(5);
         sign.on('pointerdown', () => {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
@@ -195,10 +195,10 @@ export default class MyFarmScene extends Phaser.Scene {
         for (let i = 0; i < henCount; i++) {
             const hState = hensState[i] || { isSick: false };
             
-            // 🐔 加入 setScale(2) 放大一倍
+            const position = randomHenPosition(this);
             let newHen = this.add.sprite(
-                this.cameras.main.centerX + Phaser.Math.Between(-30, 30), 
-                this.cameras.main.centerY - 30 + Phaser.Math.Between(-20, 20), 
+                position.x,
+                position.y,
                 'hen'
             ).setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
             
@@ -275,8 +275,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     wanderSingleHen(henSprite) {
         if (this.isHenSitting || !henSprite || !henSprite.active || (henSprite.hState && henSprite.hState.isSick)) return;
-        const targetX = Phaser.Math.Between(50, 340);
-        const targetY = Phaser.Math.Between(120, 450); 
+        const { x: targetX, y: targetY } = randomHenPosition(this);
         henSprite.setFlipX(targetX < henSprite.x);
         
         henSprite.play('hen_walk', true);
@@ -296,7 +295,8 @@ export default class MyFarmScene extends Phaser.Scene {
     prepareToLayEgg() {
         this.isHenSitting = true;
         const nestX = this.cameras.main.centerX;
-        const nestY = this.cameras.main.centerY - 130;
+        const area = getHenWalkArea(this);
+        const nestY = Math.min(area.bottom, area.top + 10);
 
         this.hensGroup.forEach(hen => {
             if (hen.walkTween) hen.walkTween.stop();
@@ -304,7 +304,7 @@ export default class MyFarmScene extends Phaser.Scene {
             hen.play('hen_walk', true);
 
             this.tweens.add({
-                targets: hen, x: nestX + Phaser.Math.Between(-20, 20), y: nestY + Phaser.Math.Between(-10, 10), duration: 2000, ease: 'Power2',
+                targets: hen, x: nestX + Phaser.Math.Between(-20, 20), y: Phaser.Math.Clamp(nestY + Phaser.Math.Between(-8, 8), area.top, area.bottom), duration: 2000, ease: 'Power2',
                 onComplete: () => {
                     if (!hen.active) return;
                     hen.play('hen_idle', true);

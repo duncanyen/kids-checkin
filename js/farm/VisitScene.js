@@ -1,4 +1,5 @@
-import { addFarmBackground, addVegetableGarden, setCoopSize } from './scenery.js';
+import { createPredator, hitPredator, finishPredator } from './predators.js';
+import { addFarmBackground, addVegetableGarden, setCoopSize, randomHenPosition } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
@@ -32,7 +33,7 @@ export default class VisitScene extends Phaser.Scene {
 
         const { startX, startY } = addVegetableGarden(this, plant => this.searchCabbage(plant));
 
-        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
+        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setDisplaySize(44, 50).setInteractive({ cursor: 'pointer' }).setDepth(5);
         sign.on('pointerdown', () => { this.showNoticeText('幫忙抓菜園里的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20); });
 
         this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
@@ -185,8 +186,7 @@ export default class VisitScene extends Phaser.Scene {
         this.hensGroup = [];
 
         for (let i = 0; i < henCount; i++) {
-            let cx = this.cameras.main.centerX + Phaser.Math.Between(-30, 30);
-            let cy = this.cameras.main.centerY - 30 + Phaser.Math.Between(-20, 20);
+            const { x: cx, y: cy } = randomHenPosition(this);
             // 🐔 加入 setScale(2)
             let newHen = this.add.sprite(cx, cy, 'hen').setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
 
@@ -216,8 +216,7 @@ export default class VisitScene extends Phaser.Scene {
 
     wanderSingleHen(henSprite) {
         if (!henSprite || !henSprite.active || (henSprite.hState && henSprite.hState.isSick)) return;
-        const targetX = Phaser.Math.Between(50, 340);
-        const targetY = Phaser.Math.Between(120, 450); 
+        const { x: targetX, y: targetY } = randomHenPosition(this);
         henSprite.setFlipX(targetX < henSprite.x);
         
         henSprite.play('hen_walk', true);
@@ -266,25 +265,27 @@ export default class VisitScene extends Phaser.Scene {
         const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
         const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
         const totalHitsNeeded = Math.ceil(200 / weapon.damage);
-        this.tiger = this.add.image(-20, this.cameras.main.height - 50, 'tiger').setOrigin(0.5).setScale(1.6).setDepth(25).setInteractive({ cursor: 'pointer' });
+        this.tiger = createPredator(this, 'tiger', 70, this.cameras.main.height - 60);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
+        this.tiger.warning = warnText;
 
         this.tigerTween = this.tweens.add({
-            targets: this.tiger, x: this.coop.x, y: this.coop.y + 40, duration: 50000, ease: 'Linear',
-            onComplete: () => { warnText.destroy(); if (!this.isTigerDefeated) this.tigerEscapes(); }
+            targets: this.tiger, x: this.coop.x, y: this.coop.y + this.coop.displayHeight / 2 + 65, duration: 50000, ease: 'Linear',
+            onComplete: () => { if (!this.isTigerDefeated) this.tigerEscapes(); }
         });
 
+        this.tiger.moveTween = this.tigerTween;
         this.tiger.on('pointerdown', (pointer) => {
-            if (this.isTigerDefeated) return;
+            if (this.isTigerDefeated || !this.tiger.active || this.tiger.getData('resolved')) return;
             this.tigerHitCount += weapon.damage;
-            this.tiger.setTint(0xff0000); this.time.delayedCall(50, () => this.tiger.clearTint());
+            hitPredator(this.tiger);
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
             if (weapon.damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
-            if (this.tigerHitCount >= 200) { warnText.destroy(); this.defeatTiger(); }
+            if (this.tigerHitCount >= 200) { this.defeatTiger(); }
             else {
                 const hitsLeft = Math.ceil(Math.max(0, 200 - this.tigerHitCount) / weapon.damage);
                 if (this.tigerHitCount % 20 === 0 || weapon.damage > 1) { 
@@ -296,7 +297,8 @@ export default class VisitScene extends Phaser.Scene {
 
     defeatTiger() {
         this.isTigerDefeated = true; if (this.tigerTween) this.tigerTween.stop();
-        this.tiger.setTexture('tiger_bump'); this.club.setVisible(false);
+        if (!finishPredator(this.tiger, 'dead')) return;
+        this.club.setVisible(false);
         this.showFloatingText('🏆 成功擊退猛虎！', '#FFC107', 22, this.tiger.x, this.tiger.y - 50);
         this.tweens.add({ targets: this.tiger, alpha: 0, y: this.tiger.y - 50, duration: 1500, delay: 1000, onComplete: () => this.tiger.destroy() });
 
@@ -316,6 +318,8 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     tigerEscapes() {
+        if (!finishPredator(this.tiger, 'run')) return;
+        this.club.setVisible(false);
         this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
         runTransaction(db, async (t) => {
@@ -332,26 +336,28 @@ export default class VisitScene extends Phaser.Scene {
         const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
         const totalHitsNeeded = Math.ceil(200 / weapon.damage);
 
-        this.wolf = this.add.image(this.cameras.main.centerX + 120, this.cameras.main.centerY + 220, 'wolf').setOrigin(0.5).setScale(1.5).setDepth(25).setInteractive({ cursor: 'pointer' });
+        this.wolf = createPredator(this, 'wolf', this.cameras.main.centerX + 120, this.cameras.main.centerY + 220);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
+        this.wolf.warning = warnText;
 
         this.wolfTween = this.tweens.add({
-            targets: this.wolf, x: this.coop.x, y: this.coop.y + 40, duration: 60000, ease: 'Linear',
-            onComplete: () => { warnText.destroy(); if (!this.isWolfDefeated) this.wolfEscapes(); }
+            targets: this.wolf, x: this.coop.x, y: this.coop.y + this.coop.displayHeight / 2 + 65, duration: 60000, ease: 'Linear',
+            onComplete: () => { if (!this.isWolfDefeated) this.wolfEscapes(); }
         });
 
+        this.wolf.moveTween = this.wolfTween;
         this.wolf.on('pointerdown', (pointer) => {
-            if (this.isWolfDefeated) return;
+            if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
             this.wolfHitCount += weapon.damage;
-            this.wolf.setTint(0xff0000); this.time.delayedCall(50, () => this.wolf.clearTint());
+            hitPredator(this.wolf);
             
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
             if (weapon.damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
-            if (this.wolfHitCount >= 200) { warnText.destroy(); this.defeatWolf(); }
+            if (this.wolfHitCount >= 200) { this.defeatWolf(); }
             else {
                 const hitsLeft = Math.ceil(Math.max(0, 200 - this.wolfHitCount) / weapon.damage);
                 if (this.wolfHitCount % 20 === 0 || weapon.damage > 1) { 
@@ -363,7 +369,8 @@ export default class VisitScene extends Phaser.Scene {
 
     defeatWolf() {
         this.isWolfDefeated = true; if (this.wolfTween) this.wolfTween.stop();
-        this.wolf.setTexture('wolf_bump'); this.club.setVisible(false);
+        if (!finishPredator(this.wolf, 'dead')) return;
+        this.club.setVisible(false);
         this.showFloatingText('🎉 成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
         this.tweens.add({ targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000, onComplete: () => this.wolf.destroy() });
 
@@ -383,6 +390,8 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     wolfEscapes() {
+        if (!finishPredator(this.wolf, 'run')) return;
+        this.club.setVisible(false);
         this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336', 18, this.wolf.x, this.wolf.y - 30);
         this.tweens.add({ targets: this.wolf, alpha: 0, x: this.wolf.x + 100, duration: 1000, onComplete: () => this.wolf.destroy() });
         runTransaction(db, async (t) => {
