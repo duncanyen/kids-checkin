@@ -1,3 +1,4 @@
+import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX, MACE_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
@@ -6,7 +7,7 @@ export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
 
     create() {
-        this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
+        addFarmBackground(this);
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
         this.add.text(195, 60, '🛒 商店', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 

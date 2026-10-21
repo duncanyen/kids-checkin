@@ -1,3 +1,4 @@
+import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, LAY_EGG_TIME_MS, getUsedSpace, WEAPONS_CONFIG } from './constants.js';
@@ -6,7 +7,7 @@ export default class WarehouseScene extends Phaser.Scene {
     constructor() { super({ key: 'WarehouseScene' }); }
 
     create() {
-        this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
+        addFarmBackground(this);
         
         // 🌟 倉庫的母雞展示也同步放大一倍 (原本 1.5 改為 3)
         this.hen = this.add.sprite(195, 180, 'hen').setScale(3).setOrigin(0.5).play('hen_idle');

@@ -1,3 +1,4 @@
+import { addFarmBackground, addVegetableGarden, setCoopSize } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, setDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
@@ -14,9 +15,10 @@ export default class MyFarmScene extends Phaser.Scene {
 
         document.getElementById('playerName').innerText = playerName;
 
-        this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
+        addFarmBackground(this);
         
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        setCoopSize(this.coop);
         this.coop.on('pointerdown', () => this.askCleanMyFarm());
 
         this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
@@ -24,16 +26,9 @@ export default class MyFarmScene extends Phaser.Scene {
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
 
-        const startX = cx - 135, startY = cy + 60, spacing = 30;
-        this.add.rectangle(cx, startY + 135, 300, 300, 0x5D4037, 0.4).setOrigin(0.5);
-        for (let r = 0; r < 10; r++) {
-            for (let c = 0; c < 10; c++) {
-                let cab = this.add.image(startX + c * spacing, startY + r * spacing, 'cabbage').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-                cab.on('pointerdown', () => this.searchCabbage(cab));
-            }
-        }
+        const { startX, startY } = addVegetableGarden(this, plant => this.searchCabbage(plant));
 
-        const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
+        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
         sign.on('pointerdown', () => {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
@@ -173,9 +168,7 @@ export default class MyFarmScene extends Phaser.Scene {
         const hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
         const now = Date.now();
 
-        if (coopLevel === 1) this.coop.setScale(1);
-        else if (coopLevel === 2) this.coop.setScale(1.2);
-        else if (coopLevel === 3) this.coop.setScale(1.5);
+        setCoopSize(this.coop, coopLevel);
 
         let needsDeadCleanup = false;
         const validHensState = hensState.filter(h => {

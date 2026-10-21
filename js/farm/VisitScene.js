@@ -1,3 +1,4 @@
+import { addFarmBackground, addVegetableGarden, setCoopSize } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
@@ -18,9 +19,10 @@ export default class VisitScene extends Phaser.Scene {
         this.myFarmData = null; 
         this.isStealing = false; 
 
-        this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
+        addFarmBackground(this);
 
         this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        setCoopSize(this.coop);
         this.coop.on('pointerdown', () => this.askCleanTargetFarm());
 
         this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
@@ -28,16 +30,9 @@ export default class VisitScene extends Phaser.Scene {
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
 
-        const startX = cx - 135, startY = cy + 60, spacing = 30;
-        this.add.rectangle(cx, startY + 135, 300, 300, 0x5D4037, 0.4).setOrigin(0.5);
-        for (let r = 0; r < 10; r++) {
-            for (let c = 0; c < 10; c++) {
-                let cab = this.add.image(startX + c * spacing, startY + r * spacing, 'cabbage').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-                cab.on('pointerdown', () => this.searchCabbage(cab));
-            }
-        }
+        const { startX, startY } = addVegetableGarden(this, plant => this.searchCabbage(plant));
 
-        const sign = this.add.image(startX, startY - 20, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
+        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(5);
         sign.on('pointerdown', () => { this.showNoticeText('幫忙抓菜園里的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20); });
 
         this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
@@ -177,6 +172,7 @@ export default class VisitScene extends Phaser.Scene {
         const henCount = Math.max(1, this.targetFarmData.hens || 1);
         const hensState = Array.isArray(this.targetFarmData.hensState) ? this.targetFarmData.hensState : [];
         const now = Date.now();
+        setCoopSize(this.coop, this.targetFarmData.coopLevel);
 
         this.hensGroup.forEach(h => {
             this.tweens.killTweensOf(h);

@@ -1,3 +1,4 @@
+import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID } from './constants.js';
@@ -6,7 +7,7 @@ export default class LobbyScene extends Phaser.Scene {
     constructor() { super({ key: 'LobbyScene' }); }
 
     create() {
-        this.add.tileSprite(0, 0, 390, 844, 'grass').setOrigin(0, 0);
+        addFarmBackground(this);
         this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5);
         this.add.text(195, 50, '🏘️ 咕咕村落', { fontSize: '24px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 

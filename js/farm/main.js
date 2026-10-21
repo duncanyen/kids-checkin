@@ -17,7 +17,9 @@ const config = {
         height: 844
     },
     parent: 'game-container', 
-    pixelArt: true, 
+    // Smooth painted scenery; the hen texture opts into nearest filtering in BootScene.
+    pixelArt: false,
+    antialias: true,
     scene: [BootScene, MyFarmScene, LobbyScene, VisitScene, ShopScene, WarehouseScene] 
 };
 
