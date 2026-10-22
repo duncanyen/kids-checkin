@@ -150,6 +150,7 @@
         
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+    <link rel="stylesheet" href="css/todo-enhancements.css">
 </head>
 <body>
 
@@ -166,6 +167,7 @@
         <div class="nexus-card" id="nexus-todo-container" data-group-id="">
             <div class="todo-header">
                 <h2>待辦</h2>
+                <button type="button" class="recurring-trigger" data-action="open-recurring" data-write disabled>↻ 循環待辦</button>
             </div>
 
             <div class="category-bar" id="category-container">
@@ -178,28 +180,32 @@
                 <div class="empty-state">目前尚無未完成待辦</div>
             </div>
 
-            <!-- 已完成區塊 -->
-            <div class="section-sub-title" style="margin-top: 28px;">✨ 已完成</div>
-            <div class="todo-list" id="completed-list-container">
-                <div class="empty-state">目前尚無已完成項目</div>
-            </div>
+            <details class="completed-section" id="completed-section">
+                <summary>已完成事項 <span id="completed-total">0</span></summary>
+                <div class="completed-tabs" role="tablist" aria-label="完成紀錄">
+                    <button type="button" id="completed-tab-today" role="tab" aria-selected="true" aria-controls="completed-list-container" data-action="completed-tab" data-value="today">今日完成</button>
+                    <button type="button" id="completed-tab-history" role="tab" aria-selected="false" aria-controls="completed-list-container" data-action="completed-tab" data-value="history">過往完成</button>
+                </div>
+                <div class="todo-list" id="completed-list-container" role="tabpanel"></div>
+                <div class="completed-pagination" id="completed-pagination"></div>
+            </details>
         </div>
     </div>
 
     <!-- 底部固定懸浮導覽列 -->
     <div class="fixed-bottom-bar">
         <div class="fab-btn-container">
-            <button class="fab-btn" onclick="NexusTodoApp.openAddModal()" title="新增待辦">＋</button>
+            <button class="fab-btn" data-write disabled onclick="NexusTodoApp.openAddModal()" title="新增待辦">＋</button>
         </div>
     </div>
 
     <!-- 新增/編輯 待辦彈跳視窗 Modal -->
-    <div class="modal" id="addTodoModal">
+    <div class="modal" id="addTodoModal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
             <h3 id="modal-title" style="margin-top:0; font-size:20px; font-weight:900; margin-bottom:16px;">新增待辦事項</h3>
             
             <div class="form-group">
-                <label class="form-label">待辦內容 (至少三行高度)</label>
+                <label class="form-label">待辦名稱</label>
                 <textarea id="new-todo-title" class="form-control" placeholder="輸入待辦內容..."></textarea>
             </div>
 
@@ -235,462 +241,67 @@
 
             <div class="modal-btns">
                 <button onclick="NexusTodoApp.closeAddModal()">取消</button>
-                <button id="modal-submit-btn" onclick="NexusTodoApp.saveTodo()">確認新增</button>
+                <button id="modal-submit-btn" data-write onclick="NexusTodoApp.saveTodo()">確認新增</button>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+    <div class="modal" id="recurringTodoModal" role="dialog" aria-modal="true" aria-labelledby="recurring-modal-title">
+        <div class="modal-content">
+            <h3 id="recurring-modal-title" style="margin-top:0">建立循環待辦</h3>
+            <div class="form-group">
+                <label class="form-label" for="recurring-title">待辦名稱</label>
+                <input class="form-control" id="recurring-title" placeholder="例如：倒垃圾">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="recurring-note">備註（選填）</label>
+                <textarea class="form-control" id="recurring-note" placeholder="補充說明"></textarea>
+            </div>
+            <div class="form-group">
+                <span class="form-label">負責人（可多選）</span>
+                <div class="assignee-avatar-grid" id="recurringAssigneeContainer"></div>
+            </div>
+            <div class="form-group">
+                <span class="form-label">循環設定</span>
+                <div class="frequency-options">
+                    <button type="button" data-action="frequency" data-value="daily" aria-pressed="true">每天</button>
+                    <button type="button" data-action="frequency" data-value="weekly" aria-pressed="false">每週</button>
+                    <button type="button" data-action="frequency" data-value="monthly" aria-pressed="false">每月</button>
+                    <button type="button" data-action="frequency" data-value="yearly" aria-pressed="false">每年</button>
+                </div>
+                <p class="form-hint" id="recurring-frequency-hint"></p>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="recurring-interval">每日循環間隔天數（1–30 天）</label>
+                <input class="form-control" id="recurring-interval" type="number" min="1" max="30" step="1" value="1">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="recurring-start-date">開始日期</label>
+                    <input class="form-control" id="recurring-start-date" type="date">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="recurring-start-time">開始時間（台北時間）</label>
+                    <input class="form-control" id="recurring-start-time" type="time" value="09:00">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="recurring-end-date">結束日期（選填，含當日）</label>
+                <input class="form-control" id="recurring-end-date" type="date">
+                <p class="form-hint">未填寫則持續循環，可在此停止。到期項目會在開啟待辦頁面時補齊；編輯單筆不影響後續循環。</p>
+            </div>
+            <div class="form-group">
+                <span class="form-label">分類</span>
+                <div class="category-options" id="recurring-category-container"></div>
+            </div>
+            <div class="modal-btns">
+                <button type="button" data-action="close-recurring">取消</button>
+                <button type="button" data-action="save-recurring" data-write>建立循環</button>
+            </div>
+            <div class="recurring-existing" id="recurring-existing"></div>
+        </div>
+    </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-            authDomain: "homebasedb.firebaseapp.com",
-            projectId: "homebasedb",
-            storageBucket: "homebasedb.firebasestorage.app",
-            messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        const NexusTodoApp = {
-            currentGroupId: null,
-            groupMembers: [],
-            selectedAssignees: ["所有人員"],
-            editingTodoId: null, // 用來標記目前是否處於編輯模式
-            state: {
-                categories: ["工作", "生活", "採買"],
-                todos: [],
-                currentFilter: "all",
-                selectedDeadline: "今天",
-                selectedNewTodoCategory: ""
-            },
-
-            async init(groupId) {
-                if (!groupId) groupId = localStorage.getItem('lastGroupId') || "default_group";
-                this.currentGroupId = groupId;
-                document.getElementById('nexus-todo-container').setAttribute('data-group-id', groupId);
-                
-                await this.fetchGroupMembersAndDataOnce(groupId);
-            },
-
-            async fetchGroupMembersAndDataOnce(groupId) {
-                const statusEl = document.getElementById('todo-loading-status');
-                statusEl.textContent = "同步中...";
-                
-                try {
-                    const groupDocRef = doc(db, "groups", groupId);
-                    const groupSnap = await getDoc(groupDocRef);
-                    if (groupSnap.exists()) {
-                        const gData = groupSnap.data();
-                        const memberNames = gData.members || [];
-                        this.groupMembers = [];
-                        
-                        for (let i = 0; i < memberNames.length; i += 10) {
-                            const chunk = memberNames.slice(i, i + 10);
-                            const userQ = query(collection(db, "users"), where("name", "in", chunk));
-                            const userSnap = await getDocs(userQ);
-                            userSnap.forEach(uDoc => {
-                                this.groupMembers.push(uDoc.data());
-                            });
-                        }
-                    }
-
-                    if (this.groupMembers.length === 0) {
-                        this.groupMembers = [{ name: "小明", avatar: "" }, { name: "小華", avatar: "" }];
-                    }
-
-                    const todoDocRef = doc(db, "todos", groupId);
-                    const todoSnap = await getDoc(todoDocRef);
-
-                    if (todoSnap.exists()) {
-                        const data = todoSnap.data();
-                        this.state.categories = data.categories || ["工作", "生活", "採買"];
-                        this.state.todos = data.todos || [];
-                    } else {
-                        const cachedData = localStorage.getItem(`nexus_todo_${groupId}`);
-                        if (cachedData) {
-                            const parsed = JSON.parse(cachedData);
-                            this.state.categories = parsed.categories || ["工作", "生活", "採買"];
-                            this.state.todos = parsed.todos || [];
-                        } else {
-                            this.state.todos = [
-                                { id: 1, title: "採買週末露營食材", category: "採買", deadline: "今天", assignees: ["小明", "小華"], note: "記得買無糖豆漿與肉片", completed: false },
-                                { id: 2, title: "整理客廳雜物", category: "生活", deadline: "明天", assignees: ["所有人員"], note: "", completed: true }
-                            ];
-                        }
-                        await setDoc(todoDocRef, {
-                            categories: this.state.categories,
-                            todos: this.state.todos
-                        });
-                    }
-
-                    localStorage.setItem(`nexus_todo_${groupId}`, JSON.stringify({
-                        categories: this.state.categories,
-                        todos: this.state.todos
-                    }));
-
-                    statusEl.textContent = "已同步";
-                    setTimeout(() => statusEl.textContent = "", 1500);
-                    
-                    this.render();
-                } catch (error) {
-                    console.error("讀取失敗", error);
-                    statusEl.textContent = "同步異常";
-                    this.render();
-                }
-            },
-
-            async saveState() {
-                localStorage.setItem(`nexus_todo_${this.currentGroupId}`, JSON.stringify({
-                    categories: this.state.categories,
-                    todos: this.state.todos
-                }));
-
-                try {
-                    const todoDocRef = doc(db, "todos", this.currentGroupId);
-                    await setDoc(todoDocRef, {
-                        categories: this.state.categories,
-                        todos: this.state.todos
-                    }, { merge: true });
-                } catch (err) {
-                    console.error("雲端儲存失敗：", err);
-                }
-            },
-
-            render() {
-                this.renderCategories();
-                this.renderCategoryButtons();
-                this.renderTodoList();
-                this.renderAssigneeChips();
-            },
-
-            renderCategories() {
-                const container = document.getElementById('category-container');
-                let html = `<button class="cat-btn ${this.state.currentFilter === 'all' ? 'active' : ''}" onclick="NexusTodoApp.filterCategory('all')">全部</button>`;
-                
-                this.state.categories.forEach(cat => {
-                    const isActive = this.state.currentFilter === cat ? 'active' : '';
-                    html += `
-                        <button class="cat-btn ${isActive}" onclick="NexusTodoApp.filterCategory('${cat}')">
-                            ${cat}
-                            <span class="del-cat" onclick="event.stopPropagation(); NexusTodoApp.deleteCategory('${cat}')" title="刪除分類">×</span>
-                        </button>
-                    `;
-                });
-                container.innerHTML = html;
-            },
-
-            renderCategoryButtons() {
-                const container = document.getElementById('new-todo-category-container');
-                
-                if (!this.state.selectedNewTodoCategory || !this.state.categories.includes(this.state.selectedNewTodoCategory)) {
-                    this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
-                }
-
-                let html = '';
-                this.state.categories.forEach(cat => {
-                    const isActive = this.state.selectedNewTodoCategory === cat ? 'active' : '';
-                    html += `<button type="button" class="category-btn ${isActive}" onclick="NexusTodoApp.selectNewTodoCategory('${cat}')">${cat}</button>`;
-                });
-                
-                html += `<button type="button" class="category-btn category-btn-add" onclick="NexusTodoApp.handleAddCustomCategory()">+ 新增自訂類別</button>`;
-                
-                if (container) {
-                    container.innerHTML = html;
-                }
-            },
-
-            selectNewTodoCategory(cat) {
-                this.state.selectedNewTodoCategory = cat;
-                this.renderCategoryButtons();
-            },
-
-            handleAddCustomCategory() {
-                const newCat = prompt("請輸入新的類別名稱：");
-                if (newCat && newCat.trim() !== "") {
-                    const trimmed = newCat.trim();
-                    if (!this.state.categories.includes(trimmed)) {
-                        this.state.categories.push(trimmed);
-                        this.state.selectedNewTodoCategory = trimmed;
-                        this.saveState();
-                        this.render(); 
-                    } else {
-                        alert("此類別已存在！");
-                        this.selectNewTodoCategory(trimmed); 
-                    }
-                }
-            },
-
-            renderAssigneeChips() {
-                const container = document.getElementById('assigneeAvatarContainer');
-                let html = `
-                    <div class="assignee-chip ${this.selectedAssignees.includes('所有人員') ? 'selected' : ''}" onclick="NexusTodoApp.toggleAssignee('所有人員')">
-                        <span>👤 所有人員</span>
-                    </div>
-                `;
-                
-                this.groupMembers.forEach(m => {
-                    const isSelected = this.selectedAssignees.includes(m.name);
-                    const avatarUrl = m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=10b981&color=fff`;
-                    html += `
-                        <div class="assignee-chip ${isSelected ? 'selected' : ''}" onclick="NexusTodoApp.toggleAssignee('${m.name}')">
-                            <img src="${avatarUrl}" alt="${m.name}">
-                            <span>${m.name}</span>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            },
-
-            toggleAssignee(name) {
-                if (name === '所有人員') {
-                    this.selectedAssignees = ['所有人員'];
-                } else {
-                    if (this.selectedAssignees.includes('所有人員')) {
-                        this.selectedAssignees = [];
-                    }
-                    if (this.selectedAssignees.includes(name)) {
-                        this.selectedAssignees = this.selectedAssignees.filter(n => n !== name);
-                        if (this.selectedAssignees.length === 0) {
-                            this.selectedAssignees = ['所有人員'];
-                        }
-                    } else {
-                        this.selectedAssignees.push(name);
-                    }
-                }
-                this.renderAssigneeChips();
-            },
-
-            renderTodoList() {
-                const filtered = this.state.currentFilter === 'all' 
-                    ? this.state.todos 
-                    : this.state.todos.filter(t => t.category === this.state.currentFilter);
-
-                const activeTodos = filtered.filter(t => !t.completed);
-                const completedTodos = filtered.filter(t => t.completed);
-
-                const activeContainer = document.getElementById('todo-list-container');
-                if (activeTodos.length === 0) {
-                    activeContainer.innerHTML = `<div class="empty-state">目前尚無未完成待辦</div>`;
-                } else {
-                    activeContainer.innerHTML = activeTodos.map(item => this.renderTodoItemHTML(item)).join('');
-                }
-
-                const completedContainer = document.getElementById('completed-list-container');
-                if (completedTodos.length === 0) {
-                    completedContainer.innerHTML = `<div class="empty-state">目前尚無已完成項目</div>`;
-                } else {
-                    completedContainer.innerHTML = completedTodos.map(item => this.renderTodoItemHTML(item)).join('');
-                }
-            },
-
-            renderTodoItemHTML(item) {
-                return `
-                    <div class="todo-item ${item.completed ? 'completed' : ''}">
-                        <div class="todo-item-content">
-                            <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="NexusTodoApp.toggleTodo(${item.id})" style="margin-top: 4px; width:18px; height:18px; accent-color:var(--primary); cursor: pointer;" />
-                            <div>
-                                <div style="font-weight: 700; font-size: 0.95rem; white-space: pre-wrap; word-break: break-all;">${item.title}</div>
-                                <div class="todo-details">
-                                    <span class="badge">📁 ${item.category}</span>
-                                    <span class="badge">⏰ ${item.deadline}</span>
-                                    <span class="badge">👤 ${item.assignees.join(', ')}</span>
-                                    ${item.note ? `<span>📝 ${item.note}</span>` : ''}
-                                </div>
-                                ${item.completedAt ? `<div style="font-size: 0.75rem; color: var(--primary); margin-top: 4px; font-weight:600;">✓ 於 ${item.completedAt} 完成</div>` : ''}
-                            </div>
-                        </div>
-                        <div class="todo-actions">
-                            <button class="action-btn edit" onclick="NexusTodoApp.openEditModal(${item.id})" title="編輯">✏️</button>
-                            <button class="action-btn delete" onclick="NexusTodoApp.deleteTodo(${item.id})" title="刪除">×</button>
-                        </div>
-                    </div>
-                `;
-            },
-
-            filterCategory(category) {
-                this.state.currentFilter = category;
-                this.renderCategories();
-                this.renderTodoList();
-            },
-
-            deleteCategory(catName) {
-                if (confirm(`確定要刪除分類「${catName}」嗎？`)) {
-                    this.state.categories = this.state.categories.filter(c => c !== catName);
-                    if (this.state.currentFilter === catName) {
-                        this.state.currentFilter = 'all';
-                    }
-                    if (this.state.selectedNewTodoCategory === catName) {
-                        this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
-                    }
-                    this.saveState();
-                    this.render();
-                }
-            },
-
-            openAddModal() {
-                this.editingTodoId = null; // 確保是新增模式
-                document.getElementById('modal-title').textContent = '新增待辦事項';
-                document.getElementById('modal-submit-btn').textContent = '確認新增';
-
-                this.state.selectedNewTodoCategory = this.state.categories[0] || '一般';
-                this.renderCategoryButtons();
-                
-                this.setDeadlineUI('今天');
-                
-                document.getElementById('new-todo-title').value = '';
-                document.getElementById('new-todo-note').value = '';
-                this.selectedAssignees = ['所有人員'];
-                this.renderAssigneeChips();
-
-                document.getElementById('addTodoModal').style.display = 'flex';
-                document.getElementById('new-todo-title').focus();
-            },
-
-            // 開啟編輯視窗
-            openEditModal(id) {
-                const todo = this.state.todos.find(t => t.id === id);
-                if (!todo) return;
-
-                this.editingTodoId = id; // 設定為編輯模式
-                document.getElementById('modal-title').textContent = '編輯待辦事項';
-                document.getElementById('modal-submit-btn').textContent = '儲存修改';
-
-                // 填入既有資料
-                document.getElementById('new-todo-title').value = todo.title;
-                document.getElementById('new-todo-note').value = todo.note || '';
-
-                this.state.selectedNewTodoCategory = todo.category;
-                this.renderCategoryButtons();
-
-                this.setDeadlineUI(todo.deadline);
-
-                this.selectedAssignees = [...todo.assignees];
-                this.renderAssigneeChips();
-
-                document.getElementById('addTodoModal').style.display = 'flex';
-                document.getElementById('new-todo-title').focus();
-            },
-
-            closeAddModal() {
-                document.getElementById('addTodoModal').style.display = 'none';
-                document.getElementById('new-todo-title').value = '';
-                document.getElementById('new-todo-note').value = '';
-                document.getElementById('dl-custom').innerText = '日期'; // 重置自訂日期按鈕文字
-                this.editingTodoId = null;
-                this.selectedAssignees = ['所有人員'];
-                this.renderAssigneeChips();
-            },
-
-            // 負責更新 UI 按鈕狀態的統一方法
-            setDeadlineUI(label) {
-                this.state.selectedDeadline = label;
-                document.querySelectorAll('.deadline-btn').forEach(btn => btn.classList.remove('active'));
-                
-                if (label === '今天') {
-                    document.getElementById('dl-today').classList.add('active');
-                } else if (label === '明天') {
-                    document.getElementById('dl-tomorrow').classList.add('active');
-                } else if (label === '週末') {
-                    document.getElementById('dl-weekend').classList.add('active');
-                } else {
-                    const customBtn = document.getElementById('dl-custom');
-                    customBtn.innerText = label; // 顯示自訂日期
-                    customBtn.classList.add('active');
-                }
-            },
-
-            selectDeadline(type, label) {
-                this.setDeadlineUI(label);
-            },
-
-            triggerCustomDate() {
-                document.getElementById('hidden-date-picker').style.display = 'block';
-                document.getElementById('hidden-date-picker').showPicker?.();
-                document.getElementById('hidden-date-picker').focus();
-            },
-
-            handleCustomDateChange(dateVal) {
-                if (dateVal) {
-                    this.setDeadlineUI(dateVal);
-                }
-                document.getElementById('hidden-date-picker').style.display = 'none';
-            },
-
-            // 統一處理新增或編輯儲存
-            saveTodo() {
-                const titleInput = document.getElementById('new-todo-title');
-                const noteInput = document.getElementById('new-todo-note');
-                const title = titleInput.value.trim();
-
-                if (!title) {
-                    alert("請輸入待辦內容！");
-                    titleInput.focus();
-                    return;
-                }
-
-                const targetCategory = this.state.selectedNewTodoCategory || '一般';
-
-                if (this.editingTodoId) {
-                    // 編輯現有項目
-                    const index = this.state.todos.findIndex(t => t.id === this.editingTodoId);
-                    if (index !== -1) {
-                        this.state.todos[index].title = title;
-                        this.state.todos[index].category = targetCategory;
-                        this.state.todos[index].deadline = this.state.selectedDeadline;
-                        this.state.todos[index].assignees = [...this.selectedAssignees];
-                        this.state.todos[index].note = noteInput.value.trim();
-                    }
-                } else {
-                    // 新增項目
-                    const newTodo = {
-                        id: Date.now(),
-                        title: title,
-                        category: targetCategory,
-                        deadline: this.state.selectedDeadline,
-                        assignees: [...this.selectedAssignees],
-                        note: noteInput.value.trim(),
-                        completed: false,
-                        completedAt: null
-                    };
-                    this.state.todos.unshift(newTodo);
-                }
-
-                this.saveState();
-                this.render();
-                this.closeAddModal();
-            },
-
-            toggleTodo(id) {
-                const todo = this.state.todos.find(t => t.id === id);
-                if (todo) {
-                    todo.completed = !todo.completed;
-                    const now = new Date();
-                    todo.completedAt = todo.completed ? `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` : null;
-                    this.saveState();
-                    this.renderTodoList();
-                }
-            },
-
-            deleteTodo(id) {
-                if (confirm("確定要刪除這項待辦嗎？")) {
-                    this.state.todos = this.state.todos.filter(t => t.id !== id);
-                    this.saveState();
-                    this.renderTodoList();
-                }
-            }
-        };
-
-        window.NexusTodoApp = NexusTodoApp;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const groupId = urlParams.get('groupId') || localStorage.getItem('lastGroupId');
-            NexusTodoApp.init(groupId);
-        });
-    </script>
+    <script type="module" src="js/todo.js"></script>
 </body>
 </html>
