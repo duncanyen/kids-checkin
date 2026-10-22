@@ -1,61 +1,78 @@
 # Farm scenery
 
-Original AI-generated artwork created for 咕咕村落: a warm, hand-painted rural
-landscape, timber and terracotta chicken coop, vegetable bed, and cabbage plant.
-The WebP files are optimized runtime exports; transparent props retain alpha.
+The home and visiting farms use the user-supplied farm-map.jpg, copied without
+image edits from the supplied 720 × 1280 artwork. The map already contains the
+coop and vegetable garden. It is fitted proportionally to the 390 × 844 canvas,
+cropping the outer tree margins at the sides rather than stretching the image.
+
+Earlier AI-generated standalone art remains available for menu backgrounds and
+shop/village icons. The unused standalone bed/plant assets are retained without
+preloading them. WebP props retain transparency.
 
 | File | Pixels | Use |
 | --- | --- | --- |
-| `background.webp` | 780 × 1688 | Full portrait background, drawn at 390 × 844 |
-| `coop.webp` | 320 × 300 | Chicken coop, drawn at 160 × 150 before upgrades |
-| `garden-bed.webp` | 660 × 660 | Soil and timber border, drawn at 330 × 330 |
-| `cabbage.webp` | 64 × 64 | Individual interactive plants, drawn at 24 × 24 |
-| `signboard.webp` | 88 × 100 | Cabbage sign, drawn at 44 × 50 with the existing help action |
-| `wolf-sheet.webp` | 1024 × 1024 | Pixel art matching the hen, 4 × 4 grid, 256 × 256 per frame |
-| `tiger-sheet.webp` | 1024 × 1024 | Pixel art matching the hen, 4 × 4 grid, 256 × 256 per frame |
+| farm-map.jpg | 720 × 1280 | Supplied field map for home and visiting farms |
+| background.webp | 780 × 1688 | Village/shop/warehouse menu background |
+| coop.webp | 320 × 300 | Village and shop coop icons |
+| garden-bed.webp | 660 × 660 | Retained standalone soil-bed art |
+| cabbage.webp | 64 × 64 | Retained standalone cabbage art |
+| signboard.webp | 88 × 100 | Help sign, drawn at 32 × 38 |
+| wolf-sheet.webp | 1024 × 1024 | 4 × 4 grid, 256 × 256 per frame |
+| tiger-sheet.webp | 1024 × 1024 | 4 × 4 grid, 256 × 256 per frame |
 
-`js/farm/scenery.js` shares the layout between the home and visiting farms.
-The village member list reuses the painted coop at 96 × 90. Planting uses
-the existing 100 interactive plants and game logic. Coop sizes
-remain 1×, 1.2× and 1.5× for the three upgrade levels. The other farm scenes
-reuse the landscape; shop icons reuse the coop texture.
+## Map interaction and layout
 
-Painted textures use linear filtering. The hen, wolf and tiger spritesheets
-use nearest filtering so their pixel outlines remain sharp.
+js/farm/scenery.js shares map coordinates between home and visiting farms.
+The coop is a hit zone over the painted building, not a duplicate sprite.
+Its Lv. badge reflects the existing upgrade/capacity logic. The baked building
+and hit zone stay aligned instead of resizing. The village list still uses
+standalone coop icons at 96 × 90.
 
-The predator sheets contain four walk frames (0–3), four run frames (4–7),
-four stunned frames with golden stars (8–11), and four non-graphic defeat
-frames (12–15). `js/farm/predators.js` registers and controls these states;
-the final defeat pose stays visible before the existing fade-out. Repeated
-hits restart the hit pose without pausing travel. Resolved events cannot
-resume walking or resolve twice.
+The 42 painted cabbages (7 × 6) have independent hit zones aligned with their
+pictured positions. Click pulses provide feedback while the existing
+worm-search/reward logic stays unchanged.
 
-Predators have three-quarter rear views facing northeast, mirrored for northwest.
-Spawn points and the coop-front destination form a 45-degree diagonal matching
-that view. Their grounded origins keep feet on the path. Approaches walk from
-the first frame and take 60 seconds for wolves or 50 seconds for tigers, including
-time spent playing hit poses. Run poses are used for escape.
-Predators render at 192 × 192 (twice their previous display size). These lossless
-WebP sheets are exported from the full-resolution originals, not enlarged from
-the previous 64-pixel frames. Hit areas scale to match their visible bodies.
+Hen spawn points, wander destinations and egg-laying gathering positions all
+stay in the central grass clearing between the coop-front fence and the
+vegetable fence. Bounds include room for the entire hen sprite. Rubbish also
+stays on that ground.
 
-Hen spawn points and wander destinations share a rectangular clearing in front
-of the coop. Its upper edge follows the coop's upgraded height, with clearance
-for the whole hen sprite. Egg-laying gathers hens in that clearing as well.
-`js/farm/hen-navigation.js` plans complete paths around the visible predators,
-with clearance for the hen's body. Visiting farms recheck paths every 200 ms
-and immediately when an event starts. Existing hens retreat if necessary;
-new hens spawn in safe space. Sick hens can retreat too, keeping their status
-icon attached. Defeated animals remain obstacles until they fade out. Normal
-wandering resumes after the scene clears; no remote farm data is changed by
-this visual movement behavior.
+## Predators and hen navigation
 
-Browser checks (requires Playwright, system Chromium and curl): start a static
-server in the repository, then run `node tests/farm-hen-lifecycle.cjs` and
-`node tests/farm-actors.cjs`. Set `FARM_BASE_URL` if using a port other than 8000.
-Both suites mock Firebase; actor tests count transactions without executing
-their callbacks or writing remote data.
-`node tests/farm-predator-timing.cjs` additionally checks actual 50/60-second
-arrivals after repeated attacks; allow about one minute for that test.
-`node tests/farm-hen-avoidance.cjs` covers blocked paths, moving predators,
-farm resync, upgraded coops, sick hens, and two visible predators.
+Painted backgrounds use linear filtering. Hen, wolf and tiger pixel sprites
+use nearest filtering to preserve their outlines.
+
+Predator sheets have four walk frames (0–3), four run frames (4–7), four stunned
+frames with golden stars (8–11), and four non-graphic defeat frames (12–15).
+The final defeat pose stays visible before fading. Repeated hits restart the
+hit pose without pausing travel; resolved events cannot resume or resolve twice.
+
+Predators face northeast, mirrored for northwest. Spawn/destination coordinates
+produce a matching 45-degree approach towards the pictured coop front. Wolves
+take 60 seconds, tigers 50 seconds, including time spent in hit poses.
+Predators render at 192 × 192. Their lossless sheets are exported from the
+full-resolution originals, not enlarged from previous 64-pixel frames.
+
+js/farm/hen-navigation.js plans full paths around visible predators with room
+for the hen's body. Visiting farms recheck every 200 ms and when an event starts.
+Hens retreat if needed, including sick hens whose status icons follow them.
+Defeated animals remain obstacles until they fade. Normal wandering resumes
+when the scene clears; these movements never write remote farm records.
+
+## Validation
+
+Start a static server in the repository. Tests require Playwright, curl, and
+system Chromium. Set FARM_BASE_URL if not using port 8000.
+
+- node tests/farm-map.cjs: proportional map, no duplicate art, 42 plant targets,
+  coop/plant clicks and egg-laying bounds in home and visiting farms.
+- node tests/farm-actors.cjs: routes at all coop levels, animations, defeat,
+  escape, duplicate-event protection and village navigation.
+- node tests/farm-hen-lifecycle.cjs: destroyed sprites and scene resync.
+- node tests/farm-hen-avoidance.cjs: blocked paths, moving threats, resync,
+  sick hens and two predators.
+- node tests/farm-predator-timing.cjs: real 50/60-second arrival after attacks;
+  allow about one minute.
+
+Tests mock Firebase, counting transactions without executing their callbacks
+or writing production data.

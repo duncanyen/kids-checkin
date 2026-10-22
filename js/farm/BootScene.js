@@ -11,9 +11,8 @@ export default class BootScene extends Phaser.Scene {
         // 這裡假設單格寬高為 32x32
         this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('farm_background', 'assets/farm/background.webp');
+        this.load.image('farm_map', 'assets/farm/farm-map.jpg');
         this.load.image('coop', 'assets/farm/coop.webp');
-        this.load.image('garden_bed', 'assets/farm/garden-bed.webp');
-        this.load.image('cabbage', 'assets/farm/cabbage.webp');
         this.load.image('signboard', 'assets/farm/signboard.webp');
         for (const kind of ['wolf', 'tiger']) {
             this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 256, frameHeight: 256 });

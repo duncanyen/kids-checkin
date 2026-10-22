@@ -1,5 +1,5 @@
 import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint } from './predators.js';
-import { addFarmBackground, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
+import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -14,29 +14,26 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     create() {
-        const cx = this.cameras.main.centerX;
-        const cy = this.cameras.main.centerY;
         this.emptyClickCount = 0;
         this.targetFarmData = null;
         this.myFarmData = null; 
         this.isStealing = false; 
         this.nextHenAvoidanceAt = 0;
 
-        addFarmBackground(this);
+        addFarmBackground(this, true);
 
-        this.coop = this.add.image(cx, cy - 180, 'coop').setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        setCoopSize(this.coop);
-        this.coop.on('pointerdown', () => this.askCleanTargetFarm());
+        this.coop = addFarmCoop(this, () => this.askCleanTargetFarm());
 
-        this.coopEgg = this.add.image(cx, cy - 140, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
+        const eggPosition = farmEggPosition(this);
+        this.coopEgg = this.add.image(eggPosition.x, eggPosition.y, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
 
-        const { startX, startY } = addVegetableGarden(this, plant => this.searchCabbage(plant));
-
-        const sign = this.add.image(startX, startY - 38, 'signboard').setOrigin(0.5).setDisplaySize(44, 50).setInteractive({ cursor: 'pointer' }).setDepth(5);
-        sign.on('pointerdown', () => { this.showNoticeText('幫忙抓菜園里的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20); });
+        addVegetableGarden(this, plant => this.searchCabbage(plant));
+        addFarmSign(this, sign => {
+            this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
+        });
 
         this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
         this.add.text(195, 50, `潛入 [${this.targetName}] 的家`, { fontSize: '16px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
@@ -185,8 +182,9 @@ export default class VisitScene extends Phaser.Scene {
         if (cleanVal > 50) {
             const count = Math.min(12, Math.floor((cleanVal - 50) / 4) + 2);
             for (let i = 0; i < count; i++) {
-                let rx = Phaser.Math.Between(40, 350);
-                let ry = Phaser.Math.Between(220, 500);
+                const area = getHenWalkArea(this);
+                let rx = Phaser.Math.Between(area.left, area.right);
+                let ry = Phaser.Math.Between(area.top, area.bottom);
                 this.rubbishGroup.add(this.add.image(rx, ry, 'rubbish').setDepth(2));
             }
         }

@@ -32,7 +32,7 @@ const {execFileSync}=require('node:child_process');
   for(const kind of ['wolf','tiger']) {
    const original=s[kind+'Escapes'].bind(s);
    s[kind+'Escapes']=()=>{
-    const a=s[kind];window.__arrivals.push({kind,elapsed:performance.now()-a.startedAt,x:a.x,y:a.y,targetY:s.coop.y+s.coop.displayHeight/2+20});original();
+    const a=s[kind];window.__arrivals.push({kind,elapsed:performance.now()-a.startedAt,x:a.x,y:a.y,targetX:s.coop.x,targetY:s.coop.y+s.coop.displayHeight/2+20});original();
    };
    const cap=kind[0].toUpperCase()+kind.slice(1);s['spawn'+cap+'Event']();s[kind].startedAt=performance.now();
   }
@@ -44,7 +44,7 @@ const {execFileSync}=require('node:child_process');
  }
  await p.waitForFunction(()=>window.__arrivals.length===2,null,{timeout:65000});
  const arrivals=await p.evaluate(()=>window.__arrivals);
- for(const a of arrivals)if(Math.abs(a.elapsed-(a.kind==='wolf'?60000:50000))>500 || Math.abs(a.y-a.targetY)>0.01 || Math.abs(a.x-195)>0.01)throw Error(JSON.stringify(a));
+ for(const a of arrivals)if(Math.abs(a.elapsed-(a.kind==='wolf'?60000:50000))>500 || Math.abs(a.y-a.targetY)>0.01 || Math.abs(a.x-a.targetX)>0.01)throw Error(JSON.stringify(a));
  if(errors.length)throw Error(JSON.stringify(errors));
  console.log(JSON.stringify({passed:true,arrivals,errors}));await b.close();
 })().catch(e=>{console.error(e);process.exit(1)});

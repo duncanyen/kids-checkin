@@ -59,7 +59,7 @@ const {execFileSync}=require('node:child_process');
    const zones=getThreatZones(s);
    for(const h of s.hensGroup){
     if(!pointIsSafe(h,zones)||!henRouteIsSafe(s,h))throw Error('Hen overlaps or routes through predator');
-    if(h.getBounds().top<s.coop.getBounds().bottom || h.y>422)throw Error('Fleeing hen crossed coop or garden');
+    if(h.getBounds().top<s.coop.getBounds().bottom || h.getBounds().bottom>s.gardenBounds.top)throw Error('Fleeing hen crossed coop or garden');
     if(h.statusIcon&&Math.abs(h.statusIcon.x-h.x)>1)throw Error('Sick icon did not follow fleeing hen');
    }
    return {hens:s.hensGroup.length,threats:zones.length};

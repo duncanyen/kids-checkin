@@ -38,13 +38,13 @@ const {execFileSync}=require('node:child_process');
     const next=randomHenPosition(s);
     for(let step=0;step<=10;step++) {
      const y=previous.y+(next.y-previous.y)*step/10;
-     if(y-32<edge || y+32>454) throw Error('Hen route crosses coop or garden');
+     if(y-32<edge || y+32>s.gardenBounds.top) throw Error('Hen route crosses coop or garden');
     }
     previous=next;
    }
   }
   const sign=s.children.list.find(o=>o.texture?.key==='signboard');
-  if(!sign?.input?.enabled || sign.displayWidth!==44)throw Error('Sign missing or not interactive');
+  if(!sign?.input?.enabled || sign.displayWidth!==32)throw Error('Sign missing or not interactive');
   sign.emit('pointerdown');
   s.prepareToLayEgg();
   return {levels:3,segments:900};
