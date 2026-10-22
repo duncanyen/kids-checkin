@@ -32,6 +32,8 @@ export const HEN_PRICE = 1000;
 export const WORM_PRICE = 1;
 export const EARTHWORM_PRICE = 3;
 export const FANG_PRICE = 20;
+export const DRAGON_SCALE_PRICE = 200;
+export const DRAGON_CONFIG = Object.freeze({ health: 600, flightMs: 10000, durationMs: 40000, encounterOdds: 30, coinPenalty: 100 });
 export const EXPAND_SLOT_PRICE = 100;
 export const COOP_LV2_PRICE = 3000;
 export const COOP_LV3_PRICE = 10000;
@@ -50,7 +52,7 @@ export const WEAPONS_CONFIG = {
     'mace': { name: '狼牙棒', damage: 10, icon: 'mace' }
 };
 
-export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'medicines', 'mace'];
+export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'dragonScales', 'medicines', 'mace'];
 
 // 動態計算倉庫目前使用容量
 export const getUsedSpace = (farm) => {

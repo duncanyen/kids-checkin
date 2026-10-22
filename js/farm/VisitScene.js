@@ -1,3 +1,4 @@
+import { DragonEncounter, rollVisitEncounter } from './dragon.js';
 import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint } from './predators.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
@@ -15,6 +16,9 @@ export default class VisitScene extends Phaser.Scene {
 
     create() {
         this.emptyClickCount = 0;
+        this.hasRolledEncounter = false;
+        this.dragonEncounter = null;
+        this.dragon = null;
         this.targetFarmData = null;
         this.myFarmData = null; 
         this.isStealing = false; 
@@ -45,13 +49,8 @@ export default class VisitScene extends Phaser.Scene {
         this.createConfirmDialog();
         this.initFirebase();
 
-        if (Phaser.Math.Between(1, 30) === 1) {
-            this.spawnTigerEvent();
-        } else if (Phaser.Math.Between(1, 10) === 1) {
-            this.spawnWolfEvent();
-        }
-
-        this.events.on('shutdown', () => { 
+        this.events.once('shutdown', () => {
+            this.dragonEncounter?.destroy();
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
             this.registry.events.off('changedata-myFarmData', this.onMyFarmDataChanged, this);
             this.hensGroup.forEach(h => {
@@ -95,8 +94,20 @@ export default class VisitScene extends Phaser.Scene {
                 this.coopEgg.setVisible((this.targetFarmData.eggsReady || 0) > 0);
                 this.syncTargetHens(); 
                 this.renderTargetCleanliness();
+                if (!this.hasRolledEncounter) {
+                    this.hasRolledEncounter = true;
+                    const encounter = rollVisitEncounter(this.targetFarmData.coopLevel);
+                    if (encounter === 'dragon') this.spawnDragonEvent();
+                    else if (encounter === 'tiger') this.spawnTigerEvent();
+                    else if (encounter === 'wolf') this.spawnWolfEvent();
+                }
             }
         });
+    }
+
+    spawnDragonEvent() {
+        if (this.dragonEncounter && !this.dragonEncounter.destroyed) return;
+        this.dragonEncounter = new DragonEncounter(this);
     }
 
     async checkAndUpdateTargetEggLaying(targetRef, farm) {
@@ -491,6 +502,9 @@ export default class VisitScene extends Phaser.Scene {
                     this.tweens.add({ targets: h, y: h.y - 25, duration: 100, yoyo: true, repeat: 1 });
                 });
                 this.emptyClickCount = 0;
+        this.hasRolledEncounter = false;
+        this.dragonEncounter = null;
+        this.dragon = null;
             } else { this.showFloatingText('人家現在沒蛋啦！', '#ffffff', 18, safeX, safeY); }
             return;
         }
@@ -500,6 +514,9 @@ export default class VisitScene extends Phaser.Scene {
         }
 
         this.emptyClickCount = 0;
+        this.hasRolledEncounter = false;
+        this.dragonEncounter = null;
+        this.dragon = null;
         this.isStealing = true;
         const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
 

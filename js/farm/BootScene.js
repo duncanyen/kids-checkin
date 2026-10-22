@@ -1,3 +1,4 @@
+import { registerDragonAnimations } from './dragon.js';
 import { registerPredatorAnimations } from './predators.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -13,6 +14,8 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('farm_background', 'assets/farm/background.webp');
         this.load.image('farm_map', 'assets/farm/farm-map.jpg');
         this.load.image('coop', 'assets/farm/coop.webp');
+        this.load.spritesheet('dragon', 'assets/farm/dragon-sheet.webp', { frameWidth: 256, frameHeight: 256 });
+        this.load.image('dragon_scale', 'assets/farm/dragon-scale.webp');
         this.load.image('signboard', 'assets/farm/signboard.webp');
         for (const kind of ['wolf', 'tiger']) {
             this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 256, frameHeight: 256 });
@@ -32,7 +35,7 @@ export default class BootScene extends Phaser.Scene {
 
         // 手繪場景由 preload 載入；母雞保留原有像素圖的銳利邊緣。
         this.textures.get('hen').setFilter(Phaser.Textures.FilterMode.NEAREST);
-        for (const kind of ['wolf', 'tiger']) {
+        for (const kind of ['wolf', 'tiger', 'dragon']) {
             this.textures.get(kind).setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
@@ -74,6 +77,7 @@ export default class BootScene extends Phaser.Scene {
         });
         */
         registerPredatorAnimations(this);
+        registerDragonAnimations(this);
 
         // 全域監聽設定
         if (!this.game.registry.has('isListeningFarm')) {

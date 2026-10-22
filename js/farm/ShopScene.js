@@ -1,7 +1,7 @@
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX, MACE_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
+import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, DRAGON_SCALE_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX, MACE_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
 
 export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
@@ -51,7 +51,7 @@ export default class ShopScene extends Phaser.Scene {
 
         // 📥 買進清單 (加入狼牙棒)
         this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n${HEN_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'hen', '母雞', HEN_PRICE));
-        this.addShopItem(this.buyContainer, 295, 40, 'mini_house', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE));
+        this.addShopItem(this.buyContainer, 295, 40, 'coop', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE));
         this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n10金幣`, 0x333333, () => this.openTradeModal('buy', 'medicine', '咕咕活力散', 10));
         this.addShopItem(this.buyContainer, 295, 140, 'coop', `中雞舍\n${COOP_LV2_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop2', '中型雞舍', COOP_LV2_PRICE, true));
         this.addShopItem(this.buyContainer, 95, 240, 'coop', `大雞舍\n${COOP_LV3_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop3', '大型雞舍', COOP_LV3_PRICE, true));
@@ -62,7 +62,8 @@ export default class ShopScene extends Phaser.Scene {
         this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n${WORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'worms', '菜蟲', WORM_PRICE));
         this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n${EARTHWORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'earthworms', '蚯蚓', EARTHWORM_PRICE));
         this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n${FANG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'wolfFangs', '狼牙', FANG_PRICE));
-        this.addShopItem(this.sellContainer, 195, 240, 'tiger_pelt', `虎皮\n50金幣`, 0x333333, () => this.openTradeModal('sell', 'tigerPelts', '虎皮', 50));
+        this.addShopItem(this.sellContainer, 95, 240, 'tiger_pelt', `虎皮\n50金幣`, 0x333333, () => this.openTradeModal('sell', 'tigerPelts', '虎皮', 50));
+        this.addShopItem(this.sellContainer, 295, 240, 'dragon_scale', `龍麟\n${DRAGON_SCALE_PRICE}金幣`, 0x633332, () => this.openTradeModal('sell', 'dragonScales', '龍麟', DRAGON_SCALE_PRICE));
     }
 
     addShopItem(container, x, y, iconKey, text, color, callback) {

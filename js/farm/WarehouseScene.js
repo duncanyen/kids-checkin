@@ -31,6 +31,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' },
             { key: 'wolfFangs', name: '狼牙', icon: 'fang' },
             { key: 'tigerPelts', name: '虎皮', icon: 'tiger_pelt' },
+            { key: 'dragonScales', name: '龍麟', icon: 'dragon_scale' },
             { key: 'medicines', name: '咕咕活力散', icon: 'medicine' },
             { key: 'mace', name: WEAPONS_CONFIG['mace'].name, icon: WEAPONS_CONFIG['mace'].icon, type: 'weapon' }
         ];
@@ -95,10 +96,10 @@ export default class WarehouseScene extends Phaser.Scene {
             const col = index % 2;
             const row = Math.floor(index / 2);
             const x = 100 + col * 190;
-            const y = row * 100;
+            const y = row * 80;
             const count = this.farmData[item.key] || 0;
 
-            const bg = this.add.rectangle(x, y, 160, 80, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+            const bg = this.add.rectangle(x, y, 160, 72, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
             
             const img = this.add.image(x - 45, y, item.icon);
             
@@ -137,7 +138,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
-        if (key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'medicines') {
+        if (key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
                 this.showMsg('咕咕活力散請在母雞生病時點擊母雞使用！', '#FFD54F');

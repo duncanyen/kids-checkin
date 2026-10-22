@@ -69,7 +69,7 @@ export default class MyFarmScene extends Phaser.Scene {
                     farm: { 
                         coins: 0, inventoryEggs: 0, hens: 1, coopLevel: 1, eggsReady: 0, 
                         lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0, 
-                        wolfFangs: 0, tigerPelts: 0, medicines: 0, cleanliness: 0, moral: 100,
+                        wolfFangs: 0, tigerPelts: 0, dragonScales: 0, medicines: 0, cleanliness: 0, moral: 100,
                         equippedWeapon: 'club',
                         hensState: [{ isSick: false }] 
                     } 
