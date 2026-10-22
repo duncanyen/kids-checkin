@@ -69,6 +69,11 @@ per row: right-facing flight (0–7), fire breathing (8–15), hurt (16–23), a
 (24–31). It renders at 176 × 176 so its wings fit beside the painted coop. The
 scale icon is newly generated pixel art. Both assets are lossless WebP with alpha.
 
+At home, a valid egg-collection attempt at coop level 2+ has a 1/20 dragon chance.
+An encounter delays collection until victory and settlement; the next collection
+after victory bypasses the roll. Home defeat burns only the player’s own eggs
+and deducts their coins. Home hens also avoid the dragon.
+
 A visit rolls once after the target farm snapshot arrives. Only a visited coop
 at level 2+ can roll the 1/30 dragon encounter; otherwise the old tiger/wolf rolls
 apply. The first 10 seconds fly from bottom-left to the coop's left side, followed

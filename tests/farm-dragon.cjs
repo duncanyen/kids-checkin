@@ -45,6 +45,55 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.goto(base+'/farmgame.html');
  await page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').hensGroup?.length===2);
  const checks=[];
+ // Home encounters use a separate exact 1/20 roll, only on valid collection attempts.
+ await page.evaluate(async()=>{
+  const {rollHomeDragonEncounter}=await import('/js/farm/dragon.js');
+  for(const level of [2,3]){
+   let wins=0;for(let n=1;n<=20;n++)if(rollHomeDragonEncounter(level,(_,max)=>{if(max!==20)throw Error('Wrong home odds');return n;}))wins++;
+   if(wins!==1)throw Error('Home chance must be exactly 1/20');
+  }
+  if(rollHomeDragonEncounter(1,()=>{throw Error('Level 1 must not roll');}))throw Error('Level 1 dragon');
+ });
+ async function homeHarvest(roll=1){
+  await page.evaluate(async roll=>{
+   const old=Phaser.Math.Between;window.__homeRolls=0;
+   Phaser.Math.Between=(min,max)=>{if(max===20){window.__homeRolls++;return roll;}return max;};
+   try{await window.__farmGame.scene.getScene('MyFarmScene').harvestEgg();}finally{Phaser.Math.Between=old;}
+  },roll);
+ }
+ await page.evaluate(()=>window.__farmTest.patch('self',{coopLevel:1}));
+ await homeHarvest();
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');if(s.dragonEncounter||window.__homeRolls||s.farmData.inventoryEggs!==2)throw Error('Level 1 home harvest failed');});
+ await homeHarvest();
+ await page.evaluate(()=>{if(window.__homeRolls)throw Error('Empty coop must not roll');window.__farmTest.patch('self',{coopLevel:2,eggsReady:2,inventoryEggs:0,equippedWeapon:'mace'});});
+ await homeHarvest(20);
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');if(s.dragonEncounter||window.__homeRolls!==1||s.farmData.inventoryEggs!==2)throw Error('Non-encounter harvest failed');window.__farmTest.patch('self',{eggsReady:2,inventoryEggs:0});});
+ await homeHarvest();
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.dragonEncounter;
+  if(!b||b.damage!==10||b.targetAccountId!=='self'||s.farmData.eggsReady!==2||s.farmData.inventoryEggs)throw Error('Home encounter did not protect uncollected eggs');
+  await s.harvestEgg();if(s.farmData.eggsReady!==2||s.dragonEncounter!==b)throw Error('Repeated click bypassed defense');
+  const hen=s.hensGroup[0];b.sprite.setPosition(hen.x+40,hen.y+20);s.avoidPredators();
+  const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');
+  if(!henRouteIsSafe(s,hen))throw Error('Home hen route crosses dragon');
+  for(let n=0;n<60;n++)b.hit();
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter?.settled);
+ await homeHarvest();
+ await page.evaluate(()=>{
+  const s=window.__farmGame.scene.getScene('MyFarmScene');
+  if(window.__homeRolls||s.dragonEncounter||s.farmData.eggsReady||s.farmData.inventoryEggs!==2||s.farmData.dragonScales!==1)throw Error('Victory must allow next collection without another roll');
+  window.__farmTest.patch('self',{eggsReady:3,inventoryEggs:0,coins:50});
+ });
+ await homeHarvest();
+ await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter.resolve('loss'));
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter.settled);
+ await page.evaluate(()=>{
+  const docs=window.__farmTest.docs;
+  if(docs['groups/dragon-test/users/self'].farm.coins!==0||docs['groups/dragon-test/users/self'].farm.eggsReady!==0||docs['groups/dragon-test/users/neighbor'].farm.eggsReady!==5)throw Error('Home loss must affect only home farm');
+  window.__farmTest.patch('self',{eggsReady:2,inventoryEggs:0,coins:150,equippedWeapon:'club'});
+ });
+ checks.push('home: exact 1/20 at Lv.2+, real collection trigger, no empty/repeated rolls, mace damage, hen avoidance, victory collection and own-only loss');
  // Exhaust all 30 dragon rolls; preserve existing events for ineligible farms.
  await page.evaluate(async()=>{
   const {rollVisitEncounter}=await import('/js/farm/dragon.js');

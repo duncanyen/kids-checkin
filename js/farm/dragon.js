@@ -1,6 +1,6 @@
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { CURRENT_GROUP_ID, myFarmRef, DRAGON_CONFIG, WEAPONS_CONFIG, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, WEAPONS_CONFIG, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
 
 export function registerDragonAnimations(scene) {
     for (const [action, row, repeat] of [['fly', 0, -1], ['fire', 1, -1], ['hit', 2, 0], ['dead', 3, 0]]) {
@@ -19,6 +19,10 @@ export function rollVisitEncounter(level, roll = Phaser.Math.Between) {
     if (roll(1, 30) === 1) return 'tiger';
     if (roll(1, 10) === 1) return 'wolf';
     return null;
+}
+
+export function rollHomeDragonEncounter(level, roll = Phaser.Math.Between) {
+    return (level || 1) >= 2 && roll(1, DRAGON_CONFIG.homeEncounterOdds) === 1;
 }
 
 // Both the egg loss and coin penalty commit together; retries cannot duplicate loot.
@@ -67,13 +71,14 @@ export async function settleDragonEncounter(id, outcome, targetAccountId) {
 export class DragonEncounter {
     constructor(scene) {
         this.scene = scene;
+        this.targetAccountId = scene.targetAccountId || CURRENT_ACCOUNT_ID;
         this.id = crypto.randomUUID();
         this.health = DRAGON_CONFIG.health;
         this.phase = 'flight';
         this.result = null;
         this.destroyed = false;
         this.settling = false;
-        const equipped = scene.myFarmData?.equippedWeapon || 'club';
+        const equipped = (scene.myFarmData || scene.farmData)?.equippedWeapon || 'club';
         this.weapon = WEAPONS_CONFIG[equipped] || WEAPONS_CONFIG.club;
         this.damage = Math.max(1, Number(this.weapon.damage) || 1);
         this.destination = { x: Math.max(80, scene.coop.getBounds().left - 34), y: scene.coop.getBounds().bottom + 10 };
@@ -165,7 +170,7 @@ export class DragonEncounter {
         this.settling = true;
         this.warning.disableInteractive();
         try {
-            const result = await settleDragonEncounter(this.id, this.result, this.scene.targetAccountId);
+            const result = await settleDragonEncounter(this.id, this.result, this.targetAccountId);
             this.settled = true;
             if (this.destroyed) return;
             this.warning.setText(result.outcome === 'win'
@@ -182,6 +187,7 @@ export class DragonEncounter {
     }
 
     destroy() {
+        if (this.destroyed) return;
         this.destroyed = true;
         this.arrivalTimer.remove();
         this.deadlineTimer.remove();

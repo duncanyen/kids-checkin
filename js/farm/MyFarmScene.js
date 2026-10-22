@@ -1,3 +1,5 @@
+import { DragonEncounter, rollHomeDragonEncounter } from './dragon.js';
+import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, setDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -10,7 +12,10 @@ export default class MyFarmScene extends Phaser.Scene {
         const cx = this.cameras.main.centerX; 
         this.isHenSitting = false;
         this.emptyClickCount = 0;
-        this.isHarvesting = false; 
+        this.isHarvesting = false;
+        this.dragonEncounter = null;
+        this.dragon = null;
+        this.nextHenAvoidanceAt = 0;
 
         document.getElementById('playerName').innerText = playerName;
 
@@ -44,15 +49,36 @@ export default class MyFarmScene extends Phaser.Scene {
         this.initFirebase();
         this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
 
-        this.events.on('shutdown', () => {
+        this.events.once('shutdown', () => {
+            this.dragonEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
             if (this.cleanFlashTween) this.cleanFlashTween.stop();
             this.hensGroup.forEach(hen => {
+                hen.walkTimer?.remove();
                 if (hen.statusIcon) hen.statusIcon.destroy();
                 if (hen.walkTween) hen.walkTween.stop();
             });
         });
+    }
+
+    update(time) {
+        for (const hen of this.hensGroup || []) {
+            if (hen.statusIcon?.active) hen.statusIcon.setPosition(hen.x, hen.y - 26 + Math.sin(time / 200) * 2);
+        }
+        if (time < this.nextHenAvoidanceAt) return;
+        this.nextHenAvoidanceAt = time + 200;
+        this.avoidPredators();
+    }
+
+    avoidPredators() {
+        if (!getThreatZones(this).length) return;
+        for (const hen of this.hensGroup || []) {
+            if (!hen.active || henRouteIsSafe(this, hen)) continue;
+            this.tweens.killTweensOf(hen);
+            hen.walkTimer?.remove();
+            this.wanderSingleHen(hen, true);
+        }
     }
 
     createMinBtn(x, y, label, color, callback) {
@@ -180,6 +206,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
         this.isHenSitting = false;
         this.hensGroup.forEach(hen => {
+            hen.walkTimer?.remove();
             this.tweens.killTweensOf(hen);
             if (hen.statusIcon) {
                 this.tweens.killTweensOf(hen.statusIcon);
@@ -270,26 +297,40 @@ export default class MyFarmScene extends Phaser.Scene {
         } catch (e) { this.showFloatingText(typeof e === 'string' ? e : "治療失敗", '#F44336', 16); }
     }
 
-    wanderSingleHen(henSprite) {
-        if (this.isHenSitting || !henSprite || !henSprite.active || (henSprite.hState && henSprite.hState.isSick)) return;
-        const { x: targetX, y: targetY } = randomHenPosition(this);
-        henSprite.setFlipX(targetX < henSprite.x);
-        
-        henSprite.play('hen_walk', true);
-
-        const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, targetX, targetY);
-        
-        henSprite.walkTween = this.tweens.add({
-            targets: henSprite, x: targetX, y: targetY, duration: distance * 20, ease: 'Linear',
-            onComplete: () => {
-                if (!henSprite.active || this.isHenSitting) return;
+    wanderSingleHen(henSprite, fleeing = false) {
+        if (!henSprite?.active || (this.isHenSitting && !fleeing) || (henSprite.hState?.isSick && !fleeing)) return;
+        const route = planHenPath(this, henSprite, getHenWalkArea(this));
+        henSprite.walkPath = route.points;
+        henSprite.isEvading = route.evading;
+        const step = () => {
+            if (!henSprite.active) return;
+            const target = henSprite.walkPath[0];
+            if (!target) {
+                henSprite.walkTween = null;
+                henSprite.isEvading = false;
                 henSprite.play('hen_idle', true);
-                this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => this.wanderSingleHen(henSprite));
+                henSprite.walkTimer = this.time.delayedCall(
+                    getThreatZones(this).length ? 500 : Phaser.Math.Between(1000, 3000),
+                    () => this.wanderSingleHen(henSprite));
+                return;
             }
-        });
+            henSprite.setFlipX(target.x < henSprite.x).play('hen_walk', true);
+            const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, target.x, target.y);
+            henSprite.walkTween = this.tweens.add({
+                targets: henSprite, x: target.x, y: target.y,
+                duration: Math.max(100, distance * (route.evading ? 7 : 20)), ease: 'Linear',
+                onComplete: () => {
+                    if (!henSprite.active) return;
+                    henSprite.walkPath.shift();
+                    step();
+                }
+            });
+        };
+        step();
     }
 
     prepareToLayEgg() {
+        if (this.dragonEncounter && !this.dragonEncounter.result) return;
         this.isHenSitting = true;
         const nestX = this.coop.x;
         const area = getHenWalkArea(this);
@@ -419,7 +460,11 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async harvestEgg() {
-        if (this.isHarvesting) return; 
+        if (this.isHarvesting) return;
+        if (this.dragonEncounter && !this.dragonEncounter.destroyed && !this.dragonEncounter.settled) {
+            this.showFloatingText('請先擊退烈火龍並完成結算！', '#FFD54F', 16);
+            return;
+        }
 
         if (!this.farmData || (this.farmData.eggsReady || 0) <= 0) {
             this.emptyClickCount++;
@@ -449,6 +494,13 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
+        const defended = this.dragonEncounter?.settled && this.dragonEncounter.result === 'win';
+        if (!defended && rollHomeDragonEncounter(this.farmData.coopLevel)) {
+            this.dragonEncounter?.destroy();
+            this.dragonEncounter = new DragonEncounter(this);
+            return;
+        }
+
         this.emptyClickCount = 0;
         this.isHarvesting = true; 
 
@@ -464,6 +516,9 @@ export default class MyFarmScene extends Phaser.Scene {
                     });
                 }
             });
+            this.dragonEncounter?.destroy();
+            this.dragonEncounter = null;
+            this.dragon = null;
             this.showFloatingText(`+${eggsToHarvest} 🥚`, '#FFD54F', 22);
         } catch (e) { console.error(e); } 
         finally { this.isHarvesting = false; }
