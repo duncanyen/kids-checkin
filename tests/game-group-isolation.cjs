@@ -106,8 +106,8 @@ export async function runTransaction(_,callback){const pending=[];const result=a
  assert.equal(docs['groups/B/users/same'].farm.coins,10);
  assert.equal(docs['groups/B/users/same'].farm.inventoryEggs,1);
  await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('LobbyScene'));
- await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').children.list.filter(child=>child.texture?.key==='coop').length===2);
- const names=await page.evaluate(()=>window.__farmGame.scene.getScene('LobbyScene').children.list.filter(child=>child.type==='Text').map(child=>child.text));
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').content.list.filter(child=>child.texture?.key==='coop').length===2);
+ const names=await page.evaluate(()=>window.__farmGame.scene.getScene('LobbyScene').content.list.filter(child=>child.type==='Text').map(child=>child.text));
  assert.ok(names.includes('Only B'));assert.ok(names.includes('Both groups'));assert.ok(!names.includes('Only A'));
  // Open the actual group-B neighbor and verify broadcast configuration is group-specific.
  await page.evaluate(()=>{window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(_,max)=>max;window.__farmGame.scene.getScene('LobbyScene').scene.start('VisitScene',{targetAccountId:'onlyB',targetName:'Only B'});});

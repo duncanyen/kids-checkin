@@ -107,6 +107,7 @@ async function initAdminPage() {
     document.getElementById('targetGameChatRoomSelect').addEventListener('change', (e) => saveTargetGameRoom(e.target.value));
     
     // 遊戲權限微調按鈕
+    document.getElementById('villageVisibility').addEventListener('change', event => saveVillageVisibility(event.target.value));
     document.getElementById('btnFarmAllow').addEventListener('click', () => setMemberPermission('farm', true));
     document.getElementById('btnFarmBan').addEventListener('click', () => setMemberPermission('farm', false));
     document.getElementById('btnRpsAllow').addEventListener('click', () => setMemberPermission('rps', true));
@@ -297,8 +298,41 @@ let kidsPermissions = {};
 let selectedMember = null;
 
 async function initAdminGameManagement() {
+    listenVillageVisibility();
     await loadGameChatRoomsForSelect();
     await loadParentAdminData();
+}
+
+let villageVisibilityUnsubscribe;
+function listenVillageVisibility() {
+    const select = document.getElementById('villageVisibility');
+    const status = document.getElementById('villageVisibilityStatus');
+    select.disabled = true;
+    villageVisibilityUnsubscribe?.();
+    villageVisibilityUnsubscribe = onSnapshot(doc(db, 'groups', groupId), snapshot => {
+        const visibility = snapshot.exists() && snapshot.data().farmVillageVisibility === 'public' ? 'public' : 'closed';
+        select.value = visibility;
+        select.dataset.saved = visibility;
+        select.disabled = false;
+        status.textContent = visibility === 'public' ? '公開型：成員可搜尋、拜訪其他公開村落，也開放外部成員拜訪與偷蛋。' : '封閉型：僅目前群組成員可進入，無法拜訪外部村落。';
+    }, () => { status.textContent = '載入失敗，請重新開啟遊戲權限設定。'; });
+}
+
+async function saveVillageVisibility(visibility) {
+    if (!['public', 'closed'].includes(visibility) || !isParentOrAdmin) return;
+    const select = document.getElementById('villageVisibility');
+    const status = document.getElementById('villageVisibilityStatus');
+    select.disabled = true;
+    try {
+        const group = await getDoc(doc(db, 'groups', groupId));
+        if (!group.exists() || !(group.data().members || []).includes(currentUser.accountId)) throw new Error('你已不在此群組。');
+        await updateDoc(doc(db, 'groups', groupId), { farmVillageVisibility: visibility });
+        select.dataset.saved = visibility;
+        status.textContent = visibility === 'public' ? '已儲存：公開型村落，其他公開群組可拜訪與偷蛋。' : '已儲存：封閉型村落，外部拜訪已停止。';
+    } catch (error) {
+        select.value = select.dataset.saved || 'closed';
+        status.textContent = error.message || '儲存失敗，請稍後重試。';
+    } finally { select.disabled = false; }
 }
 
 async function loadGameChatRoomsForSelect() {

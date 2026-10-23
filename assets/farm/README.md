@@ -107,11 +107,43 @@ Each group must configure its broadcast room separately. Old global settings
 and default_group progress remain untouched and are never automatically copied
 into a selected group, since their owning group cannot be inferred safely.
 
+## Public villages
+
+Group metadata uses farmVillageVisibility: "public" or "closed" (missing means
+closed). Admin game permissions contain one village-type setting for the entire
+selected group. Only members of a public source village can browse other public
+villages. Closing either side stops an external visit.
+
+LobbyScene opens the player's own village first, titled {group.name}村落. Its
+right-arrow button and horizontal swipe open the public directory. Only public
+groups are queried, excluding the source group; visible results are paginated
+10 groups at a time. The search combobox filters normalized keywords, offers
+up to six keyboard/clickable suggestions, and supports the displayed 村落 suffix.
+The member roster shows established farms only and paginates nine farms per page.
+Search overlays follow the canvas size and are removed on scene shutdown.
+
+VisitScene carries targetGroupId independently from CURRENT_GROUP_ID. Target
+farm reads/egg losses use the target group; rewards, weapons, coins, moral and
+warehouse use the original group. Transaction callbacks read both groups and
+verify public status/membership before writing, so concurrent privacy changes
+invalidate those reads and retry. External visits also observe group documents
+and return home if either side closes or a participant leaves. Dragon settlement
+uses the same access check and target group. The browser's selected group never
+changes merely because another village is visited.
+
+Theft cooldown keys encode [targetGroupId, targetAccountId] in the player's
+farm.villageStealCooldowns. Existing same-group stealCooldowns still apply. Failed
+attempts commit cooldown and moral cost without taking eggs; an exception cannot
+roll those costs back. Probability is sampled once across transaction retries.
+
 ## Validation
 
 Start a static server in the repository. Tests require Playwright, curl, and
 system Chromium. Set FARM_BASE_URL if not using port 8000.
 
+- node tests/farm-public-villages.cjs: admin settings, default closed, swipe,
+  10-item pagination, autocomplete, established-farm roster, cross-group theft,
+  cooldowns, dragon results and live closure.
 - node tests/game-group-isolation.cjs: persistent in-memory A → B → A games,
   farm collection/shop, selected-group permissions, points, roster, broadcasts,
   cross-tab changes, browser Back, and missing-group handling.

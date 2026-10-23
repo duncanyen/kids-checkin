@@ -1,20 +1,24 @@
+import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
 import { DragonEncounter, rollVisitEncounter } from './dragon.js';
 import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint } from './predators.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { CURRENT_GROUP_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
 
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
 
     init(data) {
+        this.targetGroupId = data.targetGroupId || CURRENT_GROUP_ID;
+        this.targetGroupName = data.targetGroupName || '';
         this.targetAccountId = data.targetAccountId; 
         this.targetName = data.targetName;
     }
 
     create() {
+        this.visitToken = Symbol('visit');
         this.emptyClickCount = 0;
         this.hasRolledEncounter = false;
         this.dragonEncounter = null;
@@ -44,13 +48,15 @@ export default class VisitScene extends Phaser.Scene {
 
         const btnBack = this.add.rectangle(55, 50, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(30);
         this.add.text(55, 50, '🏃 溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
-        btnBack.on('pointerdown', () => this.scene.start('LobbyScene'));
+        btnBack.on('pointerdown', () => this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId }));
 
         this.createConfirmDialog();
         this.initFirebase();
 
         this.events.once('shutdown', () => {
+            this.visitToken = null;
             this.dragonEncounter?.destroy();
+            this.groupUnsubscribes?.forEach(unsubscribe => unsubscribe());
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
             this.registry.events.off('changedata-myFarmData', this.onMyFarmDataChanged, this);
             this.hensGroup.forEach(h => {
@@ -82,12 +88,33 @@ export default class VisitScene extends Phaser.Scene {
         }
     }
 
-    initFirebase() {
+    async initFirebase() {
+        const token = this.visitToken;
         this.myFarmData = this.registry.get('myFarmData');
         this.registry.events.on('changedata-myFarmData', this.onMyFarmDataChanged, this);
 
-        const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
+        try {
+            const group = await this.assertVisitAccess();
+            if (!this.scene.isActive() || this.visitToken !== token) return;
+            this.targetGroupName = group.name || this.targetGroupName;
+            if (this.targetGroupId !== CURRENT_GROUP_ID) {
+                this.groupUnsubscribes = [CURRENT_GROUP_ID, this.targetGroupId].map(groupId =>
+                    onSnapshot(doc(db, 'groups', groupId), snapshot => {
+                        if (this.visitToken !== token) return;
+                        const group = snapshot.exists() ? snapshot.data() : null;
+                        const memberId = groupId === CURRENT_GROUP_ID ? CURRENT_ACCOUNT_ID : this.targetAccountId;
+                        if (!isPublicVillage(group) || !(group.members || []).includes(memberId)) {
+                            if (this.scene.isActive() && this.visitToken === token) this.scene.start('LobbyScene', { notice: '村落已封閉或成員已離開，已返回自己的村落。' });
+                        }
+                    }));
+            }
+        } catch (error) {
+            if (this.scene.isActive() && this.visitToken === token) this.scene.start('LobbyScene', { notice: error.message });
+            return;
+        }
+        const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
         this.unsubscribeTarget = onSnapshot(targetRef, (docSnap) => {
+            if (!this.scene.isActive() || this.visitToken !== token) return;
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
                 this.checkAndUpdateTargetEggLaying(targetRef, this.targetFarmData);
@@ -102,6 +129,24 @@ export default class VisitScene extends Phaser.Scene {
                     else if (encounter === 'wolf') this.spawnWolfEvent();
                 }
             }
+        });
+    }
+
+    assertVisitAccess(transaction) {
+        return readVillageAccess(CURRENT_GROUP_ID, this.targetGroupId, CURRENT_ACCOUNT_ID,
+            transaction ? ref => transaction.get(ref) : getDoc, this.targetAccountId);
+    }
+
+    runVisitTransaction(callback) {
+        const token = this.visitToken;
+        const groupId = this.targetGroupId, accountId = this.targetAccountId;
+        return runTransaction(db, async transaction => {
+            if (this.visitToken !== token) throw new Error('拜訪已結束。');
+            await readVillageAccess(CURRENT_GROUP_ID, groupId, CURRENT_ACCOUNT_ID, ref => transaction.get(ref), accountId);
+            if (this.visitToken !== token) throw new Error('拜訪已結束。');
+            const result = await callback(transaction);
+            if (this.visitToken !== token) throw new Error('拜訪已結束。');
+            return result;
         });
     }
 
@@ -132,7 +177,7 @@ export default class VisitScene extends Phaser.Scene {
         if (hasChanged && !this.isUpdatingTargetEggs) {
             this.isUpdatingTargetEggs = true;
             try {
-                await runTransaction(db, async (t) => {
+                await this.runVisitTransaction(async (t) => {
                     const docSnap = await t.get(targetRef);
                     if (!docSnap.exists() || !docSnap.data()?.farm) return; 
                     
@@ -167,9 +212,9 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async cleanTargetFarm() {
-        const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
+        const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
         try {
-            await runTransaction(db, async (t) => {
+            await this.runVisitTransaction(async (t) => {
                 const targetDoc = await t.get(targetRef);
                 if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
                 const targetClean = targetDoc.data().farm.cleanliness || 0;
@@ -353,7 +398,7 @@ export default class VisitScene extends Phaser.Scene {
         this.showFloatingText('🏆 成功擊退猛虎！', '#FFC107', 22, this.tiger.x, this.tiger.y - 50);
         this.tweens.add({ targets: this.tiger, alpha: 0, y: this.tiger.y - 50, duration: 1500, delay: 1000, onComplete: () => this.tiger.destroy() });
 
-        runTransaction(db, async (t) => {
+        this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
@@ -373,7 +418,7 @@ export default class VisitScene extends Phaser.Scene {
         this.club.setVisible(false);
         this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
-        runTransaction(db, async (t) => {
+        this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return;
             const farm = snap.data().farm;
@@ -427,7 +472,7 @@ export default class VisitScene extends Phaser.Scene {
         this.showFloatingText('🎉 成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
         this.tweens.add({ targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000, onComplete: () => this.wolf.destroy() });
 
-        runTransaction(db, async (t) => {
+        this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
@@ -447,8 +492,8 @@ export default class VisitScene extends Phaser.Scene {
         this.club.setVisible(false);
         this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336', 18, this.wolf.x, this.wolf.y - 30);
         this.tweens.add({ targets: this.wolf, alpha: 0, x: this.wolf.x + 100, duration: 1000, onComplete: () => this.wolf.destroy() });
-        runTransaction(db, async (t) => {
-            const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
+        this.runVisitTransaction(async (t) => {
+            const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
             const targetDoc = await t.get(targetRef);
             if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
             const targetFarm = targetDoc.data().farm;
@@ -472,7 +517,7 @@ export default class VisitScene extends Phaser.Scene {
 
         if (usedSpace >= limit) { this.showFloatingText('我的倉庫滿了！', '#F44336', 16, cabSprite.x, cabSprite.y); return; }
         try {
-            await runTransaction(db, async (t) => {
+            await this.runVisitTransaction(async (t) => {
                 const snap = await t.get(myFarmRef);
                 if (!snap.exists() || !snap.data()?.farm) return;
                 const farm = snap.data().farm;
@@ -485,77 +530,59 @@ export default class VisitScene extends Phaser.Scene {
     async attemptSteal() {
         if (this.isStealing || !this.myFarmData) return;
         const safeX = this.cameras.main.centerX, safeY = this.cameras.main.centerY - 60;
-        
-        const stealCooldowns = this.myFarmData.stealCooldowns || {};
-        const lastTargetStealTime = stealCooldowns[this.targetAccountId] || 0;
-
-        if (lastTargetStealTime && Date.now() - lastTargetStealTime < STEAL_COOLDOWN_MS) {
-            const leftMins = Math.ceil((STEAL_COOLDOWN_MS - (Date.now() - lastTargetStealTime)) / 60000);
-            this.showFloatingText(`剛偷過 [${this.targetName}]！請等 ${leftMins} 分鐘`, '#F44336', 15, safeX, safeY); return;
+        const key = villageTargetKey(this.targetGroupId, this.targetAccountId);
+        const cooldown = farm => farm.villageStealCooldowns?.[key] ||
+            (this.targetGroupId === CURRENT_GROUP_ID ? farm.stealCooldowns?.[this.targetAccountId] : 0) || 0;
+        if (Date.now() - cooldown(this.myFarmData) < STEAL_COOLDOWN_MS) {
+            this.showFloatingText('剛偷過這座雞舍，請稍後再來！', '#F44336', 15, safeX, safeY);
+            return;
         }
-
         if (!this.targetFarmData || (this.targetFarmData.eggsReady || 0) <= 0) {
             this.emptyClickCount++;
             if (this.emptyClickCount >= 5) {
-                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16, safeX, safeY); 
-                this.hensGroup.forEach(h => {
-                    h.setTint(0xff0000); 
-                    this.time.delayedCall(500, () => h.clearTint());
-                    this.tweens.add({ targets: h, y: h.y - 25, duration: 100, yoyo: true, repeat: 1 });
+                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16, safeX, safeY);
+                this.hensGroup.forEach(hen => {
+                    hen.setTint(0xff0000);
+                    this.time.delayedCall(500, () => { if (hen.active) hen.clearTint(); });
+                    this.tweens.add({ targets: hen, y: hen.y - 25, duration: 100, yoyo: true, repeat: 1 });
                 });
                 this.emptyClickCount = 0;
-        this.hasRolledEncounter = false;
-        this.dragonEncounter = null;
-        this.dragon = null;
-            } else { this.showFloatingText('人家現在沒蛋啦！', '#ffffff', 18, safeX, safeY); }
+            } else this.showFloatingText('人家現在沒蛋啦！', '#ffffff', 18, safeX, safeY);
             return;
         }
-
         if (getUsedSpace(this.myFarmData) >= (this.myFarmData.warehouseLimit || 10)) {
-            this.showFloatingText('你的倉庫滿了，偷不了！', '#F44336', 15, safeX, safeY); return;
+            this.showFloatingText('你的倉庫滿了，偷不了！', '#F44336', 15, safeX, safeY);
+            return;
         }
-
         this.emptyClickCount = 0;
-        this.hasRolledEncounter = false;
-        this.dragonEncounter = null;
-        this.dragon = null;
         this.isStealing = true;
-        const targetRef = doc(db, "groups", CURRENT_GROUP_ID, "users", this.targetAccountId);
-
-        const myMoral = this.myFarmData.moral !== undefined ? this.myFarmData.moral : 100;
-        const successRate = myMoral < 50 ? 0.4 : 0.7;
-
+        const targetRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId);
+        const roll = Math.random(); // A Firestore retry keeps the same attempt outcome.
         try {
-            await runTransaction(db, async (t) => {
-                const targetDoc = await t.get(targetRef);
-                if (!targetDoc.exists() || !targetDoc.data()?.farm) throw "手腳太慢，蛋不見了！";
-                const targetFarm = targetDoc.data().farm;
-                const myDoc = await t.get(myFarmRef);
-                if (!myDoc.exists() || !myDoc.data()?.farm) throw "資料錯誤";
-                const myCurrentFarm = myDoc.data().farm;
-
-                if (!targetFarm || (targetFarm.eggsReady || 0) <= 0) throw "手腳太慢，蛋不見了！";
-                
-                const currentMoral = myCurrentFarm.moral !== undefined ? myCurrentFarm.moral : 100;
-                const newMoral = Math.max(0, currentMoral - 5);
-
-                if (Math.random() > successRate) {
-                    t.update(myFarmRef, { [`farm.stealCooldowns.${this.targetAccountId}`]: Date.now(), "farm.moral": newMoral });
-                    throw "被狗咬了！偷竊失敗！";
+            const success = await this.runVisitTransaction(async transaction => {
+                const targetDoc = await transaction.get(targetRef);
+                const ownDoc = await transaction.get(myFarmRef);
+                const target = targetDoc.data()?.farm, own = ownDoc.data()?.farm;
+                if (!target || !own) throw new Error('農場資料不存在。');
+                if (Date.now() - cooldown(own) < STEAL_COOLDOWN_MS) throw new Error('剛偷過這座雞舍，請稍後再來！');
+                if ((target.eggsReady || 0) <= 0) throw new Error('手腳太慢，蛋不見了！');
+                if (getUsedSpace(own) >= (own.warehouseLimit || 10)) throw new Error('你的倉庫滿了，偷不了！');
+                const moral = own.moral ?? 100;
+                const success = roll <= (moral < 50 ? 0.4 : 0.7);
+                const updates = { [`farm.villageStealCooldowns.${key}`]: Date.now(), 'farm.moral': Math.max(0, moral - 5) };
+                if (success) {
+                    updates['farm.inventoryEggs'] = (own.inventoryEggs || 0) + 1;
+                    transaction.update(targetRef, { 'farm.eggsReady': target.eggsReady - 1 });
                 }
-
-                t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 });
-                t.update(myFarmRef, { 
-                    "farm.inventoryEggs": (myCurrentFarm.inventoryEggs || 0) + 1, 
-                    [`farm.stealCooldowns.${this.targetAccountId}`]: Date.now(),
-                    "farm.moral": newMoral
-                });
+                // A failed attempt still commits its cooldown and moral cost.
+                transaction.update(myFarmRef, updates);
+                return success;
             });
-            this.showFloatingText('🕵️ 偷到雞蛋', '#FFD54F', 18, safeX, safeY);
-            this.sendSystemNotification(`${playerName}偷了${this.targetName}的雞蛋`);
-
+            this.showFloatingText(success ? '🕵️ 偷到雞蛋' : '被狗咬了！偷竊失敗！', success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
+            if (!success) this.cameras.main.shake(300, 0.01);
+            if (success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {
-            this.showFloatingText(`❌ ${error}`, '#F44336', 16, safeX, safeY);
+            this.showFloatingText(`❌ ${error.message || error}`, '#F44336', 16, safeX, safeY);
             this.cameras.main.shake(300, 0.01);
         } finally { this.isStealing = false; }
     }

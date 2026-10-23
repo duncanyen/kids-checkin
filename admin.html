@@ -148,6 +148,15 @@
                 </select>
             </div>
             
+            <div class="config-box" style="display:block">
+                <label for="villageVisibility"><strong>🐔 咕咕村落遊戲權限 · 村落類型</strong></label>
+                <select id="villageVisibility" disabled style="margin:10px 0;width:100%">
+                    <option value="closed">封閉型村落（僅群組內）</option>
+                    <option value="public">公開型村落（開放跨群組拜訪）</option>
+                </select>
+                <p id="villageVisibilityStatus" role="status" style="margin:0;font-size:13px;color:var(--text-sub)">設定適用整個群組，預設為封閉型。開啟下方遊戲權限設定時載入。</p>
+            </div>
+
             <div class="section-label">1. 選擇「目前群組」成員</div>
             <div class="member-chips-container" id="memberChipsList">
                 <div style="padding:10px; font-size: 12px; color: var(--text-sub);">載入成員中...</div>

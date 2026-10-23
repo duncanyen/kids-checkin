@@ -1,3 +1,4 @@
+import { readVillageAccess } from './villages.js';
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, WEAPONS_CONFIG, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
@@ -26,10 +27,11 @@ export function rollHomeDragonEncounter(level, roll = Phaser.Math.Between) {
 }
 
 // Both the egg loss and coin penalty commit together; retries cannot duplicate loot.
-export async function settleDragonEncounter(id, outcome, targetAccountId) {
+export async function settleDragonEncounter(id, outcome, targetAccountId, targetGroupId = CURRENT_GROUP_ID) {
     if (!['win', 'loss'].includes(outcome)) throw new Error('無效的戰鬥結果');
-    const targetRef = doc(db, 'groups', CURRENT_GROUP_ID, 'users', targetAccountId);
+    const targetRef = doc(db, 'groups', targetGroupId, 'users', targetAccountId);
     return runTransaction(db, async transaction => {
+        await readVillageAccess(CURRENT_GROUP_ID, targetGroupId, CURRENT_ACCOUNT_ID, ref => transaction.get(ref), targetAccountId);
         const ownSnap = await transaction.get(myFarmRef);
         const own = ownSnap.data()?.farm;
         if (!own) throw new Error('找不到玩家農場');
@@ -72,6 +74,7 @@ export class DragonEncounter {
     constructor(scene) {
         this.scene = scene;
         this.targetAccountId = scene.targetAccountId || CURRENT_ACCOUNT_ID;
+        this.targetGroupId = scene.targetGroupId || CURRENT_GROUP_ID;
         this.id = crypto.randomUUID();
         this.health = DRAGON_CONFIG.health;
         this.phase = 'flight';
@@ -170,7 +173,7 @@ export class DragonEncounter {
         this.settling = true;
         this.warning.disableInteractive();
         try {
-            const result = await settleDragonEncounter(this.id, this.result, this.targetAccountId);
+            const result = await settleDragonEncounter(this.id, this.result, this.targetAccountId, this.targetGroupId);
             this.settled = true;
             if (this.destroyed) return;
             this.warning.setText(result.outcome === 'win'
