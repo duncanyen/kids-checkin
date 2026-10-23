@@ -1,9 +1,10 @@
+import { attachFarmAtmosphere } from './atmosphere.js';
 import { DragonEncounter, rollHomeDragonEncounter } from './dragon.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
-import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
+import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, setDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
+import { myFarmRef, CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
 
 export default class MyFarmScene extends Phaser.Scene {
     constructor() { super({ key: 'MyFarmScene' }); }
@@ -20,6 +21,7 @@ export default class MyFarmScene extends Phaser.Scene {
         document.getElementById('playerName').innerText = playerName;
 
         addFarmBackground(this, true);
+        attachFarmAtmosphere(this, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
         
         this.coop = addFarmCoop(this, () => this.askCleanMyFarm());
 
@@ -299,7 +301,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     wanderSingleHen(henSprite, fleeing = false) {
         if (!henSprite?.active || (this.isHenSitting && !fleeing) || (henSprite.hState?.isSick && !fleeing)) return;
-        const route = planHenPath(this, henSprite, getHenWalkArea(this));
+        const route = planHenPath(this, henSprite, getHenWanderArea(this));
         henSprite.walkPath = route.points;
         henSprite.isEvading = route.evading;
         const step = () => {
@@ -368,7 +370,8 @@ export default class MyFarmScene extends Phaser.Scene {
         if (this.farmInterval) clearInterval(this.farmInterval);
         
         this.farmInterval = setInterval(() => {
-            if (!this.farmData) return;
+            // A queued wall-clock tick can arrive after Phaser destroys the text.
+            if (!this.scene.isActive() || !this.timerText?.active || !this.farmData) return;
             const now = Date.now();
             let eggsReady = this.farmData.eggsReady || 0;
             let lastLayTime = this.farmData.lastLayTime || now;

@@ -1,0 +1,14 @@
+.farm-atmosphere{position:relative;width:100%;max-width:480px;box-sizing:border-box;padding:7px 12px;background:#f6edce;border-bottom:2px solid #a8844f;color:#513b24;font-family:system-ui,sans-serif;font-size:13px;z-index:40}
+.farm-atmosphere summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;list-style:none;min-height:28px;font-weight:700}
+.farm-atmosphere summary::-webkit-details-marker{display:none}
+.farm-atmosphere summary:focus-visible{outline:2px solid #6c8243;outline-offset:3px;border-radius:4px}
+.farm-atmosphere summary::after{content:'氣候設定 ▾';font-size:12px;color:#745737;white-space:nowrap}
+.farm-atmosphere details[open] summary::after{content:'收起 ▴'}
+.farm-atmosphere .climate-options{padding:10px 0 4px;line-height:1.6;border-top:1px solid #d4bf8e;margin-top:5px}
+.farm-atmosphere label{display:flex;align-items:center;gap:9px;min-height:40px;cursor:pointer}
+.farm-atmosphere input{width:18px;height:18px;accent-color:#697d41}
+.farm-atmosphere p{margin:6px 0;font-size:12px}
+.farm-atmosphere[data-active="false"] .climate-options label{opacity:.6;pointer-events:none}
+.farm-atmosphere small{display:block;font-weight:400;font-size:11px;color:#7a6548}
+/* Opening settings must not move Phaser's canvas or invalidate its hit coordinates. */
+.farm-atmosphere .climate-options{position:absolute;top:100%;left:0;right:0;max-height:65vh;overflow-y:auto;margin:0;padding:12px 16px;background:#f6edce;border:1px solid #b89b62;border-radius:0 0 14px 14px;box-shadow:0 10px 22px #35271638}

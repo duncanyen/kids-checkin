@@ -1,7 +1,8 @@
+import { attachFarmAtmosphere } from './atmosphere.js';
 import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
 import { DragonEncounter, rollVisitEncounter } from './dragon.js';
 import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint } from './predators.js';
-import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea } from './scenery.js';
+import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -29,6 +30,7 @@ export default class VisitScene extends Phaser.Scene {
         this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this, true);
+        attachFarmAtmosphere(this, { groupId: this.targetGroupId, accountId: CURRENT_ACCOUNT_ID });
 
         this.coop = addFarmCoop(this, () => this.askCleanTargetFarm());
 
@@ -294,7 +296,7 @@ export default class VisitScene extends Phaser.Scene {
 
     wanderSingleHen(henSprite, fleeing = false) {
         if (!henSprite?.active || (henSprite.hState?.isSick && !fleeing)) return;
-        const route = planHenPath(this, henSprite, getHenWalkArea(this));
+        const route = planHenPath(this, henSprite, getHenWanderArea(this));
         henSprite.walkPath = route.points;
         henSprite.isEvading = route.evading;
         const step = () => {

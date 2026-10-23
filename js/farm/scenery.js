@@ -1,4 +1,4 @@
-import { chooseHenPosition } from './hen-navigation.js';
+import { chooseHenPosition, getThreatZones } from './hen-navigation.js';
 
 // Shared scenery keeps the home and visiting farms aligned with the same artwork.
 export function addFarmBackground(scene, field = false) {
@@ -69,8 +69,17 @@ export function getHenWalkArea(scene) {
     };
 }
 
+export function getHenWanderArea(scene) {
+    const area = getHenWalkArea(scene);
+    // Rain encourages shelter, but predators always retain the full escape area.
+    if (scene.farmAtmosphere?.state.weights.rain > .5 && !getThreatZones(scene).length) {
+        return { ...area, bottom: Math.round(area.top + (area.bottom - area.top) * .55) };
+    }
+    return area;
+}
+
 export function randomHenPosition(scene) {
-    return chooseHenPosition(scene, getHenWalkArea(scene));
+    return chooseHenPosition(scene, getHenWanderArea(scene));
 }
 
 export function addVegetableGarden(scene, onPlantClick) {
