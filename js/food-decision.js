@@ -2,7 +2,7 @@ import { db } from './firebase-config.js';
 import { collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { loadGameGroupMembers } from './game-members.js';
-import { createFoodStore } from './food-store.js';
+import { createFoodStore, MEALS } from './food-store.js';
 
 // 讀取當前使用者與群組資料
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
@@ -163,12 +163,22 @@ window.foodApp.renderRestaurantList = function(type = '全部') {
     });
 };
 
+// Legacy restaurants may store one meal (or a delimited list) as text.
+// Normalize at the read boundary so every renderer/filter receives an array.
+function normalizeRestaurantMeals(value) {
+    const entries = Array.isArray(value) ? value : typeof value === 'string' ? value.split(/[,，、;；|/\s]+/) : [];
+    return [...new Set(entries.filter(item => typeof item === 'string').map(item => item.trim()).filter(item => item === '不限' || MEALS.includes(item)))];
+}
+
 async function loadRestaurants() {
     try {
         const q = query(collection(db, "food_restaurants"), where("groupId", "==", currentGroupId));
         const snap = await getDocs(q);
         restaurants = [];
-        snap.forEach(d => restaurants.push({id: d.id, ...d.data()}));
+        snap.forEach(d => {
+            const data = d.data();
+            restaurants.push({ ...data, id: d.id, meal: normalizeRestaurantMeals(data.meal) });
+        });
 
         window.foodApp.renderRestaurantList('全部');
     } catch (error) {

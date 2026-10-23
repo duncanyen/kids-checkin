@@ -26,9 +26,14 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  const docs={
  'groups/A':{name:'A',members:['alice','bob']},'groups/B':{name:'B',members:['alice','outsider']},
  'users/a':{accountId:'alice',name:'小明',avatar:'',role:'child'},'users/b':{accountId:'bob',name:'小明',role:'child'},
- 'food_restaurants/r1':{groupId:'A',name:"阿姨's 麵店",type:'中式',food:'麵',meal:['不限']},
- 'food_restaurants/r2':{groupId:'A',name:'飯店',type:'中式',food:'飯',meal:['不限']},
+ 'food_restaurants/r1':{groupId:'A',name:"阿姨's 麵店",type:'中式',food:'麵',meal:'不限'},
+ 'food_restaurants/r2':{groupId:'A',name:'飯店',type:'中式',food:'飯',meal:['不限',null,42,'不限']},
  'food_restaurants/r3':{groupId:'B',name:'B限定',type:'中式',food:'飯',meal:['不限']},
+ 'food_restaurants/empty':{groupId:'A',name:'未填餐別'},
+ 'food_restaurants/null':{groupId:'A',name:'空餐別',meal:null},
+ 'food_restaurants/number':{groupId:'A',name:'異常數字',meal:42},
+ 'food_restaurants/object':{groupId:'A',name:'異常物件',meal:{dinner:true}},
+ 'food_restaurants/multi':{groupId:'A',name:'早午餐',meal:' 早餐、午餐 '},
  'system_menus/chat':{id:'chat',label:'聊天',order:1,isDefault:true},
  'userSettings/小明':{modules:{food:false}},
  };
@@ -62,6 +67,11 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  await page.evaluate(()=>foodApp.chooseMeal('晚餐','🍲'));await page.waitForFunction(()=>document.querySelector('#foodSyncStatus').textContent.includes('已同步'));
  const date=await page.evaluate(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;});
  const key=`food_votes/A_${date}_晚餐`;
+ assert.equal(await page.locator('#restaurantList .list-item').count(),7);
+ assert.equal(await page.locator('#restaurantList').innerText().then(text=>text.includes('早餐, 午餐')),true);
+ await page.evaluate(()=>foodApp.showWheel());
+ assert.equal(await page.locator('#wheel').evaluate(el=>JSON.parse(el.dataset.candidates).length),2);
+
  await page.evaluate(()=>foodApp.showList());assert.equal(await page.locator('#voteList .restaurant').count(),2);
  await page.locator('#voteList .vote').first().click();await page.waitForFunction(()=>document.querySelector('#totalVotes').textContent==='1');
  assert.equal(docs[key].votes.alice.choice,"阿姨's 麵店");assert.equal(docs[key].votes.alice.accountId,'alice');
@@ -121,6 +131,6 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  await page.evaluate(()=>renderDynamicModules({accountId:'alice',name:'小明',menus:[]}));
  assert.equal(await page.locator('#miniCardsContainer [onclick*="food-decision"]').count(),0);
  assert.deepEqual(errors,[]);
- console.log('PASS: menu backfill, account layouts, group/date/meal isolation, persistence/revote, decision save, legacy import, concurrent votes, save errors, restaurant creation, cancelled wheel, homepage visibility');
+ console.log('PASS: legacy string/array/missing/null/number/object meals render safely and wheel filtering works; menu backfill, account layouts, group/date/meal isolation, persistence/revote, decision save, legacy import, concurrent votes, save errors, restaurant creation, cancelled wheel, homepage visibility');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
