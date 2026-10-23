@@ -136,6 +136,19 @@ farm.villageStealCooldowns. Existing same-group stealCooldowns still apply. Fail
 attempts commit cooldown and moral cost without taking eggs; an exception cannot
 roll those costs back. Probability is sampled once across transaction retries.
 
+## Village interface art
+
+Lobby controls use AI-generated painterly UI surfaces made to match the existing
+background and coop: ui-wood.webp, ui-wood-selected.webp, ui-parchment.webp and
+ui-page.webp. Flower/leaf details, warm oak and cream paper replace flat green
+rectangles. Header, navigation, farm nameplates, directory cards and numbered
+pagination share these surfaces. Public cards include a coop thumbnail.
+
+js/farm/village-ui.js centralizes hover/press feedback and selected state. Active
+navigation uses a gold highlight; the selected page uses a cream paper surface.
+css/farm-village.css styles the search and autocomplete with the same palette,
+including visible keyboard focus. Scene shutdown still removes the search UI.
+
 ## Validation
 
 Start a static server in the repository. Tests require Playwright, curl, and

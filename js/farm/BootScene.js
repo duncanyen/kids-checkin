@@ -13,6 +13,9 @@ export default class BootScene extends Phaser.Scene {
         this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('farm_background', 'assets/farm/background.webp');
         this.load.image('farm_map', 'assets/farm/farm-map.jpg');
+        for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
+            this.load.image('ui_' + name.replaceAll('-', '_'), `assets/farm/ui-${name}.webp`);
+        }
         this.load.image('coop', 'assets/farm/coop.webp');
         this.load.spritesheet('dragon', 'assets/farm/dragon-sheet.webp', { frameWidth: 256, frameHeight: 256 });
         this.load.image('dragon_scale', 'assets/farm/dragon-scale.webp');
