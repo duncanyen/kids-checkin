@@ -7,7 +7,7 @@ const base = process.env.FARM_BASE_URL || 'http://127.0.0.1:8000';
 const firestore = `
 const prefix='groups/dragon-test/users/';
 const seed={coins:150,hens:2,coopLevel:2,eggsReady:2,lastLayTime:Date.now(),cleanliness:0,warehouseLimit:10,hensState:[{},{}],equippedWeapon:'club'};
-const docs={[prefix+'self']:{farm:structuredClone(seed)},[prefix+'neighbor']:{farm:{...structuredClone(seed),eggsReady:5}}};
+const docs={'groups/dragon-test':{members:['self','neighbor']},[prefix+'self']:{farm:structuredClone(seed)},[prefix+'neighbor']:{farm:{...structuredClone(seed),eggsReady:5}}};
 const listeners=new Map();
 const snapshot=ref=>({exists:()=>!!docs[ref.path],data:()=>structuredClone(docs[ref.path])});
 function notify(){for(const [path,cbs] of listeners)for(const cb of cbs)cb(snapshot({path}));}

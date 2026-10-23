@@ -15,7 +15,7 @@ const {execFileSync}=require('node:child_process');
  const farm={coins:100,hens:2,coopLevel:1,eggsReady:0,lastLayTime:Date.now(),hensState:[{isSick:false},{isSick:true}],cleanliness:0,warehouseLimit:10};
  export const doc=(...args)=>({args}); export const collection=doc; export const query=doc; export const where=doc;
  export function onSnapshot(ref,cb){queueMicrotask(()=>cb({exists:()=>true,data:()=>({farm})}));return ()=>{};}
- export const getDoc=async()=>({exists:()=>true,data:()=>({farm})}); export const getDocs=async()=>({forEach:()=>{}});
+ export const getDoc=async ref=>({exists:()=>true,data:()=>ref.args.length===3&&ref.args[1]==='groups'?{members:['render-test','neighbor-1','neighbor-2']}:{farm}}); export const getDocs=async()=>({forEach:()=>{}});
  const deny=()=>{throw Error('Test prohibits database writes')};
  export const setDoc=deny,updateDoc=deny,addDoc=deny,serverTimestamp=deny;
  export const runTransaction=async()=>{window.__transactionCount=(window.__transactionCount||0)+1;return false;};

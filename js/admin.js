@@ -1,3 +1,5 @@
+import { getSelectedGameGroupId } from './game-context.js';
+import { loadGameGroupMembers } from './game-members.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
     getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc, 
@@ -30,10 +32,10 @@ const isParentOrAdmin = currentUser && (
     currentUser.name === '媽咪'
 );
 
-const groupId = currentUser ? (currentUser.groupId || localStorage.getItem('lastGroupId') || 'default_group') : 'default_group';
+const groupId = getSelectedGameGroupId(currentUser);
 let lastGroupNameChange = null;
 
-if (!isParentOrAdmin) {
+if (!isParentOrAdmin || !groupId) {
     alert("您沒有權限訪問管理者頁面！");
     window.location.href = 'index.html';
 } else {
@@ -305,7 +307,7 @@ async function loadGameChatRoomsForSelect() {
         if (!select) return;
         select.innerHTML = '<option value="">-- 請選擇目標群組 --</option>';
         
-        const querySnapshot = await getDocs(collection(db, "rooms"));
+        const querySnapshot = await getDocs(query(collection(db, "rooms"), where("groupId", "==", groupId)));
         querySnapshot.forEach(docSnap => {
             const room = docSnap.data();
             const opt = document.createElement('option');
@@ -314,7 +316,7 @@ async function loadGameChatRoomsForSelect() {
             select.appendChild(opt);
         });
         
-        const configDoc = await getDoc(doc(db, "settings", "gameConfig"));
+        const configDoc = await getDoc(doc(db, "groups", groupId, "settings", "gameConfig"));
         if (configDoc.exists()) {
             const targetRoomId = configDoc.data().targetRoomId;
             if (targetRoomId) select.value = targetRoomId;
@@ -326,7 +328,11 @@ async function loadGameChatRoomsForSelect() {
 
 async function saveTargetGameRoom(roomId) {
     try {
-        await setDoc(doc(db, "settings", "gameConfig"), { targetRoomId: roomId, updatedAt: serverTimestamp() }, { merge: true });
+        if (roomId) {
+            const room = await getDoc(doc(db, 'rooms', roomId));
+            if (!room.exists() || room.data().groupId !== groupId) throw new Error('聊天室不屬於目前群組');
+        }
+        await setDoc(doc(db, "groups", groupId, "settings", "gameConfig"), { targetRoomId: roomId, updatedAt: serverTimestamp() }, { merge: true });
         alert('已成功設定遊戲通知發送的聊天室！');
     } catch (e) { 
         console.error("儲存設定失敗", e); 
@@ -341,18 +347,8 @@ async function loadParentAdminData() {
     chipsContainer.innerHTML = '<div style="padding:10px; font-size:12px; color:var(--text-sub);">載入「目前群組」成員中...</div>';
 
     try {
-        const q = query(collection(db, "users"), where("groupId", "==", groupId));
-        const querySnapshot = await getDocs(q);
-        
-        groupMembers = [];
-        querySnapshot.forEach((docSnap) => {
-            const userData = docSnap.data();
-            if (userData.name && userData.role !== 'removed') groupMembers.push(userData.name);
-        });
-
-        if (groupMembers.length === 0 && currentUser.name) {
-            groupMembers.push(currentUser.name);
-        }
+        const members = await loadGameGroupMembers(groupId, currentUser.accountId);
+        groupMembers = [...new Set(members.map(member => member.name).filter(Boolean))];
 
         groupMembers.forEach(memberName => {
             const targetDocId = `${groupId}_${memberName}`;

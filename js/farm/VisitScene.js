@@ -281,13 +281,15 @@ export default class VisitScene extends Phaser.Scene {
 
     async sendSystemNotification(messageContent) {
         try {
-            const configDoc = await getDoc(doc(db, "settings", "gameConfig"));
+            const configDoc = await getDoc(doc(db, "groups", CURRENT_GROUP_ID, "settings", "gameConfig"));
             if (configDoc.exists() && configDoc.data().targetRoomId) {
                 const targetRoomId = configDoc.data().targetRoomId;
+                const room = await getDoc(doc(db, 'rooms', targetRoomId));
+                if (!room.exists() || room.data().groupId !== CURRENT_GROUP_ID) return;
                 const now = new Date();
                 const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                 const finalText = `${messageContent}\n🕒 ${timeStr}`;
-                await addDoc(collection(db, "messages"), { roomId: targetRoomId, sender: "村落廣播", text: finalText, time: timeStr, timestamp: serverTimestamp(), isSystem: true });
+                await addDoc(collection(db, "messages"), { groupId: CURRENT_GROUP_ID, roomId: targetRoomId, sender: "村落廣播", text: finalText, time: timeStr, timestamp: serverTimestamp(), isSystem: true });
                 await updateDoc(doc(db, "rooms", targetRoomId), { lastMessage: `村落廣播: ${messageContent}`, lastMessageTime: serverTimestamp() });
             }
         } catch (e) { console.error("發送廣播失敗:", e); }

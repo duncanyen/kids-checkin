@@ -1,3 +1,5 @@
+import { requireGameMembership } from './game-members.js';
+import { readGameContext, watchGameContext } from './game-context.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, onSnapshot, runTransaction, collection, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -16,19 +18,12 @@ const db = getFirestore(app);
 // ==========================================
 // 1. 動態取得當下登入的群組與人員資訊
 // ==========================================
-const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-
-// 若未登入，阻斷執行並導回首頁
-if (!currentUser) {
-    alert('請先選擇使用者登入！');
-    window.location.href = 'index.html';
-    throw new Error("未登入，停止載入遊戲"); 
-}
-
-// 動態設定為當前登入者的群組 ID 與名稱
-const CURRENT_GROUP_ID = currentUser.groupId || "default_group";
-const CURRENT_ACCOUNT_ID = currentUser.name; 
+const context = readGameContext();
+watchGameContext(context);
+await requireGameMembership(context);
+const currentUser = context.user;
+const CURRENT_GROUP_ID = context.groupId;
+const CURRENT_ACCOUNT_ID = context.accountId;
 const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_ID);
 
 // ==========================================

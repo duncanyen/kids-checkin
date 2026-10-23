@@ -1,3 +1,5 @@
+import { requireGameMembership } from './game-members.js';
+import { readGameContext, watchGameContext } from './game-context.js';
 // 1. 從 firebase-config.js 引入共用 db
 import { db } from './firebase-config.js'; 
 import { 
@@ -8,29 +10,14 @@ import {
 const RPS_ICONS = ["✊", "✋", "✌️"];
 let isGameLocked = false;
 
-const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-
-let userGroupId = 'default_group';
-let userDocId = '';
+const context = readGameContext();
+watchGameContext(context);
+await requireGameMembership(context);
+const currentUser = context.user;
+const userGroupId = context.groupId;
+// Keep existing, already group-scoped record IDs and permission settings.
+const userDocId = `${userGroupId}_${currentUser.name}`;
 let myPermissions = { rps: true, g2048: true, farm: true };
-
-if (!currentUser) {
-    alert('請先選擇使用者登入！');
-    window.location.href = 'index.html';
-} else {
-    userGroupId = currentUser.groupId || 'default_group';
-    userDocId = `${userGroupId}_${currentUser.name}`;
-
-    const avatarEl = document.getElementById('gameUserAvatar');
-    if (avatarEl) avatarEl.src = currentUser.avatar || 'homebase_icon.jpg';
-    
-    const nameEl = document.getElementById('gameUserName');
-    if (nameEl) nameEl.innerText = currentUser.name || '';
-    
-    setupView();
-    listenMyPermissions();
-}
 
 function listenMyPermissions() {
     onSnapshot(doc(db, "game_permissions", userDocId), (docSnap) => {
@@ -110,7 +97,7 @@ function getTodayStr() {
 }
 
 function getInitialRpsStats() { 
-    return { groupId: userGroupId, userName: currentUser.name, totalScore: 0, lastPlayDate: getTodayStr(), currentStreak: 0, maxStreak: 0 }; 
+    return { groupId: userGroupId, accountId: context.accountId, userName: currentUser.name, totalScore: 0, lastPlayDate: getTodayStr(), currentStreak: 0, maxStreak: 0 };
 }
 
 let currentKidStats = getInitialRpsStats();
@@ -218,7 +205,8 @@ async function playGame(playerChoice) {
 
     const docRef = doc(db, "game_records", userDocId);
     await setDoc(docRef, {
-        groupId: userGroupId, 
+        groupId: userGroupId,
+        accountId: context.accountId,
         userName: currentUser.name, 
         totalScore: currentKidStats.totalScore,
         lastPlayDate: getTodayStr(), 
@@ -228,7 +216,9 @@ async function playGame(playerChoice) {
 
     if (addedPoints > 0) {
         await addDoc(collection(db, "scores"), {
-            date: getTodayStr(), 
+            groupId: userGroupId,
+            accountId: context.accountId,
+            date: getTodayStr(),
             operator: currentUser.name, 
             examType: "遊戲獎勵", 
             subject: reason, 
@@ -251,10 +241,14 @@ let g2048GameOver = false;
 
 function listen2048UserData(docId) {
     onSnapshot(doc(db, "game_records_2048", docId), (docSnap) => {
+        g2048BestScore = 0;
         if (docSnap.exists()) {
             g2048BestScore = docSnap.data().bestScore || 0;
             const el = document.getElementById('g2048BestScore');
             if (el) el.innerText = g2048BestScore;
+        } else {
+            const el = document.getElementById('g2048BestScore');
+            if (el) el.innerText = '0';
         }
     });
 }
@@ -312,7 +306,8 @@ function render2048Board() {
         if (bscEl) bscEl.innerText = g2048BestScore;
         
         setDoc(doc(db, "game_records_2048", userDocId), { 
-            groupId: userGroupId, 
+            groupId: userGroupId,
+            accountId: context.accountId,
             userName: currentUser.name, 
             bestScore: g2048BestScore 
         }, { merge: true }).catch(e=>{});
@@ -550,3 +545,11 @@ if (btnLogout) {
         window.location.href = 'index.html';
     });
 }
+
+// Initialize after score variables are declared, including fast cached snapshots.
+const avatarEl = document.getElementById('gameUserAvatar');
+if (avatarEl) avatarEl.src = currentUser.avatar || 'homebase_icon.jpg';
+const nameEl = document.getElementById('gameUserName');
+if (nameEl) nameEl.innerText = currentUser.name || '';
+setupView();
+listenMyPermissions();

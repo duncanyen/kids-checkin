@@ -87,11 +87,34 @@ production ticks are consumed to prevent burned eggs reappearing. Recent result
 IDs prevent duplicate settlement; failed settlements show a clickable retry.
 Leaving a visit removes the actor, effects and timers.
 
+## Group isolation
+
+Game pages share js/game-context.js. The selected lastGroupId takes precedence
+above a stale profile groupId; legacy profile groupId is used only when no group
+selection has been saved. Entry verifies the account is in groups.members before game data is accessed.
+Missing group/account information stops initialization
+instead of falling back to a shared default_group. Storage changes, restored
+pages and focus changes reload a game whose group/account no longer matches.
+
+Farm state remains at groups/{selectedGroupId}/users/{accountId}. Game records
+and permissions retain their existing group-prefixed IDs. RPS reward points now
+also contain groupId and accountId. The group roster comes from groups.members,
+with profiles queried by accountId, including people who belong to many groups.
+
+Game broadcast settings are now groups/{groupId}/settings/gameConfig. Admins
+select a room from that group; broadcasts verify the room still belongs to it.
+Each group must configure its broadcast room separately. Old global settings
+and default_group progress remain untouched and are never automatically copied
+into a selected group, since their owning group cannot be inferred safely.
+
 ## Validation
 
 Start a static server in the repository. Tests require Playwright, curl, and
 system Chromium. Set FARM_BASE_URL if not using port 8000.
 
+- node tests/game-group-isolation.cjs: persistent in-memory A → B → A games,
+  farm collection/shop, selected-group permissions, points, roster, broadcasts,
+  cross-tab changes, browser Back, and missing-group handling.
 - node tests/farm-dragon.cjs: encounter gate/odds, 600/60 hits, timing, atomic
   loss, guaranteed loot, retries, warehouse and shop sale, and shutdown.
 - node tests/farm-map.cjs: proportional map, no duplicate art, 42 plant targets,
@@ -104,6 +127,6 @@ system Chromium. Set FARM_BASE_URL if not using port 8000.
 - node tests/farm-predator-timing.cjs: real 50/60-second arrival after attacks;
   allow about one minute.
 
-Tests mock Firebase and never write production data. Dragon tests execute real
+Tests mock Firebase and never write production data. Group-isolation and dragon tests execute real
 transaction callbacks against an isolated in-memory store; older actor tests
 count transaction requests without executing their callbacks.

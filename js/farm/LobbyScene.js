@@ -1,6 +1,7 @@
+import { loadGameGroupMembers } from '../game-members.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
-import { doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID } from './constants.js';
 
 export default class LobbyScene extends Phaser.Scene {
@@ -21,15 +22,14 @@ export default class LobbyScene extends Phaser.Scene {
 
     async loadNeighbors() {
         try {
-            const q = query(collection(db, "users"), where("groupId", "==", CURRENT_GROUP_ID));
-            const querySnapshot = await getDocs(q);
+            const members = await loadGameGroupMembers(CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID);
+            if (!this.scene.isActive()) return;
             
             this.loadingText.destroy();
             let index = 0;
             const startX = 80, startY = 150, spacingX = 115, spacingY = 130;
 
-            querySnapshot.forEach((docSnap) => {
-                const userData = docSnap.data();
+            members.forEach((userData) => {
                 const memberAccountId = userData.accountId; 
                 const memberName = userData.name || "未知";
                 
@@ -61,7 +61,7 @@ export default class LobbyScene extends Phaser.Scene {
             });
             if (index === 0) this.add.text(195, 320, '群組內還沒有其他鄰居喔！', { fontSize: '16px', color: '#fff' }).setOrigin(0.5);
         } catch (e) {
-            this.loadingText.setText('載入失敗，請檢查網路');
+            if (this.loadingText?.active) this.loadingText.setText(e.message || '載入失敗，請檢查網路');
         }
     }
 

@@ -1,20 +1,17 @@
+import { requireGameMembership } from '../game-members.js';
+import { readGameContext, watchGameContext } from '../game-context.js';
 import { db } from '../firebase-config.js'; 
 import { doc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // ==========================================
 // Firebase 用戶驗證與設定
 // ==========================================
-const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-export const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-
-if (!currentUser || !currentUser.accountId) {
-    alert('資料異常：請確認您已正確登入且擁有 accountId！');
-    window.location.href = 'index.html';
-    throw new Error("未登入或缺少 accountId"); 
-}
-
-export const CURRENT_GROUP_ID = currentUser.groupId || "default_group";
-export const CURRENT_ACCOUNT_ID = currentUser.accountId; 
+const context = readGameContext();
+watchGameContext(context);
+await requireGameMembership(context);
+export const currentUser = context.user;
+export const CURRENT_GROUP_ID = context.groupId;
+export const CURRENT_ACCOUNT_ID = context.accountId;
 export const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_ID);
 
 export const playerName = currentUser.name || "我";
