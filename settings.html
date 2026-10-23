@@ -102,6 +102,8 @@
     </div>
 
     <script type="module">
+        import { MODULE_META } from './js/menu-catalog.js';
+        import { readPersonalLayout } from './js/personal-layout.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -120,15 +122,7 @@
         let currentUser = null;
         
         // ★ 對齊管理者後台的 keys
-        const moduleMeta = {
-            chat: { name: "💬 聊天室" },
-            calendar: { name: "📅 行事曆" },
-            finance: { name: "💰 記帳本" },
-            photodump: { name: "📸 Photo Dump" },
-            gamezone: { name: "🎮 遊戲區" },
-            checkin: { name: "📍 到家打卡" },
-            wishlist: { name: "⭐ 許願牆" }
-        };
+        const moduleMeta = MODULE_META;
 
         let currentOrder = [];
         let currentModules = {};
@@ -160,20 +154,10 @@
 
         async function loadPersonalConfig() {
             try {
-                const docRef = doc(db, "userSettings", currentUser.name);
-                const docSnap = await getDoc(docRef);
-                let savedOrder = [];
-                
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.order && Array.isArray(data.order)) {
-                        savedOrder = data.order;
-                    }
-                    if (data.modules) {
-                        currentModules = { ...currentModules, ...data.modules };
-                    }
-                }
-                
+                const data = await readPersonalLayout(db, currentUser);
+                let savedOrder = Array.isArray(data.order) ? data.order : [];
+                if (data.modules) currentModules = { ...currentModules, ...data.modules };
+
                 // 1. 過濾出存在於「允許清單(allowedMenus)」的卡片順序
                 currentOrder = savedOrder.filter(k => allowedMenus.includes(k) && moduleMeta[k]);
                 
@@ -225,7 +209,8 @@
             document.getElementById('loadingView').style.display = 'flex';
             try {
                 currentOrder.forEach(modKey => { const chk = document.getElementById(`chk_${modKey}`); if (chk) currentModules[modKey] = chk.checked; });
-                await setDoc(doc(db, "userSettings", currentUser.name), { order: currentOrder, modules: currentModules, updatedAt: serverTimestamp() }, { merge: true });
+                if (!currentUser.accountId) throw new Error("請重新登入帳號。");
+                await setDoc(doc(db, "userSettings", currentUser.accountId), { accountId: currentUser.accountId, order: currentOrder, modules: currentModules, updatedAt: serverTimestamp() }, { merge: true });
                 await recordLog('版面自訂', '修改了個人功能卡片的顯示與排序');
                 alert('個人版面設定儲存成功！');
             } catch (e) { alert('儲存失敗，請檢查網路。'); } 
@@ -264,7 +249,7 @@
                 }
 
                 // 找出目前使用者的文件
-                const qUser = query(usersRef, where("name", "==", currentUser.name));
+                const qUser = query(usersRef, where("accountId", "==", currentUser.accountId));
                 const userSnap = await getDocs(qUser);
                 
                 if (!userSnap.empty) {
@@ -276,19 +261,11 @@
                     if (newPin) { updateData.pin = newPin; }
 
                     if (Object.keys(updateData).length > 0) {
-                        await updateDoc(userDoc.ref, updateData);
-
-                        // ★ 若名稱更改，需將舊版面設定移轉給新名稱，以免設定遺失
                         if (nameChanged) {
-                            const oldSettingsRef = doc(db, "userSettings", currentUser.name);
-                            const newSettingsRef = doc(db, "userSettings", newName);
-                            const oldSettingsSnap = await getDoc(oldSettingsRef);
-                            
-                            if (oldSettingsSnap.exists()) {
-                                await setDoc(newSettingsRef, oldSettingsSnap.data());
-                                await deleteDoc(oldSettingsRef); // 刪除舊紀錄
-                            }
+                            const layout = await readPersonalLayout(db, currentUser);
+                            await setDoc(doc(db, "userSettings", currentUser.accountId), { ...layout, accountId: currentUser.accountId }, { merge: true });
                         }
+                        await updateDoc(userDoc.ref, updateData);
 
                         // 更新本地 Session/Local 緩存
                         if (nameChanged) currentUser.name = newName;
@@ -329,7 +306,7 @@
             document.getElementById('loadingView').style.display = 'flex';
             try {
                 const usersRef = collection(db, "users");
-                const qUser = query(usersRef, where("name", "==", currentUser.name));
+                const qUser = query(usersRef, where("accountId", "==", currentUser.accountId));
                 const userSnap = await getDocs(qUser);
                 
                 if (!userSnap.empty) {

@@ -1,3 +1,4 @@
+import { readPersonalLayout } from './personal-layout.js';
 import { db } from "./firebase-config.js";
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -155,12 +156,9 @@ window.renderDynamicModules = async function(user) {
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
     try {
-        const userConfigDoc = await getDoc(doc(db, "userSettings", user.accountId || user.name));
-        if (userConfigDoc.exists()) {
-            const data = userConfigDoc.data();
-            if (data.modules) modules = data.modules;
-            if (data.order && Array.isArray(data.order)) order = data.order.filter(k => allowedMenus.includes(k));
-        }
+        const data = await readPersonalLayout(db, user);
+        if (data.modules) modules = data.modules;
+        if (Array.isArray(data.order)) order = data.order.filter(key => allowedMenus.includes(key));
         allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
     } catch (e) { order = [...allowedMenus]; }
 
@@ -216,7 +214,7 @@ window.renderDynamicModules = async function(user) {
             `;
         }
         
-        if (allowedMenus.includes('food')) {
+        if (allowedMenus.includes('food') && modules.food !== false) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')">
                     <div class="mini-widget-header">
@@ -249,6 +247,7 @@ window.renderDynamicModules = async function(user) {
             miniCardsContainer.innerHTML = miniCardsHtml;
             miniCardsContainer.style.display = 'grid';
         } else {
+            miniCardsContainer.innerHTML = '';
             miniCardsContainer.style.display = 'none';
         }
     }

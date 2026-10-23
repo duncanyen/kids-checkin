@@ -1,22 +1,31 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { db } from './firebase-config.js';
+import { collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
+import { loadGameGroupMembers } from './game-members.js';
+import { createFoodStore } from './food-store.js';
 
 // 讀取當前使用者與群組資料
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-const currentUser = savedUserStr ? JSON.parse(savedUserStr) : { accountId: 'unknown', name: '訪客' };
-const currentGroupId = localStorage.getItem('lastGroupId') || 'wJOpq0uAnXvO4ezZ1IK9';
+const currentUser = savedUserStr ? JSON.parse(savedUserStr) : {};
+const currentGroupId = getSelectedGameGroupId(currentUser);
+const context = { groupId: currentGroupId, accountId: currentUser.accountId };
+const store = createFoodStore(db, context);
+let ready = false, saving = false, members = new Map(), votes = {}, decision = null;
+let unsubscribe = null, loadVersion = 0, spinVersion = 0;
+const selection = () => ({ date: formatDateStr(selectedDate), meal: currentMeal });
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function status(message, error = false) {
+    const el = document.getElementById('foodSyncStatus');
+    el.textContent = message;
+    el.style.color = error ? '#b42318' : 'var(--green2)';
+}
+function cancelSpin() {
+    spinVersion++;
+    document.getElementById('countdown').classList.remove('show');
+    document.getElementById('winner').classList.remove('show');
+    document.getElementById('spinBtn').disabled = false;
+    document.getElementById('wheel').dataset.candidates = '';
+}
 
 let restaurants = [];
 let currentMeal = '';
@@ -32,24 +41,24 @@ function initIdentity() {
     const nameEl = document.getElementById('voteMemberName');
     const faceEl = document.getElementById('voteFaceContainer');
     const headerAvatar = document.getElementById('headerAvatarBtn');
-    
+
     // 取得頭像或備用字元
     const avatarUrl = currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl;
     const fallbackChar = (currentUser.name || '訪').charAt(0);
 
     // 更新投票身份名稱
     if (nameEl) nameEl.innerText = currentUser.name || '訪客';
-    
+
     // 更新投票身份頭像
-    const faceHtml = avatarUrl 
-        ? `<img src="${avatarUrl}" class="face real-avatar">` 
+    const faceHtml = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" class="face real-avatar">`
         : `<div class="face">${fallbackChar}</div>`;
     if (faceEl) faceEl.innerHTML = faceHtml;
-    
+
     // 更新頂部 Header 頭像
     if (headerAvatar) {
-        headerAvatar.innerHTML = avatarUrl 
-            ? `<img src="${avatarUrl}" class="real-avatar">` 
+        headerAvatar.innerHTML = avatarUrl
+            ? `<img src="${escapeHtml(avatarUrl)}" class="real-avatar">`
             : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;background:#edf6f1;color:var(--green2);font-weight:bold;">${fallbackChar}</div>`;
     }
 }
@@ -67,20 +76,21 @@ function updateDateDisplay() {
     const dateStr = formatDateStr(selectedDate);
     const todayStr = formatDateStr(new Date());
     let displayText = dateStr;
-    
+
     if (dateStr === todayStr) {
         displayText = '今天';
     } else {
         const days = ['日', '一', '二', '三', '四', '五', '六'];
         displayText = `${selectedDate.getMonth()+1}/${selectedDate.getDate()} (${days[selectedDate.getDay()]})`;
     }
-    
+
     document.getElementById('currentSelectedDateDisplay').innerText = displayText;
     document.getElementById('homeDateText').innerText = displayText;
     document.getElementById('statsDateText').innerText = displayText === '今天' ? '今日' : displayText;
 }
 
 window.foodApp.changeMonth = function(offset) {
+    calendarDate.setDate(1);
     calendarDate.setMonth(calendarDate.getMonth() + offset);
     renderCalendar();
 };
@@ -88,27 +98,28 @@ window.foodApp.changeMonth = function(offset) {
 function renderCalendar() {
     const monthYear = document.getElementById('calendarMonthYear');
     monthYear.innerText = `${calendarDate.getFullYear()}年 ${calendarDate.getMonth() + 1}月`;
-    
+
     const daysContainer = document.getElementById('calendarDays');
     daysContainer.innerHTML = '';
-    
+
     const firstDay = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
     const daysInMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate();
-    
+
     for(let i=0; i<firstDay; i++) {
         daysContainer.innerHTML += `<div></div>`;
     }
-    
+
     for(let i=1; i<=daysInMonth; i++) {
         const d = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), i);
         const dateStr = formatDateStr(d);
         const selStr = formatDateStr(selectedDate);
-        
+
         const isSelected = dateStr === selStr;
         const div = document.createElement('div');
         div.className = `calendar-day ${isSelected ? 'active' : ''}`;
         div.innerText = i;
         div.onclick = () => {
+            cancelSpin();
             selectedDate = new Date(d);
             updateDateDisplay();
             renderCalendar();
@@ -121,36 +132,31 @@ function renderCalendar() {
     }
 }
 
-function getVoteDocId(meal) {
-    const dateStr = formatDateStr(selectedDate);
-    return `${currentGroupId}_${dateStr}_${meal}`;
-}
-
 // ================= 資料載入與清單渲染 =================
 
 window.foodApp.renderRestaurantList = function(type = '全部') {
     const list = document.getElementById('restaurantList');
     if (!list) return;
     list.innerHTML = '';
-    
+
     let filtered = restaurants;
     if (type !== '全部') {
         filtered = restaurants.filter(r => r.type === type);
     }
-    
+
     if (filtered.length === 0) {
         list.innerHTML = '<div class="empty">目前沒有餐廳資料</div>';
         return;
     }
-    
+
     filtered.forEach(r => {
         const mealStr = (r.meal || []).join(', ');
         list.innerHTML += `
             <div class="list-item">
                 <div class="list-info">
-                    <b>${r.name}</b>
-                    <small>${r.type} · ${r.price || '未定價'} · ${r.food}</small>
-                    <small style="color:var(--green2)">適用: ${mealStr}</small>
+                    <b>${escapeHtml(r.name)}</b>
+                    <small>${escapeHtml(r.type)} · ${escapeHtml(r.price || '未定價')} · ${escapeHtml(r.food)}</small>
+                    <small style="color:var(--green2)">適用: ${escapeHtml(mealStr)}</small>
                 </div>
             </div>
         `;
@@ -163,10 +169,12 @@ async function loadRestaurants() {
         const snap = await getDocs(q);
         restaurants = [];
         snap.forEach(d => restaurants.push({id: d.id, ...d.data()}));
-        
+
         window.foodApp.renderRestaurantList('全部');
     } catch (error) {
         console.error("載入餐廳失敗:", error);
+        status("餐廳載入失敗，請重新整理後重試。", true);
+        throw error;
     }
 }
 
@@ -183,23 +191,26 @@ window.foodApp.filterRestaurants = function(type, btn) {
 window.foodApp.go = function(viewId, btn) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
-    
+
     if(btn) {
         document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     }
-    
+
+    if (viewId === 'vote' && !currentMeal) window.foodApp.chooseMeal('晚餐', '🍲');
     if(viewId === 'stats') {
-        loadVotes(currentMeal || '晚餐');
+        currentMeal ||= '晚餐';
+        loadVotes(currentMeal);
     }
 };
 
 window.foodApp.chooseMeal = function(meal, emoji) {
+    cancelSpin();
     currentMeal = meal;
     currentEmoji = emoji;
     document.getElementById('mealEyebrow').innerText = `${emoji} ${meal}`;
     window.foodApp.go('vote', document.querySelector('[data-view=vote]'));
-    
+
     const tabs = document.querySelectorAll('#statsTabs .chip');
     tabs.forEach(t => {
         if(t.innerText === meal) {
@@ -236,35 +247,37 @@ function setupWheel() {
         return mealArr.includes(currentMeal) || mealArr.includes('不限');
     });
 
+    wheel.dataset.candidates = '';
+    document.getElementById('wheelHint').innerText = '';
     if(candidates.length === 0) {
         document.getElementById('wheelHint').innerText = '尚無適合此時段的餐廳';
         wheel.style.background = '#eee';
         return;
     }
-    
+
     const numSegments = candidates.length;
     const angle = 360 / numSegments;
     let gradientParts = [];
-    
+
     candidates.forEach((cand, i) => {
         const startAngle = i * angle;
         const endAngle = (i + 1) * angle;
         const color = wheelColors[i % wheelColors.length];
-        
+
         gradientParts.push(`${color} ${startAngle}deg ${endAngle}deg`);
-        
+
         const labelDiv = document.createElement('div');
         labelDiv.className = 'wheel-text';
-        
+
         const textAngle = startAngle + (angle / 2);
-        
+
         // 限制字數，避免超長店名撐破排版
         let displayName = cand.name;
         if(displayName.length > 7) displayName = displayName.substring(0, 6) + '...';
         labelDiv.innerText = displayName;
-        
+
         // 推移距離改為 75px 往外推
-        labelDiv.style.transform = `translateY(-50%) rotate(${textAngle - 90}deg) translateX(75px)`; 
+        labelDiv.style.transform = `translateY(-50%) rotate(${textAngle - 90}deg) translateX(75px)`;
         labelDiv.style.left = '50%';
         labelDiv.style.top = '50%';
         labelDiv.style.transformOrigin = '0 0';
@@ -278,20 +291,23 @@ function setupWheel() {
 }
 
 window.foodApp.startSpin = function() {
+    if (!ready || saving || document.getElementById('spinBtn').disabled) return;
+    const version = ++spinVersion;
     const wheel = document.getElementById('wheel');
     const candidatesStr = wheel.dataset.candidates;
     if(!candidatesStr) return;
     const candidates = JSON.parse(candidatesStr);
-    
+
     const spinBtn = document.getElementById('spinBtn');
     spinBtn.disabled = true;
-    
+
     document.getElementById('countdown').classList.add('show');
     let count = 3;
     const cNum = document.getElementById('countNumber');
     cNum.innerText = count;
-    
+
     const timer = setInterval(() => {
+        if (version !== spinVersion) { clearInterval(timer); return; }
         count--;
         if(count > 0) {
             cNum.innerText = count;
@@ -301,32 +317,35 @@ window.foodApp.startSpin = function() {
         } else {
             clearInterval(timer);
             document.getElementById('countdown').classList.remove('show');
-            executeSpin(candidates);
+            executeSpin(candidates, version);
         }
     }, 1000);
 };
 
-function executeSpin(candidates) {
+function executeSpin(candidates, version) {
     const wheel = document.getElementById('wheel');
     const segmentAngle = 360 / candidates.length;
-    
+
     const winIndex = Math.floor(Math.random() * candidates.length);
     const winner = candidates[winIndex];
-    
-    const baseRotations = 5 * 360; 
+
+    const baseRotations = 5 * 360;
     const targetAngle = baseRotations + (360 - (winIndex * segmentAngle + segmentAngle / 2));
-    
+
     wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
     wheel.style.transform = `rotate(${targetAngle}deg)`;
-    
-    setTimeout(() => {
+
+    setTimeout(async () => {
+        if (version !== spinVersion) return;
+        if (!await saveVote(winner, 'wheel')) { document.getElementById('spinBtn').disabled = false; return; }
+        if (version !== spinVersion) return;
         document.getElementById('winner').classList.add('show');
-        document.getElementById('winnerFood').innerText = '🎉'; 
+        document.getElementById('winnerFood').innerText = '🎉';
         document.getElementById('winnerName').innerText = winner.name;
         document.getElementById('winnerMeta').innerText = `${winner.type} · ${winner.food} · ${winner.price || ''}`;
         document.getElementById('spinBtn').disabled = false;
-        
-        saveVote(winner.name, 'wheel');
+
+
     }, 4000);
 }
 
@@ -339,100 +358,114 @@ window.foodApp.acceptWheelWinner = function() {
 function renderVoteList() {
     const list = document.getElementById('voteList');
     list.innerHTML = '';
-    
+
     const candidates = restaurants.filter(r => {
         const mealArr = r.meal || [];
         return mealArr.includes(currentMeal) || mealArr.includes('不限');
     });
-    
+
     if(candidates.length === 0) {
         list.innerHTML = '<div class="empty">目前沒有適合此時段的餐廳</div>';
         return;
     }
-    
+
     candidates.forEach(cand => {
         const div = document.createElement('div');
         div.className = 'restaurant';
         div.innerHTML = `
             <div class="list-info">
-                <b>${cand.name}</b>
-                <small>${cand.type} · ${cand.food}</small>
+                <b>${escapeHtml(cand.name)}</b>
+                <small>${escapeHtml(cand.type)} · ${escapeHtml(cand.food)}</small>
             </div>
-            <button class="vote" onclick="window.foodApp.castVote('${cand.name}')">投給它</button>
+            <button class="vote" >投給它</button>
         `;
+        div.querySelector("button").onclick = () => window.foodApp.castVote(cand.id);
         list.appendChild(div);
     });
 }
 
-let mockVotesMap = {};
-async function saveVote(restaurantName, source = 'manual') {
-    const docId = getVoteDocId(currentMeal);
-    const accountId = currentUser.accountId || currentUser.id || currentUser.uid || 'unknown';
-    
+async function saveVote(restaurant, source = 'manual') {
+    if (!ready || saving || !currentMeal) return false;
+    const target = selection(), version = loadVersion;
+    saving = true;
+    status('正在儲存投票…');
     try {
-        const docSnap = await getDocs(query(collection(db, 'food_votes'), where('__name__', '==', docId)));
-        
-        let votesMap = {};
-        if (!docSnap.empty) {
-            votesMap = docSnap.docs[0].data().votes || {};
-        }
-        
-        votesMap[accountId] = {
-            name: currentUser.name,
-            avatar: currentUser.avatar || null,
-            choice: restaurantName,
-            time: new Date().toISOString()
-        };
-        
-        if (docSnap.empty) {
-            await addDoc(collection(db, 'food_votes'), {
-                _id: docId,
-                groupId: currentGroupId,
-                date: formatDateStr(selectedDate),
-                meal: currentMeal,
-                votes: votesMap
-            });
-        }
-    } catch(e) {
-        console.log("Save Vote error:", e);
-    }
-    
-    mockVotesMap[accountId] = {
-        name: currentUser.name,
-        avatar: currentUser.avatar || null,
-        choice: restaurantName
-    };
-    renderStats(mockVotesMap);
+        await store.vote(target, restaurant, currentUser, source);
+        if (version === loadVersion) status('投票已儲存');
+        return true;
+    } catch (error) {
+        console.error(error);
+        status('投票儲存失敗：' + error.message, true);
+        return false;
+    } finally { saving = false; }
 }
 
-window.foodApp.castVote = function(name) {
-    saveVote(name);
-    window.foodApp.go('stats', document.querySelector('[data-view=stats]'));
+window.foodApp.castVote = async function(id) {
+    const restaurant = restaurants.find(r => r.id === id);
+    const version = loadVersion;
+    if (restaurant && await saveVote(restaurant) && version === loadVersion) window.foodApp.go('stats', document.querySelector('[data-view=stats]'));
 };
 
 window.foodApp.switchStatsTab = function(meal, btn) {
+    if (meal !== currentMeal) cancelSpin();
     document.querySelectorAll('#statsTabs .chip').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
     currentMeal = meal;
+    document.getElementById('mealEyebrow').innerText = ({早餐:'🌤️',午餐:'🍱',晚餐:'🍲',宵夜:'🌙'}[meal] || '') + ' ' + meal;
     loadVotes(meal);
 };
 
-function loadVotes(meal) {
+async function loadVotes(meal) {
+    const version = ++loadVersion;
+    if (unsubscribe) unsubscribe();
+    unsubscribe = null;
+    votes = {}; decision = null;
+    renderStats(votes);
     document.getElementById('statsMealName').innerText = meal;
-    renderStats(mockVotesMap); 
+    document.querySelectorAll('#statsTabs .chip').forEach(c => c.classList.toggle('active', c.textContent === meal));
+    if (!ready) return;
+    status('正在查詢 ' + formatDateStr(selectedDate) + ' ' + meal + '…');
+    try {
+        const stop = await store.watch(selection(), data => {
+            if (version !== loadVersion) return;
+            votes = Object.fromEntries(Object.entries(data.votes || {}).filter(([id]) => members.has(id)).map(([id, vote]) => [id, { ...vote, name: members.get(id).name, avatar: members.get(id).avatar || members.get(id).photoURL || members.get(id).avatarUrl || null }]));
+            decision = data.decision;
+            renderStats(votes);
+            status(decision ? '已決定：' + decision.choice : '已同步 ' + formatDateStr(selectedDate) + ' ' + meal);
+        }, error => { if (version === loadVersion) status('投票查詢失敗：' + error.message, true); });
+        if (version !== loadVersion) stop(); else unsubscribe = stop;
+    } catch (error) { if (version === loadVersion) status('投票查詢失敗：' + error.message, true); }
 }
+
+window.foodApp.finishDecision = async function() {
+    if (!ready || saving) return;
+    const winner = Object.entries(Object.values(votes).reduce((counts, v) => { counts[v.choice] = (counts[v.choice] || 0) + 1; return counts; }, {})).sort((a,b) => b[1]-a[1])[0];
+    if (!winner) return status('請先投票再儲存決定', true);
+    saving = true;
+    try { await store.decide(selection(), winner[0]); status('決定已儲存：' + winner[0]); }
+    catch (error) { status('決定儲存失敗：' + error.message, true); }
+    finally { saving = false; }
+};
+window.foodApp.shareResult = async function() {
+    const text = formatDateStr(selectedDate) + ' ' + currentMeal + '：' + document.getElementById('winnerStatName').textContent;
+    if (!Object.keys(votes).length) return status('請先投票再分享', true);
+    try {
+        if (navigator.share) await navigator.share({ title: '吃什麼？', text });
+        else { await navigator.clipboard.writeText(text); status('結果已複製，可貼到群組分享'); }
+    } catch (error) { if (error.name !== 'AbortError') status('無法分享，請手動複製結果', true); }
+};
 
 function renderStats(votesMap) {
     const totalVotes = Object.keys(votesMap).length;
     document.getElementById('totalVotes').innerText = totalVotes;
-    
+
     const countMap = {};
     Object.values(votesMap).forEach(v => {
         countMap[v.choice] = (countMap[v.choice] || 0) + 1;
     });
-    
+
     const sorted = Object.entries(countMap).sort((a,b) => b[1]-a[1]);
-    
+
     if(sorted.length > 0) {
         document.getElementById('winnerStatName').innerText = sorted[0][0];
         document.getElementById('winnerStatScore').innerText = `${sorted[0][1]} 票領先`;
@@ -440,32 +473,32 @@ function renderStats(votesMap) {
         document.getElementById('winnerStatName').innerText = '尚未有人投票';
         document.getElementById('winnerStatScore').innerText = '投下第一票吧';
     }
-    
+
     const rankingDiv = document.getElementById('ranking');
     rankingDiv.innerHTML = '';
     sorted.forEach(([name, count]) => {
         const pct = Math.round((count / totalVotes) * 100);
         rankingDiv.innerHTML += `
             <div style="margin-bottom:12px">
-                <div class="rank"><strong>${name}</strong><span>${count} 票 (${pct}%)</span></div>
+                <div class="rank"><strong>${escapeHtml(name)}</strong><span>${count} 票 (${pct}%)</span></div>
                 <div class="bar"><i style="width:${pct}%"></i></div>
             </div>
         `;
     });
-    
+
     const membersDiv = document.getElementById('memberVotes');
     membersDiv.innerHTML = '';
     Object.values(votesMap).forEach(v => {
         const fallbackChar = (v.name || '訪').charAt(0);
-        const faceHtml = v.avatar 
-            ? `<img src="${v.avatar}" class="face real-avatar">` 
+        const faceHtml = v.avatar
+            ? `<img src="${escapeHtml(v.avatar)}" class="face real-avatar">`
             : `<div class="face">${fallbackChar}</div>`;
-            
+
         membersDiv.innerHTML += `
             <div class="member-vote-row">
                 ${faceHtml}
-                <div class="mv-name">${v.name}</div>
-                <div class="mv-choice">${v.choice}</div>
+                <div class="mv-name">${escapeHtml(v.name)}</div>
+                <div class="mv-choice">${escapeHtml(v.choice)}</div>
             </div>
         `;
     });
@@ -490,12 +523,14 @@ window.foodApp.openRestaurant = function() {
     document.getElementById('modalTitle').innerText = '新增餐廳';
     document.getElementById('editId').value = '';
     document.getElementById('rName').value = '';
+    document.getElementById('rType').selectedIndex = 0;
+    document.getElementById('rPrice').selectedIndex = 0;
     document.getElementById('rFood').value = '';
     document.getElementById('rTags').value = '';
     document.getElementById('rNote').value = '';
-    
+
     document.querySelectorAll('input[name="rMeal"]').forEach(chk => chk.checked = false);
-    
+
     document.getElementById('modal').classList.add('show');
 };
 
@@ -504,13 +539,14 @@ window.foodApp.closeModal = function() {
 };
 
 window.foodApp.saveRestaurant = async function() {
+    if (!ready || saving) return;
     const name = document.getElementById('rName').value.trim();
     const type = document.getElementById('rType').value;
     const price = document.getElementById('rPrice').value;
     const food = document.getElementById('rFood').value.trim();
     const tags = document.getElementById('rTags').value.trim();
     const note = document.getElementById('rNote').value.trim();
-    
+
     const mealCheckboxes = document.querySelectorAll('input[name="rMeal"]:checked');
     const meal = Array.from(mealCheckboxes).map(cb => cb.value);
 
@@ -519,9 +555,12 @@ window.foodApp.saveRestaurant = async function() {
         return;
     }
 
+    saving = true;
     try {
+        await loadGameGroupMembers(currentGroupId, currentUser.accountId);
         const payload = {
             groupId: currentGroupId,
+            accountId: currentUser.accountId,
             name,
             type,
             price,
@@ -535,11 +574,11 @@ window.foodApp.saveRestaurant = async function() {
         await addDoc(collection(db, "food_restaurants"), payload);
         alert("新增成功！");
         window.foodApp.closeModal();
-        loadRestaurants(); 
+        await loadRestaurants();
     } catch(e) {
         console.error("儲存餐廳失敗", e);
-        alert("發生錯誤，請稍後再試。");
-    }
+        alert("儲存餐廳失敗：" + e.message);
+    } finally { saving = false; }
 };
 
 // ================= 啟動初始化 =================
@@ -547,4 +586,18 @@ window.foodApp.saveRestaurant = async function() {
 initIdentity();
 updateDateDisplay();
 renderCalendar();
-loadRestaurants();
+async function initialize() {
+    try {
+        if (!currentUser.accountId || !currentGroupId) throw new Error('請先登入並選擇群組');
+        const profiles = await loadGameGroupMembers(currentGroupId, currentUser.accountId);
+        members = new Map(profiles.map(profile => [profile.accountId, profile]));
+        if (!members.has(currentUser.accountId)) throw new Error('找不到目前群組的個人資料');
+        Object.assign(currentUser, members.get(currentUser.accountId));
+        initIdentity();
+        watchGameContext(context);
+        await loadRestaurants();
+        ready = true;
+        if (currentMeal) await loadVotes(currentMeal); else status('請選擇日期與餐別');
+    } catch (error) { status(error.message, true); }
+}
+initialize();

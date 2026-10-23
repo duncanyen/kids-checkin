@@ -1,3 +1,4 @@
+import { FOOD_MENU, DEFAULT_MENUS } from './menu-catalog.js';
 import { getSelectedGameGroupId } from './game-context.js';
 import { loadGameGroupMembers } from './game-members.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -44,34 +45,23 @@ if (!isParentOrAdmin || !groupId) {
 
 async function loadSystemMenus() {
     try {
-        const q = query(collection(db, "system_menus"), orderBy("order", "asc"));
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty) {
-            console.log("資料庫無功能卡設定，自動初始化預設清單...");
-            const defaultMenus = [
-                { id: 'chat', label: '💬 聊天室', isDefault: true, group: 'all', order: 1 },
-                { id: 'calendar', label: '📅 行事曆', isDefault: true, group: 'all', order: 2 },
-                { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all', order: 3 },
-                { id: 'todo', label: '📝 待辦事項', isDefault: true, group: 'all', order: 4 },
-                { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all', order: 5 },
-                { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all', order: 6 },
-                { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family', order: 7 }, 
-                { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family', order: 8 }
-            ];
-
-            for (const menu of defaultMenus) {
-                await setDoc(doc(db, "system_menus", menu.id), menu);
-            }
-            systemMenuOptions = defaultMenus;
+        const snapshot = await getDocs(collection(db, 'system_menus'));
+        const menus = snapshot.docs.map(snapshot => ({ ...snapshot.data(), id: snapshot.id }));
+        if (!menus.length) {
+            for (const menu of DEFAULT_MENUS) await setDoc(doc(db, 'system_menus', menu.id), menu);
+            systemMenuOptions = DEFAULT_MENUS.map(menu => ({ ...menu }));
         } else {
-            systemMenuOptions = [];
-            snapshot.forEach(docSnap => {
-                systemMenuOptions.push(docSnap.data());
-            });
+            if (!menus.some(menu => menu.id === 'food')) {
+                // Backfill only the missing feature; preserve existing defaults/order.
+                const existing = await getDoc(doc(db, 'system_menus', 'food'));
+                if (!existing.exists()) await setDoc(doc(db, 'system_menus', 'food'), FOOD_MENU);
+                menus.push(existing.exists() ? { ...FOOD_MENU, ...existing.data(), id: 'food' } : { ...FOOD_MENU });
+            }
+            systemMenuOptions = menus.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         }
     } catch (error) {
-        console.error("無法讀取選單設定，請檢查索引或連線:", error);
+        console.error('無法讀取選單設定', error);
+        systemMenuOptions = DEFAULT_MENUS.map(menu => ({ ...menu }));
     }
 }
 

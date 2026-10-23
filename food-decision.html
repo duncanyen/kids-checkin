@@ -83,6 +83,7 @@
 </style>
 </head>
 <body>
+<p id="foodSyncStatus" role="status" style="text-align:center;padding:8px;margin:0">載入群組資料中…</p>
 <div class="app">
 <header>
   <button class="back-btn" onclick="window.location.href='index.html'">❮</button>
@@ -199,7 +200,7 @@
     <div class="member-votes" id="memberVotes"></div>
   </div>
 
-  <button class="primary" onclick="window.foodApp.shareResult()">📣 分享結果給群組</button>
+  <button class="primary" onclick="window.foodApp.shareResult()">📣 分享／複製結果</button>
   <button class="secondary" style="width:100%;margin-top:10px" onclick="window.foodApp.finishDecision()">那就出發吧！ →</button>
   
   <button id="adminClearBtn" class="secondary" style="width:100%; margin-top:10px; background:#fef2f2; color:#dc2626; display:none;" onclick="window.foodApp.clearCurrentStats()">🗑️ 清除此時段投票結果</button>
@@ -291,11 +292,7 @@
 </div></div>
 
 <script>
-window.foodApp = new Proxy({}, {
-    get: function(target, prop) {
-        return target[prop] || function() { console.log('Mock foodApp called:', prop); };
-    }
-});
+window.foodApp = {};
 </script>
 
 <script type="module" src="js/food-decision.js"></script>
