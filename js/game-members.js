@@ -3,7 +3,7 @@ import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gsta
 
 // groups.members is authoritative: users.groupId describes only one group and
 // cannot represent a person who has joined several groups.
-export async function loadGameGroupMembers(groupId, accountId) {
+export async function loadGameGroupMembers(groupId, accountId, { includeDocumentIds = false } = {}) {
     const ids = await getGameGroupMemberIds(groupId, accountId);
     const members = new Map();
     for (let start = 0; start < ids.length; start += 10) {
@@ -11,7 +11,7 @@ export async function loadGameGroupMembers(groupId, accountId) {
         const profiles = await getDocs(query(collection(db, 'users'), where('accountId', 'in', batch)));
         profiles.forEach(snapshot => {
             const profile = snapshot.data();
-            if (batch.includes(profile.accountId) && profile.role !== 'removed') members.set(profile.accountId, profile);
+            if (batch.includes(profile.accountId) && profile.role !== 'removed') members.set(profile.accountId, includeDocumentIds ? { ...profile, docId: snapshot.id } : profile);
         });
     }
     return ids.map(id => members.get(id)).filter(Boolean);

@@ -1,10 +1,10 @@
 import { FOOD_MENU, DEFAULT_MENUS } from './menu-catalog.js';
-import { getSelectedGameGroupId } from './game-context.js';
+import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { loadGameGroupMembers } from './game-members.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
     getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc, 
-    query, where, orderBy, serverTimestamp, onSnapshot 
+    query, where, orderBy, serverTimestamp, onSnapshot, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -22,6 +22,8 @@ let systemMenuOptions = [];
 let allLogs = [];
 let allUsers = [];
 let pendingRequests = [];
+let memberListUnsubscribe = null;
+let memberListVersion = 0;
 
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -40,6 +42,7 @@ if (!isParentOrAdmin || !groupId) {
     alert("您沒有權限訪問管理者頁面！");
     window.location.href = 'index.html';
 } else {
+    watchGameContext({ groupId, accountId: currentUser.accountId });
     initAdminPage();
 }
 
@@ -83,11 +86,18 @@ async function initAdminPage() {
         initAdminGameManagement();
     });
     setupToggle('btnToggleAddForm', 'addUserForm', 'toggleIconAdd');
-    setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList');
+    setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList', loadUsersFromFirebase);
     setupToggle('btnToggleLogs', 'logsSection', 'toggleIconLogs');
     
     await loadGroupSettings();
     await loadUsersFromFirebase();
+    let memberSignature = null;
+    memberListUnsubscribe = onSnapshot(doc(db, 'groups', groupId), snapshot => {
+        const signature = JSON.stringify(snapshot.exists() ? snapshot.data().members || [] : []);
+        if (signature !== memberSignature) { memberSignature = signature; loadUsersFromFirebase(); }
+    });
+    window.addEventListener('pagehide', event => { if (!event.persisted) memberListUnsubscribe?.(); });
+    window.addEventListener('pageshow', event => { if (event.persisted) loadUsersFromFirebase(); });
 
     // 綁定按鈕點擊事件
     document.getElementById('btnAddUser').addEventListener('click', addNewUser);
@@ -250,33 +260,45 @@ window.handleRequest = async function(reqId, actionStatus, targetUserId, targetU
     if (!confirm(`確定要【${actionText}】成員【${targetUserName}】的入群申請嗎？`)) return;
 
     try {
-        await updateDoc(doc(db, "group_requests", reqId), {
-            status: actionStatus,
-            processedTime: serverTimestamp()
-        });
-
+        const requestRef = doc(db, 'group_requests', reqId);
+        const request = await getDoc(requestRef);
+        if (!request.exists() || request.data().groupId !== groupId) throw new Error('申請不屬於目前群組。');
+        let accountId = request.data().accountId || null;
+        let existing = null, userRef = null;
         if (actionStatus === 'approved') {
-            const defaultMenus = systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
-            const newUserObj = {
-                groupId: groupId,
-                accountId: targetUserId,
-                name: targetUserName,
-                role: 'member',
-                menus: defaultMenus,
-                avatar: `https://ui-avatars.com/api/?name=${targetUserName}&background=random`
-            };
-            await addDoc(collection(db, "users"), newUserObj);
-            await logAction('系統操作', `審核通過：同意成員 ${targetUserName} 加入群組`);
-        } else {
-            await logAction('系統操作', `審核駁回：婉拒成員 ${targetUserName} 的入群申請`);
+            if (!accountId && targetUserId) {
+                const profile = await getDoc(doc(db, 'users', targetUserId));
+                accountId = profile.exists() ? profile.data().accountId : targetUserId;
+            }
+            if (!accountId) throw new Error('申請缺少帳號 ID。');
+            const profiles = await getDocs(query(collection(db, 'users'), where('accountId', '==', accountId)));
+            existing = profiles.docs[0];
+            if (existing?.data().role === 'removed') throw new Error('此帳號已停用，請先確認帳號狀態。');
+            userRef = existing ? doc(db, 'users', existing.id) : doc(collection(db, 'users'));
         }
+        await runTransaction(db, async transaction => {
+            const group = await readManagedGroup(transaction);
+            const latest = await transaction.get(requestRef);
+            if (!latest.exists() || latest.data().groupId !== groupId || latest.data().status !== 'pending') throw new Error('申請已處理或不屬於目前群組。');
+            if (actionStatus === 'approved') {
+                if (!accountId) throw new Error('申請缺少帳號 ID。');
+                if (!existing) transaction.set(userRef, {
+                    groupId, accountId, name: targetUserName, role: 'member',
+                    menus: systemMenuOptions.filter(menu => menu.isDefault).map(menu => menu.id),
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUserName)}&background=random`
+                });
+                transaction.update(group.ref, { members: [...new Set([...group.members, accountId])] });
+            }
+            transaction.update(requestRef, { status: actionStatus, processedTime: serverTimestamp() });
+        });
+        await logAction('系統操作', `審核${actionText}：成員 ${targetUserName} 的入群申請`);
 
         alert(`已成功${actionText}該申請！`);
         fetchPendingRequests();
         loadUsersFromFirebase();
     } catch (error) {
         console.error("審核處理失敗:", error);
-        alert("處理失敗，請檢查網路連線。");
+        alert("處理失敗：" + error.message);
     }
 };
 
@@ -474,30 +496,33 @@ async function setMemberPermission(gameType, allow) {
 // 人員管理與系統 Logs 邏輯
 // ==========================================
 async function loadUsersFromFirebase() {
+    const version = ++memberListVersion;
     try {
-        const q = query(collection(db, "users"), where("groupId", "==", groupId));
-        const querySnapshot = await getDocs(q);
-        
-        allUsers = [];
+        const users = await loadGameGroupMembers(groupId, currentUser.accountId, { includeDocumentIds: true });
+        if (version !== memberListVersion) return;
+        allUsers = users;
         const filterSelect = document.getElementById('userFilter');
+        const selected = filterSelect.value;
         filterSelect.innerHTML = '<option value="all">全部人員</option>';
-
-        querySnapshot.forEach(docSnap => {
-            const uData = docSnap.data();
-            if(uData.role !== 'removed') {
-                allUsers.push({ docId: docSnap.id, ...uData });
-                const opt = document.createElement('option');
-                opt.value = uData.name;
-                opt.innerText = uData.name;
-                filterSelect.appendChild(opt);
-            }
+        allUsers.forEach(user => {
+            const opt = document.createElement('option'); opt.value = user.name; opt.textContent = user.name;
+            filterSelect.appendChild(opt);
         });
-
+        if (allUsers.some(user => user.name === selected)) filterSelect.value = selected;
         renderUserList();
     } catch (error) {
-        console.error("載入成員失敗：", error);
-        document.getElementById('userListContainer').innerHTML = '<div style="text-align:center; color:#e53935;">載入成員失敗</div>';
+        if (version !== memberListVersion) return;
+        allUsers = [];
+        console.error('載入成員失敗：', error);
+        document.getElementById('userListContainer').textContent = '載入成員失敗，請確認目前群組或稍後重試。';
     }
+}
+
+async function readManagedGroup(transaction) {
+    const ref = doc(db, 'groups', groupId);
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists() || !(snapshot.data().members || []).includes(currentUser.accountId)) throw new Error('你已不在目前群組。');
+    return { ref, members: snapshot.data().members || [] };
 }
 
 function renderUserList() {
@@ -521,6 +546,7 @@ function renderUserList() {
 
         const div = document.createElement('div');
         div.className = 'user-reset-item';
+        div.dataset.accountId = user.accountId;
         div.innerHTML = `
             <div class="user-info">
                 <img class="user-avatar" src="${user.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${user.name}'">
@@ -531,10 +557,12 @@ function renderUserList() {
                 </div>
             </div>
             <div class="action-buttons">
-                <button class="btn-edit" onclick="openEditModal('${user.docId}')">編輯</button>
-                <button class="btn-remove" onclick="removeUser('${user.docId}', '${user.name}')">退出</button>
+                <button class="btn-edit">編輯</button>
+                <button class="btn-remove">退出</button>
             </div>
         `;
+        div.querySelector('.btn-edit').onclick = () => window.openEditModal(user.docId);
+        div.querySelector('.btn-remove').onclick = () => window.removeUser(user.docId, user.name);
         container.appendChild(div);
     });
 }
@@ -571,7 +599,14 @@ async function addNewUser() {
             avatar: `https://ui-avatars.com/api/?name=${nameInput}&background=random`
         };
 
-        await addDoc(collection(db, "users"), newUser);
+        const existing = await getDocs(query(collection(db, 'users'), where('accountId', '==', idInput)));
+        if (!existing.empty) throw new Error('此帳號已存在，請使用邀請碼讓成員加入，避免建立重複帳號。');
+        const userRef = doc(collection(db, 'users'));
+        await runTransaction(db, async transaction => {
+            const group = await readManagedGroup(transaction);
+            transaction.set(userRef, newUser);
+            transaction.update(group.ref, { members: [...new Set([...group.members, idInput])] });
+        });
         await logAction('系統操作', `新增了成員：${nameInput} (${idInput})`);
         
         alert(`成功新增成員：${nameInput}！`);
@@ -587,7 +622,7 @@ async function addNewUser() {
 
         await loadUsersFromFirebase();
     } catch (error) {
-        alert("新增成員失敗，請檢視連線。");
+        alert("新增成員失敗：" + error.message);
     } finally {
         document.getElementById('btnAddUser').disabled = false;
         document.getElementById('btnAddUser').innerText = "確認新增成員";
@@ -600,7 +635,7 @@ window.openEditModal = function(docId) {
 
     document.getElementById('editDocId').value = user.docId;
     document.getElementById('editName').value = user.name;
-    document.getElementById('editPin').value = user.pin;
+    document.getElementById('editPin').value = user.pin || user.password || '';
     document.getElementById('editEmail').value = user.email || '';
     document.getElementById('editRole').value = user.role;
     
@@ -634,18 +669,25 @@ async function saveEditUser() {
     const roleInput = document.getElementById('editRole').value;
     const selectedMenus = getCheckedMenus('editMenusContainer');
 
-    if (!idInput || !nameInput || !/^\d{4}$/.test(pinInput)) return alert("欄位或密碼格式錯誤！");
+    const targetUser = allUsers.find(user => user.docId === docId);
+    if (!targetUser) return alert('成員名單已變更，請重新開啟編輯。');
+    const originalPin = targetUser.pin || targetUser.password || '';
+    if (!idInput || !nameInput || (!/^\d{4}$/.test(pinInput) && pinInput !== originalPin)) return alert("欄位或密碼格式錯誤！");
     
     if (allUsers.some(u => u.accountId === idInput && u.docId !== docId)) return alert("此「帳號 ID」已與其他成員重複！");
-    if (allUsers.some(u => u.name === nameInput && u.docId !== docId)) return alert("家族內「稱呼」不可重複！");
+    if (nameInput !== targetUser.name && allUsers.some(u => u.name === nameInput && u.docId !== docId)) return alert("家族內「稱呼」不可重複！");
 
     try {
-        await updateDoc(doc(db, "users", docId), {
-            accountId: idInput, name: nameInput, pin: pinInput,
-            email: emailInput || null, role: roleInput, menus: selectedMenus
+        await runTransaction(db, async transaction => {
+            const group = await readManagedGroup(transaction);
+            if (!group.members.includes(targetUser.accountId)) throw new Error('此成員已離開目前群組。');
+            transaction.update(doc(db, 'users', docId), {
+                accountId: idInput, name: nameInput, pin: pinInput,
+                email: emailInput || null, role: roleInput, menus: selectedMenus
+            });
         });
 
-        if (currentUser && currentUser.name === allUsers.find(u => u.docId === docId)?.name) {
+        if (currentUser && currentUser.accountId === targetUser.accountId) {
             currentUser.accountId = idInput; currentUser.name = nameInput;
             currentUser.pin = pinInput; currentUser.role = roleInput;
             currentUser.menus = selectedMenus;
@@ -664,25 +706,19 @@ async function saveEditUser() {
 }
 
 window.removeUser = async function(docId, targetName) {
-    if (targetName === currentUser.name) {
-        return alert("為保護系統安全，您無法將自己退出群組！");
-    }
-
-    const confirmMsg = `⚠️ 確定要將成員【${targetName}】退出群組嗎？\n\n(註：該人員資料與歷史紀錄仍會保留，但無法再存取本群組)`;
-    if (confirm(confirmMsg)) {
-        try {
-            await updateDoc(doc(db, "users", docId), { 
-                groupId: null,
-                role: 'removed' 
-            });
-            
-            await logAction('系統操作', `已將成員退出群組：${targetName}`);
-            alert(`已成功將【${targetName}】退出群組。`);
-            await loadUsersFromFirebase(); 
-        } catch (error) {
-            alert("退出成員失敗，請檢視連線。");
-        }
-    }
+    const user = allUsers.find(member => member.docId === docId);
+    if (!user) return alert('成員名單已變更，請重新載入。');
+    if (user.accountId === currentUser.accountId) return alert('為保護系統安全，您無法將自己退出群組！');
+    if (!confirm(`確定要將成員【${user.name}】退出目前群組嗎？\n個人帳號、其他群組資格與歷史紀錄會保留。`)) return;
+    try {
+        await runTransaction(db, async transaction => {
+            const group = await readManagedGroup(transaction);
+            transaction.update(group.ref, { members: group.members.filter(id => id !== user.accountId) });
+        });
+        await logAction('系統操作', `已將成員退出群組：${user.name}`);
+        alert(`已成功將【${user.name}】退出群組。`);
+        await loadUsersFromFirebase();
+    } catch (error) { alert('退出成員失敗：' + error.message); }
 };
 
 async function logAction(actionType, details) {
