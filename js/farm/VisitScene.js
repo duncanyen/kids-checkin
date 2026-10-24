@@ -1,3 +1,5 @@
+import { GardenFeedback } from './garden-feedback.js';
+import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
 import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
 import { DragonEncounter, rollVisitEncounter } from './dragon.js';
@@ -30,6 +32,7 @@ export default class VisitScene extends Phaser.Scene {
         this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this, true);
+        this.gardenFeedback = new GardenFeedback(this);
         attachFarmAtmosphere(this, { groupId: this.targetGroupId });
 
         this.coop = addFarmCoop(this, () => this.askCleanTargetFarm());
@@ -510,23 +513,27 @@ export default class VisitScene extends Phaser.Scene {
 
         const usedSpace = getUsedSpace(this.myFarmData);
         const limit = this.myFarmData.warehouseLimit || 10;
-        const rand = Phaser.Math.Between(1, 500);
-        let foundType = null, icon = null;
-        
-        if (rand === 1) { foundType = 'earthworms'; icon = '蚯蚓'; }
-        else if (rand >= 2 && rand <= 6) { foundType = 'worms'; icon = '菜蟲'; }
-        else return;
+        const foundType = gardenFindForRoll(Phaser.Math.Between(1, GARDEN_ROLL_SIZE));
+        if (!foundType) return;
+        const feedback = this.gardenFeedback;
 
         if (usedSpace >= limit) { this.showFloatingText('我的倉庫滿了！', '#F44336', 16, cabSprite.x, cabSprite.y); return; }
         try {
-            await this.runVisitTransaction(async (t) => {
+            const caught = await this.runVisitTransaction(async (t) => {
                 const snap = await t.get(myFarmRef);
-                if (!snap.exists() || !snap.data()?.farm) return;
+                if (!snap.exists() || !snap.data()?.farm) throw new Error('農莊資料不存在。');
                 const farm = snap.data().farm;
+                if (getUsedSpace(farm) >= (farm.warehouseLimit || 10)) return false;
                 t.update(myFarmRef, { [`farm.${foundType}`]: (farm[foundType] || 0) + 1 });
+                return true;
             });
-            this.showFloatingText(`+1 ${icon}`, '#A5D6A7', 16, cabSprite.x, cabSprite.y);
-        } catch (e) { console.error(e); }
+            if (!feedback?.alive) return;
+            if (caught) feedback.show(foundType, cabSprite.x, cabSprite.y);
+            else this.showFloatingText('我的倉庫滿了！', '#F44336', 16, cabSprite.x, cabSprite.y);
+        } catch (e) {
+            console.error(e);
+            if (feedback?.alive) this.showFloatingText('未能收入倉庫，請稍後再試', '#F44336', 14, cabSprite.x, cabSprite.y);
+        }
     }
 
     async attemptSteal() {
