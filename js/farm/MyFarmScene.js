@@ -4,7 +4,7 @@ import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, setDoc, updateDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
+import { myFarmRef, CURRENT_GROUP_ID, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
 
 export default class MyFarmScene extends Phaser.Scene {
     constructor() { super({ key: 'MyFarmScene' }); }
@@ -21,7 +21,7 @@ export default class MyFarmScene extends Phaser.Scene {
         document.getElementById('playerName').innerText = playerName;
 
         addFarmBackground(this, true);
-        attachFarmAtmosphere(this, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
+        attachFarmAtmosphere(this, { groupId: CURRENT_GROUP_ID });
         
         this.coop = addFarmCoop(this, () => this.askCleanMyFarm());
 

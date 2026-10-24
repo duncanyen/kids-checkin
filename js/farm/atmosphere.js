@@ -1,24 +1,12 @@
 import { atmosphereAt, WEATHER, villageSeed } from './atmosphere-core.js';
-import { AtmosphereAudio } from './atmosphere-audio.js';
 
-const TAU = Math.PI * 2;
 function glow(graphics, x, y, radius, color, strength) {
     for (let i = 8; i >= 1; i--) graphics.fillStyle(color, strength * .035 * (9 - i)).fillCircle(x, y, radius * i / 8);
 }
-function readPreferences(key) {
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch {}
-    return { reduced: typeof saved.reduced === 'boolean' ? saved.reduced : matchMedia('(prefers-reduced-motion: reduce)').matches, sound: saved.sound === true };
-}
-
-export function attachFarmAtmosphere(scene, { groupId, accountId }) {
+export function attachFarmAtmosphere(scene, { groupId }) {
     const root = document.getElementById('farm-atmosphere');
-    if (!root) return; // Other embedded canvases need not provide the controls.
-    const key = `nexus-farm-atmosphere:${accountId}`;
-    const preferences = readPreferences(key);
-    const label = root.querySelector('[data-climate-label]'), detail = root.querySelector('[data-climate-detail]');
-    const reducedInput = root.querySelector('[data-climate-reduced]'), soundInput = root.querySelector('[data-climate-sound]');
-    const audio = new AtmosphereAudio();
+    if (!root) return; // Embedded canvases may omit the atmosphere status bar.
+    const label = root.querySelector('[data-climate-label]');
     const grade = scene.add.graphics().setDepth(-4);
     const ground = scene.add.graphics().setDepth(4);
     const weather = scene.add.graphics().setDepth(12);
@@ -36,44 +24,16 @@ export function attachFarmAtmosphere(scene, { groupId, accountId }) {
     let lastAnnouncement = '';
     root.dataset.active = 'true';
     root.dataset.groupId = groupId;
-    detail.textContent = '';
-    reducedInput.disabled = false; soundInput.disabled = false;
-    reducedInput.checked = preferences.reduced;
-    soundInput.checked = preferences.sound;
-    function persist() {
-        try { localStorage.setItem(key, JSON.stringify(preferences)); }
-        catch { detail.textContent = '瀏覽器無法保存設定，本次遊玩仍會套用。'; }
-    }
-    const reduceChanged = () => { preferences.reduced = reducedInput.checked; persist(); lastFrame = -Infinity; };
-    const soundChanged = async () => {
-        preferences.sound = soundInput.checked;
-        if (preferences.sound) {
-            try { await audio.enable(); }
-            catch (error) { preferences.sound = false; soundInput.checked = false; detail.textContent = error.message || '無法開啟環境音，請再試一次。'; }
-        }
-        if (stopped) { audio.destroy(); return; }
-        persist(); audio.update(state, preferences.sound && !document.hidden);
-    };
-    // A stored preference never bypasses the browser's user-gesture policy.
-    const unlockAudio = () => {
-        if (preferences.sound && !stopped) audio.enable().then(() => {
-            if (stopped) audio.destroy(); else audio.update(state, !document.hidden && preferences.sound);
-        }).catch(() => { detail.textContent = '點選環境音開關以啟用聲音。'; });
-    };
-    reducedInput.addEventListener('change', reduceChanged);
-    soundInput.addEventListener('change', soundChanged);
-    document.addEventListener('pointerdown', unlockAudio, { once: true });
     function refresh() {
         lastClock = -Infinity; lastFrame = -Infinity;
-        if (document.hidden) audio.update(state, false);
-        else tick();
+        if (!document.hidden) tick();
     }
     document.addEventListener('visibilitychange', refresh);
     window.addEventListener('pageshow', refresh);
     function tick() {
         if (stopped || document.hidden) return;
         const now = Date.now();
-        if (now >= lastFrame && now - lastFrame < (preferences.reduced ? 1000 : 33)) return;
+        if (now >= lastFrame && now - lastFrame < 33) return;
         lastFrame = now;
         if (now - lastClock >= 1000 || now < lastClock) {
             lastClock = now;
@@ -84,9 +44,8 @@ export function attachFarmAtmosphere(scene, { groupId, accountId }) {
             root.dataset.weather = state.weather; root.dataset.phase = state.phase;
             const next = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(state.nextWeatherAt);
             root.querySelector('[data-climate-clock]').textContent = `台灣時間 ${state.time} · 下次天氣判定 ${next}`;
-            audio.update(state, preferences.sound);
         }
-        const t = preferences.reduced ? 0 : now / 1000;
+        const t = now / 1000;
         const { rain, mist, cloudy, clear } = state.weights;
         grade.clear(); ground.clear(); weather.clear(); lights.clear(); firelight.clear();
         grade.fillStyle((state.color[0] << 16) | (state.color[1] << 8) | state.color[2], state.shade).fillRect(0, 0, width, height);
@@ -104,31 +63,29 @@ export function attachFarmAtmosphere(scene, { groupId, accountId }) {
             ground.fillStyle(0xe0e8da, (mist * .08 + (state.phase === '晨光' ? .018 : 0)));
             ground.fillEllipse((side ? width : 0) + Math.sin(t / 18 + i) * 14, 230 + i * 160, 100 + i * 15, 70);
         }
-        if (!preferences.reduced) {
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                const x = ((p.x * width + t * 20 * p.speed) % (width + 30)) - 15;
-                const y = 190 + ((p.y * height + t * 190 * p.speed) % (height - 190));
-                // Rain is lighter over the hen clearing and the coop entrance.
-                const center = x > width * .18 && x < width * .82 && y < height * .72;
-                weather.lineStyle(1, 0xd6eef3, rain * (center ? .13 : .32));
-                weather.lineBetween(x, y, x - 2, y + 9);
-                if (i < 8 && rain > .001) {
-                    const wave = ((t * .65 + p.phase) % 1);
-                    ground.lineStyle(1, 0xd7e8d8, rain * (1 - wave) * .22);
-                    ground.strokeEllipse(p.x < .5 ? 20 + p.x * 50 : width - 40 + p.x * 25, 330 + p.y * 430, 3 + wave * 14, 1 + wave * 5);
-                }
-                if (i < 7) {
-                    const sideX = i % 2 ? width - 24 - p.x * 25 : 15 + p.x * 25;
-                    const firefly = clear * state.night * (.5 + .5 * Math.sin(t * 1.2 + p.phase));
-                    glow(lights, sideX + Math.sin(t / 4 + i) * 9, 360 + p.y * 340 + Math.cos(t / 3 + i) * 6, 7, 0xf2ef99, firefly);
-                    lights.fillStyle(0xfff1ac, firefly * .8).fillCircle(sideX + Math.sin(t / 4 + i) * 9, 360 + p.y * 340 + Math.cos(t / 3 + i) * 6, 1);
-                    const leafAlpha = clear * (1 - state.night) * .35;
-                    ground.fillStyle(0xa6b956, leafAlpha).fillEllipse(sideX + Math.sin(t / 6 + i) * 12, 180 + ((p.y * 600 + t * 8) % 600), 4, 2);
-                }
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            const x = ((p.x * width + t * 20 * p.speed) % (width + 30)) - 15;
+            const y = 190 + ((p.y * height + t * 190 * p.speed) % (height - 190));
+            // Rain is lighter over the hen clearing and the coop entrance.
+            const center = x > width * .18 && x < width * .82 && y < height * .72;
+            weather.lineStyle(1, 0xd6eef3, rain * (center ? .13 : .32));
+            weather.lineBetween(x, y, x - 2, y + 9);
+            if (i < 8 && rain > .001) {
+                const wave = ((t * .65 + p.phase) % 1);
+                ground.lineStyle(1, 0xd7e8d8, rain * (1 - wave) * .22);
+                ground.strokeEllipse(p.x < .5 ? 20 + p.x * 50 : width - 40 + p.x * 25, 330 + p.y * 430, 3 + wave * 14, 1 + wave * 5);
+            }
+            if (i < 7) {
+                const sideX = i % 2 ? width - 24 - p.x * 25 : 15 + p.x * 25;
+                const firefly = clear * state.night * (.5 + .5 * Math.sin(t * 1.2 + p.phase));
+                glow(lights, sideX + Math.sin(t / 4 + i) * 9, 360 + p.y * 340 + Math.cos(t / 3 + i) * 6, 7, 0xf2ef99, firefly);
+                lights.fillStyle(0xfff1ac, firefly * .8).fillCircle(sideX + Math.sin(t / 4 + i) * 9, 360 + p.y * 340 + Math.cos(t / 3 + i) * 6, 1);
+                const leafAlpha = clear * (1 - state.night) * .35;
+                ground.fillStyle(0xa6b956, leafAlpha).fillEllipse(sideX + Math.sin(t / 6 + i) * 12, 180 + ((p.y * 600 + t * 8) % 600), 4, 2);
             }
         }
-        const warmth = state.night * (preferences.reduced ? 1 : .96 + Math.sin(t * 2) * .04);
+        const warmth = state.night * (.96 + Math.sin(t * 2) * .04);
         // Positions refer to the existing 720×1280 painted map.
         for (const [x, y, radius] of [[430, 345, 34], [187, 316, 28], [456, 145, 25], [166, 923, 28], [175, 889, 23]]) {
             const p = point(x, y); glow(lights, p.x, p.y, radius * scale, 0xffc86d, warmth);
@@ -139,19 +96,15 @@ export function attachFarmAtmosphere(scene, { groupId, accountId }) {
             glow(firelight, scene.dragon.x + 45, scene.dragon.y - 18, 72, 0xff982f, warmth * (scene.dragonEncounter?.phase === 'fire' ? 1 : .35));
         }
     }
-    scene.farmAtmosphere = { groupId, preferences, get state() { return state; }, refresh };
+    scene.farmAtmosphere = { groupId, get state() { return state; }, refresh };
     scene.events.on('update', tick);
     tick();
     scene.events.once('shutdown', () => {
         stopped = true;
         scene.events.off('update', tick);
         document.removeEventListener('visibilitychange', refresh); window.removeEventListener('pageshow', refresh);
-        document.removeEventListener('pointerdown', unlockAudio);
-        reducedInput.removeEventListener('change', reduceChanged); soundInput.removeEventListener('change', soundChanged);
-        audio.destroy();
         [grade, ground, weather, lights, firelight].forEach(layer => layer.destroy());
         root.dataset.active = 'false'; delete root.dataset.groupId;
-        reducedInput.disabled = true; soundInput.disabled = true;
         label.textContent = '🌿 村落氣候'; root.querySelector('[data-climate-clock]').textContent = '進入農莊後顯示當地氣候';
         scene.farmAtmosphere = null;
     });

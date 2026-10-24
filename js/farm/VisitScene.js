@@ -30,7 +30,7 @@ export default class VisitScene extends Phaser.Scene {
         this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this, true);
-        attachFarmAtmosphere(this, { groupId: this.targetGroupId, accountId: CURRENT_ACCOUNT_ID });
+        attachFarmAtmosphere(this, { groupId: this.targetGroupId });
 
         this.coop = addFarmCoop(this, () => this.askCleanTargetFarm());
 

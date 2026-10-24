@@ -23,11 +23,18 @@ const fs=require('node:fs');
  export const runTransaction=async()=>{window.__transactionCount=(window.__transactionCount||0)+1;return false;};
  `}));
  await p.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','window.__farmGame =')});});
- await p.addInitScript(()=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'render-test',groupId:'render-test',name:'Test'})));
+ await p.emulateMedia({reducedMotion:'reduce'});
+ await p.addInitScript(()=>{
+  sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'render-test',groupId:'render-test',name:'Test'}));
+  localStorage.setItem('nexus-farm-atmosphere:render-test',JSON.stringify({reduced:true,sound:true}));
+ });
+ let environmentAudioRequests=0;
+ await p.route('**/js/farm/atmosphere-audio.js',r=>{environmentAudioRequests++;return r.abort();});
  await p.goto((process.env.FARM_BASE_URL || 'http://127.0.0.1:8000') + '/farmgame.html');
  await p.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.hensGroup?.length===2);
 
  const checks=[];
+ if(await p.locator('#farm-atmosphere input, #farm-atmosphere details, #farm-atmosphere button').count())throw Error('Player atmosphere controls remain');
  const initialListeners=await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').events.listenerCount('update'));
  await p.clock.setFixedTime(new Date('2026-10-24T12:00:00+08:00'));
  await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmAtmosphere.refresh());
@@ -47,22 +54,18 @@ const fs=require('node:fs');
   if(kind==='rain'){
    const shelter=await p.evaluate(async()=>{const {getHenWalkArea,getHenWanderArea}=await import('/js/farm/scenery.js');const s=window.__farmGame.scene.getScene('MyFarmScene');return getHenWanderArea(s).bottom<getHenWalkArea(s).bottom;});
    if(!shelter)throw Error('Rain did not bias hens toward the coop clearing');
+   const before=await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').children.list.find(o=>o.depth===12&&o.commandBuffer)?.commandBuffer.join(','));
+   await p.clock.setFixedTime(new Date(timestamp+2000));
+   await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmAtmosphere.refresh());
+   const after=await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').children.list.find(o=>o.depth===12&&o.commandBuffer)?.commandBuffer.join(','));
+   if(!before||before===after)throw Error('Built-in rain animation stopped or old preferences disabled effects');
   }
  }
  await p.clock.setFixedTime(new Date('2026-10-24T22:00:00+08:00'));
  await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmAtmosphere.refresh());
  if(await climate.getAttribute('data-phase')!=='夜晚')throw Error('Taiwan night not applied');
  await p.screenshot({path:'/tmp/farm-atmosphere-night.png',fullPage:true});
- await climate.locator('summary').click();
- await climate.locator('[data-climate-reduced]').check();
- if(!await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmAtmosphere.preferences.reduced))throw Error('Reduced effects not applied');
- await climate.locator('[data-climate-sound]').check();
- if(!await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmAtmosphere.preferences.sound))throw Error('Audio preference not applied');
- await climate.locator('[data-climate-sound]').uncheck();
- const stored=await p.evaluate(()=>JSON.parse(localStorage.getItem('nexus-farm-atmosphere:render-test')));
- if(!stored.reduced||stored.sound)throw Error('Preferences not persisted');
- checks.push('Taiwan day/night, all four weather types, reduced effects, opt-in audio, preference persistence');
- await climate.locator('summary').click();
+ checks.push('Taiwan day/night, all four weather types, built-in rain animation ignores old preferences, no player controls or environment audio');
  // Lighting and weather never intercept existing coop/plant hit zones.
  await p.evaluate(()=>{window.__farmGame.scene.getScene('MyFarmScene').farmData.cleanliness=20;});
  const box=await p.locator('canvas').boundingBox();
@@ -74,7 +77,7 @@ const fs=require('node:fs');
  if(await climate.getAttribute('data-active')!=='false')throw Error('Climate not cleaned up on shutdown');
  await p.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('MyFarmScene'));
  await p.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene')?.farmAtmosphere);
- if(!await climate.locator('[data-climate-reduced]').isChecked())throw Error('Preference lost on scene restart');
+ if(await p.locator('#farm-atmosphere input').count())throw Error('Controls returned after scene restart');
  const listeners=await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').events.listenerCount('update'));
  if(listeners!==initialListeners)throw Error('Duplicate update listener after scene restart');
  await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('VisitScene',{targetAccountId:'neighbor-1',targetName:'Neighbor'}));
@@ -94,6 +97,7 @@ const fs=require('node:fs');
  await p.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow')));
  if(await climate.getAttribute('data-phase')!=='晨光')throw Error('Restored page retained stale time');
  checks.push('coop interaction, scene cleanup/restart, target-village weather, restored page clock');
+ if(environmentAudioRequests)throw Error('Removed environment audio was requested');
  if(errors.length)throw Error(JSON.stringify(errors));
  console.log(JSON.stringify({passed:true,checks,errors}));await b.close();
 })().catch(e=>{console.error(e);process.exit(1)});
