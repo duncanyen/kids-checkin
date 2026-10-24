@@ -1,65 +1,68 @@
-import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayRemove } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayRemove, arrayUnion } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
-import { currentUser, currentGroupId, allUsers, chatState } from "./chat-core.js";
+import { currentUser, currentGroupId, refreshChatGroupMembers, chatState } from "./chat-core.js";
 
 let uploadedAvatarBase64_Create = null; 
-let uploadedAvatarBase64_Edit = null; 
+let uploadedAvatarBase64_Edit = null;
+let savingMembers = false;
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openSubModal(id) { document.getElementById('roomSettingsMenu').style.display = 'none'; document.getElementById(id).style.display = 'flex'; }
 function backToSettings(id) { document.getElementById(id).style.display = 'none'; document.getElementById('roomSettingsMenu').style.display = 'flex'; }
 
-function getGroupMembers() {
-    return allUsers.filter(u => {
-        if (u.groupIds && Array.isArray(u.groupIds)) return u.groupIds.includes(currentGroupId);
-        if (u.groups && Array.isArray(u.groups)) {
-            return u.groups.some(g => (typeof g === 'object' ? g.id : g) === currentGroupId);
-        }
-        if (u.groupId) return u.groupId === currentGroupId;
-        return true;
-    });
-}
-
-function getCheckboxesHtml(containerId, selected = []) {
-    let html = '';
-    const groupUsers = getGroupMembers();
-    
-    groupUsers.forEach(u => {
-        if (u.name !== currentUser.name) {
-            html += `<label class="member-item"><input type="checkbox" value="${u.name}" ${selected.includes(u.name) ? 'checked' : ''}> <span>${u.name}</span></label>`;
-        }
-    });
-
-    if (!html) {
-        html = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding:10px 0;">群組內無其他成員可邀請</div>';
+function renderMemberChoices(containerId, users, emptyMessage) {
+    const container = document.getElementById(containerId);
+    container.replaceChildren();
+    for (const user of users) {
+        const label = document.createElement('label'); label.className = 'member-item';
+        const input = document.createElement('input'); input.type = 'checkbox'; input.value = user.accountId;
+        const name = document.createElement('span'); name.textContent = user.name;
+        label.append(input, name); container.appendChild(label);
     }
-
-    document.getElementById(containerId).innerHTML = html;
+    if (!users.length) container.textContent = emptyMessage;
 }
 
-document.getElementById('btnOpenCreateModal').addEventListener('click', () => {
+function resolveSelectedNames(ids, users) {
+    const profiles = new Map(users.map(user => [user.accountId, user]));
+    if (ids.some(id => !profiles.has(id))) throw new Error('部分成員已離開目前群組，請重新選擇。');
+    // Keep the existing room participant name format for chat/read/unread compatibility.
+    return [...new Set(ids)].map(id => profiles.get(id).name);
+}
+
+document.getElementById('btnOpenCreateModal').addEventListener('click', async () => {
     document.getElementById('createGroupName').value = ''; uploadedAvatarBase64_Create = null;
     document.getElementById('createAvatarPreview').src = 'https://ui-avatars.com/api/?name=G&background=10b981&color=fff';
-    getCheckboxesHtml('createMemberList', []);
+    const button = document.getElementById('btnConfirmCreate'); button.disabled = true;
+    const container = document.getElementById('createMemberList'); container.textContent = '載入目前群組成員中…';
     document.getElementById('createGroupModal').style.display = 'flex';
+    try {
+        const users = await refreshChatGroupMembers();
+        renderMemberChoices('createMemberList', users, '群組內無其他成員可邀請');
+        button.disabled = false;
+    } catch (error) { container.textContent = '無法載入成員：' + error.message; }
 });
 
 document.getElementById('btnConfirmCreate').addEventListener('click', async () => {
+    if (savingMembers) return;
     const name = document.getElementById('createGroupName').value.trim(); if (!name) return alert('請輸入群組名稱！');
-    const checkboxes = document.querySelectorAll('#createMemberList input[type="checkbox"]:checked');
-    const participants = [currentUser.name, ...Array.from(checkboxes).map(cb => cb.value)];
+    const ids = Array.from(document.querySelectorAll('#createMemberList input:checked')).map(cb => cb.value);
+    const button = document.getElementById('btnConfirmCreate');
+    savingMembers = true; button.disabled = true;
     try {
-        await addDoc(collection(db, "rooms"), { 
-            groupId: currentGroupId, 
-            name, 
-            avatar: uploadedAvatarBase64_Create || '', 
-            participants, 
-            creator: currentUser.name, 
-            lastMessage: `${currentUser.name} 建立了群組`, 
-            lastMessageTime: serverTimestamp() 
+        const users = await refreshChatGroupMembers();
+        const participants = [currentUser.name, ...resolveSelectedNames(ids, users)];
+        await addDoc(collection(db, "rooms"), {
+            groupId: currentGroupId,
+            name,
+            avatar: uploadedAvatarBase64_Create || '',
+            participants,
+            creator: currentUser.name,
+            lastMessage: `${currentUser.name} 建立了群組`,
+            lastMessageTime: serverTimestamp()
         });
         closeModal('createGroupModal');
-    } catch (e) { alert("建立失敗！"); }
+    } catch (error) { alert('建立失敗：' + error.message); }
+    finally { savingMembers = false; button.disabled = false; }
 });
 
 document.getElementById('btnOpenSettingsMenu').addEventListener('click', () => {
@@ -121,28 +124,20 @@ async function kickMember(targetMember) {
     } catch (e) { alert("移除成員失敗"); }
 }
 
-function openInviteMembers() {
-    let html = '';
-    let hasCandidates = false;
-    const currentMembers = chatState.activeRoomData.participants || [];
-    const groupUsers = getGroupMembers();
-    
-    groupUsers.forEach(u => {
-        if (!currentMembers.includes(u.name)) {
-            hasCandidates = true;
-            html += `<label class="member-item"><input type="checkbox" value="${u.name}"> <span>${u.name}</span></label>`;
-        }
-    });
-
-    if (!hasCandidates) {
-        html = '<div style="color:var(--text-sub); font-size:14px; text-align:center; padding:20px 0;">所有群組成員都已經在聊天室內囉！</div>';
-        document.getElementById('btnSaveInvite').style.display = 'none';
-    } else {
-        document.getElementById('btnSaveInvite').style.display = 'block';
-    }
-
-    document.getElementById('inviteMemberList').innerHTML = html;
+async function openInviteMembers() {
+    const roomId = chatState.activeRoomId;
+    const container = document.getElementById('inviteMemberList');
+    const button = document.getElementById('btnSaveInvite'); button.disabled = true; button.style.display = 'block';
+    container.textContent = '載入目前群組成員中…';
     openSubModal('inviteMembersModal');
+    try {
+        const users = await refreshChatGroupMembers();
+        if (roomId !== chatState.activeRoomId) return;
+        const currentMembers = chatState.activeRoomData.participants || [];
+        const candidates = users.filter(user => !currentMembers.includes(user.name));
+        renderMemberChoices('inviteMemberList', candidates, '所有群組成員都已經在聊天室內囉！');
+        button.style.display = candidates.length ? 'block' : 'none'; button.disabled = false;
+    } catch (error) { container.textContent = '無法載入成員：' + error.message; }
 }
 
 document.getElementById('btnSaveGroupEdit').addEventListener('click', async () => {
@@ -157,36 +152,30 @@ document.getElementById('btnSaveGroupEdit').addEventListener('click', async () =
 
 // =================【新增邀請提示功能】=================
 document.getElementById('btnSaveInvite').addEventListener('click', async () => {
-    const checkboxes = document.querySelectorAll('#inviteMemberList input[type="checkbox"]:checked');
-    const newMembers = Array.from(checkboxes).map(cb => cb.value);
-    
-    if (newMembers.length === 0) return alert('請先勾選要邀請的成員！');
-    
-    const participants = [...(chatState.activeRoomData.participants || []), ...newMembers];
+    if (savingMembers) return;
+    const ids = Array.from(document.querySelectorAll('#inviteMemberList input:checked')).map(cb => cb.value);
+    if (!ids.length) return alert('請先勾選要邀請的成員！');
+    const roomId = chatState.activeRoomId;
+    const button = document.getElementById('btnSaveInvite');
+    savingMembers = true; button.disabled = true;
     try {
-        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants });
-
-        // 幫每一位新成員發送系統提示訊息
+        const users = await refreshChatGroupMembers();
+        if (!roomId || roomId !== chatState.activeRoomId || chatState.activeRoomData?.groupId !== currentGroupId) throw new Error('聊天室已變更，請重新開啟邀請。');
+        const newMembers = resolveSelectedNames(ids, users).filter(name => !(chatState.activeRoomData.participants || []).includes(name));
+        if (!newMembers.length) return backToSettings('inviteMembersModal');
+        await updateDoc(doc(db, "rooms", roomId), { participants: arrayUnion(...newMembers) });
         for (const member of newMembers) {
-            const systemMsgText = `${member} 加入聊天室`;
-            await addDoc(collection(db, "messages"), { 
-                groupId: currentGroupId, 
-                roomId: chatState.activeRoomId, 
-                sender: "系統", 
-                isSystem: true,
-                text: systemMsgText, 
-                timestamp: serverTimestamp() 
+            await addDoc(collection(db, "messages"), {
+                groupId: currentGroupId, roomId, sender: '系統', isSystem: true,
+                text: `${member} 加入聊天室`, timestamp: serverTimestamp()
             });
         }
-        
-        // 更新聊天室最新對話
-        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { 
-            lastMessage: `${newMembers.join(', ')} 加入聊天室`, 
-            lastMessageTime: serverTimestamp() 
+        await updateDoc(doc(db, "rooms", roomId), {
+            lastMessage: `${newMembers.join(', ')} 加入聊天室`, lastMessageTime: serverTimestamp()
         });
-
         backToSettings('inviteMembersModal');
-    } catch (e) { alert("邀請成員失敗"); }
+    } catch (error) { alert('邀請成員失敗：' + error.message); }
+    finally { savingMembers = false; button.disabled = false; }
 });
 
 async function leaveGroup() {

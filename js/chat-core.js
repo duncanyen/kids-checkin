@@ -1,3 +1,5 @@
+import { loadGameGroupMembers } from './game-members.js';
+import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { db } from './firebase-config.js'; 
 import { 
     collection, addDoc, getDocs, query, where, orderBy, limit, 
@@ -7,9 +9,15 @@ import {
 // --- 共用全域變數 ---
 export const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 export const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-if (!currentUser) { alert('請先登入！'); window.location.href = 'index.html'; }
 
-export const currentGroupId = localStorage.getItem('lastGroupId') || 'default_family';
+
+export const currentGroupId = getSelectedGameGroupId(currentUser);
+if (!currentUser?.accountId || !currentGroupId) {
+    alert('請先登入並選擇群組，再進入聊天室。');
+    window.location.replace('index.html');
+    throw new Error('缺少聊天室帳號或群組');
+}
+watchGameContext({ accountId: currentUser.accountId, groupId: currentGroupId });
 export let allUsers = [];
 
 export const chatState = {
@@ -28,44 +36,18 @@ let selectedMsgForAction = null;
 let isFirstLoad = true; 
 window._isChatJustLoaded = false; 
 
-// --- 初始化執行 ---
-fetchFamilyUsers();
-listenToRooms();
-
-// --- 讀取量優化：users 清單快取 ---
-// 升級快取版號為 v2，強迫載入一次最新包含群組資訊的資料
-const USERS_CACHE_KEY = 'nexus_users_cache_v2';
-const USERS_CACHE_TTL = 10 * 60 * 1000;
-
-async function fetchFamilyUsers() {
-    try {
-        const cached = JSON.parse(sessionStorage.getItem(USERS_CACHE_KEY) || 'null');
-        if (cached && Array.isArray(cached.users) && cached.users.length > 0 && (Date.now() - cached.ts) < USERS_CACHE_TTL) {
-            allUsers = cached.users;
-            return;
-        }
-    } catch (e) { /* 快取壞掉就忽略，直接讀取 */ }
-
-    try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        allUsers = [];
-        querySnapshot.forEach(docSnap => {
-            const uData = docSnap.data();
-            // 修正：除了 name, avatar，也要把群組資訊存起來，供 chat-rooms 過濾使用
-            if (uData.name !== currentUser.name) {
-                allUsers.push({ 
-                    name: uData.name, 
-                    avatar: uData.avatar,
-                    groupId: uData.groupId,
-                    groupIds: uData.groupIds,
-                    groups: uData.groups
-                });
-            }
-        });
-        sessionStorage.setItem(USERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), users: allUsers }));
-    } catch (error) {
-        console.error("讀取使用者失敗:", error);
+// groups.members is authoritative. Do not reuse the former global user cache.
+export async function refreshChatGroupMembers() {
+    const members = await loadGameGroupMembers(currentGroupId, currentUser.accountId);
+    let latestUser;
+    try { latestUser = JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null'); } catch {}
+    if (getSelectedGameGroupId(latestUser) !== currentGroupId || latestUser?.accountId !== currentUser.accountId) {
+        throw new Error('帳號或群組已切換，請重新進入聊天室。');
     }
+    if (!members.some(member => member.accountId === currentUser.accountId)) throw new Error('找不到有效的群組成員資料，請重新登入。');
+    allUsers = members.filter(member => member.accountId !== currentUser.accountId);
+    if (!roomsUnsubscribe) listenToRooms();
+    return allUsers;
 }
 
 function listenToRooms() {
@@ -512,3 +494,8 @@ window.chatCore = {
     openPhotoViewer, closePhotoViewer, lockScrollPosition, insertMention, 
     openMsgAction, closeMsgActionModal, triggerReply, cancelReply, triggerRetract
 };
+
+refreshChatGroupMembers().catch(error => {
+    console.error('載入目前群組成員失敗', error);
+    document.getElementById('roomListContainer').textContent = '無法載入目前群組，請返回首頁確認群組或稍後重試。';
+});
