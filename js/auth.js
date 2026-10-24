@@ -87,7 +87,7 @@ window.toggleAuth = function(type) {
     }
 };
 
-window.evaluateUserGroups = async function(userObj) {
+window.evaluateUserGroups = async function(userObj, { forceSelection = false } = {}) {
     document.getElementById('loadingView').style.display = 'flex';
     try {
         // 【核心修改】：改以 userObj.accountId 查詢群組 members 陣列
@@ -99,14 +99,16 @@ window.evaluateUserGroups = async function(userObj) {
         document.getElementById('loadingView').style.display = 'none';
         
         const pendingCode = localStorage.getItem('pendingInviteCode');
-        if (pendingCode) {
+        if (pendingCode && !forceSelection) {
             window.showActionSection();
             window.goToActionStep('obStepJoin');
             document.getElementById('obInviteCode').value = pendingCode;
             return;
         }
 
-        if (userGroups.length === 0) {
+        if (forceSelection) {
+            window.showGroupSelectionList(userGroups);
+        } else if (userGroups.length === 0) {
             window.showActionSection();
         } else if (userGroups.length === 1) {
             window.enterGroup(userGroups[0]);
@@ -116,6 +118,7 @@ window.evaluateUserGroups = async function(userObj) {
     } catch(e) {
         console.error(e);
         document.getElementById('loadingView').style.display = 'none';
+        if (forceSelection) alert("無法載入群組，請檢查網路後重試。");
     }
 };
 

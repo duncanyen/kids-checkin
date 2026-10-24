@@ -74,7 +74,7 @@
         <div class="auth-card">
             <div id="obStepAction" class="auth-form-container active">
                 <div class="auth-title">歡迎來到 Nexus 🎉</div>
-                <div class="auth-sub">目前您尚未加入任何群組，接下來您想要...</div>
+                <div class="auth-sub">建立一個新群組，或使用邀請碼加入其他群組。</div>
                 <button class="btn-full" style="margin-bottom: 16px; padding: 20px;" onclick="goToActionStep('obStepCreate')">建立全新的群組</button>
                 <button class="btn-full btn-outline" style="padding: 20px;" onclick="goToActionStep('obStepJoin')">輸入邀請碼加入現有群組</button>
             </div>
@@ -113,16 +113,18 @@
                 <button class="btn-full" onclick="processJoinGroup()">確認加入</button>
                 <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="goToActionStep('obStepAction')">返回</button>
             </div>
+            <button id="backToGroupSelection" hidden class="btn-full btn-outline" style="margin-top: 16px;" onclick="returnToGroupSelection()">返回群組列表</button>
         </div>
     </div>
 
     <!-- 3. 群組選擇列表 -->
     <div id="groupSelectionSection" class="view-section">
         <img src="Nexus.png" alt="Nexus Logo" style="width: 80px; border-radius: 20px; margin-bottom: 16px; box-shadow: var(--shadow-soft);">
-        <h2 style="margin-top: 0; font-size: 24px; font-weight: 900;">選擇要進入的家</h2>
-        <p style="color: var(--text-sub); margin-bottom: 30px;">點選群組直接進入，或新增群組</p>
+        <h2 style="margin-top: 0; font-size: 24px; font-weight: 900;">切換群組</h2>
+        <p style="color: var(--text-sub); margin-bottom: 30px;">選擇已參與的群組，或建立、加入新群組</p>
         <div class="group-grid" id="groupListContainer"></div>
         <button class="btn-full btn-outline" style="max-width: 300px; padding: 14px;" onclick="showActionSection()">➕ 建立或加入新群組</button>
+        <button id="returnToCurrentGroup" hidden class="btn-full btn-outline" style="max-width: 300px; margin-top: 12px;" onclick="showDashboard()">返回目前群組</button>
     </div>
 
     <!-- Modal 彈窗區域 -->

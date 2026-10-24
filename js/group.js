@@ -1,7 +1,12 @@
 import { db } from "./firebase-config.js";
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
+let hasGroupSelection = false;
+let groupMutationBusy = false;
+
 window.showActionSection = function() {
+    window.stopDashboardListeners?.();
+    document.getElementById('backToGroupSelection').hidden = !hasGroupSelection;
     window.hideAllSections();
     document.getElementById('actionSection').classList.add('active');
     window.goToActionStep('obStepAction');
@@ -12,6 +17,12 @@ window.goToActionStep = function(stepId) {
     document.getElementById(stepId).classList.add('active');
 };
 
+window.returnToGroupSelection = async function() {
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || 'null');
+    if (!user?.accountId) { window.showAuthSection(); return; }
+    await window.evaluateUserGroups(user, { forceSelection: true });
+};
+
 window.selectPresetIcon = function(el, iconChar) {
     document.querySelectorAll('.preset-icon').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
@@ -19,10 +30,13 @@ window.selectPresetIcon = function(el, iconChar) {
 };
 
 window.processCreateGroup = async function() {
+    if (groupMutationBusy) return;
     const groupName = document.getElementById('obGroupName').value.trim();
     if (!groupName) { alert("請為群組取個名稱！"); return; }
     
-    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || 'null');
+    if (!user?.accountId || !user.docId) { alert('請重新登入後再操作。'); return; }
+    groupMutationBusy = true;
     document.getElementById('loadingView').style.display = 'flex';
     
     try {
@@ -43,18 +57,24 @@ window.processCreateGroup = async function() {
         const newGroup = { id: groupRef.id, ...newGroupData };
         
         document.getElementById('loadingView').style.display = 'none';
-        window.enterGroup(newGroup); 
+        await window.enterGroup(newGroup);
     } catch(e) {
-        alert("群組建立失敗。");
+        console.error("群組建立失敗", e);
+        alert("群組建立失敗，請稍後再試。");
         document.getElementById('loadingView').style.display = 'none';
+    } finally {
+        groupMutationBusy = false;
     }
 };
 
 window.processJoinGroup = async function() {
+    if (groupMutationBusy) return;
     const code = document.getElementById('obInviteCode').value.trim().toUpperCase();
     if (!code) { alert("請輸入邀請碼！"); return; }
     
-    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || 'null');
+    if (!user?.accountId || !user.docId) { alert('請重新登入後再操作。'); return; }
+    groupMutationBusy = true;
     document.getElementById('loadingView').style.display = 'flex';
     
     try {
@@ -82,11 +102,13 @@ window.processJoinGroup = async function() {
         
         const joinedGroup = { id: groupDoc.id, ...groupData, members };
         document.getElementById('loadingView').style.display = 'none';
-        window.enterGroup(joinedGroup);
+        await window.enterGroup(joinedGroup);
         
     } catch(e) {
         alert("加入群組失敗，請檢查網路。");
         document.getElementById('loadingView').style.display = 'none';
+    } finally {
+        groupMutationBusy = false;
     }
 };
 
@@ -98,6 +120,9 @@ window.generateInviteCode = function() {
 };
 
 window.showGroupSelectionList = function(userGroups) {
+    hasGroupSelection = true;
+    window.stopDashboardListeners?.();
+    document.getElementById('returnToCurrentGroup').hidden = !userGroups.some(group => group.id === window.currentGroup?.id);
     window.hideAllSections();
     const container = document.getElementById('groupListContainer');
     container.innerHTML = '';
@@ -107,11 +132,14 @@ window.showGroupSelectionList = function(userGroups) {
         card.className = 'group-card';
         card.onclick = () => window.enterGroup(g);
         
-        let iconHtml = `<div class="group-icon">${g.icon || '🏠'}</div>`;
-        if (g.icon && g.icon.startsWith('data:image')) {
-            iconHtml = `<img src="${g.icon}" class="group-icon-img">`;
-        }
-        card.innerHTML = `${iconHtml}<div class="group-name">${g.name}</div>`;
+        const icon = document.createElement(g.icon?.startsWith('data:image') ? 'img' : 'div');
+        icon.className = icon.tagName === 'IMG' ? 'group-icon-img' : 'group-icon';
+        if (icon.tagName === 'IMG') { icon.src = g.icon; icon.alt = ''; }
+        else icon.textContent = g.icon || '🏠';
+        const name = document.createElement('div');
+        name.className = 'group-name';
+        name.textContent = g.name;
+        card.append(icon, name);
         container.appendChild(card);
     });
     document.getElementById('groupSelectionSection').classList.add('active');
@@ -120,10 +148,11 @@ window.showGroupSelectionList = function(userGroups) {
 window.enterGroup = async function(groupObj) {
     window.currentGroup = groupObj;
     localStorage.setItem('lastGroupId', groupObj.id);
+    sessionStorage.setItem('nexus_active_group_id', groupObj.id);
     const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
     
     await window.recordLog(user.name, '系統操作', `進入了群組: ${groupObj.name}`);
-    window.showDashboard();
+    await window.showDashboard();
 };
 
 window.openInviteModal = async function() {

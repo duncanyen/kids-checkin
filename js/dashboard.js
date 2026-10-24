@@ -13,16 +13,19 @@ let cachedCalendarEvents = [];
 let calendarUIRenderInterval = null;
 
 // 切換群組的全域函數
-window.switchGroup = function() {
-    sessionStorage.removeItem('nexus_active_group_id'); 
-    window.location.reload(); 
+let switchingGroup = false;
+window.switchGroup = async function() {
+    if (switchingGroup) return;
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || 'null');
+    if (!user?.accountId) { window.showAuthSection(); return; }
+    document.getElementById('sidebar').classList.remove('active');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+    switchingGroup = true;
+    try { await window.evaluateUserGroups(user, { forceSelection: true }); }
+    finally { switchingGroup = false; }
 };
 
-window.showDashboard = async function() {
-    window.hideAllSections();
-    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
-    document.getElementById('dashboardView').style.display = 'block';
-    
+window.stopDashboardListeners = function() {
     if (groupNameUnsubscribe) { groupNameUnsubscribe(); groupNameUnsubscribe = null; }
     if (unreadUnsubscribe) { unreadUnsubscribe(); unreadUnsubscribe = null; }
     if (galleryUnsubscribe) { galleryUnsubscribe(); galleryUnsubscribe = null; }
@@ -30,6 +33,15 @@ window.showDashboard = async function() {
     if (calendarUIRenderInterval) { clearInterval(calendarUIRenderInterval); calendarUIRenderInterval = null; }
     if (todoUnsubscribe) { todoUnsubscribe(); todoUnsubscribe = null; }
     if (financeUnsubscribe) { financeUnsubscribe(); financeUnsubscribe = null; }
+
+};
+
+window.showDashboard = async function() {
+    window.hideAllSections();
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+    document.getElementById('dashboardView').style.display = 'block';
+
+    window.stopDashboardListeners();
 
     const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
     if (!window.currentGroup && savedGroupId) {
