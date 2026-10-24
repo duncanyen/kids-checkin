@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Nexus - 串聯生活的每一個節點",
+  "short_name": "Nexus",
+  "lang": "zh-TW",
+  "description": "群組生活、聊天室、待辦事項與咕咕村落",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbfbfc",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "./Nexus.png",
+      "sizes": "924x840",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
