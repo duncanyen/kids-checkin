@@ -175,3 +175,13 @@ system Chromium. Set FARM_BASE_URL if not using port 8000.
 Tests mock Firebase and never write production data. Group-isolation and dragon tests execute real
 transaction callbacks against an isolated in-memory store; older actor tests
 count transaction requests without executing their callbacks.
+
+## Gorilla boss
+
+The supplied gorilla reference was used to produce `gorilla-sheet.png` (1254×1254,
+transparent, four columns/four rows: run, right-facing punch, hit/dizzy, defeat).
+Load with `gorilla-sheet.json`, not a fixed-size spritesheet: rows and columns
+alternate 313/314 source pixels, with normalized source sizes and per-frame
+pivots to keep feet on the ground. `gorilla-fang.png` is the matching ivory fang
+loot icon. See docs/farm-gorilla.md and tests/farm-gorilla.cjs for gameplay and
+inventory validation.

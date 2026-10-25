@@ -1,3 +1,4 @@
+import { GORILLA_FANG_PRICE } from './gorilla-rules.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -63,6 +64,7 @@ export default class ShopScene extends Phaser.Scene {
         this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n${EARTHWORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'earthworms', '蚯蚓', EARTHWORM_PRICE));
         this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n${FANG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'wolfFangs', '狼牙', FANG_PRICE));
         this.addShopItem(this.sellContainer, 95, 240, 'tiger_pelt', `虎皮\n50金幣`, 0x333333, () => this.openTradeModal('sell', 'tigerPelts', '虎皮', 50));
+        this.addShopItem(this.sellContainer, 95, 340, 'gorilla_fang', `猩猩尖牙\n${GORILLA_FANG_PRICE}金幣`, 0x735038, () => this.openTradeModal('sell', 'gorillaFangs', '猩猩尖牙', GORILLA_FANG_PRICE));
         this.addShopItem(this.sellContainer, 295, 240, 'dragon_scale', `龍麟\n${DRAGON_SCALE_PRICE}金幣`, 0x633332, () => this.openTradeModal('sell', 'dragonScales', '龍麟', DRAGON_SCALE_PRICE));
     }
 

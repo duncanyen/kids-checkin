@@ -45,11 +45,11 @@ export const COOP_LV3_MAX = 20;
 // 擴充性武器與庫存系統配置
 // ==========================================
 export const WEAPONS_CONFIG = {
-    'club': { name: '木棒', damage: 1, icon: 'club' },
-    'mace': { name: '狼牙棒', damage: 10, icon: 'mace' }
+    'club': { name: '木棒', damage: 1, damageByEnemy: { gorilla: 1 }, icon: 'club' },
+    'mace': { name: '狼牙棒', damage: 10, damageByEnemy: { gorilla: 5 }, icon: 'mace' }
 };
 
-export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'dragonScales', 'medicines', 'mace'];
+export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace'];
 
 // 動態計算倉庫目前使用容量
 export const getUsedSpace = (farm) => {

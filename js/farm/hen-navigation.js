@@ -2,7 +2,7 @@ const CLEARANCE = 40; // Half a hen plus a little room around the visible body.
 const EPSILON = 1;
 
 export function getThreatZones(scene) {
-    return [scene.wolf, scene.tiger, scene.dragon]
+    return [scene.wolf, scene.tiger, scene.dragon, scene.gorilla]
         .filter(animal => animal?.active && animal.visible && animal.alpha > 0.05)
         .map(animal => {
             // Exclude the sheet's transparent margins, include the whole body.

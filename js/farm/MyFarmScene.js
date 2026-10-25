@@ -1,7 +1,9 @@
 import { GardenFeedback } from './garden-feedback.js';
 import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
-import { DragonEncounter, rollHomeDragonEncounter } from './dragon.js';
+import { GorillaEncounter } from './gorilla.js';
+import { rollHomeBossEncounter } from './gorilla-rules.js';
+import { DragonEncounter } from './dragon.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
@@ -18,6 +20,8 @@ export default class MyFarmScene extends Phaser.Scene {
         this.isHarvesting = false;
         this.dragonEncounter = null;
         this.dragon = null;
+        this.gorillaEncounter = null;
+        this.gorilla = null;
         this.nextHenAvoidanceAt = 0;
 
         document.getElementById('playerName').innerText = playerName;
@@ -56,6 +60,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
         this.events.once('shutdown', () => {
             this.dragonEncounter?.destroy();
+            this.gorillaEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
             if (this.cleanFlashTween) this.cleanFlashTween.stop();
@@ -100,7 +105,7 @@ export default class MyFarmScene extends Phaser.Scene {
                     farm: { 
                         coins: 0, inventoryEggs: 0, hens: 1, coopLevel: 1, eggsReady: 0, 
                         lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0, 
-                        wolfFangs: 0, tigerPelts: 0, dragonScales: 0, medicines: 0, cleanliness: 0, moral: 100,
+                        wolfFangs: 0, tigerPelts: 0, dragonScales: 0, gorillaFangs: 0, medicines: 0, cleanliness: 0, moral: 100,
                         equippedWeapon: 'club',
                         hensState: [{ isSick: false }] 
                     } 
@@ -335,7 +340,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     prepareToLayEgg() {
-        if (this.dragonEncounter && !this.dragonEncounter.result) return;
+        if ([this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
         this.isHenSitting = true;
         const nestX = this.coop.x;
         const area = getHenWalkArea(this);
@@ -471,8 +476,9 @@ export default class MyFarmScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (this.isHarvesting) return;
-        if (this.dragonEncounter && !this.dragonEncounter.destroyed && !this.dragonEncounter.settled) {
-            this.showFloatingText('請先擊退烈火龍並完成結算！', '#FFD54F', 16);
+        const activeBoss = [this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (activeBoss) {
+            this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;
         }
 
@@ -504,10 +510,14 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        const defended = this.dragonEncounter?.settled && this.dragonEncounter.result === 'win';
-        if (!defended && rollHomeDragonEncounter(this.farmData.coopLevel)) {
-            this.dragonEncounter?.destroy();
-            this.dragonEncounter = new DragonEncounter(this);
+        const defended = [this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
+        const encounter = defended ? null : rollHomeBossEncounter(this.farmData.coopLevel);
+        if (encounter) {
+            this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
+            this.dragonEncounter = null; this.gorillaEncounter = null;
+            this.dragon = null; this.gorilla = null;
+            if (encounter === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
+            else this.dragonEncounter = new DragonEncounter(this);
             return;
         }
 
@@ -526,9 +536,9 @@ export default class MyFarmScene extends Phaser.Scene {
                     });
                 }
             });
-            this.dragonEncounter?.destroy();
-            this.dragonEncounter = null;
-            this.dragon = null;
+            this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
+            this.dragonEncounter = null; this.gorillaEncounter = null;
+            this.dragon = null; this.gorilla = null;
             this.showFloatingText(`+${eggsToHarvest} 🥚`, '#FFD54F', 22);
         } catch (e) { console.error(e); } 
         finally { this.isHarvesting = false; }
