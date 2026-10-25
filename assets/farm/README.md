@@ -198,8 +198,13 @@ swing; no pixel-matrix mace remains. See docs/farm-weapons.md for balance and
 
 `hen-sheet.png`, `silkie-sheet.png` and `bresse-sheet.png` are transparent 1254 × 1254 atlases
 with 4 × 4 frames. The first eight frames are idle/blink/fluff/peck; the last
-eight are walking. Load their matching JSON atlas files because cells alternate
-313 and 314 pixels, normalized to 314 × 314. The charcoal silkie has a fluffy
+eight are walking. Load their matching JSON atlas files: the artwork is not
+perfectly aligned to a uniform grid. Each frame crops the complete connected
+chicken body, including feet and crest crossing a nominal grid boundary, then
+places it on a 314 × 314 virtual canvas with a common foot baseline. Never
+replace these rectangles with equally divided cells; that includes adjacent
+feet/crests as floating strips. The silkie feather-shedding pose is replaced
+with a clean idle pose so no floating feather decorations are rendered. The charcoal silkie has a fluffy
 crest and feathered feet; the white Bresse has a red comb and blue legs.
 The redesigned mother hen has creamy golden feathers, a red comb, and orange
 beak/feet. All three breeds now share the same illustrated sprite style.
@@ -208,3 +213,8 @@ They render at 64px frame width
 in both home and visited farms, with breed-specific animations and shared
 path planning. Breed egg icons use ivory and cool white/blue palettes.
 See docs/farm-poultry.md for economy, migration, production and feeding rules.
+
+`node scripts/build-poultry-atlases.cjs` regenerates only the atlas JSON from
+connected body regions (requires sharp), without editing source PNG pixels.
+`node --test tests/farm-poultry-atlas.test.cjs` checks all 48 animation frames
+for complete bodies, stable baselines, and no neighboring fragments/decorations.

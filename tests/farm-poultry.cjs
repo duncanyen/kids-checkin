@@ -71,6 +71,8 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   s.isHenSitting=false;s.hensGroup.forEach((h,i)=>{s.tweens.killTweensOf(h);h.walkTimer?.remove();h.setPosition(95+i*100,450);h.play(h.hState.breed+'_idle');});
  });
  await page.screenshot({path:'/tmp/farm-poultry-home.png'});
+ await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hensGroup.forEach(h=>{h.anims.stop();h.setFrame(11);}));
+ await page.screenshot({path:'/tmp/farm-poultry-walk-clean.png'});
  await page.evaluate(()=>{
   const f=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
   window.__farmTest.patch('self',{hensState:f.hensState.map(h=>({...h,laidAt:Date.now()-24*3600000,pausedFull:false})),readyEggs:{hen:0,silkie:0,bresse:0},eggsReady:0,cleanliness:0});

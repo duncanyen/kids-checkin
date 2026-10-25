@@ -41,10 +41,11 @@
 
 ## 美術與驗證
 
-`hen-sheet.png`、`silkie-sheet.png`、`bresse-sheet.png` 各 16 格（待機 8、走路 8），包括眨眼、啄食、理毛／擺動與踏步，三種雞現在採用一致的細緻像素插畫風格；母雞以奶油色羽毛與橘黃腳區別於布雷斯雞。JSON atlas 處理 1254px 圖片的 313／314px 分格，避免讀錯影格。倉庫預覽依影格寬度換算成 96px，避免高解析圖被舊倍率放大。本家與拜訪農場共用圖像和動畫，沿用母雞活動區及避開野獸的路徑。
+`hen-sheet.png`、`silkie-sheet.png`、`bresse-sheet.png` 各 16 格（待機 8、走路 8），包括眨眼、啄食、理毛／擺動與踏步，三種雞現在採用一致的細緻像素插畫風格；母雞以奶油色羽毛與橘黃腳區別於布雷斯雞。原圖沒有完全對齊等分格線，因此 JSON atlas 逐格框選完整連通雞身，包含跨越格線的腳與雞冠，統一放在 314px 虛擬影格並對齊腳底，避免相鄰格碎片顯示為殘影。烏骨雞飄散羽毛的那一格改用乾淨待機姿勢。倉庫預覽依影格寬度換算成 96px，避免高解析圖被舊倍率放大。本家與拜訪農場共用圖像和動畫，沿用母雞活動區及避開野獸的路徑。
 
 本機靜態伺服器預設 `http://127.0.0.1:8012`：
 
+- `node --test tests/farm-poultry-atlas.test.cjs`：檢查三品種共 48 格的完整雞身、固定腳底及排除鄰格碎片；`node scripts/build-poultry-atlases.cjs` 可重建裁切資訊，不改動 PNG。
 - `node --test tests/farm-poultry.test.mjs`：各品種時程／價格、離線上限、舊資料、混養容量、買賣、空雞舍、餵食、收取／偷蛋／敗北、生病與死亡。
 - `node tests/farm-poultry.cjs`：真實 Phaser 與隔離 Firestore，實際購買、出售、選品種餵食、單品種直接餵食、16 顆分品種收蛋、售完雞後收剩餘蛋、偷蛋與首領敗北。
 - `node tests/farm-weapons.cjs`、`node tests/farm-gorilla.cjs`：原武器與大金剛回歸。
