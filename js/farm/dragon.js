@@ -1,4 +1,4 @@
-import { bossWeaponDamage } from './gorilla-rules.js';
+import { bossWeaponDamage, rollVisitBossEncounter } from './gorilla-rules.js';
 import { readVillageAccess } from './villages.js';
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
@@ -17,7 +17,8 @@ export function registerDragonAnimations(scene) {
 
 // Roll once, after the visited farm arrives. Level 1 never rolls for a dragon.
 export function rollVisitEncounter(level, roll = Phaser.Math.Between) {
-    if ((level || 1) >= 2 && roll(1, DRAGON_CONFIG.encounterOdds) === 1) return 'dragon';
+    const boss = rollVisitBossEncounter(level, roll, DRAGON_CONFIG.encounterOdds);
+    if (boss) return boss;
     if (roll(1, 30) === 1) return 'tiger';
     if (roll(1, 10) === 1) return 'wolf';
     return null;

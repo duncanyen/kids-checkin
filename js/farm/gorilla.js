@@ -1,7 +1,7 @@
 import { BossEncounter } from './dragon.js';
 import { GORILLA_CONFIG, GORILLA_FANG_PRICE } from './gorilla-rules.js';
 import { db } from '../firebase-config.js';
-import { runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
 import { readVillageAccess } from './villages.js';
 
@@ -15,32 +15,37 @@ export function registerGorillaAnimations(scene) {
     }
 }
 
-// Self-home encounter: never mutate another player's farm or another group.
+// Rewards/coins belong to the visitor's source farm; lost eggs belong to the target coop.
 export async function settleGorillaEncounter(id, outcome, targetAccountId = CURRENT_ACCOUNT_ID, targetGroupId = CURRENT_GROUP_ID) {
     if (!['win','loss'].includes(outcome)) throw new Error('無效的戰鬥結果');
-    if (targetAccountId !== CURRENT_ACCOUNT_ID || targetGroupId !== CURRENT_GROUP_ID) throw new Error('大金剛僅出現在自己的農莊。');
+    const targetRef = doc(db, 'groups', targetGroupId, 'users', targetAccountId);
     return runTransaction(db, async transaction => {
-        await readVillageAccess(CURRENT_GROUP_ID, CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, ref => transaction.get(ref), CURRENT_ACCOUNT_ID);
+        await readVillageAccess(CURRENT_GROUP_ID, targetGroupId, CURRENT_ACCOUNT_ID, ref => transaction.get(ref), targetAccountId);
         const snapshot = await transaction.get(myFarmRef), farm = snapshot.data()?.farm;
         if (!farm) throw new Error('找不到玩家農場');
         const results = farm.gorillaResults || [];
         const previous = results.find(result => result.id === id);
         if (previous) return previous;
-        const updates = {}, result = { id, outcome };
+        const updates = {}, result = { id, outcome, targetGroupId, targetAccountId };
         if (outcome === 'win') {
             updates['farm.gorillaFangs'] = (farm.gorillaFangs || 0) + 1;
             result.overflow = getUsedSpace(farm) >= (farm.warehouseLimit || 10);
         } else {
             result.coinsLost = Math.min(GORILLA_CONFIG.coinPenalty, Math.max(0, farm.coins || 0));
             updates['farm.coins'] = Math.max(0, (farm.coins || 0) - GORILLA_CONFIG.coinPenalty);
-            updates['farm.eggsReady'] = 0;
-            if (Number.isFinite(farm.lastLayTime)) {
-                const now = Date.now(), total = Math.max(1, farm.hens || 1);
-                const healthy = (farm.hensState || []).filter(hen => !hen.isSick).length;
+            const targetSnapshot = targetRef.path === myFarmRef.path ? snapshot : await transaction.get(targetRef);
+            const target = targetSnapshot.data()?.farm;
+            if (!target) throw new Error('找不到目標雞舍');
+            const eggUpdates = { 'farm.eggsReady': 0 };
+            if (Number.isFinite(target.lastLayTime)) {
+                const now = Date.now(), total = Math.max(1, target.hens || 1);
+                const healthy = (target.hensState || []).filter(hen => !hen.isSick).length;
                 const interval = Math.floor(LAY_EGG_TIME_MS / Math.max(1, healthy || total));
-                const ticks = Math.max(0, Math.floor((now - farm.lastLayTime) / interval));
-                updates['farm.lastLayTime'] = (farm.eggsReady || 0) >= total * 6 ? now : farm.lastLayTime + ticks * interval;
+                const ticks = Math.max(0, Math.floor((now - target.lastLayTime) / interval));
+                eggUpdates['farm.lastLayTime'] = (target.eggsReady || 0) >= total * 6 ? now : target.lastLayTime + ticks * interval;
             }
+            if (targetRef.path === myFarmRef.path) Object.assign(updates, eggUpdates);
+            else transaction.update(targetRef, eggUpdates);
         }
         updates['farm.gorillaResults'] = [...results.slice(-31), result];
         transaction.update(myFarmRef, updates);

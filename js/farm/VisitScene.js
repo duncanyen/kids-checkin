@@ -1,3 +1,4 @@
+import { GorillaEncounter } from './gorilla.js';
 import { GardenFeedback } from './garden-feedback.js';
 import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
@@ -26,6 +27,8 @@ export default class VisitScene extends Phaser.Scene {
         this.hasRolledEncounter = false;
         this.dragonEncounter = null;
         this.dragon = null;
+        this.gorillaEncounter = null;
+        this.gorilla = null;
         this.targetFarmData = null;
         this.myFarmData = null; 
         this.isStealing = false; 
@@ -61,6 +64,7 @@ export default class VisitScene extends Phaser.Scene {
         this.events.once('shutdown', () => {
             this.visitToken = null;
             this.dragonEncounter?.destroy();
+            this.gorillaEncounter?.destroy();
             this.groupUnsubscribes?.forEach(unsubscribe => unsubscribe());
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
             this.registry.events.off('changedata-myFarmData', this.onMyFarmDataChanged, this);
@@ -129,7 +133,8 @@ export default class VisitScene extends Phaser.Scene {
                 if (!this.hasRolledEncounter) {
                     this.hasRolledEncounter = true;
                     const encounter = rollVisitEncounter(this.targetFarmData.coopLevel);
-                    if (encounter === 'dragon') this.spawnDragonEvent();
+                    if (encounter === 'gorilla') this.spawnGorillaEvent();
+                    else if (encounter === 'dragon') this.spawnDragonEvent();
                     else if (encounter === 'tiger') this.spawnTigerEvent();
                     else if (encounter === 'wolf') this.spawnWolfEvent();
                 }
@@ -155,8 +160,13 @@ export default class VisitScene extends Phaser.Scene {
         });
     }
 
+    spawnGorillaEvent() {
+        if ([this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
+        this.gorillaEncounter = new GorillaEncounter(this);
+    }
+
     spawnDragonEvent() {
-        if (this.dragonEncounter && !this.dragonEncounter.destroyed) return;
+        if ([this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.dragonEncounter = new DragonEncounter(this);
     }
 
@@ -538,6 +548,11 @@ export default class VisitScene extends Phaser.Scene {
 
     async attemptSteal() {
         if (this.isStealing || !this.myFarmData) return;
+        const activeBoss = [this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (activeBoss) {
+            this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
+            return;
+        }
         const safeX = this.cameras.main.centerX, safeY = this.cameras.main.centerY - 60;
         const key = villageTargetKey(this.targetGroupId, this.targetAccountId);
         const cooldown = farm => farm.villageStealCooldowns?.[key] ||

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GORILLA_CONFIG, GORILLA_FANG_PRICE, rollHomeBossEncounter, bossWeaponDamage } from '../js/farm/gorilla-rules.js';
+import { GORILLA_CONFIG, GORILLA_FANG_PRICE, rollHomeBossEncounter, rollVisitBossEncounter, bossWeaponDamage } from '../js/farm/gorilla-rules.js';
 
 test('Lv.3+ exact exclusive gorilla 1/30 and dragon 1/20; Lv.2 dragon stays 1/20',()=>{
     for(const level of [0,1])assert.equal(rollHomeBossEncounter(level,()=>{throw Error('ineligible level rolled');}),null);
@@ -19,4 +19,13 @@ test('1000 club hits, 200 mace hits, configurable future damage and encounter ti
     assert.equal(bossWeaponDamage({damage:25},'gorilla'),25);
     assert.equal(GORILLA_CONFIG.flightMs,10000);assert.equal(GORILLA_CONFIG.durationMs-GORILLA_CONFIG.flightMs,30000);
     assert.equal(GORILLA_FANG_PRICE,300);assert.equal(GORILLA_CONFIG.coinPenalty,100);
+});
+
+test('stealing from Lv.3+ farms has exact 1/30 gorilla and 1/30 dragon; lower coops never roll gorilla',()=>{
+    assert.equal(rollVisitBossEncounter(1,()=>{throw Error('ineligible boss roll');}),null);
+    for(const level of [2,3,4]) {
+        const counts={gorilla:0,dragon:0,none:0};
+        for(let n=1;n<=30;n++) counts[rollVisitBossEncounter(level,(_,max)=>{assert.equal(max,30);return n;})||'none']++;
+        assert.equal(counts.gorilla,level>=3?1:0);assert.equal(counts.dragon,1);
+    }
 });

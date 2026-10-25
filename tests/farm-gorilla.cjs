@@ -60,7 +60,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
    if(b.sprite.flipX||b.sprite.y<600||b.destination.x>=s.coop.x||b.destination.x<90)throw Error('Wrong approach route');
    await s.harvestEgg();if(s.gorillaEncounter!==b||s.farmData.eggsReady!==2)throw Error('Collection bypassed active boss');
    window.__lootBefore=s.farmData.gorillaFangs||0;
-   const hen=s.hensGroup[0];b.sprite.setPosition(hen.x+25,hen.y+20);s.avoidPredators();const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');if(!henRouteIsSafe(s,hen))throw Error('Hens cross gorilla');
+   const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');const hen=s.hensGroup[0];b.flight.pause();b.sprite.setPosition(hen.x+25,hen.y+20);s.avoidPredators();if(!henRouteIsSafe(s,hen))throw Error('Hens cross gorilla');
    for(let i=0;i<hits-1;i++)b.hit();if(b.result||b.health!==b.damage)throw Error('Early victory');
    b.hit();b.hit();b.resolve('loss');if(b.result!=='win'||b.sprite.input.enabled)throw Error('Boss not locked on win');
   },hits);
@@ -79,7 +79,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');if(s.gorillaEncounter.result!=='loss'||s.farmData.coins!==50||s.farmData.eggsReady!==0)throw Error('Timeout penalty incorrect');if(window.__farmTest.docs['groups/dragon-test/users/neighbor'].farm.eggsReady!==5)throw Error('Neighbor affected');s.time.timeScale=1;s.tweens.timeScale=1;});
  checks.push('10s run +30s rightward attack, deadline unchanged by hits, atomic own-only egg loss and -100 coins');
  await start();await patch({coins:30});await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter.resolve('loss'));await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter.settled);
- await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.gorillaEncounter;const {settleGorillaEncounter}=await import('/js/farm/gorilla.js');await settleGorillaEncounter(b.id,'loss');if(s.farmData.coins!==0)throw Error('Coins not floored/replay applied');let denied=false;try{await settleGorillaEncounter('foreign','loss','neighbor');}catch{denied=true;}if(!denied)throw Error('Non-home mutation allowed');});
+ await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.gorillaEncounter;const {settleGorillaEncounter}=await import('/js/farm/gorilla.js');await settleGorillaEncounter(b.id,'loss');if(s.farmData.coins!==0)throw Error('Coins not floored/replay applied');let denied=false;try{await settleGorillaEncounter('foreign','loss','neighbor','closed-group');}catch{denied=true;}if(!denied)throw Error('Inaccessible village mutation allowed');});
  // Full inventory still gets guaranteed boss loot; failed settlement can be retried.
  await start('mace');await patch({warehouseLimit:1,worms:1});await page.evaluate(()=>{window.__farmTest.failNext=true;const b=window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter;b.health=5;b.hit();});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter.warning.text.includes('重試'));
@@ -94,11 +94,49 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.waitForFunction(()=>!window.__farmGame.scene.getScene('ShopScene').isProcessing);
  const sold=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene');return{coins:s.farmData.coins,fangs:s.farmData.gorillaFangs};});
  if(sold.coins!==450||sold.fangs!==2)throw Error('Wrong sale payout or quantity: '+JSON.stringify(sold));
- checks.push('low coin floor, self-only guard, full-inventory reward, retry, warehouse trophy behavior, 300-coin sale');
+ checks.push('low coin floor, village access guard, full-inventory reward, retry, warehouse trophy behavior, 300-coin sale');
  // A scene change removes every boss object and timer.
  await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('MyFarmScene'));await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData);await start();
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');window.__oldGorilla=s.gorillaEncounter;s.scene.start('ShopScene');});
  await page.waitForFunction(()=>window.__oldGorilla.destroyed);assert.deepEqual(errors,[]);
- checks.push('scene shutdown cleanup');console.log(JSON.stringify({passed:true,checks,errors}));
+ checks.push('scene shutdown cleanup');
+ // A Lv.1 visitor still meets gorillas at a Lv.3 target coop, once per visit.
+ await patch({coopLevel:1,coins:150,inventoryEggs:0,warehouseLimit:99,equippedWeapon:'mace'});
+ await page.evaluate(()=>{
+  window.__farmTest.patch('neighbor',{coopLevel:3,eggsReady:7});
+  window.__visitRolls=0;Phaser.Math.Between=(min,max)=>{if(max===30){window.__visitRolls++;return 1;}return max;};
+  window.__farmGame.scene.getScene('ShopScene').scene.start('VisitScene',{targetAccountId:'neighbor',targetName:'鄰居'});
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').gorillaEncounter);
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('VisitScene'),b=s.gorillaEncounter;
+  if(b.targetAccountId!=='neighbor'||b.targetGroupId!=='dragon-test'||s.dragonEncounter||window.__visitRolls!==1)throw Error('Visit target/one-roll gate incorrect');
+  window.__farmTest.patch('neighbor',{eggsReady:7});if(window.__visitRolls!==1||s.gorillaEncounter!==b)throw Error('Snapshot respawned gorilla');
+  const commits=window.__farmTest.commits;await s.attemptSteal();if(window.__farmTest.commits!==commits||s.myFarmData.inventoryEggs!==0)throw Error('Stealing bypassed fight');
+  window.__visitLoot=s.myFarmData.gorillaFangs;b.health=5;b.hit();
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').gorillaEncounter.settled);
+ await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('VisitScene');if(s.myFarmData.gorillaFangs!==window.__visitLoot+1||s.targetFarmData.eggsReady!==7)throw Error('Visit loot saved to wrong farm');Math.random=()=>0;await s.attemptSteal();if(s.myFarmData.inventoryEggs!==1||s.targetFarmData.eggsReady!==6)throw Error('Cannot steal after victory');});
+ checks.push('Lv.3 target eligibility independent of player level, one boss per visit, blocks stealing until victory, own reward and post-victory theft');
+ // Across public villages: burn target eggs, charge source player, preserve all other farms.
+ await page.evaluate(()=>{
+  const docs=window.__farmTest.docs;docs['groups/dragon-test'].farmVillageVisibility='public';
+  docs['groups/other']={farmVillageVisibility:'public',members:['neighbor','self']};
+  docs['groups/other/users/neighbor']={farm:{...structuredClone(docs['groups/dragon-test/users/neighbor'].farm),eggsReady:5,coins:777}};
+  docs['groups/other/users/self']={farm:{coins:999,eggsReady:9}};
+  window.__farmGame.scene.getScene('VisitScene').scene.restart({targetGroupId:'other',targetAccountId:'neighbor',targetName:'其他村落鄰居'});
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').gorillaEncounter?.targetGroupId==='other');
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__ownEggs=s.myFarmData.eggsReady;s.gorillaEncounter.resolve('loss');});
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').gorillaEncounter.settled);
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('VisitScene'),b=s.gorillaEncounter,docs=window.__farmTest.docs;
+  const {settleGorillaEncounter}=await import('/js/farm/gorilla.js');await settleGorillaEncounter(b.id,'loss','neighbor','other');
+  if(s.myFarmData.coins!==50||s.myFarmData.eggsReady!==window.__ownEggs||s.targetFarmData.eggsReady!==0||s.targetFarmData.coins!==777)throw Error('Cross-group penalty ownership wrong');
+  if(docs['groups/dragon-test/users/neighbor'].farm.eggsReady!==6||docs['groups/other/users/self'].farm.coins!==999||docs['groups/other/users/self'].farm.eggsReady!==9)throw Error('Unrelated farm changed');
+  docs['groups/other'].farmVillageVisibility='closed';const before=window.__farmTest.commits;let denied=false;try{await settleGorillaEncounter('denied','loss','neighbor','other');}catch{denied=true;}if(!denied||window.__farmTest.commits!==before)throw Error('Closed village accepted settlement');
+ });
+ checks.push('cross-group target egg loss/source coins, own eggs/other accounts untouched, idempotent retry, closed-village rejection');
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

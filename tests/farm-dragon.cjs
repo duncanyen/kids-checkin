@@ -199,7 +199,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  for(const level of [1,2,3]){
   await page.evaluate(level=>{
    window.__farmTest.patch('neighbor',{coopLevel:level,eggsReady:5});
-   window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(min,max)=>max===30?1:max;
+   window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(min,max)=>max===30?(level>=3?2:1):max;
    const game=window.__farmGame;game.scene.getScene('VisitScene').hasRolledEncounter=false;
    game.scene.getScenes(true)[0].scene.start('VisitScene',{targetAccountId:'neighbor',targetName:'鄰居'});
   },level);
