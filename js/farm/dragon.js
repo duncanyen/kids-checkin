@@ -1,8 +1,9 @@
+import { equippedWeapon } from './combat-rules.js';
 import { bossWeaponDamage, rollVisitBossEncounter } from './gorilla-rules.js';
 import { readVillageAccess } from './villages.js';
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, DRAGON_SCALE_PRICE, WEAPONS_CONFIG, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, DRAGON_SCALE_PRICE, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
 
 export function registerDragonAnimations(scene) {
     for (const [action, row, repeat] of [['fly', 0, -1], ['fire', 1, -1], ['hit', 2, 0], ['dead', 3, 0]]) {
@@ -92,8 +93,7 @@ export class BossEncounter {
         this.result = null;
         this.destroyed = false;
         this.settling = false;
-        const equipped = (scene.myFarmData || scene.farmData)?.equippedWeapon || 'club';
-        this.weapon = WEAPONS_CONFIG[equipped] || WEAPONS_CONFIG.club;
+        this.weapon = equippedWeapon(scene.myFarmData || scene.farmData);
         this.damage = bossWeaponDamage(this.weapon, spec.key);
         this.destination = { x: Math.max(spec.minX || 80, scene.coop.getBounds().left - (spec.approachInset || 34)), y: scene.coop.getBounds().bottom + 10 };
         this.sprite = scene.add.sprite(spec.spawnX || 58, scene.scale.height - 140, spec.key, 0)
@@ -105,7 +105,7 @@ export class BossEncounter {
         this.sprite.on('animationcomplete', animation => {
             if (!this.result && animation.key === `${spec.key}_hit`) this.sprite.play(`${spec.key}_${this.phase === spec.attackPhase ? spec.attack : spec.travel}`);
         });
-        this.weaponSprite = scene.add.image(0, 0, this.weapon.icon).setScale(1.5).setDepth(28).setVisible(false);
+        this.weaponSprite = scene.add.image(0, 0, this.weapon.icon).setDisplaySize(64, 86).setDepth(28).setVisible(false);
         this.warning = scene.add.text(195, 112, '', {
             fontSize: '15px', color: '#FFF2CC', fontStyle: 'bold', align: 'center',
             backgroundColor: '#542723', padding: { x: 12, y: 8 },

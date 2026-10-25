@@ -185,3 +185,11 @@ alternate 313/314 source pixels, with normalized source sizes and per-frame
 pivots to keep feet on the ground. `gorilla-fang.png` is the matching ivory fang
 loot icon. See docs/farm-gorilla.md and tests/farm-gorilla.cjs for gameplay and
 inventory validation.
+
+## Weapons
+
+`battleaxe.png` and the replacement `mace.png` are transparent hand-painted
+weapon icons generated for the village. They share warm wood, leather, steel
+and brass details. The same textures are used in the shop, warehouse and combat
+swing; no pixel-matrix mace remains. See docs/farm-weapons.md for balance and
+`node tests/farm-weapons.cjs` for isolated purchase/equipment/sale/combat checks.

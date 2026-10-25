@@ -17,6 +17,8 @@ export default class BootScene extends Phaser.Scene {
         for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
             this.load.image('ui_' + name.replaceAll('-', '_'), `assets/farm/ui-${name}.webp`);
         }
+        this.load.image('mace', 'assets/farm/mace.png');
+        this.load.image('battleaxe', 'assets/farm/battleaxe.png');
         this.load.image('coop', 'assets/farm/coop.webp');
         this.load.spritesheet('dragon', 'assets/farm/dragon-sheet.webp', { frameWidth: 256, frameHeight: 256 });
         this.load.image('dragon_scale', 'assets/farm/dragon-scale.webp');
@@ -57,7 +59,6 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('tiger_pelt', { data: ['......4K4K4.......', '.....4KKKKK4......', '...444K444K444....', '..4KKKKKKKKKKK4...', '.4KK4KK444KK4KK4..', '.4KKKKKKKKKKKKK4..', '..44KK44444KK44...', '...4KKKKKKKKK4....', '..4KK4444444KK4...', '.4KKKKKKKKKKKKK4..', '.4K44K4...4K44K4..', '..4444.....4444...'], pixelWidth: 4, palette: palette });
         this.textures.generate('club', { data: ['..GG..', '.GFFG.', 'GFFFFG', 'GFFFFG', 'GFFFFG', '.GFFG.', '.GFFG.', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
-        this.textures.generate('mace', { data: ['..88..', '.8448.', '848848', '848848', '.8448.', '..GG..', '..GG..', '..GG..', '..GG..'], pixelWidth: 4, palette: palette });
         this.textures.generate('star', { data: ['.E.', 'EEE', '.E.'], pixelWidth: 4, palette: palette });
 
         // 註冊母雞動畫 (對應素材表的影格位置)

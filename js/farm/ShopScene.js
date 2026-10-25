@@ -1,8 +1,9 @@
+import { hitsToDefeat } from './combat-rules.js';
 import { GORILLA_FANG_PRICE } from './gorilla-rules.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, DRAGON_SCALE_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX, MACE_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
+import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, DRAGON_SCALE_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX, MACE_PRICE, MACE_SELL_PRICE, AXE_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
 
 export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
@@ -21,6 +22,7 @@ export default class ShopScene extends Phaser.Scene {
         this.isProcessing = false; 
         this.createConfirmDialog();
         this.createTabs();
+        this.createWeaponGuide();
 
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
         this.initGlobalData();
@@ -58,6 +60,8 @@ export default class ShopScene extends Phaser.Scene {
         this.addShopItem(this.buyContainer, 95, 240, 'coop', `大雞舍\n${COOP_LV3_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop3', '大型雞舍', COOP_LV3_PRICE, true));
         this.addShopItem(this.buyContainer, 295, 240, 'mace', `狼牙棒\n${MACE_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'mace', '狼牙棒', MACE_PRICE));
 
+        this.addShopItem(this.buyContainer, 95, 340, 'battleaxe', `雙手斧\n${AXE_PRICE}金幣`, 0x735038, () => this.openTradeModal('buy', 'battleaxe', '雙手斧', AXE_PRICE));
+
         // 📤 賣出清單
         this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n${EGG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'inventoryEggs', '雞蛋', EGG_PRICE));
         this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n${WORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'worms', '菜蟲', WORM_PRICE));
@@ -66,6 +70,32 @@ export default class ShopScene extends Phaser.Scene {
         this.addShopItem(this.sellContainer, 95, 240, 'tiger_pelt', `虎皮\n50金幣`, 0x333333, () => this.openTradeModal('sell', 'tigerPelts', '虎皮', 50));
         this.addShopItem(this.sellContainer, 95, 340, 'gorilla_fang', `猩猩尖牙\n${GORILLA_FANG_PRICE}金幣`, 0x735038, () => this.openTradeModal('sell', 'gorillaFangs', '猩猩尖牙', GORILLA_FANG_PRICE));
         this.addShopItem(this.sellContainer, 295, 240, 'dragon_scale', `龍麟\n${DRAGON_SCALE_PRICE}金幣`, 0x633332, () => this.openTradeModal('sell', 'dragonScales', '龍麟', DRAGON_SCALE_PRICE));
+        this.addShopItem(this.sellContainer, 295, 340, 'mace', `狼牙棒\n${MACE_SELL_PRICE}金幣`, 0x735038, () => this.openTradeModal('sell', 'mace', '狼牙棒', MACE_SELL_PRICE));
+    }
+
+    createWeaponGuide() {
+        const button = this.add.rectangle(195, 730, 190, 42, 0x735038).setStrokeStyle(2, 0xdcb975).setInteractive({ cursor: 'pointer' });
+        this.add.text(195, 730, '武器圖鑑・攻擊說明', { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5);
+        const panel = this.add.container(0, 0).setDepth(90).setVisible(false);
+        const shade = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive();
+        const paper = this.add.rectangle(195, 398, 370, 450, 0xffefd0).setStrokeStyle(3, 0x735038);
+        const title = this.add.text(195, 205, '武器圖鑑', { fontSize: '22px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5);
+        panel.add([shade, paper, title]);
+        const columns = [60, 158, 245, 333];
+        ['擊殺次數', ...Object.values(WEAPONS_CONFIG).map(w => w.name)].forEach((name, i) => {
+            panel.add(this.add.text(columns[i], 254, name, { fontSize: '15px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5));
+        });
+        [['wolf', '大野狼'], ['tiger', '老虎'], ['dragon', '烈火龍'], ['gorilla', '大金剛']].forEach(([key, name], row) => {
+            [name, ...Object.values(WEAPONS_CONFIG).map(w => `${hitsToDefeat(w, key)} 下`)].forEach((text, col) => {
+                panel.add(this.add.text(columns[col], 300 + row * 43, text, { fontSize: '15px', color: '#593b27' }).setOrigin(0.5));
+            });
+        });
+        panel.add(this.add.text(195, 493, '每次有效點擊計為一次攻擊。\n購買武器後，請先到倉庫配備。\n狼牙棒卸下後可售得 1000 金幣。', { fontSize: '14px', color: '#735038', align: 'center', lineSpacing: 8 }).setOrigin(0.5));
+        const close = this.add.rectangle(195, 577, 130, 38, 0x735038).setInteractive({ cursor: 'pointer' });
+        panel.add([close, this.add.text(195, 577, '返回商店', { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5)]);
+        button.on('pointerdown', () => panel.setVisible(true));
+        close.on('pointerdown', () => panel.setVisible(false));
+        this.weaponGuide = panel;
     }
 
     addShopItem(container, x, y, iconKey, text, color, callback) {
@@ -126,6 +156,11 @@ export default class ShopScene extends Phaser.Scene {
 
     openTradeModal(type, itemKey, itemName, unitPrice, isSingleOnly = false) {
         if (this.isProcessing || !this.farmData) return;
+
+        if (type === 'sell' && WEAPONS_CONFIG[itemKey] && this.farmData.equippedWeapon === itemKey) {
+            this.showMsg('請先到倉庫卸下武器，再至商店賣出！', '#FFD54F');
+            return;
+        }
 
         this.tradeType = type;
         this.tradeUnitPrice = unitPrice;
@@ -218,7 +253,9 @@ export default class ShopScene extends Phaser.Scene {
     async executeBuyWeapon(key, qty, price) {
         if (this.isProcessing) return;
         this.isProcessing = true;
-        const totalPrice = qty * price;
+        const config = WEAPONS_CONFIG[key];
+        if (!config?.buyPrice || !Number.isSafeInteger(qty) || qty <= 0) { this.isProcessing = false; return; }
+        const totalPrice = qty * config.buyPrice;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
@@ -260,11 +297,14 @@ export default class ShopScene extends Phaser.Scene {
     async executeSellItem(itemKey, unitPrice, itemName, qty) {
         if (this.isProcessing) return;
         this.isProcessing = true;
-        const totalPrice = qty * unitPrice;
+        const weapon = WEAPONS_CONFIG[itemKey];
+        if (!Number.isSafeInteger(qty) || qty <= 0 || (weapon && !weapon.sellPrice)) { this.isProcessing = false; return; }
+        const totalPrice = qty * (weapon?.sellPrice ?? unitPrice);
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
+                if (weapon && farm.equippedWeapon === itemKey) throw '請先到倉庫卸下武器！';
                 if ((farm[itemKey] || 0) >= qty) {
                     t.update(myFarmRef, { 
                         [`farm.${itemKey}`]: farm[itemKey] - qty, 

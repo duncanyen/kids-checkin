@@ -1,4 +1,5 @@
-export const GORILLA_CONFIG = Object.freeze({ health: 1000, flightMs: 10000, durationMs: 40000, encounterOdds: 30, minCoopLevel: 3, coinPenalty: 100 });
+import { ENEMY_HEALTH, weaponDamage } from './combat-rules.js';
+export const GORILLA_CONFIG = Object.freeze({ health: ENEMY_HEALTH.gorilla, flightMs: 10000, durationMs: 40000, encounterOdds: 30, minCoopLevel: 3, coinPenalty: 100 });
 export const GORILLA_FANG_PRICE = 300;
 
 // A single exclusive roll preserves BOTH exact rates at Lv.3+: 2/60 gorilla,
@@ -24,5 +25,5 @@ export function rollVisitBossEncounter(level, roll = (min, max) => Phaser.Math.B
 }
 
 export function bossWeaponDamage(weapon, enemy) {
-    return Math.max(1, Number(weapon.damageByEnemy?.[enemy] ?? weapon.damage) || 1);
+    return weaponDamage(weapon, enemy);
 }

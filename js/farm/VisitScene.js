@@ -1,3 +1,4 @@
+import { ENEMY_HEALTH, equippedWeapon, weaponDamage } from './combat-rules.js';
 import { GorillaEncounter } from './gorilla.js';
 import { GardenFeedback } from './garden-feedback.js';
 import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
@@ -9,7 +10,7 @@ import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegeta
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
 
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
@@ -371,12 +372,13 @@ export default class VisitScene extends Phaser.Scene {
 
     spawnTigerEvent() {
         this.isTigerDefeated = false; this.tigerHitCount = 0;
-        const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
-        const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
-        const totalHitsNeeded = Math.ceil(200 / weapon.damage);
+        const weapon = equippedWeapon(this.myFarmData);
+        const damage = weaponDamage(weapon, 'tiger');
+        const health = ENEMY_HEALTH.tiger;
+        const totalHitsNeeded = Math.ceil(health / damage);
         const spawn = predatorSpawnPoint(this, 'tiger');
         this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
-        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
+        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
         this.tiger.warning = warnText;
@@ -389,16 +391,16 @@ export default class VisitScene extends Phaser.Scene {
         this.tiger.moveTween = this.tigerTween;
         this.tiger.on('pointerdown', (pointer) => {
             if (this.isTigerDefeated || !this.tiger.active || this.tiger.getData('resolved')) return;
-            this.tigerHitCount += weapon.damage;
+            this.tigerHitCount += damage;
             hitPredator(this.tiger);
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
-            if (weapon.damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
-            if (this.tigerHitCount >= 200) { this.defeatTiger(); }
+            if (damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
+            if (this.tigerHitCount >= health) { this.defeatTiger(); }
             else {
-                const hitsLeft = Math.ceil(Math.max(0, 200 - this.tigerHitCount) / weapon.damage);
-                if (this.tigerHitCount % 20 === 0 || weapon.damage > 1) { 
+                const hitsLeft = Math.ceil(Math.max(0, health - this.tigerHitCount) / damage);
+                if (this.tigerHitCount % 20 === 0 || damage > 1) {
                     this.showFloatingText(`還差 ${hitsLeft} 下!`, '#FF9800', 16, this.tiger.x, this.tiger.y - 50); 
                 }
             }
@@ -443,13 +445,13 @@ export default class VisitScene extends Phaser.Scene {
 
     spawnWolfEvent() {
         this.isWolfDefeated = false; this.wolfHitCount = 0;
-        const weaponKey = (this.myFarmData && this.myFarmData.equippedWeapon) ? this.myFarmData.equippedWeapon : 'club';
-        const weapon = WEAPONS_CONFIG[weaponKey] || WEAPONS_CONFIG['club'];
-        const totalHitsNeeded = Math.ceil(200 / weapon.damage);
-
+        const weapon = equippedWeapon(this.myFarmData);
+        const damage = weaponDamage(weapon, 'wolf');
+        const health = ENEMY_HEALTH.wolf;
+        const totalHitsNeeded = Math.ceil(health / damage);
         const spawn = predatorSpawnPoint(this, 'wolf');
         this.wolf = createPredator(this, 'wolf', spawn.x, spawn.y);
-        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setScale(1.5).setDepth(30).setVisible(false);
+        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
         const warnText = this.add.text(this.cameras.main.centerX, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
         this.wolf.warning = warnText;
@@ -462,17 +464,17 @@ export default class VisitScene extends Phaser.Scene {
         this.wolf.moveTween = this.wolfTween;
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
-            this.wolfHitCount += weapon.damage;
+            this.wolfHitCount += damage;
             hitPredator(this.wolf);
             
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
-            if (weapon.damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
-            if (this.wolfHitCount >= 200) { this.defeatWolf(); }
+            if (damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
+            if (this.wolfHitCount >= health) { this.defeatWolf(); }
             else {
-                const hitsLeft = Math.ceil(Math.max(0, 200 - this.wolfHitCount) / weapon.damage);
-                if (this.wolfHitCount % 20 === 0 || weapon.damage > 1) { 
+                const hitsLeft = Math.ceil(Math.max(0, health - this.wolfHitCount) / damage);
+                if (this.wolfHitCount % 20 === 0 || damage > 1) {
                     this.showFloatingText(`還差 ${hitsLeft} 下!`, '#FF9800', 16, this.wolf.x, this.wolf.y - 40); 
                 }
             }

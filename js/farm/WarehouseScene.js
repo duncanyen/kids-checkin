@@ -34,7 +34,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'dragonScales', name: '龍麟', icon: 'dragon_scale' },
             { key: 'gorillaFangs', name: '猩猩尖牙', icon: 'gorilla_fang' },
             { key: 'medicines', name: '咕咕活力散', icon: 'medicine' },
-            { key: 'mace', name: WEAPONS_CONFIG['mace'].name, icon: WEAPONS_CONFIG['mace'].icon, type: 'weapon' }
+            ...Object.entries(WEAPONS_CONFIG).filter(([key]) => key !== 'club').map(([key, weapon]) => ({ key, name: weapon.name, icon: weapon.icon, type: 'weapon' }))
         ];
 
         this.createActionPanel();
@@ -97,10 +97,10 @@ export default class WarehouseScene extends Phaser.Scene {
             const col = index % 2;
             const row = Math.floor(index / 2);
             const x = 100 + col * 190;
-            const y = row * 80;
+            const y = row * 72;
             const count = this.farmData[item.key] || 0;
 
-            const bg = this.add.rectangle(x, y, 160, 72, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+            const bg = this.add.rectangle(x, y, 160, 66, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
             
             const img = this.add.image(x - 45, y, item.icon);
             
@@ -172,11 +172,13 @@ export default class WarehouseScene extends Phaser.Scene {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
-                if (!farm) return;
-                t.update(myFarmRef, { "farm.equippedWeapon": currentlyEquipped ? 'club' : key });
+                if (!farm || !WEAPONS_CONFIG[key] || !(farm[key] > 0)) throw '倉庫已沒有這把武器！';
+                if (currentlyEquipped !== (farm.equippedWeapon === key)) throw '裝備狀態已變更，請重新選擇！';
+                const next = currentlyEquipped ? 'club' : key;
+                t.update(myFarmRef, { "farm.equippedWeapon": next });
             });
             this.showMsg(currentlyEquipped ? '已缷下，恢復為預設木棒！' : `裝備成功！已換上 [${WEAPONS_CONFIG[key].name}]`, '#4CAF50');
-        } catch (e) { console.error(e); }
+        } catch (e) { this.showMsg(typeof e === 'string' ? e : '配備失敗，請稍後重試', '#F44336'); }
     }
 
     async feedItem(key) {

@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const base = process.env.FARM_BASE_URL || 'http://127.0.0.1:8000';
 const firestore = `
 const prefix='groups/dragon-test/users/';
-const seed={coins:150,hens:2,coopLevel:2,eggsReady:2,lastLayTime:Date.now(),cleanliness:0,warehouseLimit:10,hensState:[{},{}],equippedWeapon:'club'};
+const seed={coins:150,hens:2,coopLevel:2,eggsReady:2,lastLayTime:Date.now(),cleanliness:0,warehouseLimit:10,hensState:[{},{}],equippedWeapon:'club',mace:1};
 const docs={'groups/dragon-test':{members:['self','neighbor']},[prefix+'self']:{farm:structuredClone(seed)},[prefix+'neighbor']:{farm:{...structuredClone(seed),eggsReady:5}}};
 const listeners=new Map();
 const snapshot=ref=>({exists:()=>!!docs[ref.path],data:()=>structuredClone(docs[ref.path])});
@@ -107,7 +107,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  checks.push('level gate, exact 1/30 chance, inventory capacity');
  async function visit(weapon='club'){
   await page.evaluate(weapon=>{
-   window.__farmTest.patch('self',{equippedWeapon:weapon});
+   window.__farmTest.patch('self',{equippedWeapon:weapon,[weapon]:1});
    window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(_,max)=>max;
    const game=window.__farmGame;
    game.scene.getScene('VisitScene').hasRolledEncounter=false;

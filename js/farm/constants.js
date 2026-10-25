@@ -1,3 +1,5 @@
+import { ENEMY_HEALTH, WEAPONS_CONFIG } from './combat-rules.js';
+export { WEAPONS_CONFIG };
 import { requireGameMembership } from '../game-members.js';
 import { readGameContext, watchGameContext } from '../game-context.js';
 import { db } from '../firebase-config.js'; 
@@ -30,11 +32,13 @@ export const WORM_PRICE = 1;
 export const EARTHWORM_PRICE = 3;
 export const FANG_PRICE = 20;
 export const DRAGON_SCALE_PRICE = 200;
-export const DRAGON_CONFIG = Object.freeze({ health: 600, flightMs: 10000, durationMs: 40000, encounterOdds: 30, homeEncounterOdds: 20, coinPenalty: 100 });
+export const DRAGON_CONFIG = Object.freeze({ health: ENEMY_HEALTH.dragon, flightMs: 10000, durationMs: 40000, encounterOdds: 30, homeEncounterOdds: 20, coinPenalty: 100 });
 export const EXPAND_SLOT_PRICE = 100;
 export const COOP_LV2_PRICE = 3000;
 export const COOP_LV3_PRICE = 10000;
-export const MACE_PRICE = 2000; // 狼牙棒售價
+export const AXE_PRICE = WEAPONS_CONFIG.battleaxe.buyPrice;
+export const MACE_SELL_PRICE = WEAPONS_CONFIG.mace.sellPrice;
+export const MACE_PRICE = WEAPONS_CONFIG.mace.buyPrice; // 狼牙棒售價
 
 // 容量設定
 export const COOP_LV1_MAX = 3;
@@ -44,12 +48,7 @@ export const COOP_LV3_MAX = 20;
 // ==========================================
 // 擴充性武器與庫存系統配置
 // ==========================================
-export const WEAPONS_CONFIG = {
-    'club': { name: '木棒', damage: 1, damageByEnemy: { gorilla: 1 }, icon: 'club' },
-    'mace': { name: '狼牙棒', damage: 10, damageByEnemy: { gorilla: 5 }, icon: 'mace' }
-};
-
-export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace'];
+export const INVENTORY_KEYS = ['inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe'];
 
 // 動態計算倉庫目前使用容量
 export const getUsedSpace = (farm) => {
