@@ -10,8 +10,9 @@ export default class WarehouseScene extends Phaser.Scene {
     create() {
         addFarmBackground(this);
         
-        // 🌟 倉庫的母雞展示也同步放大一倍 (原本 1.5 改為 3)
-        this.hen = this.add.sprite(195, 180, 'hen').setScale(3).setOrigin(0.5).play('hen_idle');
+        // 以顯示尺寸計算比例，讓高解析精靈圖維持原本的預覽大小。
+        this.hen = this.add.sprite(195, 180, 'hen', 0).setOrigin(0.5).play('hen_idle');
+        this.hen.setScale(96 / this.hen.width);
         this.isFeeding = false;
 
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);

@@ -10,10 +10,7 @@ export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
 
     preload() {
-        // ⚠️ 重要：請依照「下載.png」的實際總解析度，除以 6(欄) 與 8(列) 來設定 frameWidth 與 frameHeight
-        // 這裡假設單格寬高為 32x32
-        this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
-        for (const breed of ['silkie', 'bresse']) this.load.atlas(breed, `assets/farm/${breed}-sheet.png`, `assets/farm/${breed}-sheet.json`);
+        for (const breed of ['hen', 'silkie', 'bresse']) this.load.atlas(breed, `assets/farm/${breed}-sheet.png`, `assets/farm/${breed}-sheet.json`);
         this.load.image('farm_background', 'assets/farm/background.webp');
         this.load.image('farm_map', 'assets/farm/farm-map.jpg');
         for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
@@ -43,9 +40,8 @@ export default class BootScene extends Phaser.Scene {
             'e': '#FDE047', 'f': '#D97706', 'g': '#FCA5A5', 'P': '#8BC34A'
         };
 
-        // 手繪場景由 preload 載入；母雞保留原有像素圖的銳利邊緣。
-        this.textures.get('hen').setFilter(Phaser.Textures.FilterMode.NEAREST);
-        for (const kind of ['wolf', 'tiger', 'dragon', 'gorilla', 'silkie', 'bresse']) {
+        // 所有角色採用一致的清晰像素邊緣。
+        for (const kind of ['wolf', 'tiger', 'dragon', 'gorilla', 'hen', 'silkie', 'bresse']) {
             this.textures.get(kind).setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
@@ -65,28 +61,6 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
         this.textures.generate('star', { data: ['.E.', 'EEE', '.E.'], pixelWidth: 4, palette: palette });
 
-        // 註冊母雞動畫 (對應素材表的影格位置)
-        this.anims.create({
-            key: 'hen_idle',
-            frames: this.anims.generateFrameNumbers('hen', { start: 0, end: 1 }),
-            frameRate: 3,
-            repeat: -1
-        });
-        
-        this.anims.create({
-            key: 'hen_walk',
-            frames: this.anims.generateFrameNumbers('hen', { start: 6, end: 11 }), // 第二排為走動
-            frameRate: 8,
-            repeat: -1
-        });
-        /*
-        this.anims.create({
-            key: 'hen_sleep',
-            frames: this.anims.generateFrameNumbers('hen', { start: 42, end: 45 }), // 最後一排為睡覺(生病使用)
-            frameRate: 3,
-            repeat: -1
-        });
-        */
         registerPoultryAnimations(this);
         registerPredatorAnimations(this);
         registerDragonAnimations(this);

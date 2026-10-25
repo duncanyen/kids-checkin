@@ -1,6 +1,6 @@
 import { BREEDS, breedOf } from './poultry.js';
 export function registerPoultryAnimations(scene) {
-    for (const breed of ['silkie', 'bresse']) {
+    for (const breed of ['hen', 'silkie', 'bresse']) {
         for (const [action, start, end, fps] of [['idle', 0, 7, 5], ['walk', 8, 15, 8]]) {
             scene.anims.create({ key: `${breed}_${action}`, frames: scene.anims.generateFrameNumbers(breed, { start, end }), frameRate: fps, repeat: -1 });
         }

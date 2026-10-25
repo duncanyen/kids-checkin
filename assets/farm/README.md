@@ -196,12 +196,15 @@ swing; no pixel-matrix mace remains. See docs/farm-weapons.md for balance and
 
 ## Chicken breeds
 
-`silkie-sheet.png` and `bresse-sheet.png` are transparent 1254 × 1254 atlases
+`hen-sheet.png`, `silkie-sheet.png` and `bresse-sheet.png` are transparent 1254 × 1254 atlases
 with 4 × 4 frames. The first eight frames are idle/blink/fluff/peck; the last
 eight are walking. Load their matching JSON atlas files because cells alternate
 313 and 314 pixels, normalized to 314 × 314. The charcoal silkie has a fluffy
 crest and feathered feet; the white Bresse has a red comb and blue legs.
-They use the existing hen as the art reference and render at 64px frame width
+The redesigned mother hen has creamy golden feathers, a red comb, and orange
+beak/feet. All three breeds now share the same illustrated sprite style.
+The legacy root `hen.png` is retained but no longer loaded by the farm game.
+They render at 64px frame width
 in both home and visited farms, with breed-specific animations and shared
 path planning. Breed egg icons use ivory and cool white/blue palettes.
 See docs/farm-poultry.md for economy, migration, production and feeding rules.

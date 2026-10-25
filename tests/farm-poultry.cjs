@@ -56,7 +56,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   await s.executeBuyHen(1,'bresse');if(f().coins!==28000||f().hens!==3)throw Error('Overfilled coop');
   await s.executeTradePoultry('hen',1,'sell');if(f().coins!==28500||f().hens!==2)throw Error('Original hen half-price sale wrong');
   await s.executeBuyHen(1,'bresse');if(f().coins!==24500||f().hens!==3||f().hensState.filter(h=>h.breed==='bresse').length!==1)throw Error('Bresse purchase wrong');
-  for(const breed of ['silkie','bresse'])for(const action of ['idle','walk'])if(s.anims.get(breed+'_'+action).frames.length!==8)throw Error('Missing breed animation');
+  for(const breed of ['hen','silkie','bresse'])for(const action of ['idle','walk'])if(s.anims.get(breed+'_'+action).frames.length!==8)throw Error('Missing breed animation');
   if(s.catalog.buy.length<=6||s.catalog.sell.length<=12)throw Error('Catalog missing items');
   s.changeShopPage(1);if(s.pageText.text!=='2 / 2')throw Error('Shop pagination broken');
   s.poultryGuide.setVisible(true);
@@ -89,6 +89,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene')&&window.__farmGame.scene.getScene('WarehouseScene').farmData);
  await page.evaluate(async()=>{
   const s=window.__farmGame.scene.getScene('WarehouseScene'),f=()=>window.__farmTest.docs['groups/dragon-test/users/self'].farm;
+  if(Math.abs(s.hen.displayWidth-96)>1||s.hen.texture.key!=='hen')throw Error('Hen preview not normalized for atlas');
   for(const key of ['silkieEggs','bresseEggs'])if(!s.allConfigItems.some(i=>i.key===key))throw Error('Warehouse missing egg breed');
   await s.feedItem('worms');if(!s.feedPicker.visible||f().worms!==3)throw Error('Mixed feed did not ask first');
   s.feedBreedButtons.silkie.button.emit('pointerdown');
