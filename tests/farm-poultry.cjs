@@ -58,7 +58,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   await s.executeBuyHen(1,'bresse');if(f().coins!==24500||f().hens!==3||f().hensState.filter(h=>h.breed==='bresse').length!==1)throw Error('Bresse purchase wrong');
   for(const breed of ['hen','silkie','bresse'])for(const action of ['idle','walk'])if(s.anims.get(breed+'_'+action).frames.length!==8)throw Error('Missing breed animation');
   if(s.catalog.buy.length<=6||s.catalog.sell.length<=12)throw Error('Catalog missing items');
-  s.changeShopPage(1);if(s.pageText.text!=='2 / 2')throw Error('Shop pagination broken');
+  s.selectShopCategory('chickens');s.changeShopPage(1);if(s.pageText.text!=='1 / 1'||s.pageText.visible)throw Error('Chicken category should fit one page');
   s.poultryGuide.setVisible(true);
  });
  await page.screenshot({path:'/tmp/farm-poultry-guide.png'});

@@ -1,3 +1,4 @@
+import { itemCategory, addCategoryTabs, ITEM_CATEGORIES } from './item-categories.js';
 import { addPoultryGuide } from './poultry-guide.js';
 import { BREEDS, poultryState, coopCapacity, tradePoultry } from './poultry.js';
 import { hitsToDefeat } from './combat-rules.js';
@@ -42,8 +43,8 @@ export default class ShopScene extends Phaser.Scene {
         const btnSell = this.add.rectangle(290, 180, 120, 40, 0x4CAF50, 0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(290, 180, '📤 賣出', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-        this.buyContainer = this.add.container(0, 240);
-        this.sellContainer = this.add.container(0, 240).setVisible(false);
+        this.buyContainer = this.add.container(0, 290);
+        this.sellContainer = this.add.container(0, 290).setVisible(false);
 
         btnBuy.on('pointerdown', () => {
             btnBuy.setFillStyle(0xE53935, 1); btnSell.setFillStyle(0x4CAF50, 0.5);
@@ -55,7 +56,9 @@ export default class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        this.shopPages = { buy: 0, sell: 0 };
+        this.shopPages = { buy: {}, sell: {} };
+        this.shopCategory = 'chickens';
+        this.categoryTabs = addCategoryTabs(this, 230, key => this.selectShopCategory(key));
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
         const buy = this.catalog.buy, sell = this.catalog.sell;
@@ -67,9 +70,11 @@ export default class ShopScene extends Phaser.Scene {
         buy.push(
             ['expand', 'coop', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE)],
             ['medicine', 'medicine', '咕咕活力散\n10金幣', () => this.openTradeModal('buy', 'medicine', '咕咕活力散', 10)],
-            ['coop2', 'coop', `中雞舍\n${COOP_LV2_PRICE}金幣`, () => this.openTradeModal('buy', 'coop2', '中型雞舍', COOP_LV2_PRICE, true)],
-            ['coop3', 'coop', `大雞舍\n${COOP_LV3_PRICE}金幣`, () => this.openTradeModal('buy', 'coop3', '大型雞舍', COOP_LV3_PRICE, true)]
+            ['coop2', 'coop', `中級雞舍\n${COOP_LV2_PRICE}金幣`, () => this.openTradeModal('buy', 'coop2', '中級雞舍', COOP_LV2_PRICE, true)],
+            ['coop3', 'coop', `高級雞舍\n${COOP_LV3_PRICE}金幣`, () => this.openTradeModal('buy', 'coop3', '高級雞舍', COOP_LV3_PRICE, true)]
         );
+        buy.push(['coop4', 'coop', '特級雞舍\n即將推出', () => this.showMsg('特級雞舍即將推出', '#FFD54F')],
+            ['coop5', 'coop', '頂級雞舍\n即將推出', () => this.showMsg('頂級雞舍即將推出', '#FFD54F')]);
         for (const [key, weapon] of Object.entries(WEAPONS_CONFIG)) {
             if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.buyPrice}金幣`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
             if (weapon.sellPrice) sell.push([key, weapon.icon, `${weapon.name}\n${weapon.sellPrice}金幣`, () => this.openTradeModal('sell', key, weapon.name, weapon.sellPrice)]);
@@ -79,30 +84,50 @@ export default class ShopScene extends Phaser.Scene {
         }
         for (const [mode, entries] of Object.entries(this.catalog)) {
             const container = mode === 'buy' ? this.buyContainer : this.sellContainer;
-            entries.forEach(([key, icon, text, action], index) => {
+            const categoryIndexes = {};
+            entries.forEach(([key, icon, text, action]) => {
+                const category = itemCategory(key);
+                const index = categoryIndexes[category] || 0;
+                categoryIndexes[category] = index + 1;
                 const slot = index % 6;
                 const objects = this.addShopItem(container, slot % 2 ? 295 : 95, 40 + Math.floor(slot / 2) * 100, icon, text, 0x735038, action);
-                for (const object of objects) { object.catalogPage = Math.floor(index / 6); object.setVisible(object.catalogPage === 0); }
+                for (const object of objects) { object.catalogPage = Math.floor(index / 6); object.catalogCategory = category; object.catalogKey = key; }
             });
         }
-        const previous = this.add.rectangle(70, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
-        const next = this.add.rectangle(320, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
-        this.add.text(70, 640, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
-        this.add.text(320, 640, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.previousPage = this.add.rectangle(70, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        this.nextPage = this.add.rectangle(320, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        this.previousLabel = this.add.text(70, 640, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.nextLabel = this.add.text(320, 640, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
         this.pageText = this.add.text(195, 640, '', { fontSize: '15px', color: '#fff2cc', backgroundColor: '#593b27', padding: 5 }).setOrigin(0.5);
-        previous.on('pointerdown', () => this.changeShopPage(-1));
-        next.on('pointerdown', () => this.changeShopPage(1));
+        this.previousPage.on('pointerdown', () => this.changeShopPage(-1));
+        this.nextPage.on('pointerdown', () => this.changeShopPage(1));
         btnBuy.on('pointerdown', () => { this.shopMode = 'buy'; this.changeShopPage(0); });
         btnSell.on('pointerdown', () => { this.shopMode = 'sell'; this.changeShopPage(0); });
+        this.emptyCategoryText = this.add.text(195, 400, '', { fontSize: '17px', color: '#fff2cc', align: 'center', backgroundColor: '#593b27', padding: 12 }).setOrigin(0.5);
+        this.changeShopPage(0);
+    }
+
+    selectShopCategory(key) {
+        if (!ITEM_CATEGORIES.some(c => c.key === key)) return;
+        this.shopCategory = key;
         this.changeShopPage(0);
     }
 
     changeShopPage(delta) {
-        const mode = this.shopMode, total = Math.ceil(this.catalog[mode].length / 6);
-        const page = this.shopPages[mode] = Phaser.Math.Clamp(this.shopPages[mode] + delta, 0, total - 1);
-        const container = mode === 'buy' ? this.buyContainer : this.sellContainer;
-        for (const object of container.list) object.setVisible(object.catalogPage === page);
+        const mode = this.shopMode, category = this.shopCategory;
+        const count = this.catalog[mode].filter(([key]) => itemCategory(key) === category).length;
+        const total = Math.max(1, Math.ceil(count / 6));
+        const page = this.shopPages[mode][category] = Phaser.Math.Clamp((this.shopPages[mode][category] || 0) + delta, 0, total - 1);
+        for (const [name, container] of [['buy', this.buyContainer], ['sell', this.sellContainer]]) {
+            container.setVisible(name === mode);
+            for (const object of container.list) object.setVisible(name === mode && object.catalogCategory === category && object.catalogPage === page);
+        }
+        this.categoryTabs.select(category);
+        this.emptyCategoryText?.setText(category === 'coops' ? '雞舍升級後直接使用，無法賣出。' : '此分類目前沒有可販售的商品。').setVisible(count === 0);
         this.pageText.setText(`${page + 1} / ${total}`);
+        for (const object of [this.pageText, this.previousPage, this.previousLabel, this.nextPage, this.nextLabel]) object.setVisible(total > 1);
+        this.previousPage.setAlpha(page > 0 ? 1 : 0.4);
+        this.nextPage.setAlpha(page < total - 1 ? 1 : 0.4);
     }
 
     createWeaponGuide() {
@@ -189,6 +214,8 @@ export default class ShopScene extends Phaser.Scene {
 
     openTradeModal(type, itemKey, itemName, unitPrice, isSingleOnly = false) {
         if (this.isProcessing || !this.farmData) return;
+
+        if (['coop4', 'coop5'].includes(itemKey)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
 
         if (type === 'sell' && WEAPONS_CONFIG[itemKey] && this.farmData.equippedWeapon === itemKey) {
             this.showMsg('請先到倉庫卸下武器，再至商店賣出！', '#FFD54F');
@@ -375,6 +402,7 @@ export default class ShopScene extends Phaser.Scene {
 
     async executeUpgradeCoop(level, price) {
         if (this.isProcessing) return;
+        if (![2, 3].includes(level)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
         this.isProcessing = true;
         try {
             await runTransaction(db, async (t) => {

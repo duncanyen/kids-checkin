@@ -1,4 +1,5 @@
-import { BREEDS, poultryState, feedPoultry } from './poultry.js';
+import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
+import { BREEDS, poultryState, feedPoultry, coopCapacity } from './poultry.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -23,10 +24,16 @@ export default class WarehouseScene extends Phaser.Scene {
         btnBack.on('pointerdown', () => this.scene.start('MyFarmScene'));
 
         this.capacityText = this.add.text(195, 110, '容量: 0/10', { fontSize: '16px', color: '#fff', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
-        this.itemsPanel = this.add.container(0, 260);
+        this.itemsPanel = this.add.container(0, 310);
         this.emptyText = this.add.text(195, 340, '倉庫空空如也～', { fontSize: '18px', color: '#FFFFFF', fontStyle: 'bold', backgroundColor: 'rgba(0,0,0,0.5)', padding: { x: 10, y: 8 } }).setOrigin(0.5).setVisible(false);
 
+        this.warehouseCategory = 'chickens';
+        this.warehousePages = {};
+        this.categoryTabs = addCategoryTabs(this, 250, key => this.selectWarehouseCategory(key));
         this.allConfigItems = [
+            ...Object.entries(BREEDS).map(([key, breed]) => ({ key: `bird:${key}`, name: breed.name, icon: breed.texture, type: 'bird', breed: key })),
+            { key: 'ownedCoop', name: '雞舍', icon: 'coop', type: 'coop' },
+            { key: 'warehouseCapacity', name: '倉庫容量', icon: 'coop', type: 'warehouse' },
             { key: 'coins', name: '金幣', icon: 'coin' },
             ...Object.values(BREEDS).map(b => ({ key: b.eggKey, name: b.eggName, icon: b.eggIcon })),
             { key: 'worms', name: '菜蟲', icon: 'worm' },
@@ -89,18 +96,18 @@ export default class WarehouseScene extends Phaser.Scene {
 
         if (!this.farmData) return;
 
-        const ownedItems = this.allConfigItems.filter(item => (this.farmData[item.key] || 0) > 0);
-
-        if (ownedItems.length === 0) {
-            this.emptyText.setVisible(true);
-            return;
-        }
-
-        this.emptyText.setVisible(false);
-
+        const category = this.warehouseCategory;
+        const ownedItems = this.allConfigItems.filter(item => itemCategory(item.key) === category && this.warehouseItemCount(item) > 0);
         const totalPages = Math.max(1, Math.ceil(ownedItems.length / 8));
-        this.warehousePage = Math.min(this.warehousePage, totalPages - 1);
+        this.warehousePage = this.warehousePages[category] = Math.min(this.warehousePages[category] || 0, totalPages - 1);
+        this.visibleWarehouseItems = ownedItems.slice(this.warehousePage * 8, this.warehousePage * 8 + 8);
+        this.categoryTabs.select(category);
+        const label = ITEM_CATEGORIES.find(c => c.key === category).label;
+        this.emptyText.setText(`「${label}」分類目前沒有物品`).setVisible(ownedItems.length === 0);
         this.warehousePageText.setText(`${this.warehousePage + 1} / ${totalPages}`);
+        for (const object of [this.warehousePageText, this.previousPage, this.previousLabel, this.nextPage, this.nextLabel]) object.setVisible(totalPages > 1);
+        this.previousPage.setAlpha(this.warehousePage > 0 ? 1 : 0.4);
+        this.nextPage.setAlpha(this.warehousePage < totalPages - 1 ? 1 : 0.4);
         ownedItems.forEach((item, index) => {
             if (Math.floor(index / 8) !== this.warehousePage) return;
             index %= 8;
@@ -108,7 +115,7 @@ export default class WarehouseScene extends Phaser.Scene {
             const row = Math.floor(index / 2);
             const x = 100 + col * 190;
             const y = row * 72;
-            const count = this.farmData[item.key] || 0;
+            const count = this.warehouseItemCount(item);
 
             const bg = this.add.rectangle(x, y, 160, 66, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
             
@@ -118,6 +125,9 @@ export default class WarehouseScene extends Phaser.Scene {
             img.setScale(scale);
 
             let displayTxt = `${item.name}\nx ${count}`;
+            if (item.type === 'bird') displayTxt = `${item.name}\n雞舍中 × ${count}`;
+            if (item.type === 'coop') displayTxt = `${coopName(this.farmData.coopLevel)}\n飼養 ${poultryState(this.farmData).hens.length}/${coopCapacity(this.farmData.coopLevel)}`;
+            if (item.type === 'warehouse') displayTxt = `倉庫容量\n${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10} 格`;
             if (item.type === 'weapon' && this.farmData.equippedWeapon === item.key) {
                 displayTxt = `[裝備中]\n${displayTxt}`;
             }
@@ -134,6 +144,16 @@ export default class WarehouseScene extends Phaser.Scene {
         const count = this.farmData[key] || 0;
         
         const itemConfig = this.allConfigItems.find(i => i.key === key);
+        if (itemConfig?.type === 'warehouse') {
+            this.actionPanel.setVisible(false);
+            this.showMsg(`倉庫容量 ${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10}\n擴充請到商店「其他」分類`, '#FFD54F');
+            return;
+        }
+        if (itemConfig?.type === 'bird' || itemConfig?.type === 'coop') {
+            this.actionPanel.setVisible(false);
+            this.showMsg(itemConfig.type === 'bird' ? `${name}住在雞舍，買賣請到商店「雞」分類！` : `${coopName(this.farmData.coopLevel)}可飼養 ${coopCapacity(this.farmData.coopLevel)} 隻雞`, '#FFD54F');
+            return;
+        }
 
         if (itemConfig && itemConfig.type === 'weapon') {
             const isEquipped = this.farmData.equippedWeapon === key;
@@ -191,14 +211,35 @@ export default class WarehouseScene extends Phaser.Scene {
         } catch (e) { this.showMsg(typeof e === 'string' ? e : '配備失敗，請稍後重試', '#F44336'); }
     }
 
+    warehouseItemCount(item) {
+        if (item.type === 'bird') return poultryState(this.farmData).hens.filter(h => h.breed === item.breed).length;
+        if (item.type === 'coop' || item.type === 'warehouse') return 1;
+        return this.farmData[item.key] || 0;
+    }
+
+    selectWarehouseCategory(key) {
+        if (!ITEM_CATEGORIES.some(c => c.key === key)) return;
+        this.warehouseCategory = key;
+        this.actionPanel.setVisible(false);
+        this.feedPicker.setVisible(false);
+        this.renderWarehouseItems();
+    }
+
+    changeWarehousePage(delta) {
+        const category = this.warehouseCategory;
+        this.warehousePages[category] = Math.max(0, (this.warehousePages[category] || 0) + delta);
+        this.actionPanel.setVisible(false);
+        this.renderWarehouseItems();
+    }
+
     createWarehousePages() {
-        const previous = this.add.rectangle(70, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
-        const next = this.add.rectangle(320, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
-        this.add.text(70, 630, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
-        this.add.text(320, 630, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.previousPage = this.add.rectangle(70, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        this.nextPage = this.add.rectangle(320, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        this.previousLabel = this.add.text(70, 630, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.nextLabel = this.add.text(320, 630, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
         this.warehousePageText = this.add.text(195, 630, '', { fontSize: '15px', color: '#fff2cc', backgroundColor: '#593b27', padding: 5 }).setOrigin(0.5);
-        previous.on('pointerdown', () => { this.warehousePage = Math.max(0, this.warehousePage - 1); this.renderWarehouseItems(); });
-        next.on('pointerdown', () => { this.warehousePage++; this.renderWarehouseItems(); });
+        this.previousPage.on('pointerdown', () => this.changeWarehousePage(-1));
+        this.nextPage.on('pointerdown', () => this.changeWarehousePage(1));
     }
 
     createFeedPicker() {
