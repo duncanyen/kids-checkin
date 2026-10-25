@@ -1,9 +1,10 @@
+import { clearPoultryEggs } from './poultry.js';
 import { equippedWeapon } from './combat-rules.js';
 import { bossWeaponDamage, rollVisitBossEncounter } from './gorilla-rules.js';
 import { readVillageAccess } from './villages.js';
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, DRAGON_SCALE_PRICE, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, DRAGON_SCALE_PRICE, getUsedSpace } from './constants.js';
 
 export function registerDragonAnimations(scene) {
     for (const [action, row, repeat] of [['fly', 0, -1], ['fire', 1, -1], ['hit', 2, 0], ['dead', 3, 0]]) {
@@ -53,16 +54,7 @@ export async function settleDragonEncounter(id, outcome, targetAccountId, target
             if (!target) throw new Error('找不到目標雞舍');
             result.coinsLost = Math.min(DRAGON_CONFIG.coinPenalty, Math.max(0, own.coins || 0));
             updates['farm.coins'] = Math.max(0, (own.coins || 0) - DRAGON_CONFIG.coinPenalty);
-            const eggUpdates = { 'farm.eggsReady': 0 };
-            // Consume any production ticks accrued during combat, without erasing
-            // progress toward the next egg or allowing old eggs to reappear.
-            if (Number.isFinite(target.lastLayTime)) {
-                const now = Date.now();
-                const interval = Math.floor(LAY_EGG_TIME_MS / Math.max(1, target.hens || 1));
-                const ticks = Math.max(0, Math.floor((now - target.lastLayTime) / interval));
-                eggUpdates['farm.lastLayTime'] = (target.eggsReady || 0) >= Math.max(1, target.hens || 1) * 6
-                    ? now : target.lastLayTime + ticks * interval;
-            }
+            const eggUpdates = clearPoultryEggs(target);
             if (targetRef.path === myFarmRef.path) Object.assign(updates, eggUpdates);
             else transaction.update(targetRef, eggUpdates);
         }

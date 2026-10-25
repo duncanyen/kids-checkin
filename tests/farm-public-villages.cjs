@@ -112,7 +112,7 @@ function write(path,data,merge){const next=merge?clone(docs[path]||{}):{};for(co
  // Failure is a committed attempt: the target egg remains, cooldown and moral cost persist.
  await patch('groups/A/users/player',{'farm.villageStealCooldowns':{},'farm.moral':100});
  await page.evaluate(async()=>{Math.random=()=>0.99;const s=window.__farmGame.scene.getScene('VisitScene');s.targetFarmData.eggsReady=1;});
- await patch('groups/C/users/neighbor',{'farm.eggsReady':2});
+ await patch('groups/C/users/neighbor',{'farm.eggsReady':2,'farm.readyEggs':{hen:2,silkie:0,bresse:0}});
  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').attemptSteal());
  assert.equal(docs['groups/C/users/neighbor'].farm.eggsReady,2);assert.equal(docs['groups/A/users/player'].farm.moral,95);assert.equal(Object.keys(docs['groups/A/users/player'].farm.villageStealCooldowns).length,1);
  checks.push('failed theft commits cooldown and moral cost without taking an egg');

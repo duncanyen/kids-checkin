@@ -1,3 +1,4 @@
+import { registerPoultryAnimations } from './poultry-art.js';
 import { registerGorillaAnimations } from './gorilla.js';
 import { registerDragonAnimations } from './dragon.js';
 import { registerPredatorAnimations } from './predators.js';
@@ -12,6 +13,7 @@ export default class BootScene extends Phaser.Scene {
         // ⚠️ 重要：請依照「下載.png」的實際總解析度，除以 6(欄) 與 8(列) 來設定 frameWidth 與 frameHeight
         // 這裡假設單格寬高為 32x32
         this.load.spritesheet('hen', 'hen.png', { frameWidth: 32, frameHeight: 32 });
+        for (const breed of ['silkie', 'bresse']) this.load.atlas(breed, `assets/farm/${breed}-sheet.png`, `assets/farm/${breed}-sheet.json`);
         this.load.image('farm_background', 'assets/farm/background.webp');
         this.load.image('farm_map', 'assets/farm/farm-map.jpg');
         for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
@@ -43,10 +45,12 @@ export default class BootScene extends Phaser.Scene {
 
         // 手繪場景由 preload 載入；母雞保留原有像素圖的銳利邊緣。
         this.textures.get('hen').setFilter(Phaser.Textures.FilterMode.NEAREST);
-        for (const kind of ['wolf', 'tiger', 'dragon', 'gorilla']) {
+        for (const kind of ['wolf', 'tiger', 'dragon', 'gorilla', 'silkie', 'bresse']) {
             this.textures.get(kind).setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
+        this.textures.generate('silkie_egg', { data: ['..LL..', '.LLLL.', 'LLLLLL', 'LLLLLF', '.LLLF.', '..FF..'], pixelWidth: 6, palette });
+        this.textures.generate('bresse_egg', { data: ['..11..', '.1111.', '111111', '11111I', '.111I.', '..II..'], pixelWidth: 6, palette });
         this.textures.generate('coin', { data: ['.777.', '7L77K', '7777K', '777KK', '.7KK.'], pixelWidth: 5, palette: palette });
         this.textures.generate('worm', { data: ['9A9A'], pixelWidth: 5, palette: palette });
         this.textures.generate('earthworm', { data: ['N2N2'], pixelWidth: 5, palette: palette });
@@ -83,6 +87,7 @@ export default class BootScene extends Phaser.Scene {
             repeat: -1
         });
         */
+        registerPoultryAnimations(this);
         registerPredatorAnimations(this);
         registerDragonAnimations(this);
         registerGorillaAnimations(this);

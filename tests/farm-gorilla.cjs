@@ -29,7 +29,7 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{
  if(writes.length){window.__farmTest.commits++;notify();}
  return result;
  });queue=run.catch(()=>{});return run;}
-window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix+who].farm,values);notify();}};
+window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+who].farm;Object.assign(farm,values);if(farm.poultryVersion===2&&'eggsReady' in values&&!('readyEggs' in values))farm.readyEggs={hen:values.eggsReady,silkie:0,bresse:0};notify();}};
 `;
 (async () => {
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});

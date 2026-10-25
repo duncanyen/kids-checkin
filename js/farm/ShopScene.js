@@ -1,9 +1,11 @@
+import { addPoultryGuide } from './poultry-guide.js';
+import { BREEDS, poultryState, coopCapacity, tradePoultry } from './poultry.js';
 import { hitsToDefeat } from './combat-rules.js';
 import { GORILLA_FANG_PRICE } from './gorilla-rules.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, EGG_PRICE, HEN_PRICE, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, DRAGON_SCALE_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, COOP_LV2_MAX, COOP_LV3_MAX, MACE_PRICE, MACE_SELL_PRICE, AXE_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
+import { myFarmRef, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, DRAGON_SCALE_PRICE, EXPAND_SLOT_PRICE, COOP_LV2_PRICE, COOP_LV3_PRICE, WEAPONS_CONFIG, getUsedSpace } from './constants.js';
 
 export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
@@ -23,6 +25,7 @@ export default class ShopScene extends Phaser.Scene {
         this.createConfirmDialog();
         this.createTabs();
         this.createWeaponGuide();
+        addPoultryGuide(this);
 
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
         this.initGlobalData();
@@ -52,30 +55,59 @@ export default class ShopScene extends Phaser.Scene {
             this.buyContainer.setVisible(false); this.sellContainer.setVisible(true);
         });
 
-        // 📥 買進清單 (加入狼牙棒)
-        this.addShopItem(this.buyContainer, 95, 40, 'hen', `母雞\n${HEN_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'hen', '母雞', HEN_PRICE));
-        this.addShopItem(this.buyContainer, 295, 40, 'coop', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE));
-        this.addShopItem(this.buyContainer, 95, 140, 'medicine', `咕咕活力散\n10金幣`, 0x333333, () => this.openTradeModal('buy', 'medicine', '咕咕活力散', 10));
-        this.addShopItem(this.buyContainer, 295, 140, 'coop', `中雞舍\n${COOP_LV2_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop2', '中型雞舍', COOP_LV2_PRICE, true));
-        this.addShopItem(this.buyContainer, 95, 240, 'coop', `大雞舍\n${COOP_LV3_PRICE}金幣`, 0x1976D2, () => this.openTradeModal('buy', 'coop3', '大型雞舍', COOP_LV3_PRICE, true));
-        this.addShopItem(this.buyContainer, 295, 240, 'mace', `狼牙棒\n${MACE_PRICE}金幣`, 0x333333, () => this.openTradeModal('buy', 'mace', '狼牙棒', MACE_PRICE));
+        this.shopPages = { buy: 0, sell: 0 };
+        this.shopMode = 'buy';
+        this.catalog = { buy: [], sell: [] };
+        const buy = this.catalog.buy, sell = this.catalog.sell;
+        for (const [key, breed] of Object.entries(BREEDS)) {
+            buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣`, () => this.openTradeModal('buy', key, breed.name, breed.buy)]);
+            sell.push([`bird:${key}`, breed.texture, `${breed.name}\n${breed.sell}金幣`, () => this.openTradeModal('sell', `bird:${key}`, breed.name, breed.sell)]);
+            sell.push([breed.eggKey, breed.eggIcon, `${breed.eggName}\n${breed.eggPrice}金幣`, () => this.openTradeModal('sell', breed.eggKey, breed.eggName, breed.eggPrice)]);
+        }
+        buy.push(
+            ['expand', 'coop', `倉庫容量(+10)\n${EXPAND_SLOT_PRICE}金幣`, () => this.openTradeModal('buy', 'expand', '倉庫擴充(+10)', EXPAND_SLOT_PRICE)],
+            ['medicine', 'medicine', '咕咕活力散\n10金幣', () => this.openTradeModal('buy', 'medicine', '咕咕活力散', 10)],
+            ['coop2', 'coop', `中雞舍\n${COOP_LV2_PRICE}金幣`, () => this.openTradeModal('buy', 'coop2', '中型雞舍', COOP_LV2_PRICE, true)],
+            ['coop3', 'coop', `大雞舍\n${COOP_LV3_PRICE}金幣`, () => this.openTradeModal('buy', 'coop3', '大型雞舍', COOP_LV3_PRICE, true)]
+        );
+        for (const [key, weapon] of Object.entries(WEAPONS_CONFIG)) {
+            if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.buyPrice}金幣`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
+            if (weapon.sellPrice) sell.push([key, weapon.icon, `${weapon.name}\n${weapon.sellPrice}金幣`, () => this.openTradeModal('sell', key, weapon.name, weapon.sellPrice)]);
+        }
+        for (const [key, icon, name, price] of [['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
+            sell.push([key, icon, `${name}\n${price}金幣`, () => this.openTradeModal('sell', key, name, price)]);
+        }
+        for (const [mode, entries] of Object.entries(this.catalog)) {
+            const container = mode === 'buy' ? this.buyContainer : this.sellContainer;
+            entries.forEach(([key, icon, text, action], index) => {
+                const slot = index % 6;
+                const objects = this.addShopItem(container, slot % 2 ? 295 : 95, 40 + Math.floor(slot / 2) * 100, icon, text, 0x735038, action);
+                for (const object of objects) { object.catalogPage = Math.floor(index / 6); object.setVisible(object.catalogPage === 0); }
+            });
+        }
+        const previous = this.add.rectangle(70, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        const next = this.add.rectangle(320, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        this.add.text(70, 640, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.add.text(320, 640, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.pageText = this.add.text(195, 640, '', { fontSize: '15px', color: '#fff2cc', backgroundColor: '#593b27', padding: 5 }).setOrigin(0.5);
+        previous.on('pointerdown', () => this.changeShopPage(-1));
+        next.on('pointerdown', () => this.changeShopPage(1));
+        btnBuy.on('pointerdown', () => { this.shopMode = 'buy'; this.changeShopPage(0); });
+        btnSell.on('pointerdown', () => { this.shopMode = 'sell'; this.changeShopPage(0); });
+        this.changeShopPage(0);
+    }
 
-        this.addShopItem(this.buyContainer, 95, 340, 'battleaxe', `雙手斧\n${AXE_PRICE}金幣`, 0x735038, () => this.openTradeModal('buy', 'battleaxe', '雙手斧', AXE_PRICE));
-
-        // 📤 賣出清單
-        this.addShopItem(this.sellContainer, 95, 40, 'egg', `雞蛋\n${EGG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'inventoryEggs', '雞蛋', EGG_PRICE));
-        this.addShopItem(this.sellContainer, 295, 40, 'worm', `菜蟲\n${WORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'worms', '菜蟲', WORM_PRICE));
-        this.addShopItem(this.sellContainer, 95, 140, 'earthworm', `蚯蚓\n${EARTHWORM_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'earthworms', '蚯蚓', EARTHWORM_PRICE));
-        this.addShopItem(this.sellContainer, 295, 140, 'fang', `狼牙\n${FANG_PRICE}金幣`, 0x333333, () => this.openTradeModal('sell', 'wolfFangs', '狼牙', FANG_PRICE));
-        this.addShopItem(this.sellContainer, 95, 240, 'tiger_pelt', `虎皮\n50金幣`, 0x333333, () => this.openTradeModal('sell', 'tigerPelts', '虎皮', 50));
-        this.addShopItem(this.sellContainer, 95, 340, 'gorilla_fang', `猩猩尖牙\n${GORILLA_FANG_PRICE}金幣`, 0x735038, () => this.openTradeModal('sell', 'gorillaFangs', '猩猩尖牙', GORILLA_FANG_PRICE));
-        this.addShopItem(this.sellContainer, 295, 240, 'dragon_scale', `龍麟\n${DRAGON_SCALE_PRICE}金幣`, 0x633332, () => this.openTradeModal('sell', 'dragonScales', '龍麟', DRAGON_SCALE_PRICE));
-        this.addShopItem(this.sellContainer, 295, 340, 'mace', `狼牙棒\n${MACE_SELL_PRICE}金幣`, 0x735038, () => this.openTradeModal('sell', 'mace', '狼牙棒', MACE_SELL_PRICE));
+    changeShopPage(delta) {
+        const mode = this.shopMode, total = Math.ceil(this.catalog[mode].length / 6);
+        const page = this.shopPages[mode] = Phaser.Math.Clamp(this.shopPages[mode] + delta, 0, total - 1);
+        const container = mode === 'buy' ? this.buyContainer : this.sellContainer;
+        for (const object of container.list) object.setVisible(object.catalogPage === page);
+        this.pageText.setText(`${page + 1} / ${total}`);
     }
 
     createWeaponGuide() {
-        const button = this.add.rectangle(195, 730, 190, 42, 0x735038).setStrokeStyle(2, 0xdcb975).setInteractive({ cursor: 'pointer' });
-        this.add.text(195, 730, '武器圖鑑・攻擊說明', { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5);
+        const button = this.add.rectangle(100, 730, 170, 42, 0x735038).setStrokeStyle(2, 0xdcb975).setInteractive({ cursor: 'pointer' });
+        this.add.text(100, 730, '武器圖鑑', { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5);
         const panel = this.add.container(0, 0).setDepth(90).setVisible(false);
         const shade = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive();
         const paper = this.add.rectangle(195, 398, 370, 450, 0xffefd0).setStrokeStyle(3, 0x735038);
@@ -106,6 +138,7 @@ export default class ShopScene extends Phaser.Scene {
         const txt = this.add.text(x + 18, y, text, { fontSize: '13px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
         bg.on('pointerdown', callback);
         container.add([bg, icon, txt]);
+        return [bg, icon, txt];
     }
 
     createConfirmDialog() {
@@ -173,10 +206,10 @@ export default class ShopScene extends Phaser.Scene {
         if (type === 'buy') {
             if (isSingleOnly) {
                 this.currentMaxQty = 1;
-            } else if (itemKey === 'hen') {
+            } else if (BREEDS[itemKey]) {
                 const coopLevel = this.farmData.coopLevel || 1;
-                const maxHens = (coopLevel === 3) ? COOP_LV3_MAX : (coopLevel === 2 ? COOP_LV2_MAX : 3);
-                const currentHens = this.farmData.hens || 1;
+                const maxHens = coopCapacity(coopLevel);
+                const currentHens = poultryState(this.farmData).hens.length;
                 const spaceForHens = Math.max(0, maxHens - currentHens);
                 const maxByCoins = Math.floor(coins / unitPrice);
                 this.currentMaxQty = Math.min(spaceForHens, maxByCoins);
@@ -187,7 +220,7 @@ export default class ShopScene extends Phaser.Scene {
                 this.currentMaxQty = Math.min(freeSpace, maxByCoins);
             }
         } else {
-            this.currentMaxQty = this.farmData[itemKey] || 0;
+            this.currentMaxQty = itemKey.startsWith('bird:') ? poultryState(this.farmData).hens.filter(h => h.breed === itemKey.slice(5)).length : (this.farmData[itemKey] || 0);
         }
 
         if (this.currentMaxQty <= 0) {
@@ -200,19 +233,21 @@ export default class ShopScene extends Phaser.Scene {
         }
 
         this.dialogTitle.setText(`${type === 'buy' ? '買進' : '賣出'} [${itemName}]`);
-        this.dialogSubText.setText(`單價: ${unitPrice} 金幣`);
+        this.dialogSubText.setText(`單價: ${unitPrice} 金幣${type === 'buy' && BREEDS[itemKey] ? `・每 ${BREEDS[itemKey].interval / 3600000} 小時 1 顆蛋` : ''}`);
+        if (type === 'sell' && itemKey.startsWith('bird:')) this.dialogSubText.setText(`單價: ${unitPrice} 金幣\n優先出售健康雞，已產出的蛋保留`);
         this.updateQuantity(0); 
 
         this.confirmTradeCallback = (qty) => {
             if (type === 'buy') {
-                if (itemKey === 'hen') this.executeBuyHen(qty);
+                if (BREEDS[itemKey]) this.executeBuyHen(qty, itemKey);
                 else if (itemKey === 'expand') this.executeExpandWarehouse(qty);
                 else if (itemKey === 'medicine') this.executeBuyMedicine(qty);
                 else if (itemKey === 'coop2') this.executeUpgradeCoop(2, unitPrice);
                 else if (itemKey === 'coop3') this.executeUpgradeCoop(3, unitPrice);
                 else if (WEAPONS_CONFIG[itemKey]) this.executeBuyWeapon(itemKey, qty, unitPrice);
             } else {
-                this.executeSellItem(itemKey, unitPrice, itemName, qty);
+                if (itemKey.startsWith('bird:')) this.executeTradePoultry(itemKey.slice(5), qty, 'sell');
+                else this.executeSellItem(itemKey, unitPrice, itemName, qty);
             }
         };
 
@@ -299,7 +334,8 @@ export default class ShopScene extends Phaser.Scene {
         this.isProcessing = true;
         const weapon = WEAPONS_CONFIG[itemKey];
         if (!Number.isSafeInteger(qty) || qty <= 0 || (weapon && !weapon.sellPrice)) { this.isProcessing = false; return; }
-        const totalPrice = qty * (weapon?.sellPrice ?? unitPrice);
+        const egg = Object.values(BREEDS).find(b => b.eggKey === itemKey);
+        const totalPrice = qty * (weapon?.sellPrice ?? egg?.eggPrice ?? unitPrice);
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
@@ -317,32 +353,23 @@ export default class ShopScene extends Phaser.Scene {
         finally { this.isProcessing = false; }
     }
 
-    async executeBuyHen(qty) {
+    executeBuyHen(qty, breed = 'hen') {
+        return this.executeTradePoultry(breed, qty, 'buy');
+    }
+
+    async executeTradePoultry(breed, qty, type) {
         if (this.isProcessing) return;
         this.isProcessing = true;
-        const totalPrice = qty * HEN_PRICE;
+        const now = Date.now();
+        const ids = Array.from({ length: Number.isSafeInteger(qty) && qty > 0 && qty <= 20 ? qty : 0 }, () => crypto.randomUUID());
         try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                const coopLevel = farm.coopLevel || 1; 
-                let maxHens = (coopLevel === 3) ? COOP_LV3_MAX : (coopLevel === 2 ? COOP_LV2_MAX : 3);
-                if ((farm.hens || 1) + qty > maxHens) throw `母雞數量將超過雞舍限制 (${maxHens}隻)！`;
-                if ((farm.coins || 0) < totalPrice) throw "金幣不足！";
-
-                let states = farm.hensState || [];
-                for (let i = 0; i < qty; i++) {
-                    states.push({ isSick: false });
-                }
-
-                t.update(myFarmRef, { 
-                    "farm.coins": farm.coins - totalPrice, 
-                    "farm.hens": (farm.hens || 1) + qty,
-                    "farm.hensState": states
-                });
+            await runTransaction(db, async transaction => {
+                const snap = await transaction.get(myFarmRef), farm = snap.data()?.farm;
+                if (!farm) throw new Error('農場資料不存在');
+                transaction.update(myFarmRef, tradePoultry(farm, breed, qty, type, now, ids));
             });
-            this.showMsg(`購買成功！母雞數量 +${qty}`, '#FFD54F');
-        } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
+            this.showMsg(`${type === 'buy' ? '購買' : '賣出'}成功！${BREEDS[breed].name} ${type === 'buy' ? '+' : '-'}${qty}`, '#FFD54F');
+        } catch (e) { this.showMsg(e.message || '交易失敗，請稍後重試', '#F44336'); }
         finally { this.isProcessing = false; }
     }
 

@@ -1,7 +1,8 @@
+import { BREEDS, poultryState, feedPoultry } from './poultry.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, LAY_EGG_TIME_MS, getUsedSpace, WEAPONS_CONFIG } from './constants.js';
+import { myFarmRef, getUsedSpace, WEAPONS_CONFIG } from './constants.js';
 
 export default class WarehouseScene extends Phaser.Scene {
     constructor() { super({ key: 'WarehouseScene' }); }
@@ -26,7 +27,7 @@ export default class WarehouseScene extends Phaser.Scene {
 
         this.allConfigItems = [
             { key: 'coins', name: '金幣', icon: 'coin' },
-            { key: 'inventoryEggs', name: '雞蛋', icon: 'egg' },
+            ...Object.values(BREEDS).map(b => ({ key: b.eggKey, name: b.eggName, icon: b.eggIcon })),
             { key: 'worms', name: '菜蟲', icon: 'worm' },
             { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' },
             { key: 'wolfFangs', name: '狼牙', icon: 'fang' },
@@ -38,6 +39,9 @@ export default class WarehouseScene extends Phaser.Scene {
         ];
 
         this.createActionPanel();
+        this.createFeedPicker();
+        this.warehousePage = 0;
+        this.createWarehousePages();
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
         this.initFirebase();
@@ -93,7 +97,12 @@ export default class WarehouseScene extends Phaser.Scene {
 
         this.emptyText.setVisible(false);
 
+        const totalPages = Math.max(1, Math.ceil(ownedItems.length / 8));
+        this.warehousePage = Math.min(this.warehousePage, totalPages - 1);
+        this.warehousePageText.setText(`${this.warehousePage + 1} / ${totalPages}`);
         ownedItems.forEach((item, index) => {
+            if (Math.floor(index / 8) !== this.warehousePage) return;
+            index %= 8;
             const col = index % 2;
             const row = Math.floor(index / 2);
             const x = 100 + col * 190;
@@ -139,7 +148,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
-        if (key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'gorillaFangs' || key === 'medicines') {
+        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'gorillaFangs' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
                 this.showMsg('咕咕活力散請在母雞生病時點擊母雞使用！', '#FFD54F');
@@ -181,46 +190,63 @@ export default class WarehouseScene extends Phaser.Scene {
         } catch (e) { this.showMsg(typeof e === 'string' ? e : '配備失敗，請稍後重試', '#F44336'); }
     }
 
-    async feedItem(key) {
-        if (this.isFeeding || !this.farmData || (this.farmData[key] || 0) <= 0) return;
+    createWarehousePages() {
+        const previous = this.add.rectangle(70, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        const next = this.add.rectangle(320, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
+        this.add.text(70, 630, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.add.text(320, 630, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.warehousePageText = this.add.text(195, 630, '', { fontSize: '15px', color: '#fff2cc', backgroundColor: '#593b27', padding: 5 }).setOrigin(0.5);
+        previous.on('pointerdown', () => { this.warehousePage = Math.max(0, this.warehousePage - 1); this.renderWarehouseItems(); });
+        next.on('pointerdown', () => { this.warehousePage++; this.renderWarehouseItems(); });
+    }
+
+    createFeedPicker() {
+        this.feedPicker = this.add.container(0, 0).setDepth(80).setVisible(false);
+        const shade = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive();
+        const paper = this.add.rectangle(195, 405, 350, 350, 0xffefd0).setStrokeStyle(3, 0x735038);
+        this.feedPicker.add([shade, paper, this.add.text(195, 260, '選擇要餵食的品種', { fontSize: '20px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5)]);
+        this.feedBreedButtons = {};
+        Object.entries(BREEDS).forEach(([breed, config], i) => {
+            const y = 325 + i * 65;
+            const button = this.add.rectangle(195, y, 290, 50, 0x735038).setInteractive({ cursor: 'pointer' });
+            const label = this.add.text(195, y, config.name, { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5);
+            this.feedPicker.add([button, label]);
+            this.feedBreedButtons[breed] = { button, label };
+            button.on('pointerdown', () => { this.feedPicker.setVisible(false); this.feedItem(this.pendingFeedItem, breed); });
+        });
+        const cancel = this.add.text(195, 540, '取消', { fontSize: '18px', color: '#735038', padding: 10 }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        cancel.on('pointerdown', () => this.feedPicker.setVisible(false));
+        this.feedPicker.add(cancel);
+    }
+
+    async feedItem(key, breed) {
+        if (this.isFeeding || !this.farmData || !(this.farmData[key] > 0)) return;
         this.actionPanel.setVisible(false);
-        this.isFeeding = true; 
-
-        const reduceMins = key === 'worms' ? 30 : 60;
-        const reduceMs = reduceMins * 60 * 1000;
-
+        const hens = poultryState(this.farmData).hens;
+        const breeds = [...new Set(hens.map(h => h.breed))];
+        if (!breeds.length) { this.showMsg('雞舍沒有雞隻，請先到商店選購！', '#FFD54F'); return; }
+        if (!breed && breeds.length > 1) {
+            this.pendingFeedItem = key;
+            for (const [b, { button, label }] of Object.entries(this.feedBreedButtons)) {
+                const count = hens.filter(h => h.breed === b).length;
+                button.setVisible(count > 0); label.setVisible(count > 0).setText(`${BREEDS[b].name} × ${count}`);
+            }
+            this.feedPicker.setVisible(true);
+            return;
+        }
+        breed ||= breeds[0];
+        this.isFeeding = true;
+        const now = Date.now();
         try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                if (farm[key] > 0) {
-                    let newLastLayTime = farm.lastLayTime - reduceMs;
-                    let newEggsReady = farm.eggsReady || 0;
-                    let newCleanliness = farm.cleanliness || 0;
-                    const now = Date.now();
-                    
-                    const henCount = farm.hens || 1;
-                    const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
-                    const maxEggs = henCount * 6;
-                    
-                    while (now - newLastLayTime >= currentLayTimeMs && newEggsReady < maxEggs) {
-                        newEggsReady++;
-                        newLastLayTime += currentLayTimeMs;
-                        newCleanliness = Math.min(100, newCleanliness + 2);
-                    }
-                    if (newEggsReady >= maxEggs && (now - newLastLayTime > 0)) { newLastLayTime = now; }
-
-                    t.update(myFarmRef, { 
-                        [`farm.${key}`]: farm[key] - 1, 
-                        "farm.lastLayTime": newLastLayTime, 
-                        "farm.eggsReady": newEggsReady,
-                        "farm.cleanliness": newCleanliness
-                    });
-                }
+            await runTransaction(db, async transaction => {
+                const snap = await transaction.get(myFarmRef), farm = snap.data()?.farm;
+                if (!farm) throw new Error('農場資料不存在');
+                transaction.update(myFarmRef, feedPoultry(farm, key, breed, now));
             });
+            this.hen.setTexture(BREEDS[breed].texture, 0).setScale(96 / this.hen.width).play(`${breed}_idle`);
             this.showHeartEffect(key === 'earthworms');
-            this.showMsg(`母雞很開心！下顆蛋加速 ${reduceMins} 分鐘`, '#4CAF50');
-        } catch (e) { console.error(e); } 
+            this.showMsg(`${BREEDS[breed].name}很開心！加速 ${key === 'worms' ? 30 : 60} 分鐘`, '#4CAF50');
+        } catch (e) { this.showMsg(e.message || '餵食失敗，請稍後重試', '#F44336'); }
         finally { this.isFeeding = false; }
     }
 

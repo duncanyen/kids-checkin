@@ -1,3 +1,5 @@
+import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, takePoultryEgg } from './poultry.js';
+import { addPoultrySprite, poultryAnim } from './poultry-art.js';
 import { ENEMY_HEALTH, equippedWeapon, weaponDamage } from './combat-rules.js';
 import { GorillaEncounter } from './gorilla.js';
 import { GardenFeedback } from './garden-feedback.js';
@@ -10,7 +12,7 @@ import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegeta
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, LAY_EGG_TIME_MS, playerName, getUsedSpace } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, playerName, getUsedSpace } from './constants.js';
 
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
@@ -43,6 +45,7 @@ export default class VisitScene extends Phaser.Scene {
 
         const eggPosition = farmEggPosition(this);
         this.coopEgg = this.add.image(eggPosition.x, eggPosition.y, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
+        this.coopEgg.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.attemptSteal());
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
@@ -172,49 +175,15 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async checkAndUpdateTargetEggLaying(targetRef, farm) {
-        if (!farm || farm.lastLayTime === undefined) return;
-        const now = Date.now();
-        const henCount = Math.max(1, farm.hens || 1);
-        const currentLayTimeMs = Math.floor(LAY_EGG_TIME_MS / henCount);
-        const maxEggs = henCount * 6;
-
-        let lastLayTime = farm.lastLayTime;
-        let eggsReady = farm.eggsReady || 0;
-        let cleanliness = farm.cleanliness || 0;
-        let hasChanged = false;
-
-        while (now - lastLayTime >= currentLayTimeMs && eggsReady < maxEggs) {
-            eggsReady++; lastLayTime += currentLayTimeMs; cleanliness = Math.min(100, cleanliness + 2); hasChanged = true;
-        }
-        if (eggsReady >= maxEggs && (now - lastLayTime > 0) && lastLayTime !== now) {
-            lastLayTime = now; hasChanged = true;
-        }
-
-        if (hasChanged && !this.isUpdatingTargetEggs) {
-            this.isUpdatingTargetEggs = true;
-            try {
-                await this.runVisitTransaction(async (t) => {
-                    const docSnap = await t.get(targetRef);
-                    if (!docSnap.exists() || !docSnap.data()?.farm) return; 
-                    
-                    const latestFarm = docSnap.data().farm;
-                    let lTime = latestFarm.lastLayTime || now;
-                    let eReady = latestFarm.eggsReady || 0;
-                    let cVal = latestFarm.cleanliness || 0;
-                    let updated = false;
-
-                    while (now - lTime >= currentLayTimeMs && eReady < maxEggs) {
-                        eReady++; lTime += currentLayTimeMs; cVal = Math.min(100, cVal + 2); updated = true;
-                    }
-                    if (eReady >= maxEggs && (now - lTime > 0)) { lTime = now; updated = true; }
-
-                    if (updated) {
-                        t.update(targetRef, { "farm.lastLayTime": lTime, "farm.eggsReady": eReady, "farm.cleanliness": cVal });
-                    }
-                });
-            } catch (e) { console.error("更新目標玩家生蛋進度失敗:", e); } 
-            finally { this.isUpdatingTargetEggs = false; }
-        }
+        if (!farm || this.isUpdatingTargetEggs || !productionChanged(farm, Date.now())) return;
+        this.isUpdatingTargetEggs = true;
+        try {
+            await this.runVisitTransaction(async transaction => {
+                const snap = await transaction.get(targetRef);
+                if (snap.data()?.farm) transaction.update(targetRef, poultryPatch(settlePoultry(snap.data().farm)));
+            });
+        } catch (e) { console.error('更新目標玩家生蛋進度失敗:', e); }
+        finally { this.isUpdatingTargetEggs = false; }
     }
 
     onMyFarmDataChanged(parent, value) { this.myFarmData = value; }
@@ -264,8 +233,8 @@ export default class VisitScene extends Phaser.Scene {
 
     syncTargetHens() {
         if (!this.targetFarmData) return;
-        const henCount = Math.max(1, this.targetFarmData.hens || 1);
-        const hensState = Array.isArray(this.targetFarmData.hensState) ? this.targetFarmData.hensState : [];
+        const henCount = poultryState(this.targetFarmData).hens.length;
+        const hensState = poultryState(this.targetFarmData).hens;
         const now = Date.now();
         setCoopSize(this.coop, this.targetFarmData.coopLevel);
 
@@ -283,23 +252,23 @@ export default class VisitScene extends Phaser.Scene {
         for (let i = 0; i < henCount; i++) {
             const { x: cx, y: cy } = randomHenPosition(this);
             // 🐔 加入 setScale(2)
-            let newHen = this.add.sprite(cx, cy, 'hen').setOrigin(0.5).setScale(2).setDepth(10).setInteractive({ cursor: 'pointer' });
+            let newHen = addPoultrySprite(this, hensState[i], cx, cy);
 
             const hState = hensState[i] || {};
             newHen.hState = hState;
             if (hState.isSick) {
-                newHen.play('hen_idle', true);
+                newHen.play(poultryAnim(newHen, 'idle'), true);
                 const sickDuration = hState.sickTimestamp ? (now - hState.sickTimestamp) : 0;
                 let iconKey = (sickDuration > 24 * 3600 * 1000) ? 'skull' : 'sick_pelt';
                 let icon = this.add.image(cx, cy - 25, iconKey).setDepth(11);
                 newHen.statusIcon = icon;
             } else {
-                newHen.play('hen_idle', true);
+                newHen.play(poultryAnim(newHen, 'idle'), true);
             }
 
             newHen.on('pointerdown', () => {
                 // 🌟 同步放大偷蛋點擊時的比例
-                this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: 2.2, scaleY: 1.8, duration: 100, yoyo: true });
+                this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
                 this.attemptSteal(); 
             });
 
@@ -319,13 +288,13 @@ export default class VisitScene extends Phaser.Scene {
             if (!target) {
                 henSprite.walkTween = null;
                 henSprite.isEvading = false;
-                henSprite.play('hen_idle', true);
+                henSprite.play(poultryAnim(henSprite, 'idle'), true);
                 henSprite.walkTimer = this.time.delayedCall(
                     getThreatZones(this).length ? 500 : Phaser.Math.Between(1000, 3000),
                     () => this.wanderSingleHen(henSprite));
                 return;
             }
-            henSprite.setFlipX(target.x < henSprite.x).play('hen_walk', true);
+            henSprite.setFlipX(target.x < henSprite.x).play(poultryAnim(henSprite, 'walk'), true);
             const distance = Phaser.Math.Distance.Between(henSprite.x, henSprite.y, target.x, target.y);
             henSprite.walkTween = this.tweens.add({
                 targets: henSprite, x: target.x, y: target.y,
@@ -514,7 +483,7 @@ export default class VisitScene extends Phaser.Scene {
             const targetDoc = await t.get(targetRef);
             if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
             const targetFarm = targetDoc.data().farm;
-            if (targetFarm && (targetFarm.eggsReady || 0) > 0) { t.update(targetRef, { "farm.eggsReady": targetFarm.eggsReady - 1 }); }
+            if (targetFarm && (targetFarm.eggsReady || 0) > 0) { t.update(targetRef, takePoultryEgg(targetFarm, Math.random()).patch); }
         }).catch(e => console.error(e));
     }
 
@@ -584,6 +553,7 @@ export default class VisitScene extends Phaser.Scene {
         this.isStealing = true;
         const targetRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId);
         const roll = Math.random(); // A Firestore retry keeps the same attempt outcome.
+        const eggRoll = Math.random();
         try {
             const success = await this.runVisitTransaction(async transaction => {
                 const targetDoc = await transaction.get(targetRef);
@@ -597,14 +567,17 @@ export default class VisitScene extends Phaser.Scene {
                 const success = roll <= (moral < 50 ? 0.4 : 0.7);
                 const updates = { [`farm.villageStealCooldowns.${key}`]: Date.now(), 'farm.moral': Math.max(0, moral - 5) };
                 if (success) {
-                    updates['farm.inventoryEggs'] = (own.inventoryEggs || 0) + 1;
-                    transaction.update(targetRef, { 'farm.eggsReady': target.eggsReady - 1 });
+                    const egg = takePoultryEgg(target, eggRoll);
+                    const itemKey = BREEDS[egg.breed].eggKey;
+                    updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
+                    this.stolenEggName = BREEDS[egg.breed].eggName;
+                    transaction.update(targetRef, egg.patch);
                 }
                 // A failed attempt still commits its cooldown and moral cost.
                 transaction.update(myFarmRef, updates);
                 return success;
             });
-            this.showFloatingText(success ? '🕵️ 偷到雞蛋' : '被狗咬了！偷竊失敗！', success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
+            this.showFloatingText(success ? `🕵️ 偷到${this.stolenEggName || '雞蛋'}` : '被狗咬了！偷竊失敗！', success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!success) this.cameras.main.shake(300, 0.01);
             if (success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {

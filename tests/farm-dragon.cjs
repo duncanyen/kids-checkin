@@ -29,7 +29,7 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{
  if(writes.length){window.__farmTest.commits++;notify();}
  return result;
  });queue=run.catch(()=>{});return run;}
-window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix+who].farm,values);notify();}};
+window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+who].farm;Object.assign(farm,values);if(farm.poultryVersion===2&&'eggsReady' in values&&!('readyEggs' in values))farm.readyEggs={hen:values.eggsReady,silkie:0,bresse:0};notify();}};
 `;
 (async () => {
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -73,8 +73,8 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.dragonEncounter;
   if(!b||b.damage!==10||b.targetAccountId!=='self'||s.farmData.eggsReady!==2||s.farmData.inventoryEggs)throw Error('Home encounter did not protect uncollected eggs');
   await s.harvestEgg();if(s.farmData.eggsReady!==2||s.dragonEncounter!==b)throw Error('Repeated click bypassed defense');
-  const hen=s.hensGroup[0];b.sprite.setPosition(hen.x+40,hen.y+20);s.avoidPredators();
   const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');
+  const hen=s.hensGroup[0];b.flight.pause();b.sprite.setPosition(hen.x+40,hen.y+20);s.avoidPredators();
   if(!henRouteIsSafe(s,hen))throw Error('Home hen route crosses dragon');
   for(let n=0;n<60;n++)b.hit();
  });

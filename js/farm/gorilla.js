@@ -1,8 +1,9 @@
+import { clearPoultryEggs } from './poultry.js';
 import { BossEncounter } from './dragon.js';
 import { GORILLA_CONFIG, GORILLA_FANG_PRICE } from './gorilla-rules.js';
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, getUsedSpace, LAY_EGG_TIME_MS } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, getUsedSpace } from './constants.js';
 import { readVillageAccess } from './villages.js';
 
 export function registerGorillaAnimations(scene) {
@@ -36,14 +37,7 @@ export async function settleGorillaEncounter(id, outcome, targetAccountId = CURR
             const targetSnapshot = targetRef.path === myFarmRef.path ? snapshot : await transaction.get(targetRef);
             const target = targetSnapshot.data()?.farm;
             if (!target) throw new Error('找不到目標雞舍');
-            const eggUpdates = { 'farm.eggsReady': 0 };
-            if (Number.isFinite(target.lastLayTime)) {
-                const now = Date.now(), total = Math.max(1, target.hens || 1);
-                const healthy = (target.hensState || []).filter(hen => !hen.isSick).length;
-                const interval = Math.floor(LAY_EGG_TIME_MS / Math.max(1, healthy || total));
-                const ticks = Math.max(0, Math.floor((now - target.lastLayTime) / interval));
-                eggUpdates['farm.lastLayTime'] = (target.eggsReady || 0) >= total * 6 ? now : target.lastLayTime + ticks * interval;
-            }
+            const eggUpdates = clearPoultryEggs(target);
             if (targetRef.path === myFarmRef.path) Object.assign(updates, eggUpdates);
             else transaction.update(targetRef, eggUpdates);
         }
