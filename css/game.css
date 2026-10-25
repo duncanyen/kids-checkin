@@ -146,7 +146,7 @@ body {
 .g2048-box { background: #bbada0; padding: 8px 16px; border-radius: 10px; color: white; text-align: center; }
 .g2048-box .lbl { font-size: 10px; text-transform: uppercase; color: #eee4da; font-weight: 700; }
 .g2048-box .val { font-size: 16px; font-weight: 700; }
-.g2048-board { background: #bbada0; border-radius: 14px; padding: 12px; width: 340px; height: 340px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 10px; position: relative; box-shadow: var(--shadow-md); }
+.g2048-board { touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; background: #bbada0; border-radius: 14px; padding: 12px; width: 340px; height: 340px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 10px; position: relative; box-shadow: var(--shadow-md); }
 .g2048-cell { background: rgba(238, 228, 218, 0.35); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; color: #776e65; user-select: none; }
 
 .tile-2 { background: #eee4da; color: #776e65; }

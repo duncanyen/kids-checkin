@@ -77,6 +77,7 @@ function selectGame(gameType) {
 }
 
 function returnToLobby() {
+    reset2048Gesture();
     const kidGameContainer = document.getElementById('kidGameContainer');
     const g2048Container = document.getElementById('g2048Container');
     const gameLobby = document.getElementById('gameLobby');
@@ -254,6 +255,7 @@ function listen2048UserData(docId) {
 }
 
 function init2048Game() {
+    reset2048Gesture();
     g2048Board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
     g2048Score = 0; 
     g2048GameOver = false;
@@ -497,33 +499,47 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-let touchStartX = 0, touchStartY = 0;
+let g2048Gesture = null;
 const boardEl = document.getElementById('g2048Board');
+function reset2048Gesture() {
+    const previous = g2048Gesture;
+    g2048Gesture = null;
+    if (previous && boardEl?.hasPointerCapture(previous.id)) boardEl.releasePointerCapture(previous.id);
+}
+function is2048Visible() {
+    return document.getElementById('g2048Container')?.style.display === 'block';
+}
 if (boardEl) {
-    boardEl.addEventListener('touchstart', (e) => { 
-        touchStartX = e.touches[0].clientX; 
-        touchStartY = e.touches[0].clientY; 
-    }, {passive: true});
-    
-    boardEl.addEventListener('touchend', (e) => {
-        const g2048Container = document.getElementById('g2048Container');
-        if(g2048Container && g2048Container.style.display !== 'block') return;
-        
-        let deltaX = e.changedTouches[0].clientX - touchStartX;
-        let deltaY = e.changedTouches[0].clientY - touchStartY;
-        
-        if(Math.abs(deltaX) > Math.abs(deltaY)) {
-            if(Math.abs(deltaX) > 30) { 
-                if(deltaX > 0) makeMove('right'); 
-                else makeMove('left'); 
-            }
-        } else {
-            if(Math.abs(deltaY) > 30) { 
-                if(deltaY > 0) makeMove('down'); 
-                else makeMove('up'); 
-            }
-        }
-    }, {passive: true});
+    // touch-action on the board prevents Android from taking the gesture for
+    // scrolling/pull-to-refresh. Capture the board, not a tile replaced on render.
+    boardEl.addEventListener('pointerdown', event => {
+        if (!event.isPrimary) { reset2048Gesture(); return; }
+        if (!is2048Visible() || (event.pointerType === 'mouse' && event.button !== 0)) return;
+        reset2048Gesture();
+        g2048Gesture = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        boardEl.setPointerCapture(event.pointerId);
+        if (event.cancelable) event.preventDefault();
+    });
+    boardEl.addEventListener('pointermove', event => {
+        if (g2048Gesture?.id === event.pointerId && event.cancelable) event.preventDefault();
+    });
+    boardEl.addEventListener('pointerup', event => {
+        if (g2048Gesture?.id !== event.pointerId) return;
+        const start = g2048Gesture;
+        reset2048Gesture();
+        if (!is2048Visible()) return;
+        if (event.cancelable) event.preventDefault();
+        const deltaX = event.clientX - start.x, deltaY = event.clientY - start.y;
+        if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) <= 30) return;
+        if (Math.abs(deltaX) > Math.abs(deltaY)) makeMove(deltaX > 0 ? 'right' : 'left');
+        else makeMove(deltaY > 0 ? 'down' : 'up');
+    });
+    boardEl.addEventListener('pointercancel', reset2048Gesture);
+    boardEl.addEventListener('lostpointercapture', event => {
+        if (g2048Gesture?.id === event.pointerId) reset2048Gesture();
+    });
+    window.addEventListener('blur', reset2048Gesture);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) reset2048Gesture(); });
 }
 
 document.querySelectorAll('.p-card').forEach(card => {
