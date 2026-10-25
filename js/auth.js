@@ -1,5 +1,6 @@
+import { normalizeAccountId, findAccountsById, newAccountRef, assertAccountAvailable, ACCOUNT_ID_TAKEN } from './account-identity.js';
 import { db } from "./firebase-config.js";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 window.navTo = function(url, moduleName) {
     const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
@@ -129,18 +130,22 @@ window.processLogin = async function() {
     if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
     document.getElementById('loadingView').style.display = 'flex';
     try {
-        let q = query(collection(db, "users"), where("accountId", "==", loginId));
-        let snap = await getDocs(q);
-        if(snap.empty) {
-            q = query(collection(db, "users"), where("name", "==", loginId));
-            snap = await getDocs(q);
+        const matches = await findAccountsById(db, loginId);
+        if (matches.length > 1) {
+            alert('此帳號存在大小寫重複資料，請聯絡管理員確認。');
+            document.getElementById('loadingView').style.display = 'none';
+            return;
         }
-        if (snap.empty) {
+        let userDoc = matches[0];
+        if (!userDoc) {
+            const snap = await getDocs(query(collection(db, "users"), where("name", "==", loginId)));
+            userDoc = snap.docs[0];
+        }
+        if (!userDoc) {
             alert('找不到此帳號，請確認輸入正確。');
             document.getElementById('loadingView').style.display = 'none';
             return;
         }
-        const userDoc = snap.docs[0];
         const userData = userDoc.data();
         if (userData.password !== loginPwd && userData.pin !== loginPwd) {
             alert('密碼錯誤，請重新輸入！');
@@ -158,28 +163,32 @@ window.processLogin = async function() {
 };
 
 window.processRegistration = async function() {
-    const regId = document.getElementById('regId').value.trim();
+    const regId = normalizeAccountId(document.getElementById('regId').value);
     const regEmail = document.getElementById('regEmail').value.trim();
     const regName = document.getElementById('regName').value.trim();
     const pwd = document.getElementById('regPassword').value.trim();
     const pwdConfirm = document.getElementById('regConfirmPassword').value.trim();
     if(!regId || !regEmail || !regName || !pwd) { alert('請填寫完整註冊資訊！'); return; }
+    if (!/^[a-z0-9_]+$/.test(regId)) { alert('帳號 ID 只能包含英文、數字與底線！'); return; }
     if(pwd.length < 6) { alert('密碼長度必須至少 6 碼！'); return; }
     if(pwd !== pwdConfirm) { alert('兩次輸入的密碼不一致！'); return; }
     document.getElementById('loadingView').style.display = 'flex';
     try {
-        let qId = query(collection(db, "users"), where("accountId", "==", regId));
-        if (!(await getDocs(qId)).empty) { alert('此登入帳號 ID 已被使用，請換一個！'); document.getElementById('loadingView').style.display = 'none'; return; }
+        if ((await findAccountsById(db, regId)).length) throw new Error(ACCOUNT_ID_TAKEN);
         let qName = query(collection(db, "users"), where("name", "==", regName));
         if (!(await getDocs(qName)).empty) { alert('此群組暱稱已被使用，請換一個！'); document.getElementById('loadingView').style.display = 'none'; return; }
         
         const avatar = `https://ui-avatars.com/api/?name=${regName}&background=10b981&color=fff`;
-        const userRef = await addDoc(collection(db, "users"), { accountId: regId, email: regEmail, name: regName, password: pwd, pin: pwd, avatar: avatar, role: "member", createdAt: serverTimestamp() });
+        const userRef = newAccountRef(db, regId);
+        await runTransaction(db, async transaction => {
+            await assertAccountAvailable(transaction, userRef);
+            transaction.set(userRef, { accountId: regId, email: regEmail, name: regName, password: pwd, pin: pwd, avatar, role: "member", createdAt: serverTimestamp() });
+        });
         const loggedUser = { docId: userRef.id, accountId: regId, email: regEmail, name: regName, password: pwd, avatar, role: "member" };
         sessionStorage.setItem('familyCheckInUser', JSON.stringify(loggedUser));
         await window.evaluateUserGroups(loggedUser);
     } catch (e) {
-        alert("註冊失敗，請檢查網路。");
+        alert(e.message === ACCOUNT_ID_TAKEN ? ACCOUNT_ID_TAKEN : "註冊失敗，請檢查網路。");
         document.getElementById('loadingView').style.display = 'none';
     }
 };

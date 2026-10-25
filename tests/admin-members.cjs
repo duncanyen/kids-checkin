@@ -72,9 +72,12 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
  await page.locator('[data-account-id="bob"] .btn-remove').click();await page.waitForFunction(()=>!document.querySelector('[data-account-id="bob"]'));
  assert.equal(docs['groups/A'].members.includes('bob'),false);assert.equal(docs['groups/B'].members.includes('bob'),true);assert.equal(docs['users/bob-doc'].role,'member');assert.equal(docs['users/bob-doc'].groupId,'B');
  // Creating a profile and adding membership is atomic, and a failed commit leaves neither behind.
- await page.click('#btnToggleAddForm');await page.fill('#newUserId','newmember');await page.fill('#newUserName','新成員');await page.fill('#newUserPin','1234');
+ await page.click('#btnToggleAddForm');await page.fill('#newUserId','NeWMember');await page.fill('#newUserName','新成員');await page.fill('#newUserPin','1234');
  failCommit=true;await page.click('#btnAddUser');await page.waitForFunction(()=>!document.getElementById('btnAddUser').disabled);assert.equal(docs['groups/A'].members.includes('newmember'),false);assert.equal(Object.values(docs).some(d=>d.accountId==='newmember'),false);failCommit=false;
  await page.click('#btnAddUser');await page.waitForSelector('[data-account-id="newmember"]');assert.equal(docs['groups/A'].members.includes('newmember'),true);
+ // Duplicate IDs are rejected even for an account outside the current group.
+ await page.click('#btnToggleAddForm');await page.fill('#newUserId','OUTSIDER');await page.fill('#newUserName','不可重複');await page.fill('#newUserPin','1234');
+ const beforeDuplicate=writes.length;await page.click('#btnAddUser');await page.waitForFunction(()=>!document.getElementById('btnAddUser').disabled);assert.equal(writes.length,beforeDuplicate);assert.match(alerts.at(-1),/不分大小寫/);
  // Approval reuses an existing account and joins it to this group without duplicating its profile.
  docs['group_requests/request']={groupId:'A',status:'pending'};
  const profilesBefore=Object.keys(docs).filter(p=>p.startsWith('users/')).length;
@@ -87,7 +90,8 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
  // Back/forward cache restoration keeps the membership subscription and refreshes the list.
  await page.evaluate(async()=>{window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));const {doc,updateDoc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await updateDoc(doc({},'groups','B'),{members:['admin','bob','outsider','charlie']});window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
  await page.waitForSelector('[data-account-id="charlie"]',{state:'attached'});
- assert.ok(queries.filter(q=>q.path==='users').every(q=>q.filters?.some(f=>f.field==='accountId')));
+ assert.ok(queries.some(q=>q.path==='users'&&!q.filters)); // Global legacy-ID duplicate check.
+ assert.ok(queries.filter(q=>q.path==='users'&&q.filters).every(q=>q.filters.some(f=>f.field==='accountId')));
  assert.deepEqual(errors,[]);console.log('PASS: authoritative membership list, multi-group profiles, same-name edit/self identity, preserved PIN, live joins, group-only removal, atomic add/retry, approval reuses profile, selected group isolation');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

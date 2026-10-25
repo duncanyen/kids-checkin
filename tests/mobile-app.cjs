@@ -18,7 +18,7 @@ const root=path.resolve(__dirname,'..');
   await route.fulfill({response,body:html});
  });
  await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
- await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:'export const collection=()=>({}),query=()=>({}),where=()=>({}),getDocs=()=>{},addDoc=()=>{},serverTimestamp=()=>0;'}));
+ await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:'export const doc=()=>({}),runTransaction=()=>{},collection=()=>({}),query=()=>({}),where=()=>({}),getDocs=()=>{},addDoc=()=>{},serverTimestamp=()=>0;'}));
  await context.route('https://cdn.jsdelivr.net/**',r=>r.abort());
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);
  await page.addInitScript(()=>{

@@ -1,3 +1,4 @@
+import { normalizeAccountId, findAccountsById, newAccountRef, assertAccountAvailable, ACCOUNT_ID_TAKEN } from './account-identity.js';
 import { FOOD_MENU, DEFAULT_MENUS } from './menu-catalog.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { loadGameGroupMembers } from './game-members.js';
@@ -568,7 +569,7 @@ function renderUserList() {
 }
 
 async function addNewUser() {
-    const idInput = document.getElementById('newUserId').value.trim();
+    const idInput = normalizeAccountId(document.getElementById('newUserId').value);
     const nameInput = document.getElementById('newUserName').value.trim();
     const pinInput = document.getElementById('newUserPin').value.trim();
     const emailInput = document.getElementById('newUserEmail').value.trim();
@@ -581,7 +582,7 @@ async function addNewUser() {
     if (!/^\d{4}$/.test(pinInput)) return alert("密碼格式錯誤，必須為 4 位數字！");
     if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) return alert("電子郵件格式不正確！");
     
-    if (allUsers.some(u => u.accountId === idInput)) return alert("此「帳號 ID」已存在，請更換一個！");
+    if (allUsers.some(u => normalizeAccountId(u.accountId) === idInput)) return alert("此「帳號 ID」已存在，請更換一個！");
     if (allUsers.some(u => u.name === nameInput)) return alert("家族內「稱呼」不可重複，請更換一個！");
 
     try {
@@ -599,11 +600,11 @@ async function addNewUser() {
             avatar: `https://ui-avatars.com/api/?name=${nameInput}&background=random`
         };
 
-        const existing = await getDocs(query(collection(db, 'users'), where('accountId', '==', idInput)));
-        if (!existing.empty) throw new Error('此帳號已存在，請使用邀請碼讓成員加入，避免建立重複帳號。');
-        const userRef = doc(collection(db, 'users'));
+        if ((await findAccountsById(db, idInput)).length) throw new Error(ACCOUNT_ID_TAKEN);
+        const userRef = newAccountRef(db, idInput);
         await runTransaction(db, async transaction => {
             const group = await readManagedGroup(transaction);
+            await assertAccountAvailable(transaction, userRef);
             transaction.set(userRef, newUser);
             transaction.update(group.ref, { members: [...new Set([...group.members, idInput])] });
         });
@@ -671,10 +672,11 @@ async function saveEditUser() {
 
     const targetUser = allUsers.find(user => user.docId === docId);
     if (!targetUser) return alert('成員名單已變更，請重新開啟編輯。');
+    if (targetUser.accountId && idInput !== targetUser.accountId) return alert('帳號 ID 設定後不可更改。');
     const originalPin = targetUser.pin || targetUser.password || '';
     if (!idInput || !nameInput || (!/^\d{4}$/.test(pinInput) && pinInput !== originalPin)) return alert("欄位或密碼格式錯誤！");
     
-    if (allUsers.some(u => u.accountId === idInput && u.docId !== docId)) return alert("此「帳號 ID」已與其他成員重複！");
+    if (allUsers.some(u => normalizeAccountId(u.accountId) === normalizeAccountId(idInput) && u.docId !== docId)) return alert("此「帳號 ID」已與其他成員重複！");
     if (nameInput !== targetUser.name && allUsers.some(u => u.name === nameInput && u.docId !== docId)) return alert("家族內「稱呼」不可重複！");
 
     try {

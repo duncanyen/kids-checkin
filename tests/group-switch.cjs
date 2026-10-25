@@ -24,6 +24,7 @@ export function onSnapshot(ref,cb,error){const l={ref,cb};listeners.add(l);emit(
 async function notify(){for(const l of [...listeners])await emit(l);}
 export const updateDoc=async(ref,data)=>{await window.__groupDb({...ref,kind:'update',data});await notify();};
 export const addDoc=async(ref,data)=>{const id=await window.__groupDb({...ref,kind:'add',data});await notify();return{id};};
+export const runTransaction=()=>{throw Error('Unexpected registration transaction in group-switch test');};
 export const getCountFromServer=async()=>({data:()=>({count:0})});
 `;
 (async()=>{
