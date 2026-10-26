@@ -1,22 +1,9 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-    getFirestore, collection, addDoc, query, orderBy, onSnapshot, where,
-    serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc
+    collection, addDoc, query, orderBy, onSnapshot, where,
+    serverTimestamp, doc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// 🌟 ImgBB API 設定 
-const IMGBB_API_KEY = "a8dd5d8d055c20807b18a53a514757e0"; 
+import { db } from './firebase-config.js';
+import { uploadPhotoPost, removePhotoFiles } from './gallery-storage.js';
 
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -29,6 +16,7 @@ if (!currentUser || !currentGroupId) {
     window.location.href = 'index.html'; 
 }
 
+let uploadInProgress = false;
 let pendingUploadBase64Array = []; 
 let allPhotosData = [];
 let currentSort = 'latest';
@@ -133,7 +121,7 @@ function renderPhotoCard(photoId, data, startGlobalIndex) {
         timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     }
 
-    const isMine = (data.uploader === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+    const isMine = ((data.uploaderAccountId ? data.uploaderAccountId === currentUser.accountId : data.uploader === currentUser.name) || currentUser.role === 'admin' || currentUser.role === 'parent');
     const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')" title="刪除貼文">🗑️</button>` : '';
 
     const likesArray = Array.isArray(data.likes) ? data.likes : [];
@@ -253,7 +241,15 @@ window.deleteComment = async function(photoId, commentIndex) {
 window.deletePhoto = async function(photoId) {
     if (confirm("確定要刪除這張內容嗎？")) {
         try {
+            const photo = allPhotosData.find(item => item.id === photoId);
+            if (!photo || photo.groupId !== currentGroupId) return;
             await deleteDoc(doc(db, "photos", photoId));
+            try {
+                const results = await removePhotoFiles(photo.storagePaths, currentUser, currentGroupId);
+                if (results.some(result => result.status === 'rejected')) throw new Error('清理未完成');
+            } catch {
+                alert('貼文已刪除，但部分照片檔案清理失敗，請聯絡管理者處理。');
+            }
         } catch (e) { alert("刪除失敗，請再試一次。"); }
     }
 };
@@ -313,11 +309,12 @@ function processImageFile(file) {
     });
 }
 
-document.getElementById('btnCancelUpload').addEventListener('click', () => { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('fileInput').value = ''; pendingUploadBase64Array = []; });
+document.getElementById('btnCancelUpload').addEventListener('click', () => { if (uploadInProgress) return; document.getElementById('uploadModal').style.display = 'none'; document.getElementById('fileInput').value = ''; pendingUploadBase64Array = []; });
 
-// 🌟 透過 ImgBB API 上傳圖片
+// 上傳 Firebase Storage，成功後儲存貼文。
 document.getElementById('btnConfirmUpload').addEventListener('click', async () => {
-    if (pendingUploadBase64Array.length === 0) return;
+    if (uploadInProgress || pendingUploadBase64Array.length === 0) return;
+    uploadInProgress = true;
     
     const caption = document.getElementById('uploadCaption').value.trim();
     const btnConfirm = document.getElementById('btnConfirmUpload');
@@ -326,37 +323,22 @@ document.getElementById('btnConfirmUpload').addEventListener('click', async () =
     btnConfirm.innerText = '準備上傳...';
 
     try {
-        const uploadedUrls = [];
-        for (let i = 0; i < pendingUploadBase64Array.length; i++) {
-            btnConfirm.innerText = `上傳圖片 (${i + 1}/${pendingUploadBase64Array.length})...`;
-            const pureBase64 = pendingUploadBase64Array[i].split(',')[1];
-            
-            const formData = new FormData();
-            formData.append("image", pureBase64);
-
-            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                uploadedUrls.push(result.data.url);
-            } else {
-                throw new Error(result.error.message);
+        const photoRef = doc(collection(db, "photos"));
+        await uploadPhotoPost({
+            images: [...pendingUploadBase64Array], user: currentUser, groupId: currentGroupId, postId: photoRef.id,
+            progress: (index, total) => { btnConfirm.innerText = `上傳圖片 (${index}/${total})...`; },
+            save: async uploaded => {
+                btnConfirm.innerText = '儲存資料中...';
+                await setDoc(photoRef, {
+                    ...uploaded,
+                    groupId: currentGroupId,
+                    caption,
+                    uploader: currentUser.name,
+                    uploaderAvatar: currentUser.avatar || null,
+                    timestamp: serverTimestamp(),
+                    comments: [], likes: []
+                });
             }
-        }
-
-        btnConfirm.innerText = '儲存資料中...';
-        await addDoc(collection(db, "photos"), {
-            groupId: currentGroupId, 
-            imageUrls: uploadedUrls,
-            caption: caption,
-            uploader: currentUser.name,
-            uploaderAvatar: currentUser.avatar || null,
-            timestamp: serverTimestamp(),
-            comments: [],
-            likes: []
         });
 
         document.getElementById('uploadModal').style.display = 'none';
@@ -365,8 +347,10 @@ document.getElementById('btnConfirmUpload').addEventListener('click', async () =
         localStorage.setItem('homebase_photodump_last_read', Date.now().toString());
     } catch (e) {
         console.error("發佈失敗：", e);
-        alert("上傳失敗！請檢查網路，或確認 ImgBB API Key 是否有效。");
+        const denied = /unauthenticated|permission-denied|unauthorized/.test(e.code || '');
+        alert(denied ? '上傳權限驗證失敗，請重新登入並確認目前群組。' : '照片上傳失敗，請稍後重試；若持續失敗，請管理者確認 Firebase Storage 與照片上傳服務已部署。');
     } finally {
+        uploadInProgress = false;
         btnConfirm.disabled = false;
         btnConfirm.innerText = '發佈';
     }

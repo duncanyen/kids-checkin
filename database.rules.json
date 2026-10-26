@@ -1,0 +1,39 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "nexus": {
+      "status": { ".read": "auth != null" },
+      "farms": {
+        "$group": {
+          "$account": {
+            ".read": "auth != null && root.child('nexus/access/accounts').child(auth.token.accountKey).child('active').val() === true && root.child('nexus/access/groups').child(auth.token.groupKey).child('members').child(auth.token.accountKey).val() === true && root.child('nexus/access/groups').child($group).child('members').child($account).val() === true && ($group === auth.token.groupKey || (root.child('nexus/access/groups').child(auth.token.groupKey).child('public').val() === true && root.child('nexus/access/groups').child($group).child('public').val() === true))"
+          }
+        }
+      },
+      "inboxes": {
+        "$group": {
+          "$account": {
+            ".indexOn": ["sortTime"],
+            ".read": "auth != null && $group === auth.token.groupKey && $account === auth.token.accountKey && root.child('nexus/access/accounts').child(auth.token.accountKey).child('active').val() === true && root.child('nexus/access/groups').child($group).child('members').child($account).val() === true"
+          }
+        }
+      },
+      "rooms": {
+        "$group": {
+          "$room": {
+            ".read": "auth != null && $group === auth.token.groupKey && root.child('nexus/access/accounts').child(auth.token.accountKey).child('active').val() === true && root.child('nexus/access/groups').child($group).child('members').child(auth.token.accountKey).val() === true && root.child('nexus/access/rooms').child($room).child('groupKey').val() === $group && root.child('nexus/access/rooms').child($room).child('participants').child(auth.token.accountKey).val() === true"
+          }
+        }
+      },
+      "messages": {
+        "$group": {
+          "$room": {
+            ".indexOn": ["sortTime"],
+            ".read": "auth != null && query.orderByChild === 'sortTime' && query.limitToLast != null && query.limitToLast <= 100 && $group === auth.token.groupKey && root.child('nexus/access/accounts').child(auth.token.accountKey).child('active').val() === true && root.child('nexus/access/groups').child($group).child('members').child(auth.token.accountKey).val() === true && root.child('nexus/access/rooms').child($room).child('groupKey').val() === $group && root.child('nexus/access/rooms').child($room).child('participants').child(auth.token.accountKey).val() === true"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, nextEggStatus, collectPoultry } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
 import { GardenFeedback } from './garden-feedback.js';
@@ -9,7 +10,7 @@ import { DragonEncounter } from './dragon.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
-import { onSnapshot, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, CURRENT_GROUP_ID, playerName, getUsedSpace } from './constants.js';
 
 export default class MyFarmScene extends Phaser.Scene {
@@ -102,7 +103,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     initFirebase() {
-        this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
+        this.unsubscribe = watchFarm(myFarmRef, (docSnap) => {
             if (!docSnap.exists()) {
                 setDoc(myFarmRef, { 
                     farm: { 

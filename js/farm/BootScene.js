@@ -1,9 +1,8 @@
+import { watchFarm } from '../live-reads.js';
 import { registerPoultryAnimations } from './poultry-art.js';
 import { registerGorillaAnimations } from './gorilla.js';
 import { registerDragonAnimations } from './dragon.js';
 import { registerPredatorAnimations } from './predators.js';
-import { db } from '../firebase-config.js';
-import { onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef } from './constants.js';
 
 export default class BootScene extends Phaser.Scene {
@@ -69,7 +68,7 @@ export default class BootScene extends Phaser.Scene {
         // 全域監聽設定
         if (!this.game.registry.has('isListeningFarm')) {
             this.game.registry.set('isListeningFarm', true);
-            this.game.myFarmUnsubscribe = onSnapshot(myFarmRef, (docSnap) => {
+            this.game.myFarmUnsubscribe = watchFarm(myFarmRef, (docSnap) => {
                 if (docSnap.exists() && docSnap.data().farm) {
                     this.game.registry.set('myFarmData', docSnap.data().farm);
                 }

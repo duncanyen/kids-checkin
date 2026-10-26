@@ -1,3 +1,4 @@
+import { watchRooms } from './live-reads.js';
 import { readPersonalLayout } from './personal-layout.js';
 import { db } from "./firebase-config.js";
 import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -354,7 +355,7 @@ window.checkUnreadMessages = function(user) {
     try {
         if (!window.currentGroup) return;
         const q = query(collection(db, "rooms"), where("groupId", "==", window.currentGroup.id), where("participants", "array-contains", user.name));
-        unreadUnsubscribe = onSnapshot(q, (querySnapshot) => {
+        unreadUnsubscribe = watchRooms(q, window.currentGroup.id, user.accountId, (querySnapshot) => {
             let totalUnreadMessages = 0;
             querySnapshot.forEach(docSnap => {
                 const room = docSnap.data();

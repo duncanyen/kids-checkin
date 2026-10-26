@@ -1,8 +1,9 @@
+import { watchFarm } from '../live-reads.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
 import { BREEDS, poultryState, feedPoultry, coopCapacity } from './poultry.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
-import { onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, getUsedSpace, WEAPONS_CONFIG } from './constants.js';
 
 export default class WarehouseScene extends Phaser.Scene {
@@ -81,7 +82,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     initFirebase() {
-        this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
+        this.unsubscribe = watchFarm(myFarmRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().farm) {
                 this.farmData = docSnap.data().farm;
                 const usedSpace = getUsedSpace(this.farmData);

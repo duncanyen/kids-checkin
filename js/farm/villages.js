@@ -1,3 +1,4 @@
+import { readFarm } from '../live-reads.js';
 import { db } from '../firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -43,7 +44,7 @@ export async function loadVillageFarms(visitorGroupId, targetGroupId, accountId)
         });
     }
     const farms = await Promise.all(ids.filter(id => profiles.has(id)).map(async id => {
-        const snapshot = await getDoc(doc(db, 'groups', targetGroupId, 'users', id));
+        const snapshot = await readFarm(doc(db, 'groups', targetGroupId, 'users', id));
         return snapshot.exists() && snapshot.data().farm ? { ...profiles.get(id), farm: snapshot.data().farm } : null;
     }));
     return { group, farms: farms.filter(Boolean) };

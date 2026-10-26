@@ -1,9 +1,10 @@
+import { watchRooms, watchRoom, watchMessages } from './live-reads.js';
 import { loadGameGroupMembers } from './game-members.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { db } from './firebase-config.js'; 
 import { 
     collection, addDoc, getDocs, query, where, orderBy, limit, 
-    onSnapshot, serverTimestamp, doc, updateDoc, increment 
+    serverTimestamp, doc, updateDoc, increment
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // --- 共用全域變數 ---
@@ -59,7 +60,7 @@ function listenToRooms() {
         orderBy("lastMessageTime", "desc")
     );
 
-    roomsUnsubscribe = onSnapshot(q, (snapshot) => {
+    roomsUnsubscribe = watchRooms(q, currentGroupId, currentUser.accountId, (snapshot) => {
         const container = document.getElementById('roomListContainer');
         container.innerHTML = '';
         if (snapshot.empty) {
@@ -131,7 +132,7 @@ async function enterRoom(roomId, roomData) {
 
 function listenToActiveRoom(roomId) {
     if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
-    singleRoomUnsubscribe = onSnapshot(doc(db, "rooms", roomId), (docSnap) => {
+    singleRoomUnsubscribe = watchRoom(doc(db, "rooms", roomId), currentGroupId, roomId, (docSnap) => {
         if (docSnap.exists()) {
             chatState.activeRoomData = docSnap.data(); 
             if (!chatState.activeRoomData.participants) chatState.activeRoomData.participants = [currentUser.name];
@@ -189,7 +190,7 @@ function listenToMessages(roomId) {
         limit(MESSAGE_PAGE_SIZE)
     );
     
-    messagesUnsubscribe = onSnapshot(q, (snapshot) => {
+    messagesUnsubscribe = watchMessages(q, currentGroupId, roomId, MESSAGE_PAGE_SIZE, (snapshot) => {
         let tempMsgs = []; 
         if (!snapshot.empty) {
             snapshot.forEach((docSnap) => tempMsgs.push({ id: docSnap.id, ...docSnap.data() }));

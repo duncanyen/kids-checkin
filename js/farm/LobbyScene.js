@@ -1,3 +1,4 @@
+import { readFarm } from '../live-reads.js';
 import { villageButton, selectVillageButton, villageText } from './village-ui.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
@@ -193,7 +194,7 @@ export default class LobbyScene extends Phaser.Scene {
                 try {
                     const groupId = group.id;
                     await readVillageAccess(CURRENT_GROUP_ID, groupId, CURRENT_ACCOUNT_ID, getDoc, member.accountId);
-                    const snapshot = await getDoc(doc(db, 'groups', groupId, 'users', member.accountId));
+                    const snapshot = await readFarm(doc(db, 'groups', groupId, 'users', member.accountId));
                     if (!snapshot.exists() || !snapshot.data().farm) throw new Error('這位成員尚未建立雞舍。');
                     if (this.scene.isActive() && request === this.requestId) this.scene.start('VisitScene', { targetGroupId: groupId, targetGroupName: group.name, targetAccountId: member.accountId, targetName: member.name });
                 } catch (error) { if (this.scene.isActive() && request === this.requestId) this.showFloatingText(195, 185, error.message, '#FFCDD2'); }

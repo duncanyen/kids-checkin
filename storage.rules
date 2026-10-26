@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member(groupId) {
+      return request.auth != null
+        && request.auth.token.photoGroupId == groupId
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.accountId == request.auth.token.photoAccountId
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role != 'removed'
+        && request.auth.token.photoAccountId in firestore.get(/databases/(default)/documents/groups/$(groupId)).data.members;
+    }
+    match /photo-dump/{groupId}/{ownerId}/{postId}/{fileName} {
+      allow read: if member(groupId);
+      allow create: if member(groupId) && request.auth.uid == ownerId
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType == 'image/jpeg'
+        && fileName.matches('.*[.]jpg');
+      allow delete: if member(groupId) && (request.auth.uid == ownerId
+        || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'parent']);
+    }
+  }
+}

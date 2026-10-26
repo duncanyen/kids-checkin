@@ -1,3 +1,4 @@
+import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, takePoultryEgg } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
 import { ENEMY_HEALTH, equippedWeapon, weaponDamage } from './combat-rules.js';
@@ -126,7 +127,7 @@ export default class VisitScene extends Phaser.Scene {
             return;
         }
         const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
-        this.unsubscribeTarget = onSnapshot(targetRef, (docSnap) => {
+        this.unsubscribeTarget = watchFarm(targetRef, (docSnap) => {
             if (!this.scene.isActive() || this.visitToken !== token) return;
             if (docSnap.exists() && docSnap.data().farm) {
                 this.targetFarmData = docSnap.data().farm;
