@@ -20,6 +20,17 @@ export function createFoodStore(db, context) {
         });
     }
     return {
+        async changeRestaurant(id, payload) {
+            return runTransaction(db, async transaction => {
+                const group = await transaction.get(doc(db, 'groups', context.groupId));
+                if (!group.exists() || !(group.data().members || []).includes(context.accountId)) throw new Error('你已不在此群組，請重新選擇群組');
+                const ref = doc(db, 'food_restaurants', id);
+                const restaurant = await transaction.get(ref);
+                if (!restaurant.exists() || restaurant.data().groupId !== context.groupId) throw new Error('餐廳已刪除或不屬於目前群組，請重新整理');
+                if (payload === null) transaction.delete(ref);
+                else transaction.update(ref, { ...payload, groupId: context.groupId, updatedByAccountId: context.accountId, updatedAt: new Date().toISOString() });
+            });
+        },
         async watch(selection, receive, fail) {
             // Old versions used addDoc rather than the intended fixed document ID.
             // Import those votes once; canonical votes always take precedence.

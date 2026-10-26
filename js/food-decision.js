@@ -28,6 +28,9 @@ function cancelSpin() {
 }
 
 let restaurants = [];
+let restaurantFilter = '全部';
+const priceLabels = { '$': '0~200', '$$': '200~500', '$$$': '500~1000', '$$$$': '1000~' };
+const priceLabel = value => priceLabels[value] || value || '未定價';
 let currentMeal = '';
 let currentEmoji = '';
 
@@ -134,7 +137,8 @@ function renderCalendar() {
 
 // ================= 資料載入與清單渲染 =================
 
-window.foodApp.renderRestaurantList = function(type = '全部') {
+window.foodApp.renderRestaurantList = function(type = restaurantFilter) {
+    restaurantFilter = type;
     const list = document.getElementById('restaurantList');
     if (!list) return;
     list.innerHTML = '';
@@ -151,15 +155,22 @@ window.foodApp.renderRestaurantList = function(type = '全部') {
 
     filtered.forEach(r => {
         const mealStr = (r.meal || []).join(', ');
-        list.innerHTML += `
-            <div class="list-item">
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        row.innerHTML = `
                 <div class="list-info">
                     <b>${escapeHtml(r.name)}</b>
-                    <small>${escapeHtml(r.type)} · ${escapeHtml(r.price || '未定價')} · ${escapeHtml(r.food)}</small>
+                    <small>${escapeHtml(r.type)} · ${escapeHtml(priceLabel(r.price))} · ${escapeHtml(r.food)}</small>
                     <small style="color:var(--green2)">適用: ${escapeHtml(mealStr)}</small>
                 </div>
-            </div>
+                <div class="restaurant-actions">
+                    <button class="action edit-restaurant" aria-label="修改餐廳" title="修改餐廳">✎</button>
+                    <button class="action danger delete-restaurant" aria-label="刪除餐廳" title="刪除餐廳">✕</button>
+                </div>
         `;
+        row.querySelector('.edit-restaurant').onclick = () => window.foodApp.openRestaurant(r.id);
+        row.querySelector('.delete-restaurant').onclick = () => window.foodApp.deleteRestaurant(r.id);
+        list.appendChild(row);
     });
 };
 
@@ -180,7 +191,9 @@ async function loadRestaurants() {
             restaurants.push({ ...data, id: d.id, meal: normalizeRestaurantMeals(data.meal) });
         });
 
-        window.foodApp.renderRestaurantList('全部');
+        window.foodApp.renderRestaurantList();
+        cancelSpin();
+        if (currentMeal) renderVoteList();
     } catch (error) {
         console.error("載入餐廳失敗:", error);
         status("餐廳載入失敗，請重新整理後重試。", true);
@@ -352,7 +365,7 @@ function executeSpin(candidates, version) {
         document.getElementById('winner').classList.add('show');
         document.getElementById('winnerFood').innerText = '🎉';
         document.getElementById('winnerName').innerText = winner.name;
-        document.getElementById('winnerMeta').innerText = `${winner.type} · ${winner.food} · ${winner.price || ''}`;
+        document.getElementById('winnerMeta').innerText = `${winner.type} · ${winner.food} · ${priceLabel(winner.price)}`;
         document.getElementById('spinBtn').disabled = false;
 
 
@@ -385,7 +398,7 @@ function renderVoteList() {
         div.innerHTML = `
             <div class="list-info">
                 <b>${escapeHtml(cand.name)}</b>
-                <small>${escapeHtml(cand.type)} · ${escapeHtml(cand.food)}</small>
+                <small>${escapeHtml(cand.type)} · ${escapeHtml(cand.food)} · ${escapeHtml(priceLabel(cand.price))}</small>
             </div>
             <button class="vote" >投給它</button>
         `;
@@ -527,29 +540,49 @@ function renderStats(votesMap) {
     }
 }
 
-// ================= 管理：新增餐廳功能 =================
+// ================= 管理：新增、修改與刪除餐廳 =================
 
-window.foodApp.openRestaurant = function() {
-    document.getElementById('modalTitle').innerText = '新增餐廳';
-    document.getElementById('editId').value = '';
-    document.getElementById('rName').value = '';
-    document.getElementById('rType').selectedIndex = 0;
-    document.getElementById('rPrice').selectedIndex = 0;
-    document.getElementById('rFood').value = '';
-    document.getElementById('rTags').value = '';
-    document.getElementById('rNote').value = '';
-
-    document.querySelectorAll('input[name="rMeal"]').forEach(chk => chk.checked = false);
-
+window.foodApp.openRestaurant = function(id = '') {
+    if (!ready || saving) return;
+    const restaurant = id ? restaurants.find(r => r.id === id) : null;
+    if (id && !restaurant) return;
+    document.getElementById('modalTitle').innerText = id ? '修改餐廳' : '新增餐廳';
+    document.getElementById('editId').value = id;
+    document.getElementById('rName').value = restaurant?.name || '';
+    const type = document.getElementById('rType');
+    type.value = restaurant?.type || '中式';
+    if (!type.value) type.value = '其他';
+    const price = document.getElementById('rPrice');
+    price.value = priceLabel(restaurant?.price || '$');
+    if (!price.value) price.selectedIndex = 0;
+    document.getElementById('rFood').value = restaurant?.food || '';
+    document.getElementById('rTags').value = restaurant?.tags || '';
+    document.getElementById('rNote').value = restaurant?.note || '';
+    document.querySelectorAll('input[name="rMeal"]').forEach(chk => chk.checked = (restaurant?.meal || []).includes(chk.value));
     document.getElementById('modal').classList.add('show');
 };
 
 window.foodApp.closeModal = function() {
-    document.getElementById('modal').classList.remove('show');
+    if (!saving) document.getElementById('modal').classList.remove('show');
+};
+
+window.foodApp.deleteRestaurant = async function(id) {
+    if (!ready || saving) return;
+    const restaurant = restaurants.find(r => r.id === id);
+    if (!restaurant || !confirm(`確定刪除「${restaurant.name}」？刪除後將不再出現在候選清單，既有投票紀錄會保留。`)) return;
+    saving = true;
+    try {
+        await store.changeRestaurant(id, null);
+        await loadRestaurants();
+        status('餐廳已刪除');
+    } catch (error) {
+        alert('刪除餐廳失敗：' + error.message);
+    } finally { saving = false; }
 };
 
 window.foodApp.saveRestaurant = async function() {
     if (!ready || saving) return;
+    const editId = document.getElementById('editId').value;
     const name = document.getElementById('rName').value.trim();
     const type = document.getElementById('rType').value;
     const price = document.getElementById('rPrice').value;
@@ -570,7 +603,6 @@ window.foodApp.saveRestaurant = async function() {
         await loadGameGroupMembers(currentGroupId, currentUser.accountId);
         const payload = {
             groupId: currentGroupId,
-            accountId: currentUser.accountId,
             name,
             type,
             price,
@@ -581,9 +613,10 @@ window.foodApp.saveRestaurant = async function() {
             updatedAt: new Date().toISOString()
         };
 
-        await addDoc(collection(db, "food_restaurants"), payload);
-        alert("新增成功！");
-        window.foodApp.closeModal();
+        if (editId) await store.changeRestaurant(editId, payload);
+        else await addDoc(collection(db, "food_restaurants"), { ...payload, accountId: currentUser.accountId });
+        alert(editId ? '修改成功！' : '新增成功！');
+        document.getElementById('modal').classList.remove('show');
         await loadRestaurants();
     } catch(e) {
         console.error("儲存餐廳失敗", e);

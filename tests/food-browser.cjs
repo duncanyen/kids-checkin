@@ -26,7 +26,7 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  const docs={
  'groups/A':{name:'A',members:['alice','bob']},'groups/B':{name:'B',members:['alice','outsider']},
  'users/a':{accountId:'alice',name:'小明',avatar:'',role:'child'},'users/b':{accountId:'bob',name:'小明',role:'child'},
- 'food_restaurants/r1':{groupId:'A',name:"阿姨's 麵店",type:'中式',food:'麵',meal:'不限'},
+ 'food_restaurants/r1':{groupId:'A',name:"阿姨's 麵店",price:'$$',type:'中式',food:'麵',meal:'不限'},
  'food_restaurants/r2':{groupId:'A',name:'飯店',type:'中式',food:'飯',meal:['不限',null,42,'不限']},
  'food_restaurants/r3':{groupId:'B',name:'B限定',type:'中式',food:'飯',meal:['不限']},
  'food_restaurants/empty':{groupId:'A',name:'未填餐別'},
@@ -49,7 +49,7 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
   if(operation.kind==='commit'){
    if(fail)throw Error('permission-denied');
    if(operation.expected.some(([p,v])=>(versions.get(p)||0)!==v)){retries++;throw Error('ABORTED');}
-   for(const w of operation.pending){docs[w.path]=w.merge?{...docs[w.path],...w.data}:w.data;versions.set(w.path,(versions.get(w.path)||0)+1);writes.push(w);}
+   for(const w of operation.pending){if(w.delete)delete docs[w.path];else docs[w.path]=w.merge?{...docs[w.path],...w.data}:w.data;versions.set(w.path,(versions.get(w.path)||0)+1);writes.push(w);}
    return;
   }
  });
@@ -68,6 +68,10 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  const date=await page.evaluate(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;});
  const key=`food_votes/A_${date}_晚餐`;
  assert.equal(await page.locator('#restaurantList .list-item').count(),7);
+ assert.match(await page.locator('#restaurantList').innerText(),/200~500/);
+ await page.evaluate(()=>{foodApp.go('manage');foodApp.openRestaurant('r1');});
+ assert.equal(await page.inputValue('#rPrice'),'200~500');
+ await page.evaluate(()=>{foodApp.closeModal();foodApp.go('vote');});
  assert.equal(await page.locator('#restaurantList').innerText().then(text=>text.includes('早餐, 午餐')),true);
  await page.evaluate(()=>foodApp.showWheel());
  assert.equal(await page.locator('#wheel').evaluate(el=>JSON.parse(el.dataset.candidates).length),2);
@@ -103,6 +107,34 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  await page.fill('#rName','測試餐館');await page.fill('#rFood','火鍋');await page.check('input[name="rMeal"][value="晚餐"]');
  await page.evaluate(()=>foodApp.saveRestaurant());
  assert.ok(Object.values(docs).some(d=>d.name==='測試餐館'&&d.groupId==='B'&&d.accountId==='alice'));
+ const createdPath=Object.keys(docs).find(path=>docs[path].name==='測試餐館'),createdId=createdPath.split('/').at(-1);
+ await page.locator('#restaurantList .list-item').filter({hasText:'測試餐館'}).getByRole('button',{name:'修改餐廳'}).click();
+ assert.equal(await page.inputValue('#rName'),'測試餐館');
+ assert.equal(await page.locator('input[name="rMeal"][value="晚餐"]').isChecked(),true);
+ await page.fill('#rName',"新名字's 餐館");await page.selectOption('#rPrice','500~1000');await page.fill('#rNote','修改備註');
+ await page.evaluate(()=>foodApp.saveRestaurant());
+ assert.equal(docs[createdPath].name,"新名字's 餐館");assert.equal(docs[createdPath].price,'500~1000');
+ assert.equal(docs[createdPath].accountId,'alice');assert.equal(docs[createdPath].updatedByAccountId,'alice');
+ assert.equal(Object.keys(docs).filter(p=>p.startsWith('food_restaurants/')).length,9);
+ await page.reload();await page.waitForFunction(()=>document.querySelector('#foodSyncStatus').textContent.includes('請選擇'));
+ assert.match(await page.locator('#restaurantList').innerText(),/500~1000/);
+ await page.evaluate(()=>foodApp.go('manage'));
+ // Cancel leaves the restaurant unchanged; failed deletion also preserves it.
+ page.removeAllListeners('dialog');page.on('dialog',d=>d.dismiss());
+ await page.evaluate(id=>foodApp.deleteRestaurant(id),createdId);assert.ok(docs[createdPath]);
+ page.removeAllListeners('dialog');page.on('dialog',d=>d.accept());
+ fail=true;await page.evaluate(id=>foodApp.deleteRestaurant(id),createdId);assert.ok(docs[createdPath]);fail=false;
+ // The transaction rejects a restaurant from another group and revoked members.
+ const cross=await page.evaluate(async()=>{const {createFoodStore}=await import('/js/food-store.js');try{await createFoodStore({}, {groupId:'B',accountId:'alice'}).changeRestaurant('r1',null);return '';}catch(e){return e.message;}});
+ assert.match(cross,/不屬於目前群組/);assert.ok(docs['food_restaurants/r1']);
+ docs['groups/B'].members=['outsider'];
+ await page.evaluate(id=>foodApp.deleteRestaurant(id),createdId);assert.ok(docs[createdPath]);docs['groups/B'].members=['alice','outsider'];
+ await page.locator('#restaurantList .list-item').filter({hasText:"新名字's 餐館"}).getByRole('button',{name:'刪除餐廳'}).click();
+ await page.waitForFunction(()=>!document.querySelector('#restaurantList').textContent.includes("新名字's 餐館"));
+ assert.equal(docs[createdPath],undefined);
+ await page.evaluate(()=>{foodApp.chooseMeal('晚餐','🍲');foodApp.showList();});
+ assert.equal(await page.locator('#voteList .restaurant').count(),1);
+
  // Deterministic browser clock checks a cancelled wheel does not save to a new date.
  await page.clock.install();await page.evaluate(()=>{foodApp.chooseMeal('晚餐','🍲');foodApp.showWheel();foodApp.startSpin();});
  const votesBefore=Object.keys(docs).filter(k=>k.startsWith('food_votes/')).length;
@@ -131,6 +163,6 @@ export async function runTransaction(_,callback){for(let attempt=0;attempt<10;at
  await page.evaluate(()=>renderDynamicModules({accountId:'alice',name:'小明',menus:[]}));
  assert.equal(await page.locator('#miniCardsContainer [onclick*="food-decision"]').count(),0);
  assert.deepEqual(errors,[]);
- console.log('PASS: legacy string/array/missing/null/number/object meals render safely and wheel filtering works; menu backfill, account layouts, group/date/meal isolation, persistence/revote, decision save, legacy import, concurrent votes, save errors, restaurant creation, cancelled wheel, homepage visibility');
+ console.log('PASS: legacy string/array/missing/null/number/object meals render safely and wheel filtering works; menu backfill, account layouts, group/date/meal isolation, persistence/revote, decision save, legacy import, concurrent votes, save errors, restaurant create/edit/delete with price compatibility, cancellation/error handling and group checks, cancelled wheel, homepage visibility');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

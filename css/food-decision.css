@@ -204,3 +204,6 @@ textarea{min-height:80px;resize:vertical}.form-grid{display:grid;grid-template-c
 .checkbox-label input { width: auto; margin: 0; }
 
 @media(min-width:700px){body{padding:24px 0}.app{border-radius:32px;box-shadow:0 25px 80px #173c2d12;overflow:hidden}}
+
+.restaurant-actions{display:flex;gap:8px;flex-shrink:0}
+.list-info{min-width:0;overflow-wrap:anywhere}
