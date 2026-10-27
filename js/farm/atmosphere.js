@@ -1,3 +1,5 @@
+import { farmView } from './viewport.js';
+import { getFarmMapLayout } from './scenery.js';
 import { atmosphereAt, WEATHER, villageSeed } from './atmosphere-core.js';
 
 function glow(graphics, x, y, radius, color, strength) {
@@ -12,9 +14,6 @@ export function attachFarmAtmosphere(scene, { groupId }) {
     const weather = scene.add.graphics().setDepth(12);
     const lights = scene.add.graphics().setDepth(13);
     const firelight = scene.add.graphics().setDepth(24.5);
-    const width = scene.scale.width, height = scene.scale.height;
-    const scale = Math.max(width / 720, height / 1280), offsetX = (width - 720 * scale) / 2;
-    const point = (x, y) => ({ x: offsetX + x * scale, y: y * scale });
     const seed = villageSeed(groupId);
     const particles = Array.from({ length: 38 }, (_, i) => {
         const h = villageSeed(`${seed}:${i}`);
@@ -45,6 +44,10 @@ export function attachFarmAtmosphere(scene, { groupId }) {
             const next = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(state.nextWeatherAt);
             root.querySelector('[data-climate-clock]').textContent = `台灣時間 ${state.time} · 下次天氣判定 ${next}`;
         }
+        const view = farmView(scene), {width,height} = view;
+        for (const layer of [grade,ground,weather,lights,firelight]) layer.setPosition(view.left,view.top);
+        const map=getFarmMapLayout(scene),scale=map.scale;
+        const point=(x,y)=>{const p=map.point(x,y);return{x:p.x-view.left,y:p.y-view.top};};
         const t = now / 1000;
         const { rain, mist, cloudy, clear } = state.weights;
         grade.clear(); ground.clear(); weather.clear(); lights.clear(); firelight.clear();
@@ -93,7 +96,7 @@ export function attachFarmAtmosphere(scene, { groupId }) {
         const windowPoint = point(430, 345);
         lights.fillStyle(0xffdb8b, warmth * .35).fillRoundedRect(windowPoint.x - 6, windowPoint.y - 8, 11, 15, 2);
         if (scene.dragon?.active && scene.dragon.visible && state.night > .05) {
-            glow(firelight, scene.dragon.x + 45, scene.dragon.y - 18, 72, 0xff982f, warmth * (scene.dragonEncounter?.phase === 'fire' ? 1 : .35));
+            glow(firelight, scene.dragon.x - view.left + 45, scene.dragon.y - view.top - 18, 72, 0xff982f, warmth * (scene.dragonEncounter?.phase === 'fire' ? 1 : .35));
         }
     }
     scene.farmAtmosphere = { groupId, get state() { return state; }, refresh };

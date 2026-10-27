@@ -1,11 +1,8 @@
 html{height:100%;background:#6b8945}
-body{margin:0;padding:0;width:100%;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:#6b8945 url('../assets/farm/farm-map.jpg') center/cover no-repeat}
+body{margin:0;padding:0;width:100%;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:#6b8945}
 .top-nav{flex-shrink:0;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));padding-top:max(8px,env(safe-area-inset-top));background:#f8ebcc;color:#583d24;border-bottom:1px solid #b39262;font:14px system-ui,sans-serif}
 .btn-back{flex-shrink:0;border:1px solid #b28b57;border-radius:10px;padding:9px 12px;min-height:40px;background:#ead3a7;color:#583d24;font:700 13px system-ui,sans-serif;cursor:pointer}
 .farm-atmosphere{max-width:none;flex-shrink:0}
 #game-container{position:relative;isolation:isolate;flex:1;min-height:0;width:100%;overflow:hidden;background:#79994d}
-/* Extend the village art across wide/tall screens while keeping every game
-   control in the original 390×844 play area visible and proportional. */
-#game-container::before{content:'';position:absolute;z-index:-1;inset:-8px;background:url('../assets/farm/farm-map.jpg') center/cover no-repeat;filter:blur(4px)}
 #game-container canvas{position:relative;display:block}
 @media(max-height:500px){.top-nav{padding-top:4px;padding-bottom:4px}.btn-back{min-height:32px;padding:5px 9px}.farm-atmosphere{padding-top:3px;padding-bottom:3px}.farm-atmosphere [data-climate-clock]{display:none}}

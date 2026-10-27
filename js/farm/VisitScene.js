@@ -1,3 +1,4 @@
+import { configureFarmViewport } from './viewport.js';
 import { visitorNotice } from './mail-store.js';
 import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, takePoultryEgg } from './poultry.js';
@@ -27,6 +28,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     create() {
+        configureFarmViewport(this);
         this.visitToken = Symbol('visit');
         this.emptyClickCount = 0;
         this.hasRolledEncounter = false;
@@ -192,7 +194,7 @@ export default class VisitScene extends Phaser.Scene {
 
     askCleanTargetFarm() {
         if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
-            this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, this.cameras.main.centerX, 150); return;
+            this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, 195, 150); return;
         }
         this.dialogText.setText(`[${this.targetName}] 的雞舍有點髒亂\n是否要幫忙打掃雞舍？`);
         this.dialogContainer.setVisible(true);
@@ -214,7 +216,7 @@ export default class VisitScene extends Phaser.Scene {
                 t.update(targetRef, { "farm.cleanliness": newClean });
                 t.update(myFarmRef, { "farm.moral": newMoral });
             });
-            this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, this.cameras.main.centerX, 150);
+            this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, 195, 150);
             this.sendSystemNotification(`${playerName}幫${this.targetName}打掃了雞舍`);
         } catch (e) { console.error(e); }
     }
@@ -350,7 +352,7 @@ export default class VisitScene extends Phaser.Scene {
         const spawn = predatorSpawnPoint(this, 'tiger');
         this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
-        const warnText = this.add.text(this.cameras.main.centerX, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
+        const warnText = this.add.text(195, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
         this.tiger.warning = warnText;
 
@@ -395,9 +397,9 @@ export default class VisitScene extends Phaser.Scene {
             } else return false; 
         }).then((success) => {
             if (success) { 
-                this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1 🐅', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); 
+                this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1 🐅', '#FFF', 20, 195, 422));
                 this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
-            } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY)); }
+            } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, 195, 422)); }
         }).catch(e => console.error(e));
     }
 
@@ -423,7 +425,7 @@ export default class VisitScene extends Phaser.Scene {
         const spawn = predatorSpawnPoint(this, 'wolf');
         this.wolf = createPredator(this, 'wolf', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
-        const warnText = this.add.text(this.cameras.main.centerX, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
+        const warnText = this.add.text(195, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
         this.wolf.warning = warnText;
 
@@ -469,9 +471,9 @@ export default class VisitScene extends Phaser.Scene {
             } else return false; 
         }).then((success) => {
             if (success) { 
-                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, this.cameras.main.centerX, this.cameras.main.centerY)); 
+                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, 195, 422));
                 this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
-            } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, this.cameras.main.centerX, this.cameras.main.centerY)); }
+            } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, 195, 422)); }
         }).catch(e => console.error(e));
     }
 
@@ -526,7 +528,7 @@ export default class VisitScene extends Phaser.Scene {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;
         }
-        const safeX = this.cameras.main.centerX, safeY = this.cameras.main.centerY - 60;
+        const safeX = 195, safeY = 422 - 60;
         const key = villageTargetKey(this.targetGroupId, this.targetAccountId);
         const cooldown = farm => farm.villageStealCooldowns?.[key] ||
             (this.targetGroupId === CURRENT_GROUP_ID ? farm.stealCooldowns?.[this.targetAccountId] : 0) || 0;

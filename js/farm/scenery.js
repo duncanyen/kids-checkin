@@ -1,30 +1,99 @@
+import { farmView } from './viewport.js';
 import { chooseHenPosition, getThreatZones } from './hen-navigation.js';
 
-// Shared scenery keeps the home and visiting farms aligned with the same artwork.
+// Single continuous panorama: the renderer fills the viewport, not a CSS backdrop.
 export function addFarmBackground(scene, field = false) {
-    if (field) {
+    const image = scene.add.image(0, 0, field ? 'farm_map' : 'farm_background').setOrigin(0, 0).setDepth(-10);
+    let previous;
+    const resize = () => {
+        const view = farmView(scene);
+        if (!field) {
+            const scale = Math.max(view.width / image.width, view.height / image.height);
+            image.setPosition(195 - image.width * scale / 2, 422 - image.height * scale / 2)
+                .setDisplaySize(image.width * scale, image.height * scale);
+            return;
+        }
         const map = getFarmMapLayout(scene);
-        return scene.add.image(map.offsetX, 0, 'farm_map').setOrigin(0, 0)
-            .setDisplaySize(720 * map.scale, 1280 * map.scale).setDepth(-10);
-    }
-    return scene.add.image(0, 0, 'farm_background')
-        .setOrigin(0, 0)
-        .setDisplaySize(scene.scale.width, scene.scale.height)
-        .setDepth(-10);
+        image.setTexture(map.texture).setPosition(map.offsetX, map.offsetY).setDisplaySize(map.width * map.artScale, map.height * map.artScale);
+        if (previous && (previous.texture !== map.texture || previous.artScale !== map.artScale)) reflowFarm(scene, previous, map);
+        previous = map;
+    };
+    resize();
+    scene.events.on('farm-viewport-resize', resize);
+    scene.events.once('shutdown', () => scene.events.off('farm-viewport-resize', resize));
+    return image;
 }
 
-// The supplied 720×1280 map is fitted without distortion; the outer tree
-// margins are cropped by the canvas, leaving the house, clearing and plot.
+// Reference coordinates preserve the existing farm interactions. These landmarks
+// align them with the new panoramic painting, including all 42 cabbages.
+const yKnots = [[0,0],[210,157],[322.5,246],[395,327],[495,355],[900,453],
+    [961,492],[993,515],[1027,540],[1062,566],[1099,591],[1137,618],[1194,659],[1280,724]];
+function interpolate(value, inverse = false) {
+    const from = inverse ? 1 : 0, to = inverse ? 0 : 1;
+    let i = 1;
+    while (i < yKnots.length - 1 && value > yKnots[i][from]) i++;
+    const a = yKnots[i - 1], b = yKnots[i];
+    return a[to] + (value - a[from]) / (b[from] - a[from]) * (b[to] - a[to]);
+}
 export function getFarmMapLayout(scene) {
-    const scale = Math.max(scene.scale.width / 720, scene.scale.height / 1280);
-    const offsetX = (scene.scale.width - 720 * scale) / 2;
-    return { scale, offsetX, point: (x, y) => ({ x: offsetX + x * scale, y: y * scale }) };
+    const view = farmView(scene);
+    if (view.width <= 500) {
+        const artScale = Math.max(view.width / 720, view.height / 1280);
+        const offsetX = 195 - 360 * artScale, offsetY = 422 - 640 * artScale;
+        return { texture: 'farm_map', width:720, height:1280, artScale, scale:artScale, offsetX, offsetY,
+            point:(x,y)=>({x:offsetX+x*artScale,y:offsetY+y*artScale}),
+            reference:(x,y)=>({x:(x-offsetX)/artScale,y:(y-offsetY)/artScale}) };
+    }
+    const artScale = Math.max(view.width / 2172, view.height / 724);
+    const offsetX = 195 - 1086 * artScale, offsetY = 422 - 362 * artScale;
+    return { texture:'farm_panorama', width:2172, height:724, artScale, scale: .889 * artScale, offsetX, offsetY,
+        point: (x, y) => ({ x: offsetX + (739 + x * .889) * artScale, y: offsetY + interpolate(y) * artScale }),
+        reference: (x, y) => ({ x: ((x - offsetX) / artScale - 739) / .889, y: interpolate((y - offsetY) / artScale, true) }) };
+}
+function coopGeometry(map) {
+    return { width: 260 * map.scale, height: map.point(370,435).y - map.point(370,210).y };
+}
+function reflowFarm(scene, oldMap, map) {
+    const move = object => {
+        if (!object?.active) return;
+        const ref = oldMap.reference(object.x, object.y), point = map.point(ref.x, ref.y);
+        object.setPosition(point.x, point.y);
+    };
+    if (scene.coop) {
+        const p = map.point(370,322.5), size = coopGeometry(map);
+        scene.coop.setPosition(p.x,p.y).setSize(size.width,size.height);
+        scene.coop.input?.hitArea.setSize(size.width,size.height);
+        scene.coop.levelBadge?.setPosition(p.x,p.y+size.height/2+9);
+    }
+    [scene.coopEgg,scene.farmSign,...(scene.gardenPlants || []),...(scene.rubbishGroup?.getChildren() || [])].forEach(move);
+    if (scene.gardenBounds) {
+        const a=map.point(145,900),b=map.point(596,1194);
+        scene.gardenBounds={left:a.x,top:a.y,right:b.x,bottom:b.y};
+    }
+    for (const hen of scene.hensGroup || []) {
+        // Let the nesting sequence finish its callbacks; killing it could leave
+        // isHenSitting locked. Its next wander uses the new clearing.
+        if (scene.isHenSitting) { move(hen); continue; }
+        scene.tweens.killTweensOf(hen); hen.walkTimer?.remove(); move(hen);
+        scene.wanderSingleHen?.(hen);
+    }
+    for (const name of ['wolf','tiger','dragon','gorilla']) move(scene[name]);
+    for (const name of ['wolf','tiger']) {
+        const predator=scene[name],dest=predator?{x:scene.coop.x,y:scene.coop.getBounds().bottom+20}:null;
+        if (dest && predator.moveTween?.isPlaying()) { predator.moveTween.updateTo('x',dest.x,true); predator.moveTween.updateTo('y',dest.y,true); }
+    }
+    for (const boss of [scene.dragonEncounter,scene.gorillaEncounter].filter(Boolean)) {
+        boss.destination={x:Math.max(boss.spec.minX||80,scene.coop.getBounds().left-(boss.spec.approachInset||34)),y:scene.coop.getBounds().bottom+10};
+        if (boss.flight?.isPlaying()) { boss.flight.updateTo('x',boss.destination.x,true); boss.flight.updateTo('y',boss.destination.y,true); }
+        else if (!boss.result) boss.sprite.setPosition(boss.destination.x,boss.destination.y);
+    }
 }
 
 export function addFarmCoop(scene, onClick) {
     const map = getFarmMapLayout(scene);
     const position = map.point(370, 322.5);
-    const coop = scene.add.zone(position.x, position.y, 260 * map.scale, 225 * map.scale)
+    const size = coopGeometry(map);
+    const coop = scene.add.zone(position.x, position.y, size.width, size.height)
         .setInteractive({ cursor: 'pointer' }).setData('mapCoop', true);
     coop.on('pointerdown', onClick);
     coop.levelBadge = scene.add.text(coop.x, coop.y + coop.height / 2 + 9, '', {
@@ -40,7 +109,7 @@ export function farmEggPosition(scene) {
 
 export function addFarmSign(scene, onClick) {
     const position = getFarmMapLayout(scene).point(160, 940);
-    const sign = scene.add.image(position.x, position.y, 'signboard')
+    const sign = scene.farmSign = scene.add.image(position.x, position.y, 'signboard')
         .setDisplaySize(32, 38).setDepth(5).setInteractive({ cursor: 'pointer' });
     sign.on('pointerdown', () => onClick(sign));
     return sign;
@@ -62,10 +131,10 @@ export function setCoopSize(coop, level = 1) {
 export function getHenWalkArea(scene) {
     const map = getFarmMapLayout(scene);
     return {
-        left: Math.ceil(map.point(185, 0).x),
-        right: Math.floor(map.point(545, 0).x),
-        top: Math.ceil(Math.max(scene.coop.y + scene.coop.displayHeight / 2 + 40, map.point(0, 495).y + 32)),
-        bottom: Math.floor(map.point(0, 900).y - 44),
+        left: Math.ceil(Math.max(40, map.point(185, 0).x)),
+        right: Math.floor(Math.min(350, map.point(545, 0).x)),
+        top: Math.ceil(Math.max(scene.coop.y + scene.coop.displayHeight / 2 + 30, map.point(0, 495).y + 12)),
+        bottom: Math.floor(map.point(0, 900).y - 32),
     };
 }
 

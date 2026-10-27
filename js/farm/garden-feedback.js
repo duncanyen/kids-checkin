@@ -71,7 +71,7 @@ export class GardenFeedback {
         if (!this.alive || this.busy || !this.queue.length) return;
         this.busy=true;
         const {type,count}=this.queue.shift(), style=ITEMS[type], scene=this.scene;
-        const card=scene.add.container(scene.scale.width/2,scene.scale.height*.55+18).setDepth(45).setAlpha(0).setScale(.8);
+        const card=scene.add.container(195,844*.55+18).setDepth(45).setAlpha(0).setScale(.8);
         card.setData('gardenFind',{type,count}); this.roots.add(card);
         const shadow=scene.add.graphics().fillStyle(0x3d321f,.2).fillRoundedRect(-147,-48,300,112,18);
         const paper=scene.add.image(0,0,'ui_parchment').setDisplaySize(308,120);
@@ -84,7 +84,7 @@ export class GardenFeedback {
         const amount=scene.add.text(121,-8,`+${count}`,{...textStyle,fontSize:'25px',fontStyle:'bold',color:style.ink}).setOrigin(1,0);
         card.add([shadow,paper,badge,mascot,eyebrow,title,subtitle,amount]);
         scene.tweens.add({targets:mascot,y:-5,angle:5,duration:260,yoyo:true,repeat:2,ease:'Sine.InOut'});
-        scene.tweens.add({targets:card,y:scene.scale.height*.55,alpha:1,scaleX:1,scaleY:1,duration:340,ease:'Back.Out',onComplete:()=>{
+        scene.tweens.add({targets:card,y:844*.55,alpha:1,scaleX:1,scaleY:1,duration:340,ease:'Back.Out',onComplete:()=>{
             if(!this.alive)return;
             scene.time.delayedCall(1250,()=>{
                 if(!this.alive)return;

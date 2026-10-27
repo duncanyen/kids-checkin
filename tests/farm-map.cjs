@@ -36,10 +36,10 @@ const {execFileSync}=require('node:child_process');
   }
   const map=await p.evaluate(key=>{
    const s=window.__farmGame.scene.getScene(key);
-   const backgrounds=s.children.list.filter(o=>o.texture?.key==='farm_map');
+   const backgrounds=s.children.list.filter(o=>['farm_map','farm_panorama'].includes(o.texture?.key));
    if(backgrounds.length!==1)throw Error('Farm map not loaded');
    const image=backgrounds[0];
-   if(Math.abs(image.displayWidth/image.displayHeight-720/1280)>0.0001)throw Error('Map distorted');
+   if(Math.abs(image.displayWidth/image.displayHeight-(image.texture.key==='farm_map'?720/1280:2172/724))>0.0001)throw Error('Map distorted');
    if(s.children.list.some(o=>['coop','garden_bed','cabbage'].includes(o.texture?.key)))throw Error('Duplicate painted coop or garden');
    if(s.gardenPlants.length!==42||s.gardenPlants.some(o=>!o.input?.enabled))throw Error('Painted cabbage hit zones missing');
    for(const h of s.hensGroup)if(h.getBounds().top<s.coop.getBounds().bottom||h.getBounds().bottom>s.gardenBounds.top)throw Error('Hen outside clearing');
@@ -48,7 +48,10 @@ const {execFileSync}=require('node:child_process');
    return {coop:{x:s.coop.x,y:s.coop.y},first:{x:s.gardenPlants[0].x,y:s.gardenPlants[0].y},last:{x:s.gardenPlants[41].x,y:s.gardenPlants[41].y},plants:s.gardenPlants.length};
   },key);
   const box=await p.locator('canvas').boundingBox();
-  const click=async pos=>p.mouse.click(box.x+pos.x*box.width/390,box.y+pos.y*box.height/844);
+  const click=async pos=>{
+   const screen=await p.evaluate(({key,pos})=>{const c=window.__farmGame.scene.getScene(key).cameras.main;return{x:c.width/2+(pos.x-195)*c.zoom,y:c.height/2+(pos.y-422)*c.zoom};},{key,pos});
+   await p.mouse.click(box.x+screen.x,box.y+screen.y);
+  };
   await click(map.coop);
   await p.waitForFunction(key=>window.__farmGame.scene.getScene(key).dialogContainer.visible,key);
   await p.evaluate(key=>window.__farmGame.scene.getScene(key).dialogContainer.setVisible(false),key);

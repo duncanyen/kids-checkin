@@ -61,7 +61,7 @@ export function predatorDestination(scene) {
 
 export function predatorSpawnPoint(scene, kind) {
     const destination = predatorDestination(scene);
-    const x = kind === 'wolf' ? scene.scale.width - 70 : 70;
+    const x = kind === 'wolf' ? 390 - 70 : 70;
     // Equal horizontal/vertical travel matches the sheet's 45-degree heading.
     return { x, y: destination.y + Math.abs(destination.x - x) };
 }

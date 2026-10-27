@@ -1,3 +1,4 @@
+import { configureFarmViewport } from './viewport.js';
 import { watchFarm } from '../live-reads.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
 import { BREEDS, poultryState, feedPoultry, coopCapacity } from './poultry.js';
@@ -10,6 +11,7 @@ export default class WarehouseScene extends Phaser.Scene {
     constructor() { super({ key: 'WarehouseScene' }); }
 
     create() {
+        configureFarmViewport(this);
         addFarmBackground(this);
         
         // 以顯示尺寸計算比例，讓高解析精靈圖維持原本的預覽大小。

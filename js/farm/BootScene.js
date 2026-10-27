@@ -12,6 +12,7 @@ export default class BootScene extends Phaser.Scene {
         for (const breed of ['hen', 'silkie', 'bresse']) this.load.atlas(breed, `assets/farm/${breed}-sheet.png`, `assets/farm/${breed}-sheet.json`);
         this.load.image('farm_background', 'assets/farm/background.webp');
         this.load.image('farm_map', 'assets/farm/farm-map.jpg');
+        this.load.image('farm_panorama', 'assets/farm/farm-panorama.webp');
         for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
             this.load.image('ui_' + name.replaceAll('-', '_'), `assets/farm/ui-${name}.webp`);
         }

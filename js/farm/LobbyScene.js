@@ -1,3 +1,4 @@
+import { configureFarmViewport } from './viewport.js';
 import { readFarm } from '../live-reads.js';
 import { villageButton, selectVillageButton, villageText } from './village-ui.js';
 import { addFarmBackground } from './scenery.js';
@@ -12,6 +13,7 @@ export default class LobbyScene extends Phaser.Scene {
     init(data = {}) { this.selectedGroupId = data.targetGroupId || CURRENT_GROUP_ID; this.openPublic = data.openPublic || false; this.notice = data.notice || ''; }
 
     create() {
+        configureFarmViewport(this);
         this.lobbyToken = Symbol('lobby');
         this.requestId = (this.requestId || 0) + 1;
         this.entering = false;
@@ -66,9 +68,10 @@ export default class LobbyScene extends Phaser.Scene {
         this.searchRoot = root; this.searchInput = input; this.suggestions = suggestions;
         const alignSearch = () => {
             const canvas = this.game.canvas.getBoundingClientRect(), bounds = parent.getBoundingClientRect();
-            root.style.left = `${canvas.left - bounds.left + canvas.width * 0.05}px`;
-            root.style.top = `${canvas.top - bounds.top + canvas.height * 122 / 844}px`;
-            root.style.width = `${canvas.width * 0.9}px`;
+            const camera = this.cameras.main, ratio = canvas.width / camera.width;
+            root.style.left = `${canvas.left - bounds.left + (camera.width / 2 + (19.5 - 195) * camera.zoom) * ratio}px`;
+            root.style.top = `${canvas.top - bounds.top + (camera.height / 2 + (122 - 422) * camera.zoom) * ratio}px`;
+            root.style.width = `${351 * camera.zoom * ratio}px`;
         };
         this.searchResizeObserver = new ResizeObserver(alignSearch);
         this.searchResizeObserver.observe(this.game.canvas);

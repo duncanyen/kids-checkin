@@ -1,3 +1,4 @@
+import { configureFarmViewport } from './viewport.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES } from './item-categories.js';
 import { addPoultryGuide } from './poultry-guide.js';
 import { BREEDS, poultryState, coopCapacity, tradePoultry } from './poultry.js';
@@ -12,6 +13,7 @@ export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
 
     create() {
+        configureFarmViewport(this);
         addFarmBackground(this);
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
         this.add.text(195, 60, '🛒 商店', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);

@@ -1,3 +1,4 @@
+import { configureFarmViewport } from './viewport.js';
 import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, nextEggStatus, collectPoultry } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
@@ -17,7 +18,8 @@ export default class MyFarmScene extends Phaser.Scene {
     constructor() { super({ key: 'MyFarmScene' }); }
 
     create() {
-        const cx = this.cameras.main.centerX; 
+        configureFarmViewport(this);
+        const cx = 195;
         this.isHenSitting = false;
         this.emptyClickCount = 0;
         this.isHarvesting = false;
@@ -537,7 +539,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
-    showFloatingText(msg, color, fontSize = 22, x = this.cameras.main.centerX, y = this.cameras.main.centerY - 60) {
+    showFloatingText(msg, color, fontSize = 22, x = 195, y = 422 - 60) {
         const floatTxt = this.add.text(x, y, msg, { fontSize: `${fontSize}px`, fontFamily: 'monospace', color: color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3, align: 'center' }).setOrigin(0.5).setDepth(20);
         this.tweens.add({ targets: floatTxt, y: floatTxt.y - 40, alpha: 0, duration: 1200, onComplete: () => floatTxt.destroy() });
     }

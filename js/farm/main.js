@@ -12,8 +12,9 @@ import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID } from './constants.js';
 // ==========================================
 const config = {
     type: Phaser.AUTO,
+    backgroundColor: '#79994d',
     scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 390, 
         height: 844

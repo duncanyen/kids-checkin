@@ -87,9 +87,21 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
             assert.equal(Math.round(layout.parent.width),viewport.width);
             assert.ok(Math.abs(layout.parent.bottom-viewport.height)<=1);
             assert.equal(layout.scroll,false);
-            assert.match(layout.bg,/farm-map/);
+            assert.equal(layout.bg,'none');
+            assert.equal(Math.round(layout.canvas.width),viewport.width);
+            assert.ok(Math.abs(layout.canvas.height-layout.parent.height)<=1);
             assert.ok(layout.canvas.x>=-1&&layout.canvas.right<=viewport.width+1);
             assert.ok(layout.canvas.y>=layout.parent.y-1&&layout.canvas.bottom<=viewport.height+1);
+            const scenery=await page.evaluate(()=>{
+                const scene=window.__farmGame.scene.getScene('MyFarmScene'),camera=scene.cameras.main;
+                const image=scene.children.list.find(o=>['farm_map','farm_panorama'].includes(o.texture?.key)),bounds=image.getBounds();
+                const halfWidth=camera.width/camera.zoom/2,halfHeight=camera.height/camera.zoom/2;
+                return{expectedRatio:image.texture.key==='farm_map'?720/1280:2172/724,ratio:image.displayWidth/image.displayHeight,covers:bounds.left<=195-halfWidth+.1&&bounds.right>=195+halfWidth-.1&&bounds.top<=422-halfHeight+.1&&bounds.bottom>=422+halfHeight-.1,plantsVisible:scene.gardenPlants.length===42&&scene.gardenPlants.every(plant=>{const b=plant.getBounds();return b.left>=195-halfWidth&&b.right<=195+halfWidth&&b.top>=422-halfHeight&&b.bottom<=422+halfHeight}),hudWidth:scene.children.list.find(o=>o.type==='Text'&&o.text==='🏠 村落').scaleX};
+            });
+            assert.ok(Math.abs(scenery.ratio-scenery.expectedRatio)<.001);
+            assert.equal(scenery.covers,true);
+            assert.equal(scenery.plantsVisible,true);
+            assert.equal(scenery.hudWidth,1);
             await page.screenshot({path:`/tmp/farm-fullscreen-${viewport.width}.png`,fullPage:true});
         }
         await page.setViewportSize({width:390,height:844});

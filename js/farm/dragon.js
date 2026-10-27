@@ -88,7 +88,7 @@ export class BossEncounter {
         this.weapon = equippedWeapon(scene.myFarmData || scene.farmData);
         this.damage = bossWeaponDamage(this.weapon, spec.key);
         this.destination = { x: Math.max(spec.minX || 80, scene.coop.getBounds().left - (spec.approachInset || 34)), y: scene.coop.getBounds().bottom + 10 };
-        this.sprite = scene.add.sprite(spec.spawnX || 58, scene.scale.height - 140, spec.key, 0)
+        this.sprite = scene.add.sprite(spec.spawnX || 58, 844 - 140, spec.key, 0)
             .setOrigin(0.5, 0.875).setDisplaySize(spec.size, spec.size).setDepth(25)
             .setInteractive({ cursor: 'pointer', hitArea: new Phaser.Geom.Rectangle(12, 12, spec.frameSize - 24, spec.frameSize - 24), hitAreaCallback: Phaser.Geom.Rectangle.Contains });
         scene[spec.key] = this.sprite;

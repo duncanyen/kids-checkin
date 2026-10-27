@@ -21,12 +21,13 @@ export const setDoc=deny,updateDoc=deny,addDoc=deny,serverTimestamp=deny;
 let queue=Promise.resolve();
 export function runTransaction(_,callback){const run=queue.then(async()=>{
  if(window.__farmTest.failNext){window.__farmTest.failNext=false;throw Error('Simulated offline');}
- const writes=[];
- const result=await callback({get:async ref=>snapshot(ref),update:(ref,values)=>writes.push([ref,values])});
+ const writes=[];const sets=[];
+ const result=await callback({get:async ref=>snapshot(ref),set:(ref,value)=>sets.push([ref,value]),update:(ref,values)=>writes.push([ref,values])});
+ for(const [ref,value] of sets)docs[ref.path]=structuredClone(value);
  for(const [ref,values] of writes) for(const [key,value] of Object.entries(values)){
   const bits=key.split('.');let object=docs[ref.path];for(const bit of bits.slice(0,-1))object=object[bit]??={};object[bits.at(-1)]=structuredClone(value);
  }
- if(writes.length){window.__farmTest.commits++;notify();}
+ if(writes.length||sets.length){window.__farmTest.commits++;notify();}
  return result;
  });queue=run.catch(()=>{});return run;}
 window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+who].farm;Object.assign(farm,values);if(farm.poultryVersion===2&&'eggsReady' in values&&!('readyEggs' in values))farm.readyEggs={hen:values.eggsReady,silkie:0,bresse:0};notify();}};
@@ -46,12 +47,21 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.addInitScript(()=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'self',groupId:'dragon-test',name:'測試玩家'})));
  await page.goto(base+'/farmgame.html');
  await page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').hensGroup?.length===2);
- const checks=[];
+ const checks=[];let checkedResize=false;
  async function patch(data){await page.evaluate(data=>window.__farmTest.patch('self',data),data);}
  async function start(weapon='club'){
   await patch({coopLevel:3,eggsReady:2,inventoryEggs:0,coins:150,warehouseLimit:99,worms:0,equippedWeapon:weapon});
   await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');s.gorillaEncounter?.destroy();s.gorillaEncounter=null;s.gorilla=null;s.dragonEncounter?.destroy();s.dragonEncounter=null;s.dragon=null;const old=Phaser.Math.Between;Phaser.Math.Between=(min,max)=>max===60?1:max;try{await s.harvestEgg();}finally{Phaser.Math.Between=old;}});
   await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter);
+  if(!checkedResize){
+   const before=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter;return{id:b.id,health:b.health,remaining:b.deadlineTimer.getRemaining(),commits:window.__farmTest.commits};});
+   for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
+    await page.setViewportSize(viewport);await page.waitForTimeout(80);
+    await page.evaluate(before=>{const b=window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter;if(b.id!==before.id||b.health!==before.health||b.deadlineTimer.getRemaining()>before.remaining+10||window.__farmTest.commits!==before.commits)throw Error('Resizing reset battle or wrote economy data');},before);
+   }
+   checkedResize=true;
+  }
+
  }
  for(const [weapon,hits]of [['club',1000],['mace',200]]){
   await start(weapon);
