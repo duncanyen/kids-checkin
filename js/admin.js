@@ -2,22 +2,11 @@ import { normalizeAccountId, findAccountsById, newAccountRef, assertAccountAvail
 import { FOOD_MENU, DEFAULT_MENUS } from './menu-catalog.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { loadGameGroupMembers } from './game-members.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { db } from './firebase-config.js';
 import { 
-    getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc, 
+    collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc,
     query, where, orderBy, serverTimestamp, onSnapshot, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 let systemMenuOptions = [];
 let allLogs = [];
@@ -70,11 +59,6 @@ async function loadSystemMenus() {
 }
 
 async function initAdminPage() {
-    await loadSystemMenus();
-
-    renderMenuCheckboxes('newMenusContainer', false); 
-    renderMenuCheckboxes('editMenusContainer', true); 
-    
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     document.getElementById('logDateFilter').value = todayStr;
@@ -89,6 +73,11 @@ async function initAdminPage() {
     setupToggle('btnToggleAddForm', 'addUserForm', 'toggleIconAdd');
     setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList', loadUsersFromFirebase);
     setupToggle('btnToggleLogs', 'logsSection', 'toggleIconLogs');
+
+    // Bind expand/collapse before any remote request can delay the page.
+    await loadSystemMenus();
+    renderMenuCheckboxes('newMenusContainer', false);
+    renderMenuCheckboxes('editMenusContainer', true);
     
     await loadGroupSettings();
     await loadUsersFromFirebase();
@@ -122,16 +111,21 @@ async function initAdminPage() {
 }
 
 function setupToggle(btnId, targetId, iconId, onOpenCallback) {
-    document.getElementById(btnId).addEventListener('click', () => {
+    const button = document.getElementById(btnId);
+    button.setAttribute('aria-controls', targetId);
+    button.setAttribute('aria-expanded', 'false');
+    button.addEventListener('click', () => {
         const el = document.getElementById(targetId);
         const icon = document.getElementById(iconId);
         if (el.style.display === 'none' || el.style.display === '') {
             el.style.display = (targetId === 'addUserForm' || targetId === 'groupSettingsForm') ? 'flex' : 'block';
             icon.innerText = '▲';
+            button.setAttribute('aria-expanded', 'true');
             if (onOpenCallback) onOpenCallback();
         } else {
             el.style.display = 'none';
             icon.innerText = '▼';
+            button.setAttribute('aria-expanded', 'false');
         }
     });
 }

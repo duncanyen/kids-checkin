@@ -14,7 +14,7 @@ const docs={
  'system_menus/chat':{id:'chat',label:'聊天室',order:1,isDefault:true},
  'system_menus/food':{id:'food',label:'吃什麼',order:2,isDefault:true},
 };
-const writes=[],queries=[];let failCommit=false,failUsers=false;
+const writes=[],queries=[];let failCommit=false,failUsers=false;let releaseMenus;const menusReady=new Promise(resolve=>{releaseMenus=resolve;});
 const mock=`
 export const doc=(first, ...parts)=>{const path=parts.length?parts.join('/'):first.path+'/auto-'+crypto.randomUUID();return{path,id:path.split('/').at(-1),kind:'doc'};};
 export const collection=(_, ...parts)=>({path:parts.join('/'),kind:'query'});
@@ -38,9 +38,10 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
  const context=await browser.newContext({viewport:{width:390,height:844}});
- await context.exposeFunction('__groupDb',op=>{
+ await context.exposeFunction('__groupDb',async op=>{
   if(op.kind==='get')return docs[op.path];
   if(op.kind==='query'){
+   if(op.path==='system_menus')await menusReady;
    queries.push(op);if(failUsers&&op.path==='users')throw Error('offline');
    let rows=Object.entries(docs).filter(([p])=>p.startsWith(op.path+'/')&&p.split('/').length===op.path.split('/').length+1).map(([path,data])=>({path,data}));
    for(const f of op.filters||[])if(f.field)rows=rows.filter(r=>f.op==='in'?f.value.includes(r.data[f.field]):f.op==='array-contains'?r.data[f.field]?.includes(f.value):r.data[f.field]===f.value);
@@ -51,13 +52,24 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
   if(op.kind==='set'||op.kind==='update'){apply({...op,merge:op.kind==='update'||op.merge});return;}
   if(op.kind==='add'){const id='add-'+writes.length;apply({...op,path:op.path+'/'+id});return id;}
  });
- await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:mock}));
+ // Use real Firebase app initialization to catch conflicting default configs.
+ const sdkFile='/tmp/nexus-firebase-app.js';
+ const appSdk=require('node:fs').existsSync(sdkFile)?require('node:fs').readFileSync(sdkFile,'utf8'):require('node:child_process').execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js'],{encoding:'utf8',maxBuffer:2*1024*1024});
+ await context.route('https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js',r=>r.fulfill({contentType:'text/javascript',body:appSdk}));
  await context.route('https://ui-avatars.com/**',r=>r.abort());
  const page=await context.newPage(),errors=[],alerts=[];page.setDefaultTimeout(10000);
- page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{alerts.push(d.message());return d.accept();});
+ page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message);});page.on('dialog',d=>{alerts.push(d.message());return d.accept();});
  await page.addInitScript(()=>{if(!sessionStorage.getItem('familyCheckInUser'))sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'admin',name:'同名成員',role:'admin',groupId:'B'}));if(!localStorage.getItem('lastGroupId'))localStorage.setItem('lastGroupId','A');});
- await page.goto(base+'/admin.html');await page.waitForSelector('#userListContainer [data-account-id="bob"]',{state:'attached'});
+ await page.goto(base+'/admin.html');
+ // All six sections work while the menu request is deliberately unresolved.
+ for(const [button,target]of [['btnToggleGroupSettings','groupSettingsForm'],['btnToggleRequests','requestsSection'],['btnToggleGamePanel','adminGameSection'],['btnToggleAddForm','addUserForm'],['btnToggleUserList','userListContainer'],['btnToggleLogs','logsSection']]){
+  await page.click('#'+button);assert.equal(await page.locator('#'+target).isVisible(),true);assert.equal(await page.locator('#'+button).getAttribute('aria-expanded'),'true');
+  await page.click('#'+button);assert.equal(await page.locator('#'+target).isVisible(),false);assert.equal(await page.locator('#'+button).getAttribute('aria-expanded'),'false');
+ }
+ releaseMenus();
+ await page.waitForSelector('#newMenusContainer input[value="food"]',{state:'attached'});
+ await page.waitForSelector('#userListContainer [data-account-id="bob"]',{state:'attached'});
  await page.click('#btnToggleUserList');
  await page.waitForFunction(()=>document.querySelectorAll('#userListContainer [data-account-id]').length===3);
  assert.deepEqual(await page.locator('#userListContainer [data-account-id]').evaluateAll(rows=>rows.map(r=>r.dataset.accountId)),['admin','bob','charlie']);
@@ -92,6 +104,6 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
  await page.waitForSelector('[data-account-id="charlie"]',{state:'attached'});
  assert.ok(queries.some(q=>q.path==='users'&&!q.filters)); // Global legacy-ID duplicate check.
  assert.ok(queries.filter(q=>q.path==='users'&&q.filters).every(q=>q.filters.some(f=>f.field==='accountId')));
- assert.deepEqual(errors,[]);console.log('PASS: authoritative membership list, multi-group profiles, same-name edit/self identity, preserved PIN, live joins, group-only removal, atomic add/retry, approval reuses profile, selected group isolation');
+ assert.deepEqual(errors,[]);console.log('PASS: real Firebase app initialization, all six dropdowns during delayed loading, authoritative membership list, multi-group profiles, same-name edit/self identity, preserved PIN, live joins, group-only removal, atomic add/retry, approval reuses profile, selected group isolation');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
