@@ -4,6 +4,8 @@ import LobbyScene from './LobbyScene.js';
 import VisitScene from './VisitScene.js';
 import ShopScene from './ShopScene.js';
 import WarehouseScene from './WarehouseScene.js';
+import { mountFarmMail } from './mail-ui.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID } from './constants.js';
 
 // ==========================================
 // 啟動 Phaser 遊戲引擎 (手機滿版設定)
@@ -25,3 +27,4 @@ const config = {
 
 // 確保在 HTML 中 <script type="module" src="js/farm/main.js"></script>
 const game = new Phaser.Game(config);
+mountFarmMail(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });

@@ -21,12 +21,13 @@ export const setDoc=deny,updateDoc=deny,addDoc=deny,serverTimestamp=deny;
 let queue=Promise.resolve();
 export function runTransaction(_,callback){const run=queue.then(async()=>{
  if(window.__farmTest.failNext){window.__farmTest.failNext=false;throw Error('Simulated offline');}
- const writes=[];
- const result=await callback({get:async ref=>snapshot(ref),update:(ref,values)=>writes.push([ref,values])});
+ const writes=[];const sets=[];
+ const result=await callback({get:async ref=>snapshot(ref),set:(ref,value)=>sets.push([ref,value]),update:(ref,values)=>writes.push([ref,values])});
+ for(const [ref,value] of sets)docs[ref.path]=structuredClone(value);
  for(const [ref,values] of writes) for(const [key,value] of Object.entries(values)){
   const bits=key.split('.');let object=docs[ref.path];for(const bit of bits.slice(0,-1))object=object[bit]??={};object[bits.at(-1)]=structuredClone(value);
  }
- if(writes.length){window.__farmTest.commits++;notify();}
+ if(writes.length||sets.length){window.__farmTest.commits++;notify();}
  return result;
  });queue=run.catch(()=>{});return run;}
 window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix+who].farm,values);notify();}};
@@ -40,7 +41,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:phaser}));
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:firestore}));
- await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','window.__farmGame =')});});
+ await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await page.addInitScript(()=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'self',groupId:'dragon-test',name:'測試玩家'})));
  await page.goto(base+'/farmgame.html');
  await page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').hensGroup?.length===2);

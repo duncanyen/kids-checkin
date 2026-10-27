@@ -33,7 +33,7 @@ export async function setDoc(ref,data,options={}){await window.__db({kind:'write
 export const updateDoc=(ref,data)=>setDoc(ref,data,{merge:true});
 export const addDoc=async(ref,data)=>({path:await window.__db({kind:'add',path:ref.path,data})});
 export const serverTimestamp=()=>Date.now();
-export async function runTransaction(_,callback){const pending=[];const result=await callback({get:getDoc,update:(ref,data)=>pending.push({path:ref.path,data,merge:true})});await window.__db({kind:'transaction',pending});await notify();return result;}
+export async function runTransaction(_,callback){const pending=[];const result=await callback({get:getDoc,set:(ref,data)=>pending.push({path:ref.path,data,merge:false}),update:(ref,data)=>pending.push({path:ref.path,data,merge:true})});await window.__db({kind:'transaction',pending});await notify();return result;}
 `;
 function write(path,data,merge){const next=merge?clone(docs[path]||{}):{};for(const [key,value] of Object.entries(data)){const keys=key.split('.');let object=next;for(const bit of keys.slice(0,-1))object=object[bit]??={};object[keys.at(-1)]=clone(value);}docs[path]=next;writes.push({path,data:clone(data)});}
 (async()=>{
@@ -57,7 +57,7 @@ function write(path,data,merge){const next=merge?clone(docs[path]||{}):{};for(co
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:phaser}));
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:mock}));
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
- await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','window.__farmGame =')});});
+ await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await page.addInitScript(()=>{localStorage.setItem('lastGroupId','A');sessionStorage.setItem('familyCheckInUser',JSON.stringify({name:'Player',accountId:'player',groupId:'stale',role:'admin'}));});
  const checks=[];
  async function openLobby(){await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData);await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('LobbyScene'));await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='A');}

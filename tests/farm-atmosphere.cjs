@@ -22,7 +22,7 @@ const fs=require('node:fs');
  export const setDoc=record,updateDoc=record,addDoc=record,serverTimestamp=()=>Date.now();
  export const runTransaction=async()=>{window.__transactionCount=(window.__transactionCount||0)+1;return false;};
  `}));
- await p.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','window.__farmGame =')});});
+ await p.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await p.emulateMedia({reducedMotion:'reduce'});
  await p.addInitScript(()=>{
   sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'render-test',groupId:'render-test',name:'Test'}));

@@ -1,3 +1,4 @@
+import { visitorNotice } from './mail-store.js';
 import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, takePoultryEgg } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
@@ -555,6 +556,8 @@ export default class VisitScene extends Phaser.Scene {
         const targetRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId);
         const roll = Math.random(); // A Firestore retry keeps the same attempt outcome.
         const eggRoll = Math.random();
+        const visitMailRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId, 'farm_notifications', `visit-${crypto.randomUUID()}`);
+        const visitTime = Date.now();
         try {
             const success = await this.runVisitTransaction(async transaction => {
                 const targetDoc = await transaction.get(targetRef);
@@ -573,6 +576,7 @@ export default class VisitScene extends Phaser.Scene {
                     updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
                     this.stolenEggName = BREEDS[egg.breed].eggName;
                     transaction.update(targetRef, egg.patch);
+                    transaction.set(visitMailRef, visitorNotice(visitTime));
                 }
                 // A failed attempt still commits its cooldown and moral cost.
                 transaction.update(myFarmRef, updates);

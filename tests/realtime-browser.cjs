@@ -40,7 +40,7 @@ window.__farmTest={docs,commits:0,firestoreListeners:[],patch:(who,values)=>{Obj
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:phaser}));
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:firestore}));
- await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','window.__farmGame =')});});
+ await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await page.route('**/js/live-read-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const REALTIME_READS_ENABLED=true;export const REALTIME_REGION="asia-southeast1";'}));
  const {wire}=require('../functions/live-model.cjs');
  const platform=`
