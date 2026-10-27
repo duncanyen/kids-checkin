@@ -18,6 +18,8 @@ const {execFileSync}=require('node:child_process');
  const deny=()=>{throw Error('Test prohibits database writes')};
  export const setDoc=deny,updateDoc=deny,runTransaction=deny,addDoc=deny,serverTimestamp=deny;
  `}));
+ // Mailbox subscriptions are covered separately by farm-mail-browser.cjs.
+ await p.route('**/js/farm/mail-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmMail(){}'}));
  await p.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await p.addInitScript(()=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'render-test',groupId:'render-test',name:'Test'})));
  await p.goto((process.env.FARM_BASE_URL || 'http://127.0.0.1:8000') + '/farmgame.html');

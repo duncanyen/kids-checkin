@@ -88,7 +88,27 @@ test('failed transaction does not consume rewards and removed members cannot man
 test('visitor records are anonymous and timestamps always use Taiwan time', async () => {
     const f = await fixture();
     const time = Date.parse('2026-10-27T00:55:34Z');
-    assert.deepEqual(f.visitorNotice(time), { type: 'visitor', title: '訪客來訪', note: '訪客來偷蛋', createdAt: time });
+    assert.deepEqual(f.visitorNotice(time), { type: 'visitor', title: '訪客來訪', note: '訪客來偷蛋', createdAt: time, readAt: null });
     assert.equal(f.formatMailTime(time), '2026-10-27 08:55:34');
     assert.equal(f.formatMailTime(Date.parse('2026-10-26T16:00:00Z')), '2026-10-27 00:00:00');
+});
+
+
+test('read receipts persist, tolerate deleted mail and never change rewards', async () => {
+    const f = await fixture();
+    await f.store.ensureWelcome();
+    assert.equal(f.docs[notice].readAt, null);
+    f.state.fail = true;
+    await assert.rejects(f.store.markRead([f.WELCOME_ID]), /offline/);
+    assert.equal(f.docs[notice].readAt, null);
+    f.state.fail = false;
+    await f.store.markRead([f.WELCOME_ID, f.WELCOME_ID, 'already-deleted']);
+    const readAt = f.docs[notice].readAt;
+    assert.ok(readAt);
+    await f.store.markRead([f.WELCOME_ID]);
+    assert.equal(f.docs[notice].readAt, readAt);
+    assert.equal(f.docs[notice].claimedAt, null);
+    assert.equal(f.docs[owner].farm.coins, 12);
+    f.docs['groups/A'].members = [];
+    await assert.rejects(f.store.markRead([f.WELCOME_ID]), /不在此群組/);
 });

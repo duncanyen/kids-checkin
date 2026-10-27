@@ -22,6 +22,8 @@ const fs=require('node:fs');
  export const setDoc=record,updateDoc=record,addDoc=record,serverTimestamp=()=>Date.now();
  export const runTransaction=async()=>{window.__transactionCount=(window.__transactionCount||0)+1;return false;};
  `}));
+ // Mailbox subscriptions are covered separately by farm-mail-browser.cjs.
+ await p.route('**/js/farm/mail-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmMail(){}'}));
  await p.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await p.emulateMedia({reducedMotion:'reduce'});
  await p.addInitScript(()=>{

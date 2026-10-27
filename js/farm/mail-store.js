@@ -5,7 +5,7 @@ export const WELCOME_REWARD = Object.freeze({ coins: 1000, worms: 8, earthworms:
 export const WELCOME_BODY = '歡迎加入咕咕村落，若您有任何疑問，歡迎隨時與我們連絡，感謝您的支持，祝您遊戲愉快';
 
 export function visitorNotice(createdAt) {
-    return { type: 'visitor', title: '訪客來訪', note: '訪客來偷蛋', createdAt };
+    return { type: 'visitor', title: '訪客來訪', note: '訪客來偷蛋', createdAt, readAt: null };
 }
 
 export function formatMailTime(value) {
@@ -39,7 +39,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
                 const data = await readOwner(transaction);
                 // This receipt is intentionally outside the deletable notification.
                 if (data.farmMail?.welcomeCreatedAt || data.farmMail?.welcomeClaimedAt) return;
-                transaction.set(noticeRef(WELCOME_ID), { type: 'system', title: '系統通知', body: WELCOME_BODY, reward: WELCOME_REWARD, createdAt: now, claimedAt: null });
+                transaction.set(noticeRef(WELCOME_ID), { type: 'system', title: '系統通知', body: WELCOME_BODY, reward: WELCOME_REWARD, createdAt: now, claimedAt: null, readAt: null });
                 transaction.update(owner, { 'farmMail.welcomeCreatedAt': now });
             });
         },
@@ -50,6 +50,19 @@ export function createFarmMailStore(db, { groupId, accountId }) {
                 rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0) || a.id.localeCompare(b.id));
                 receive(rows);
             }, fail);
+        },
+        markRead(ids) {
+            const unique = [...new Set(ids)];
+            if (unique.length > 100) throw new Error('一次最多讀取 100 則通知');
+            const now = Date.now();
+            return runTransaction(db, async transaction => {
+                await readOwner(transaction);
+                const snapshots = await Promise.all(unique.map(id => transaction.get(noticeRef(id))));
+                snapshots.forEach((snapshot, i) => {
+                    if (snapshot.exists() && !snapshot.data().readAt) transaction.update(noticeRef(unique[i]), { readAt: now });
+                });
+                return now;
+            });
         },
         claim(id) {
             if (id !== WELCOME_ID) throw new Error('此通知沒有可領取的獎勵');

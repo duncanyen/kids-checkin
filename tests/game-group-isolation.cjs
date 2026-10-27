@@ -70,6 +70,8 @@ export async function runTransaction(_,callback){const pending=[];const result=a
  await context.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:phaser}));
  await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await context.route('**/group-switch-test.html',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><title>Group switch fixture</title>'}));
+ // Mailbox subscriptions are covered separately by farm-mail-browser.cjs.
+ await context.route('**/js/farm/mail-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmMail(){}'}));
  await context.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  const page=await context.newPage(),errors=[],dialogs=[];
  page.on('pageerror',error=>errors.push(error.message));page.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.dismiss();});

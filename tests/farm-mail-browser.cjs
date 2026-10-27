@@ -74,6 +74,25 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         });
         await page.goto(base + '/farmgame.html');
         await page.waitForSelector('.farm-mail-launcher').catch(async error => { console.error(await page.evaluate(()=>({ html:document.querySelector('.farm-mail-launcher')?.outerHTML, data:window.__farmGame?.registry?.get('myFarmData'), scenes:window.__farmGame?.scene?.getScenes(true).map(s=>s.scene.key) }))); throw error; });
+        await page.waitForSelector('.farm-mail-badge:not([hidden])');
+        assert.equal(await page.locator('.farm-mail-badge').textContent(), '1');
+        assert.equal(await page.locator('.farm-mail-launcher').innerText(), '1');
+        for (const viewport of [{width:390,height:844},{width:1440,height:900},{width:844,height:390}]) {
+            await page.setViewportSize(viewport);
+            await page.waitForTimeout(150);
+            const layout = await page.evaluate(() => {
+                const parent=document.querySelector('#game-container').getBoundingClientRect(),canvas=document.querySelector('canvas').getBoundingClientRect();
+                return {width:innerWidth,height:innerHeight,parent:{x:parent.x,y:parent.y,width:parent.width,height:parent.height,bottom:parent.bottom},canvas:{x:canvas.x,y:canvas.y,width:canvas.width,height:canvas.height,right:canvas.right,bottom:canvas.bottom},scroll:document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight,bg:getComputedStyle(document.querySelector('#game-container'),'::before').backgroundImage};
+            });
+            assert.equal(Math.round(layout.parent.width),viewport.width);
+            assert.ok(Math.abs(layout.parent.bottom-viewport.height)<=1);
+            assert.equal(layout.scroll,false);
+            assert.match(layout.bg,/farm-map/);
+            assert.ok(layout.canvas.x>=-1&&layout.canvas.right<=viewport.width+1);
+            assert.ok(layout.canvas.y>=layout.parent.y-1&&layout.canvas.bottom<=viewport.height+1);
+            await page.screenshot({path:`/tmp/farm-fullscreen-${viewport.width}.png`,fullPage:true});
+        }
+        await page.setViewportSize({width:390,height:844});
         await page.locator('.farm-mail-launcher').click();
         await page.getByRole('tab', { name: '系統', exact: true }).click();
         await page.waitForSelector('.farm-mail-gift');
@@ -81,6 +100,9 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(await page.evaluate(() => window.__farmGame.input.enabled), false);
         await page.locator('.farm-mail-summary').click();
         assert.match(await page.locator('.farm-mail-body').textContent(), /歡迎加入咕咕村落/);
+        await page.waitForSelector('.farm-mail-badge[hidden]',{state:'attached'});
+        assert.ok(docs[welcome].readAt);
+        assert.equal(docs[welcome].claimedAt,null);
         assert.match(await page.locator('.farm-mail-rewards').textContent(), /1000/);
         fail = true;
         await page.getByRole('button', { name: '領取', exact: true }).click();
@@ -148,13 +170,20 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         const visits = Object.entries(docs).filter(([path]) => path.startsWith(visitorPrefix));
         assert.equal(visits.length, 1);
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore - 1);
-        assert.deepEqual(Object.keys(visits[0][1]).sort(), ['createdAt', 'note', 'title', 'type']);
+        assert.deepEqual(Object.keys(visits[0][1]).sort(), ['createdAt', 'note', 'readAt', 'title', 'type']);
         // Visit records show no detail button, include Taiwan timestamps and can be deleted.
-        docs[owner + '/farm_notifications/visitor-test'] = visits[0][1];
+        await page.evaluate(async notice => {
+            const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+            await setDoc(doc({},'groups','A','users','self','farm_notifications','visitor-test'),notice);
+        }, visits[0][1]);
+        await page.waitForSelector('.farm-mail-badge:not([hidden])');
+        assert.equal(await page.locator('.farm-mail-badge').textContent(),'1');
         await page.locator('.farm-mail-launcher').click();
         await page.getByRole('tab', { name: '訪客', exact: true }).click();
         await page.waitForSelector('.farm-mail-row');
         assert.equal(await page.locator('button.farm-mail-summary').count(), 0);
+        await page.waitForSelector('.farm-mail-badge[hidden]',{state:'attached'});
+        assert.ok(docs[owner+'/farm_notifications/visitor-test'].readAt);
         assert.match(await page.locator('.farm-mail-time').textContent(), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
         await page.getByRole('button', { name: '刪除', exact: true }).click();
         await page.waitForSelector('.farm-mail-empty');
@@ -166,6 +195,6 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.ok(docs['groups/B/users/self/farm_notifications/welcome-v1']);
         assert.equal(docs[owner].farm.coins, 1050);
         assert.deepEqual(errors, []);
-        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation and input blocking.');
+        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launcher, full-viewport layout and input blocking.');
     } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
