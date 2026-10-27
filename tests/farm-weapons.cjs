@@ -50,7 +50,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  const checks=[];
  await page.evaluate(async()=>{
   const {WEAPONS_CONFIG,hitsToDefeat,equippedWeapon}=await import('/js/farm/combat-rules.js');
-  const expected={club:[200,200,600,1000],mace:[20,20,60,200],battleaxe:[5,10,20,40]};
+  const expected={club:[200,200,Infinity,1000],mace:[20,20,Infinity,200],battleaxe:[5,10,Infinity,40]};
   for(const [key,hits] of Object.entries(expected))for(const [i,enemy] of ['wolf','tiger','dragon','gorilla'].entries())if(hitsToDefeat(WEAPONS_CONFIG[key],enemy)!==hits[i])throw Error('Wrong balance '+key+' '+enemy);
   if(equippedWeapon({equippedWeapon:'battleaxe',battleaxe:0})!==WEAPONS_CONFIG.club)throw Error('Unowned axe usable');
   window.__farmTest.patch('self',{coins:10000,mace:1,battleaxe:0,warehouseLimit:99});
@@ -111,7 +111,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
    a.emit('pointerdown',{x:a.x,y:a.y});if(!s['is'+cap+'Defeated'])throw Error('Wrong '+enemy+' axe hits');
   },{enemy,hits});
  }
- for(const [enemy,hits] of [['dragon',20],['gorilla',40]]){
+ for(const [enemy,hits] of [['gorilla',40]]){
   await page.evaluate(({enemy,hits})=>{
    const s=window.__farmGame.scene.getScene('VisitScene'),cap=enemy[0].toUpperCase()+enemy.slice(1);
    s['spawn'+cap+'Event']();const b=s[enemy+'Encounter'];
@@ -122,7 +122,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   await page.waitForFunction(enemy=>window.__farmGame.scene.getScene('VisitScene')[enemy+'Encounter'].settled,enemy);
   await page.evaluate(enemy=>window.__farmGame.scene.getScene('VisitScene')[enemy+'Encounter'].destroy(),enemy);
  }
- checks.push('real Phaser fights: axe wolf 5 / tiger 10 / dragon 20 / gorilla 40 hits');
+ checks.push('real Phaser fights: axe wolf 5 / tiger 10 / gorilla 40 hits; dragon melee immunity checked in balance');
  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

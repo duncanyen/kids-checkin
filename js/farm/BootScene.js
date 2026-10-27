@@ -1,3 +1,4 @@
+import { registerEagleAnimations } from './eagle.js';
 import { watchFarm } from '../live-reads.js';
 import { registerPoultryAnimations } from './poultry-art.js';
 import { registerGorillaAnimations } from './gorilla.js';
@@ -18,6 +19,8 @@ export default class BootScene extends Phaser.Scene {
         for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
             this.load.image('ui_' + name.replaceAll('-', '_'), `assets/farm/ui-${name}.webp`);
         }
+        this.load.atlas('eagle', 'assets/farm/eagle-sheet.png', 'assets/farm/eagle-sheet.json');
+        for (const key of ['shortbow', 'huntingbow', 'eagle-feather', 'arrow']) this.load.image(key, `assets/farm/${key}.png`);
         this.load.image('mace', 'assets/farm/mace.png');
         this.load.image('battleaxe', 'assets/farm/battleaxe.png');
         this.load.image('coop', 'assets/farm/coop.webp');
@@ -66,6 +69,7 @@ export default class BootScene extends Phaser.Scene {
         registerPoultryAnimations(this);
         registerPredatorAnimations(this);
         registerDragonAnimations(this);
+        registerEagleAnimations(this);
         registerGorillaAnimations(this);
 
         // 全域監聽設定

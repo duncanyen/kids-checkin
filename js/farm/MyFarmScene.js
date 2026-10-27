@@ -1,3 +1,4 @@
+import { EagleEncounter } from './eagle.js';
 import { isFarmSave, copyFarmSave } from './save-store.js';
 import { configureFarmViewport } from './viewport.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, nextEggStatus, collectPoultry } from './poultry.js';
@@ -24,6 +25,8 @@ export default class MyFarmScene extends Phaser.Scene {
         this.isHenSitting = false;
         this.emptyClickCount = 0;
         this.isHarvesting = false;
+        this.eagleEncounter = null;
+        this.eagle = null;
         this.dragonEncounter = null;
         this.dragon = null;
         this.gorillaEncounter = null;
@@ -67,7 +70,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
 
         this.events.once('shutdown', () => {
-            this.dragonEncounter?.destroy();
+            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
@@ -361,7 +364,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     prepareToLayEgg() {
         if (!this.isSaveReady()) return;
-        if ([this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
+        if ([this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
         this.isHenSitting = true;
         const nestX = this.coop.x;
         const area = getHenWalkArea(this);
@@ -467,7 +470,7 @@ export default class MyFarmScene extends Phaser.Scene {
     async harvestEgg() {
         if (!this.isSaveReady()) return;
         if (this.isHarvesting) return;
-        const activeBoss = [this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        const activeBoss = [this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;
@@ -501,13 +504,14 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        const defended = [this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
+        const defended = [this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
         const encounter = defended ? null : rollHomeBossEncounter(this.farmData.coopLevel);
         if (encounter) {
-            this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
-            this.dragonEncounter = null; this.gorillaEncounter = null;
-            this.dragon = null; this.gorilla = null;
-            if (encounter === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
+            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
+            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
+            this.eagle = null; this.dragon = null; this.gorilla = null;
+            if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
+            else if (encounter === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
             else this.dragonEncounter = new DragonEncounter(this);
             return;
         }
@@ -526,9 +530,9 @@ export default class MyFarmScene extends Phaser.Scene {
                 return result;
 
             });
-            this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
-            this.dragonEncounter = null; this.gorillaEncounter = null;
-            this.dragon = null; this.gorilla = null;
+            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
+            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
+            this.eagle = null; this.dragon = null; this.gorilla = null;
             this.showFloatingText(Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋', '#FFD54F', 18);
         } catch (e) { this.showFloatingText(e.message || '收蛋失敗，請稍後重試', '#F44336', 16); }
         finally { this.isHarvesting = false; }

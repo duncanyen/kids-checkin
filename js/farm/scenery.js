@@ -77,13 +77,13 @@ function reflowFarm(scene, oldMap, map) {
         scene.tweens.killTweensOf(hen); hen.walkTimer?.remove(); move(hen);
         scene.wanderSingleHen?.(hen);
     }
-    for (const name of ['wolf','tiger','dragon','gorilla']) move(scene[name]);
+    for (const name of ['wolf','tiger','dragon','gorilla','eagle']) move(scene[name]);
     for (const name of ['wolf','tiger']) {
         const predator=scene[name],dest=predator?{x:scene.coop.x,y:scene.coop.getBounds().bottom+20}:null;
         if (dest && predator.moveTween?.isPlaying()) { predator.moveTween.updateTo('x',dest.x,true); predator.moveTween.updateTo('y',dest.y,true); }
     }
-    for (const boss of [scene.dragonEncounter,scene.gorillaEncounter].filter(Boolean)) {
-        boss.destination={x:Math.max(boss.spec.minX||80,scene.coop.getBounds().left-(boss.spec.approachInset||34)),y:scene.coop.getBounds().bottom+10};
+    for (const boss of [scene.eagleEncounter,scene.dragonEncounter,scene.gorillaEncounter].filter(Boolean)) {
+        boss.destination=boss.spec.destination ? boss.spec.destination() : {x:Math.max(boss.spec.minX||80,scene.coop.getBounds().left-(boss.spec.approachInset||34)),y:scene.coop.getBounds().bottom+10};
         if (boss.flight?.isPlaying()) { boss.flight.updateTo('x',boss.destination.x,true); boss.flight.updateTo('y',boss.destination.y,true); }
         else if (!boss.result) boss.sprite.setPosition(boss.destination.x,boss.destination.y);
     }

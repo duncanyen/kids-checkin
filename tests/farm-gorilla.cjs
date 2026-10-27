@@ -69,7 +69,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
    const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.gorillaEncounter;
    if(b.health!==1000||Math.abs(b.sprite.displayWidth-208)>1||(b.sprite.frame.width<313||b.sprite.frame.width>314))throw Error('Wrong boss health/size/texture');
    for(const action of ['run','attack','hit','dead'])if(s.anims.get('gorilla_'+action).frames.length!==4)throw Error('Missing animation');
-   if(b.sprite.flipX||b.sprite.y<600||b.destination.x>=s.coop.x||b.destination.x<90)throw Error('Wrong approach route');
+   if(b.sprite.flipX||(b.phase==='flight'&&b.sprite.y<b.destination.y-1)||b.destination.x>=s.coop.x||b.destination.x<90)throw Error('Wrong approach route '+JSON.stringify({x:b.sprite.x,y:b.sprite.y,destination:b.destination,coopX:s.coop.x,remaining:b.deadlineTimer.getRemaining()}));
    await s.harvestEgg();if(s.gorillaEncounter!==b||s.farmData.eggsReady!==2)throw Error('Collection bypassed active boss');
    window.__lootBefore=s.farmData.gorillaFangs||0;
    const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');const hen=s.hensGroup[0];b.flight.pause();b.sprite.setPosition(hen.x+25,hen.y+20);s.avoidPredators();if(!henRouteIsSafe(s,hen))throw Error('Hens cross gorilla');
@@ -116,7 +116,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await patch({coopLevel:1,coins:150,inventoryEggs:0,warehouseLimit:99,equippedWeapon:'mace'});
  await page.evaluate(()=>{
   window.__farmTest.patch('neighbor',{coopLevel:3,eggsReady:7});
-  window.__visitRolls=0;Phaser.Math.Between=(min,max)=>{if(max===30){window.__visitRolls++;return 1;}return max;};
+  window.__visitRolls=0;Phaser.Math.Between=(min,max)=>{if(max===60){window.__visitRolls++;return 1;}return max;};
   window.__farmGame.scene.getScene('ShopScene').scene.start('VisitScene',{targetAccountId:'neighbor',targetName:'鄰居'});
  });
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').gorillaEncounter);

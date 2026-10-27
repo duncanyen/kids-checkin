@@ -14,7 +14,7 @@ export function isFarmSave(farm) {
     if (!farm || typeof farm !== 'object' || Array.isArray(farm)) return false;
     if (!Number.isFinite(farm.coins) || !Number.isInteger(farm.hens)) return false;
     const counts = ['coins', 'hens', 'inventoryEggs', 'silkieEggs', 'bresseEggs', 'eggsReady', 'worms', 'earthworms',
-        'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'warehouseLimit'];
+        'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'shortbow', 'huntingbow', 'eagleFeathers', 'warehouseLimit'];
     if (counts.some(key => key in farm && (!Number.isFinite(farm[key]) || farm[key] < 0))) return false;
     if ('hensState' in farm && !Array.isArray(farm.hensState)) return false;
     if (farm.poultryVersion === 2) {

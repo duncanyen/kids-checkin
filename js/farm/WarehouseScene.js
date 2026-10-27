@@ -44,6 +44,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'wolfFangs', name: '狼牙', icon: 'fang' },
             { key: 'tigerPelts', name: '虎皮', icon: 'tiger_pelt' },
             { key: 'dragonScales', name: '龍麟', icon: 'dragon_scale' },
+            { key: 'eagleFeathers', name: '巨鷹羽毛', icon: 'eagle-feather' },
             { key: 'gorillaFangs', name: '猩猩尖牙', icon: 'gorilla_fang' },
             { key: 'medicines', name: '咕咕活力散', icon: 'medicine' },
             ...Object.entries(WEAPONS_CONFIG).filter(([key]) => key !== 'club').map(([key, weapon]) => ({ key, name: weapon.name, icon: weapon.icon, type: 'weapon' }))
@@ -131,7 +132,7 @@ export default class WarehouseScene extends Phaser.Scene {
             if (item.type === 'bird') displayTxt = `${item.name}\n雞舍中 × ${count}`;
             if (item.type === 'coop') displayTxt = `${coopName(this.farmData.coopLevel)}\n飼養 ${poultryState(this.farmData).hens.length}/${coopCapacity(this.farmData.coopLevel)}`;
             if (item.type === 'warehouse') displayTxt = `倉庫容量\n${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10} 格`;
-            if (item.type === 'weapon' && this.farmData.equippedWeapon === item.key) {
+            if (item.type === 'weapon' && this.farmData[WEAPONS_CONFIG[item.key]?.ranged ? 'equippedBow' : 'equippedWeapon'] === item.key) {
                 displayTxt = `[裝備中]\n${displayTxt}`;
             }
 
@@ -159,7 +160,7 @@ export default class WarehouseScene extends Phaser.Scene {
         }
 
         if (itemConfig && itemConfig.type === 'weapon') {
-            const isEquipped = this.farmData.equippedWeapon === key;
+            const isEquipped = this.farmData[WEAPONS_CONFIG[key]?.ranged ? 'equippedBow' : 'equippedWeapon'] === key;
             this.actionTitle.setText(isEquipped ? `已配戴在身上\n是否缷下裝備 [${name}]？` : `是否配備此物品 [${name}]？`);
             this.textFeed.setText(isEquipped ? '缷下' : '配備');
             this.actionPanel.setVisible(true);
@@ -172,7 +173,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
-        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'gorillaFangs' || key === 'medicines') {
+        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
                 this.showMsg('咕咕活力散請在母雞生病時點擊母雞使用！', '#FFD54F');
@@ -206,11 +207,12 @@ export default class WarehouseScene extends Phaser.Scene {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if (!farm || !WEAPONS_CONFIG[key] || !(farm[key] > 0)) throw '倉庫已沒有這把武器！';
-                if (currentlyEquipped !== (farm.equippedWeapon === key)) throw '裝備狀態已變更，請重新選擇！';
-                const next = currentlyEquipped ? 'club' : key;
-                t.update(myFarmRef, { "farm.equippedWeapon": next });
+                const slot = WEAPONS_CONFIG[key].ranged ? 'equippedBow' : 'equippedWeapon';
+                if (currentlyEquipped !== (farm[slot] === key)) throw '裝備狀態已變更，請重新選擇！';
+                const next = currentlyEquipped ? (slot === 'equippedBow' ? null : 'club') : key;
+                t.update(myFarmRef, { [`farm.${slot}`]: next });
             });
-            this.showMsg(currentlyEquipped ? '已缷下，恢復為預設木棒！' : `裝備成功！已換上 [${WEAPONS_CONFIG[key].name}]`, '#4CAF50');
+            this.showMsg(currentlyEquipped ? '已卸下裝備！' : `裝備成功！已換上 [${WEAPONS_CONFIG[key].name}]`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : '配備失敗，請稍後重試', '#F44336'); }
     }
 
@@ -305,8 +307,8 @@ export default class WarehouseScene extends Phaser.Scene {
                 if (farm[key] > 0) {
                     const updates = { [`farm.${key}`]: farm[key] - 1 };
                     
-                    if (farm.equippedWeapon === key && (farm[key] - 1) === 0) {
-                        updates["farm.equippedWeapon"] = 'club';
+                    if ((farm.equippedWeapon === key || farm.equippedBow === key) && (farm[key] - 1) === 0) {
+                        updates[WEAPONS_CONFIG[key]?.ranged ? 'farm.equippedBow' : 'farm.equippedWeapon'] = WEAPONS_CONFIG[key]?.ranged ? null : 'club';
                     }
                     
                     t.update(myFarmRef, updates);

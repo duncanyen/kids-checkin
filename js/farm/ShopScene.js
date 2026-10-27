@@ -81,7 +81,7 @@ export default class ShopScene extends Phaser.Scene {
             if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.buyPrice}金幣`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
             if (weapon.sellPrice) sell.push([key, weapon.icon, `${weapon.name}\n${weapon.sellPrice}金幣`, () => this.openTradeModal('sell', key, weapon.name, weapon.sellPrice)]);
         }
-        for (const [key, icon, name, price] of [['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
+        for (const [key, icon, name, price] of [['eagleFeathers', 'eagle-feather', '巨鷹羽毛', 300], ['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
             sell.push([key, icon, `${name}\n${price}金幣`, () => this.openTradeModal('sell', key, name, price)]);
         }
         for (const [mode, entries] of Object.entries(this.catalog)) {
@@ -140,16 +140,16 @@ export default class ShopScene extends Phaser.Scene {
         const paper = this.add.rectangle(195, 398, 370, 450, 0xffefd0).setStrokeStyle(3, 0x735038);
         const title = this.add.text(195, 205, '武器圖鑑', { fontSize: '22px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5);
         panel.add([shade, paper, title]);
-        const columns = [60, 158, 245, 333];
-        ['擊殺次數', ...Object.values(WEAPONS_CONFIG).map(w => w.name)].forEach((name, i) => {
-            panel.add(this.add.text(columns[i], 254, name, { fontSize: '15px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5));
-        });
-        [['wolf', '大野狼'], ['tiger', '老虎'], ['dragon', '烈火龍'], ['gorilla', '大金剛']].forEach(([key, name], row) => {
-            [name, ...Object.values(WEAPONS_CONFIG).map(w => `${hitsToDefeat(w, key)} 下`)].forEach((text, col) => {
-                panel.add(this.add.text(columns[col], 300 + row * 43, text, { fontSize: '15px', color: '#593b27' }).setOrigin(0.5));
-            });
-        });
-        panel.add(this.add.text(195, 493, '每次有效點擊計為一次攻擊。\n購買武器後，請先到倉庫配備。\n狼牙棒卸下後可售得 1000 金幣。', { fontSize: '14px', color: '#735038', align: 'center', lineSpacing: 8 }).setOrigin(0.5));
+        const hits = (enemy, keys, suffix) => keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
+        const guide = [
+            '近戰：木棒／狼牙棒／雙手斧',
+            ...[['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe'], ' 下')}`),
+            '', '飛行系：短弓／獵弓',
+            ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow'], ' 箭')}`),
+            '飛行系近戰無效，弓箭僅攻擊飛行系。',
+            '近戰與弓可各配備一把，拖曳弓瞄準射箭。'
+        ].join('\n');
+        panel.add(this.add.text(195, 260, guide, { fontSize: '14px', color: '#593b27', align: 'center', lineSpacing: 7 }).setOrigin(.5,0));
         const close = this.add.rectangle(195, 577, 130, 38, 0x735038).setInteractive({ cursor: 'pointer' });
         panel.add([close, this.add.text(195, 577, '返回商店', { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5)]);
         button.on('pointerdown', () => panel.setVisible(true));
@@ -369,7 +369,7 @@ export default class ShopScene extends Phaser.Scene {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
-                if (weapon && farm.equippedWeapon === itemKey) throw '請先到倉庫卸下武器！';
+                if (weapon && (farm.equippedWeapon === itemKey || farm.equippedBow === itemKey)) throw '請先到倉庫卸下武器！';
                 if ((farm[itemKey] || 0) >= qty) {
                     t.update(myFarmRef, { 
                         [`farm.${itemKey}`]: farm[itemKey] - qty, 

@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { execFileSync } = require('node:child_process');
-const base = process.env.FARM_BASE_URL || 'http://127.0.0.1:8000';
+const base = process.env.FARM_BASE_URL || 'http://127.0.0.1:8012';
 const firestore = `
 const prefix='groups/dragon-test/users/';
 const seed={coins:150,hens:2,coopLevel:2,eggsReady:2,lastLayTime:Date.now(),cleanliness:0,warehouseLimit:10,hensState:[{},{}],equippedWeapon:'club',mace:1};
@@ -21,8 +21,9 @@ export const setDoc=deny,updateDoc=deny,addDoc=deny,serverTimestamp=deny;
 let queue=Promise.resolve();
 export function runTransaction(_,callback){const run=queue.then(async()=>{
  if(window.__farmTest.failNext){window.__farmTest.failNext=false;throw Error('Simulated offline');}
- const writes=[];
- const result=await callback({get:async ref=>snapshot(ref),update:(ref,values)=>writes.push([ref,values])});
+ const writes=[];const sets=[];
+ const result=await callback({get:async ref=>snapshot(ref),set:(ref,value)=>sets.push([ref,value]),update:(ref,values)=>writes.push([ref,values])});
+ for(const [ref,value] of sets)docs[ref.path]=structuredClone(value);
  for(const [ref,values] of writes) for(const [key,value] of Object.entries(values)){
   const bits=key.split('.');let object=docs[ref.path];for(const bit of bits.slice(0,-1))object=object[bit]??={};object[bits.at(-1)]=structuredClone(value);
  }
@@ -36,7 +37,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  try {
  const page=await browser.newPage({viewport:{width:390,height:844}});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
- const phaser=execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js'],{encoding:'utf8',maxBuffer:4*1024*1024});
+ const phaser=require('node:fs').existsSync('/tmp/kids-phaser.js')?require('node:fs').readFileSync('/tmp/kids-phaser.js','utf8'):execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js'],{encoding:'utf8',maxBuffer:4*1024*1024});
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:phaser}));
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:firestore}));
@@ -47,6 +48,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.goto(base+'/farmgame.html');
  await page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').hensGroup?.length===2);
  const checks=[];
+ await page.evaluate(async()=>{window.__W=(await import('/js/farm/combat-rules.js')).WEAPONS_CONFIG;window.__bow=window.__W.shortbow;});
  // Home encounters use a separate exact 1/20 roll, only on valid collection attempts.
  await page.evaluate(async()=>{
   const {rollHomeDragonEncounter}=await import('/js/farm/dragon.js');
@@ -73,12 +75,12 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await homeHarvest();
  await page.evaluate(async()=>{
   const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.dragonEncounter;
-  if(!b||b.damage!==10||b.targetAccountId!=='self'||s.farmData.eggsReady!==2||s.farmData.inventoryEggs)throw Error('Home encounter did not protect uncollected eggs');
+  if(!b||b.damage!==0||b.targetAccountId!=='self'||s.farmData.eggsReady!==2||s.farmData.inventoryEggs)throw Error('Home encounter did not protect uncollected eggs');
   await s.harvestEgg();if(s.farmData.eggsReady!==2||s.dragonEncounter!==b)throw Error('Repeated click bypassed defense');
   const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');
   const hen=s.hensGroup[0];b.flight.pause();b.sprite.setPosition(hen.x+40,hen.y+20);s.avoidPredators();
   if(!henRouteIsSafe(s,hen))throw Error('Home hen route crosses dragon');
-  for(let n=0;n<60;n++)b.hit();
+  for(let n=0;n<30;n++)b.arrowHit(window.__bow);
  });
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter?.settled);
  await homeHarvest();
@@ -95,21 +97,21 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   if(docs['groups/dragon-test/users/self'].farm.coins!==0||docs['groups/dragon-test/users/self'].farm.eggsReady!==0||docs['groups/dragon-test/users/neighbor'].farm.eggsReady!==5)throw Error('Home loss must affect only home farm');
   window.__farmTest.patch('self',{eggsReady:2,inventoryEggs:0,coins:150,equippedWeapon:'club'});
  });
- checks.push('home: exact 1/20 at Lv.2+, real collection trigger, no empty/repeated rolls, mace damage, hen avoidance, victory collection and own-only loss');
+ checks.push('home: exact 1/20 at Lv.2+, real collection trigger, no empty/repeated rolls, bow damage, hen avoidance, victory collection and own-only loss');
  // Exhaust all 30 dragon rolls; preserve existing events for ineligible farms.
  await page.evaluate(async()=>{
   const {rollVisitEncounter}=await import('/js/farm/dragon.js');
   for(const level of [2,3]){
-   let dragons=0;for(let n=1;n<=30;n++){let first=true;const value=rollVisitEncounter(level,(_,max)=>{if(first){first=false;return n;}return max;});if(value==='dragon')dragons++;}
-   if(dragons!==1)throw Error('Encounter chance must be exactly 1/30');
+   const total=level>=3?60:30;let dragons=0;for(let n=1;n<=total;n++){let first=true;const value=rollVisitEncounter(level,(_,max)=>{if(first){first=false;return n;}return max;});if(value==='dragon')dragons++;}
+   if(dragons!==total/30)throw Error('Encounter chance must be exactly 1/30');
   }
   if(rollVisitEncounter(1,()=>1)!=='tiger')throw Error('Level 1 must retain old events, never dragon');
   const {getUsedSpace}=await import('/js/farm/constants.js');if(getUsedSpace({dragonScales:3,worms:2})!==5)throw Error('Dragon loot missing from capacity');
  });
  checks.push('level gate, exact 1/30 chance, inventory capacity');
- async function visit(weapon='club'){
+ async function visit(weapon='shortbow'){
   await page.evaluate(weapon=>{
-   window.__farmTest.patch('self',{equippedWeapon:weapon,[weapon]:1});
+   window.__farmTest.patch('self',{equippedWeapon:'club',equippedBow:weapon,[weapon]:1});window.__bow=window.__W[weapon];
    window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(_,max)=>max;
    const game=window.__farmGame;
    game.scene.getScene('VisitScene').hasRolledEncounter=false;
@@ -118,17 +120,17 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   await page.waitForFunction(()=>window.__farmGame.scene.isActive('VisitScene')&&window.__farmGame.scene.getScene('VisitScene').hasRolledEncounter);
   await page.evaluate(()=>{Phaser.Math.Between=window.__savedBetween;const s=window.__farmGame.scene.getScene('VisitScene');if(s.dragon)throw Error('Maximum roll should not spawn an event');s.spawnDragonEvent();});
  }
- for(const [weapon,hits] of [['club',600],['mace',60]]){
+ for(const [weapon,hits] of [['shortbow',30],['huntingbow',20]]){
   await visit(weapon);
   await page.evaluate(hits=>{
    const s=window.__farmGame.scene.getScene('VisitScene'),b=s.dragonEncounter;
    if(b.sprite.displayWidth!==176||b.sprite.frame.width!==256)throw Error('Wrong dragon display size');
    for(const name of ['fly','fire','hit','dead'])if(s.anims.get('dragon_'+name).frames.length!==8)throw Error('Missing animation frames');
    window.__beforeLoot=window.__farmTest.docs['groups/dragon-test/users/self'].farm.dragonScales||0;
-   for(let i=0;i<hits-1;i++)b.sprite.emit('pointerdown',{x:b.sprite.x,y:b.sprite.y});
-   if(b.result||b.health!==b.damage)throw Error('Dragon defeated before required hits');
-   b.sprite.emit('pointerdown',{x:b.sprite.x,y:b.sprite.y});
-   b.sprite.emit('pointerdown',{});b.resolve('loss');b.resolve('win');
+   for(let i=0;i<hits-1;i++)b.arrowHit(window.__bow);
+   if(b.result||b.health!==window.__bow.damageByEnemy.dragon)throw Error('Dragon defeated before required hits');
+   b.arrowHit(window.__bow);
+   b.arrowHit(window.__bow);b.resolve('loss');b.resolve('win');
    if(b.result!=='win'||b.sprite.input.enabled||b.sprite.anims.currentAnim.key!=='dragon_dead')throw Error('Victory did not lock input');
   },hits);
   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
@@ -143,22 +145,22 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   checks.push(weapon+': exactly '+hits+' hits, one guaranteed reward, replay safe');
  }
  // Future weapons use their configured damage without another enemy-specific table.
- await page.evaluate(async()=>{const {WEAPONS_CONFIG}=await import('/js/farm/constants.js');WEAPONS_CONFIG.testWeapon={name:'測試武器',damage:20,icon:'mace'};});
+ await page.evaluate(async()=>{const {WEAPONS_CONFIG}=await import('/js/farm/constants.js');WEAPONS_CONFIG.testWeapon={name:'測試弓',ranged:true,damage:20,damageByEnemy:{dragon:20},icon:'shortbow'};});
  await visit('testWeapon');
- await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('VisitScene').dragonEncounter;for(let i=0;i<29;i++)b.hit();if(b.result||b.health!==20)throw Error('Future weapon damage ignored');b.hit();});
+ await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('VisitScene').dragonEncounter;for(let i=0;i<29;i++)b.arrowHit(window.__bow);if(b.result||b.health!==20)throw Error('Future weapon damage ignored');b.arrowHit(window.__bow);});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
  checks.push('future weapon configuration');
  // One accelerated real scene-clock battle verifies 10 seconds flight + 30 fire,
  // including hits in both phases without postponing the deadline.
  await page.evaluate(()=>window.__farmTest.patch('self',{coins:150}));
  await visit();
- await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),b=s.dragonEncounter;if(b.sprite.x!==58||b.sprite.y<600)throw Error('Flight must start bottom-left');s.time.timeScale=10;s.tweens.timeScale=10;b.hit();});
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),b=s.dragonEncounter;if(b.sprite.x>100||b.sprite.y<500)throw Error('Flight must start bottom-left');s.time.timeScale=10;s.tweens.timeScale=10;b.arrowHit(window.__bow);});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.phase==='fire');
  await page.evaluate(()=>{
   const s=window.__farmGame.scene.getScene('VisitScene'),b=s.dragonEncounter;
   if(!b.flame.visible||b.sprite.flipX||Math.abs(b.sprite.x-b.destination.x)>1||b.sprite.x>=s.coop.x)throw Error('Dragon must breathe right from left of coop');
   const remaining=b.deadlineTimer.getRemaining();if(remaining>30000||remaining<27000)throw Error('Fire phase must begin at 10 seconds');
-  b.hit();if(b.deadlineTimer.getRemaining()!==remaining)throw Error('Hit delayed combat');
+  b.arrowHit(window.__bow);if(b.deadlineTimer.getRemaining()!==remaining)throw Error('Hit delayed combat');
  });
  if(process.env.FARM_SCREENSHOTS)await page.screenshot({path:process.env.FARM_SCREENSHOTS+'/dragon-fire.png'});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
@@ -176,8 +178,8 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.evaluate(()=>{if(window.__farmTest.docs['groups/dragon-test/users/self'].farm.coins!==0)throw Error('Coins must floor at zero');});
  // Full warehouse must never discard a boss reward; transient failures are retryable.
  await page.evaluate(()=>window.__farmTest.patch('self',{worms:10,warehouseLimit:10}));
- await visit('mace');
- await page.evaluate(()=>{window.__farmTest.failNext=true;const b=window.__farmGame.scene.getScene('VisitScene').dragonEncounter;window.__beforeLoot=window.__farmTest.docs['groups/dragon-test/users/self'].farm.dragonScales;b.health=10;b.hit();});
+ await visit('shortbow');
+ await page.evaluate(()=>{window.__farmTest.failNext=true;const b=window.__farmGame.scene.getScene('VisitScene').dragonEncounter;window.__beforeLoot=window.__farmTest.docs['groups/dragon-test/users/self'].farm.dragonScales;b.health=10;b.arrowHit(window.__bow);});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.warning.text.includes('重試'));
  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.warning.emit('pointerdown'));
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
@@ -186,7 +188,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  // Warehouse presentation and the real shop modal / transaction callback.
  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.start('WarehouseScene'));
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('WarehouseScene').farmData?.dragonScales>0);
- await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('WarehouseScene');if(!s.itemsPanel.list.some(o=>o.texture?.key==='dragon_scale'))throw Error('Warehouse icon absent');s.handleItemClick('dragonScales','龍麟');if(s.actionPanel.visible)throw Error('Scale must not open feed action');s.scene.start('ShopScene');});
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('WarehouseScene');s.selectWarehouseCategory('other');if(!s.itemsPanel.list.some(o=>o.texture?.key==='dragon_scale'))throw Error('Warehouse icon absent');s.handleItemClick('dragonScales','龍麟');if(s.actionPanel.visible)throw Error('Scale must not open feed action');s.scene.start('ShopScene');});
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene')&&window.__farmGame.scene.getScene('ShopScene').farmData?.dragonScales>0);
  await page.evaluate(()=>{
   const s=window.__farmGame.scene.getScene('ShopScene');if(!s.sellContainer.list.some(o=>o.texture?.key==='dragon_scale'))throw Error('Shop icon absent');
@@ -201,7 +203,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  for(const level of [1,2,3]){
   await page.evaluate(level=>{
    window.__farmTest.patch('neighbor',{coopLevel:level,eggsReady:5});
-   window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(min,max)=>max===30?(level>=3?2:1):max;
+   window.__savedBetween=Phaser.Math.Between;Phaser.Math.Between=(min,max)=>max===(level>=3?60:30)?(level>=3?3:1):max;
    const game=window.__farmGame;game.scene.getScene('VisitScene').hasRolledEncounter=false;
    game.scene.getScenes(true)[0].scene.start('VisitScene',{targetAccountId:'neighbor',targetName:'鄰居'});
   },level);
@@ -215,7 +217,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
     window.__farmTest.patch('neighbor',{eggsReady:4});
     if(s.dragonEncounter!==b)throw Error('Snapshot rerolled encounter');
     // A click on the expiry boundary must lose even before the timeout callback runs.
-    if(level===3){b.health=b.damage;b.deadlineTimer.elapsed=40000;b.hit();if(b.result!=='loss')throw Error('Late hit won an expired battle');}
+    if(level===3){b.health=window.__bow.damageByEnemy.dragon;b.deadlineTimer.elapsed=40000;b.arrowHit(window.__bow);if(b.result!=='loss')throw Error('Late hit won an expired battle');}
    }
   },level);
   if(level===3)await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
@@ -224,7 +226,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await visit();
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__oldBattle=s.dragonEncounter;window.__commits=window.__farmTest.commits;s.scene.start('MyFarmScene');});
  await page.waitForTimeout(500);
- await page.evaluate(()=>{const b=window.__oldBattle;if(!b.destroyed||b.sprite.active||b.flame.active)throw Error('Shutdown retained dragon objects');b.resolve('loss');b.hit();if(window.__farmTest.commits!==window.__commits)throw Error('Exited battle wrote a delayed result');});
+ await page.evaluate(()=>{const b=window.__oldBattle;if(!b.destroyed||b.sprite.active||b.flame.active)throw Error('Shutdown retained dragon objects');b.resolve('loss');b.arrowHit(window.__bow);if(window.__farmTest.commits!==window.__commits)throw Error('Exited battle wrote a delayed result');});
  checks.push('scene shutdown removes battle and prevents delayed writes');
  assert.deepEqual(errors,[]);
  console.log(JSON.stringify({passed:true,checks,errors}));
