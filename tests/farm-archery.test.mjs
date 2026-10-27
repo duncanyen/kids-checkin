@@ -5,8 +5,8 @@ import {rollHomeBossEncounter,rollVisitBossEncounter} from '../js/farm/gorilla-r
 import {launchVelocity,arrowPoint,arrowHits} from '../js/farm/archery-core.js';
 test('flying enemies require owned equipped bows with exact hit counts',()=>{
  for(const key of ['club','mace','battleaxe'])for(const enemy of ['eagle','dragon'])assert.equal(weaponDamage(W[key],enemy),0);
- assert.equal(hitsToDefeat(W.shortbow,'dragon'),30);assert.equal(hitsToDefeat(W.huntingbow,'dragon'),20);
- assert.equal(hitsToDefeat(W.shortbow,'eagle'),20);assert.equal(hitsToDefeat(W.huntingbow,'eagle'),10);
+ assert.equal(hitsToDefeat(W.shortbow,'dragon'),20);assert.equal(hitsToDefeat(W.huntingbow,'dragon'),10);
+ assert.equal(hitsToDefeat(W.shortbow,'eagle'),10);assert.equal(hitsToDefeat(W.huntingbow,'eagle'),5);
  assert.equal(equippedBow({shortbow:1}),null);assert.equal(equippedBow({equippedBow:'shortbow',shortbow:0}),null);
  assert.equal(equippedBow({equippedBow:'shortbow',shortbow:1}),W.shortbow);
  for(const key of ['shortbow','huntingbow'])for(const enemy of ['wolf','tiger','gorilla'])assert.equal(weaponDamage(W[key],enemy),0);

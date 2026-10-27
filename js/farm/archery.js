@@ -7,8 +7,8 @@ export class ArcheryControls {
         const s=this.scene;
         this.path=s.add.graphics().setDepth(37);
         this.bow=s.add.image(195,730,'shortbow').setDisplaySize(88,88).setDepth(38).setVisible(false).setInteractive({cursor:'grab'});
-        this.button=s.add.image(195,666,'ui_wood').setDisplaySize(210,42).setDepth(38).setInteractive({cursor:'pointer'});
-        this.label=s.add.text(195,666,'',{fontSize:'15px',color:'#fff2cc',fontStyle:'bold'}).setOrigin(.5).setDepth(39);
+        this.button=s.add.image(70,740,'ui_wood').setDisplaySize(116,52).setDepth(38).setInteractive({cursor:'pointer'});
+        this.label=s.add.text(70,740,'',{fontSize:'13px',align:'center',color:'#fff2cc',fontStyle:'bold'}).setOrigin(.5).setDepth(39);
         this.help=s.add.text(195,786,'',{fontSize:'13px',color:'#fff2cc',backgroundColor:'#593b27',padding:5,align:'center'}).setOrigin(.5).setDepth(39);
         this.button.on('pointerdown',()=>{this.selected=!this.selected;this.cancel();this.refresh();});
         this.bow.on('pointerdown',pointer=>{
@@ -57,7 +57,7 @@ export class ArcheryControls {
         if(!available&&this.selected){this.selected=false;this.cancel();}
         this.button.setVisible(available);this.label.setVisible(available);this.bow.setVisible(available&&this.selected);
         this.help.setText(available?(this.selected?'按住弓往後拉，放開射箭\n虛線為預估彈道，請預判飛行方向':'切換弓箭後，拖曳瞄準射擊'):'飛行怪物需弓箭！請先到倉庫配備。');
-        this.label.setText(this.selected?`切換近戰：${equippedWeapon(this.scene.myFarmData||this.scene.farmData).name}`:`切換弓箭：${bow?.name||''}`);
+        this.label.setText(this.selected?`切換近戰\n${equippedWeapon(this.scene.myFarmData||this.scene.farmData).name}`:`切換弓箭\n${bow?.name||''}`);
         if(bow)this.bow.setTexture(bow.icon);
         this.encounter.rangedWeapon=this.selected?bow:null;
     }

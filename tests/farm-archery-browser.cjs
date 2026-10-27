@@ -72,29 +72,29 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter);
  await page.evaluate(()=>{
   const b=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter;
-  if(b.sprite.x<195||b.config.flightMs!==10000||b.config.durationMs!==40000)throw Error('Eagle entry timing');
+  if(b.sprite.x<195||b.config.flightMs!==10000||b.config.durationMs!==60000)throw Error('Eagle entry timing');
   const hp=b.health;b.hit();if(b.health!==hp)throw Error('Tap damaged flying enemy');
-  b.archery.button.emit('pointerdown');if(!b.archery.selected||!b.archery.bow.visible)throw Error('Switch bow failed');
+  const button=b.archery.button.getBounds(),bow=b.archery.bow.getBounds();if(button.right>=bow.left||button.bottom>800||button.centerX>=100)throw Error('Switch button overlaps bow or is not at lower left');b.archery.button.emit('pointerdown');if(!b.archery.selected||!b.archery.bow.visible)throw Error('Switch bow failed');
   b.flight.stop();b.sprite.setPosition(195,350);b.phase='test';
  });
  async function point(x,y){const box=await page.locator('canvas').boundingBox();return page.evaluate(({x,y,box})=>{const c=window.__farmGame.scene.getScene('MyFarmScene').cameras.main;return{x:box.x+c.width/2+(x-195)*c.zoom,y:box.y+c.height/2+(y-422)*c.zoom};},{x,y,box});}
  async function shoot(x,y){const a=await point(195,730),b=await point(x,y);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});const dots=await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.path.commandBuffer.length);if(!dots)throw Error('No aiming trajectory');await page.mouse.up();}
  await page.screenshot({path:'/tmp/eagle-archery.png'});
  await shoot(195,830);
- await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health===190);
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health===180);
  const client=await page.context().newCDPSession(page);
  const touchStart=await point(195,730),touchEnd=await point(195,830);
  await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touchStart]});
  await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touchEnd]});
  await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
- await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health===180);
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health===160);
  await shoot(275,755);await page.waitForTimeout(750);
- assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health),180);
+ assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health),160);
  checks.push('real mouse and touchscreen drag draw trajectory, release launches arrow, swept hit deals damage; off-target arrow misses');
- await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.eagleEncounter;const before=b.health;b.hit();if(b.health!==before)throw Error('Click bypassed archery');for(let i=0;i<18;i++)b.arrowHit(b.archery.getBow());});
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.eagleEncounter;const before=b.health;b.hit();if(b.health!==before)throw Error('Click bypassed archery');for(let i=0;i<8;i++)b.arrowHit(b.archery.getBow());});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.settled);
  await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.eagleEncounter;const {settleEagleEncounter}=await import('/js/farm/eagle.js');await settleEagleEncounter(b.id,'win','self');if(s.farmData.eagleFeathers!==1||s.farmData.eggsReady!==2)throw Error('Reward/idempotence/eggs');});
- checks.push('shortbow 20 hits, guaranteed one feather, duplicate settlement no extra reward');
+ checks.push('shortbow 10 hits, guaranteed one feather, duplicate settlement no extra reward');
  await patch({coins:50});
  await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');s.eagleEncounter.destroy();const {EagleEncounter}=await import('/js/farm/eagle.js');s.eagleEncounter=new EagleEncounter(s);s.eagleEncounter.startFire();window.__hover={x:s.eagle.x,y:s.eagle.y};});
  await page.waitForTimeout(350);
@@ -103,10 +103,10 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');s.time.timeScale=1;s.tweens.timeScale=1;if(s.eagleEncounter.result!=='loss'||s.farmData.coins!==0||s.farmData.eggsReady!==2)throw Error('Eagle loss must only floor own coins');s.eagleEncounter.destroy();s.eagleEncounter=null;});
  checks.push('smooth circling, five-second dive, automatic timeout preserves eggs and floors coins at zero');
  await patch({coins:1000,equippedBow:'huntingbow'});
- await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');const {DragonEncounter}=await import('/js/farm/dragon.js');s.dragonEncounter=new DragonEncounter(s);const b=s.dragonEncounter;b.hit();if(b.health!==600)throw Error('Dragon accepted melee');const {WEAPONS_CONFIG:W}=await import('/js/farm/combat-rules.js');for(let i=0;i<20;i++)b.arrowHit(W.huntingbow);});
+ await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');const {DragonEncounter}=await import('/js/farm/dragon.js');s.dragonEncounter=new DragonEncounter(s);const b=s.dragonEncounter;b.hit();if(b.health!==600)throw Error('Dragon accepted melee');const {WEAPONS_CONFIG:W}=await import('/js/farm/combat-rules.js');for(let i=0;i<10;i++)b.arrowHit(W.huntingbow);});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter.settled);
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');if(s.farmData.dragonScales!==1)throw Error('Dragon bow reward');s.dragonEncounter.destroy();s.dragonEncounter=null;});
- checks.push('dragon cannot be tapped, hunting bow 20 hits grants scale');
+ checks.push('dragon cannot be tapped, hunting bow 10 hits grants scale');
  // Actual visit hook, target lv3; timeout costs the visitor only.
  await page.evaluate(()=>{window.__oldRoll=Phaser.Math.Between;Phaser.Math.Between=(min,max)=>max===60?5:max;window.__farmGame.scene.getScene('MyFarmScene').scene.start('VisitScene',{targetAccountId:'neighbor',targetName:'鄰居',targetGroupId:'dragon-test'});});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').eagleEncounter);

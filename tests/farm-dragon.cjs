@@ -80,7 +80,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   const {henRouteIsSafe}=await import('/js/farm/hen-navigation.js');
   const hen=s.hensGroup[0];b.flight.pause();b.sprite.setPosition(hen.x+40,hen.y+20);s.avoidPredators();
   if(!henRouteIsSafe(s,hen))throw Error('Home hen route crosses dragon');
-  for(let n=0;n<30;n++)b.arrowHit(window.__bow);
+  for(let n=0;n<20;n++)b.arrowHit(window.__bow);
  });
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter?.settled);
  await homeHarvest();
@@ -120,7 +120,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   await page.waitForFunction(()=>window.__farmGame.scene.isActive('VisitScene')&&window.__farmGame.scene.getScene('VisitScene').hasRolledEncounter);
   await page.evaluate(()=>{Phaser.Math.Between=window.__savedBetween;const s=window.__farmGame.scene.getScene('VisitScene');if(s.dragon)throw Error('Maximum roll should not spawn an event');s.spawnDragonEvent();});
  }
- for(const [weapon,hits] of [['shortbow',30],['huntingbow',20]]){
+ for(const [weapon,hits] of [['shortbow',20],['huntingbow',10]]){
   await visit(weapon);
   await page.evaluate(hits=>{
    const s=window.__farmGame.scene.getScene('VisitScene'),b=s.dragonEncounter;
@@ -150,7 +150,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('VisitScene').dragonEncounter;for(let i=0;i<29;i++)b.arrowHit(window.__bow);if(b.result||b.health!==20)throw Error('Future weapon damage ignored');b.arrowHit(window.__bow);});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
  checks.push('future weapon configuration');
- // One accelerated real scene-clock battle verifies 10 seconds flight + 30 fire,
+ // One accelerated real scene-clock battle verifies 10 seconds flight + 50 fire,
  // including hits in both phases without postponing the deadline.
  await page.evaluate(()=>window.__farmTest.patch('self',{coins:150}));
  await visit();
@@ -159,7 +159,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.evaluate(()=>{
   const s=window.__farmGame.scene.getScene('VisitScene'),b=s.dragonEncounter;
   if(!b.flame.visible||b.sprite.flipX||Math.abs(b.sprite.x-b.destination.x)>1||b.sprite.x>=s.coop.x)throw Error('Dragon must breathe right from left of coop');
-  const remaining=b.deadlineTimer.getRemaining();if(remaining>30000||remaining<27000)throw Error('Fire phase must begin at 10 seconds');
+  const remaining=b.deadlineTimer.getRemaining();if(remaining>50000||remaining<47000)throw Error('Fire phase must begin at 10 seconds');
   b.arrowHit(window.__bow);if(b.deadlineTimer.getRemaining()!==remaining)throw Error('Hit delayed combat');
  });
  if(process.env.FARM_SCREENSHOTS)await page.screenshot({path:process.env.FARM_SCREENSHOTS+'/dragon-fire.png'});
@@ -171,7 +171,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   if(window.__farmTest.docs['groups/dragon-test/users/self'].farm.coins!==50)throw Error('Repeated penalty');
   s.time.timeScale=1;s.tweens.timeScale=1;
  });
- checks.push('10s flight + 30s fire, hits never postpone 40s deadline, atomic loss and no duplicate penalty');
+ checks.push('10s flight + 50s fire, hits never postpone 60s deadline, atomic loss and no duplicate penalty');
  await visit();
  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.resolve('loss'));
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
@@ -213,16 +213,16 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
    const s=window.__farmGame.scene.getScene('VisitScene');
    if(level===1){if(s.dragon||!s.tiger.active)throw Error('Level 1 encounter gate failed');}
    else{
-    const b=s.dragonEncounter;if(!b||b.arrivalTimer.delay!==10000||b.deadlineTimer.delay!==40000)throw Error('Eligible dragon encounter not initialized');
+    const b=s.dragonEncounter;if(!b||b.arrivalTimer.delay!==10000||b.deadlineTimer.delay!==60000)throw Error('Eligible dragon encounter not initialized');
     window.__farmTest.patch('neighbor',{eggsReady:4});
     if(s.dragonEncounter!==b)throw Error('Snapshot rerolled encounter');
     // A click on the expiry boundary must lose even before the timeout callback runs.
-    if(level===3){b.health=window.__bow.damageByEnemy.dragon;b.deadlineTimer.elapsed=40000;b.arrowHit(window.__bow);if(b.result!=='loss')throw Error('Late hit won an expired battle');}
+    if(level===3){b.health=window.__bow.damageByEnemy.dragon;b.deadlineTimer.elapsed=60000;b.arrowHit(window.__bow);if(b.result!=='loss')throw Error('Late hit won an expired battle');}
    }
   },level);
   if(level===3)await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').dragonEncounter.settled);
  }
- checks.push('snapshot level gate, one roll per visit, 40-second expiry boundary');
+ checks.push('snapshot level gate, one roll per visit, 60-second expiry boundary');
  await visit();
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__oldBattle=s.dragonEncounter;window.__commits=window.__farmTest.commits;s.scene.start('MyFarmScene');});
  await page.waitForTimeout(500);
