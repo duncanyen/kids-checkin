@@ -1,5 +1,5 @@
+import { isFarmSave, copyFarmSave } from './save-store.js';
 import { configureFarmViewport } from './viewport.js';
-import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, nextEggStatus, collectPoultry } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
 import { GardenFeedback } from './garden-feedback.js';
@@ -11,7 +11,7 @@ import { DragonEncounter } from './dragon.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
-import { setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, CURRENT_GROUP_ID, playerName, getUsedSpace } from './constants.js';
 
 export default class MyFarmScene extends Phaser.Scene {
@@ -20,6 +20,7 @@ export default class MyFarmScene extends Phaser.Scene {
     create() {
         configureFarmViewport(this);
         const cx = 195;
+        this.farmData = null;
         this.isHenSitting = false;
         this.emptyClickCount = 0;
         this.isHarvesting = false;
@@ -54,12 +55,13 @@ export default class MyFarmScene extends Phaser.Scene {
         this.createMinBtn(235, 40, '🎒 倉庫', 0xE65100, () => this.scene.start('WarehouseScene'));
 
         this.add.rectangle(335, 40, 95, 48, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
-        this.coinsText = this.add.text(295, 24, '💰 0', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
-        this.cleanText = this.add.text(295, 42, '🗑️ 0/100', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
+        this.coinsText = this.add.text(295, 24, '💰 —', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
+        this.cleanText = this.add.text(295, 42, '🗑️ —', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
 
         this.timerBg = this.add.rectangle(cx, 90, 200, 26, 0x000000, 0.6).setOrigin(0.5);
-        this.timerText = this.add.text(cx, 90, '連線中...', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
+        this.timerText = this.add.text(cx, 90, '讀取存檔中…', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
+        this.timerText.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.game.retryFarmSave?.());
         this.createConfirmDialog();
         this.initFirebase();
         this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
@@ -100,43 +102,57 @@ export default class MyFarmScene extends Phaser.Scene {
     createMinBtn(x, y, label, color, callback) {
         const btn = this.add.rectangle(x, y, 80, 36, color, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(x, y, label, { fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        btn.on('pointerdown', callback);
+        btn.on('pointerdown', () => {
+            if (!this.farmData || this.registry.get('farmLoadState')?.phase !== 'ready') {
+                this.timerText?.setText('請等待存檔連線完成');
+                return;
+            }
+            callback();
+        });
         return btn;
     }
 
     initFirebase() {
-        this.unsubscribe = watchFarm(myFarmRef, (docSnap) => {
-            if (!docSnap.exists()) {
-                setDoc(myFarmRef, { 
-                    farm: { 
-                        coins: 0, inventoryEggs: 0, hens: 1, coopLevel: 1, eggsReady: 0, 
-                        lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0, 
-                        wolfFangs: 0, tigerPelts: 0, dragonScales: 0, gorillaFangs: 0, medicines: 0, cleanliness: 0, moral: 100,
-                        equippedWeapon: 'club',
-                        hensState: [{ isSick: false }] 
-                    } 
-                }, { merge: true });
-                return;
-            }
-
-            const rawData = docSnap.data();
-            if (!rawData || !rawData.farm) return;
-
-            this.farmData = rawData.farm;
+        let closed = false;
+        const apply = farm => {
+            if (!farm || closed) return;
+            // Work on a view copy; never turn incomplete snapshots into defaults.
+            this.farmData = copyFarmSave(farm);
             if (!this.farmData.equippedWeapon) this.farmData.equippedWeapon = 'club';
-
             this.farmData.hensState = poultryState(this.farmData).hens;
             this.farmData.hens = this.farmData.hensState.length;
-            this.farmData.coins ??= 0;
             this.farmData.cleanliness ??= 0;
             this.farmData.warehouseLimit ||= 10;
             this.farmData.coopLevel ||= 1;
-
             this.updateUI();
             this.renderCleanlinessVisual();
-            this.syncHens(); 
-            this.startEggTimer(); 
-        });
+            this.syncHens();
+            this.startEggTimer();
+        };
+        const showState = state => {
+            if (state && state.phase !== 'ready' && this.timerText?.active) this.timerText.setText(state.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…');
+        };
+        const onFarm = (_parent, farm) => apply(farm);
+        const onState = (_parent, state) => showState(state);
+        const onFirst = (_parent, key, value) => {
+            if (key === 'myFarmData') apply(value);
+            if (key === 'farmLoadState') showState(value);
+        };
+        this.registry.events.on('changedata-myFarmData', onFarm);
+        this.registry.events.on('changedata-farmLoadState', onState);
+        this.registry.events.on('setdata', onFirst);
+        apply(this.registry.get('myFarmData'));
+        showState(this.registry.get('farmLoadState'));
+        this.unsubscribe = () => {
+            closed = true;
+            this.registry.events.off('changedata-myFarmData', onFarm);
+            this.registry.events.off('changedata-farmLoadState', onState);
+            this.registry.events.off('setdata', onFirst);
+        };
+    }
+
+    isSaveReady() {
+        return !!this.farmData && this.registry.get('farmLoadState')?.phase === 'ready';
     }
 
     updateUI() {
@@ -173,6 +189,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     askCleanMyFarm() {
+        if (!this.isSaveReady()) return;
         if (!this.farmData || (this.farmData.cleanliness || 0) === 0) {
             this.showFloatingText('雞舍非常乾淨，不需要打掃～', '#FFFFFF', 16);
             return;
@@ -184,6 +201,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async cleanMyFarm() {
+        if (!this.isSaveReady()) return;
         try {
             await runTransaction(db, async (t) => {
                 t.update(myFarmRef, { "farm.cleanliness": 0 });
@@ -259,10 +277,11 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async cleanupDeadHens(newHensState) {
+        if (!this.isSaveReady()) return;
         try {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
-                if (!snap.exists() || !snap.data().farm) return;
+                if (!isFarmSave(snap.data()?.farm)) throw new Error('存檔未確認，停止更新雞隻');
                 t.update(myFarmRef, poultryPatch(settlePoultry(snap.data().farm)));
             });
             this.showFloatingText('💔 有雞隻生病太久不幸離世了...', '#F44336', 16);
@@ -270,6 +289,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     askTreatment(henIndex) {
+        if (!this.isSaveReady()) return;
         const meds = this.farmData.medicines || 0;
         if (meds < 1) {
             this.showFloatingText('倉庫沒有 [咕咕活力散]，請先去商店購買！', '#F44336', 15); return;
@@ -282,6 +302,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async treatHen(henIndex) {
+        if (!this.isSaveReady()) return;
         const targetId = this.selectedHenId || this.farmData?.hensState?.[henIndex]?.id;
         const healedAt = Date.now();
         try {
@@ -339,6 +360,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     prepareToLayEgg() {
+        if (!this.isSaveReady()) return;
         if ([this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
         this.isHenSitting = true;
         const nestX = this.coop.x;
@@ -377,6 +399,8 @@ export default class MyFarmScene extends Phaser.Scene {
         if (this.farmInterval) clearInterval(this.farmInterval);
         const tick = async () => {
             if (!this.scene.isActive() || !this.timerText?.active || !this.farmData) return;
+            const connection = this.registry.get('farmLoadState');
+            if (connection && connection.phase !== 'ready') { this.timerText.setText(connection.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…'); return; }
             const now = Date.now(), status = nextEggStatus(this.farmData, now);
             if (!status.hens) this.timerText.setText('雞舍空著，去商店選購雞隻吧！');
             else if (status.full) this.timerText.setText(`📦 產能已滿 (${status.eggs} 顆)`);
@@ -392,7 +416,7 @@ export default class MyFarmScene extends Phaser.Scene {
             try {
                 await runTransaction(db, async transaction => {
                     const snap = await transaction.get(myFarmRef), farm = snap.data()?.farm;
-                    if (!farm) return;
+                    if (!isFarmSave(farm)) throw new Error('存檔未確認，停止更新雞蛋');
                     const state = settlePoultry(farm, now);
                     const added = Object.values(state.ready).reduce((a, b) => a + b, 0) - (farm.eggsReady || 0);
                     const risk = state.cleanliness > 80 ? 0.5 : state.cleanliness > 50 ? 0.2 : 0;
@@ -406,6 +430,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async searchCabbage(cabSprite) {
+        if (!this.isSaveReady()) return;
         if (!this.farmData || cabSprite.isAnimating) return;
         cabSprite.isAnimating = true;
         this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
@@ -440,6 +465,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async harvestEgg() {
+        if (!this.isSaveReady()) return;
         if (this.isHarvesting) return;
         const activeBoss = [this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {

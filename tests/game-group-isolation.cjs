@@ -46,7 +46,7 @@ export async function setDoc(ref,data,options={}){await window.__dbCall({kind:'s
 export const updateDoc=(ref,data)=>setDoc(ref,data,{merge:true});
 export async function addDoc(ref,data){const path=await window.__dbCall({kind:'add',path:ref.path,data});return{path};}
 export const serverTimestamp=()=>Date.now();
-export async function runTransaction(_,callback){const pending=[];const result=await callback({get:getDoc,update:(ref,data)=>pending.push({kind:'set',path:ref.path,data,merge:true})});await window.__dbCall({kind:'transaction',pending});await notify();return result;}
+export async function runTransaction(_,callback){const pending=[];const result=await callback({get:getDoc,set:(ref,data,options={})=>pending.push({kind:'set',path:ref.path,data,merge:!!options.merge}),update:(ref,data)=>pending.push({kind:'set',path:ref.path,data,merge:true})});await window.__dbCall({kind:'transaction',pending});await notify();return result;}
 `;
 (async()=>{
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -100,7 +100,7 @@ export async function runTransaction(_,callback){const pending=[];const result=a
  // Make and collect B eggs, then sell one. These exercise the actual game transactions.
  await page.evaluate(async()=>{
   const {db}=await import('/js/firebase-config.js');const {doc,updateDoc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
-  await updateDoc(doc(db,'groups','B','users','same'),{'farm.eggsReady':2});
+  await updateDoc(doc(db,'groups','B','users','same'),{'farm.eggsReady':2,'farm.readyEggs':{hen:2,silkie:0,bresse:0}});
   const s=window.__farmGame.scene.getScene('MyFarmScene');await s.harvestEgg();s.scene.start('ShopScene');
  });
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').farmData?.inventoryEggs===2);

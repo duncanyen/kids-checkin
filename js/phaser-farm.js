@@ -1,20 +1,18 @@
+import { ensureFarmSave, isFarmSave } from './farm/save-store.js';
+import { readGameContext, watchGameContext } from './game-context.js';
+import { requireGameMembership } from './game-members.js';
 import { db } from './firebase-config.js'; 
-import { doc, onSnapshot, runTransaction, setDoc, updateDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { doc, onSnapshot, runTransaction, updateDoc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // ==========================================
 // 1. Firebase 用戶驗證與設定 (嚴格使用 accountId)
 // ==========================================
-const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
-const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-
-if (!currentUser || !currentUser.accountId) {
-    alert('資料異常：請確認您已正確登入且擁有 accountId！');
-    window.location.href = 'index.html';
-    throw new Error("未登入或缺少 accountId"); 
-}
-
-const CURRENT_GROUP_ID = currentUser.groupId || "default_group";
-const CURRENT_ACCOUNT_ID = currentUser.accountId; 
+const context = readGameContext();
+watchGameContext(context);
+await requireGameMembership(context);
+const currentUser = context.user;
+const CURRENT_GROUP_ID = context.groupId;
+const CURRENT_ACCOUNT_ID = context.accountId;
 const myFarmRef = doc(db, "groups", CURRENT_GROUP_ID, "users", CURRENT_ACCOUNT_ID);
 
 document.getElementById('playerName').innerText = currentUser.name || "我";
@@ -230,11 +228,15 @@ class MyFarmScene extends Phaser.Scene {
 
     initFirebase() {
         this.unsubscribe = onSnapshot(myFarmRef, (docSnap) => {
-            if (!docSnap.exists() || !docSnap.data().farm) {
-                setDoc(myFarmRef, { farm: { coins: 0, inventoryEggs: 0, hens: 1, eggsReady: 0, lastLayTime: Date.now(), warehouseLimit: 10, worms: 0, earthworms: 0, wolfFangs: 0 } }, { merge: true });
+            const farm = docSnap.exists() ? docSnap.data()?.farm : null;
+            if (!isFarmSave(farm)) {
+                if (!this.initializingFarm) this.initializingFarm = ensureFarmSave(db, context, { canCreate: () => !this.hasSeenFarm })
+                    .catch(() => { this.timerText?.setText('存檔尚未確認，請重新連線；不會自動重置農場'); })
+                    .finally(() => { this.initializingFarm = null; });
                 return;
             }
-            this.farmData = docSnap.data().farm;
+            this.hasSeenFarm = true;
+            this.farmData = farm;
             this.updateUI();
             this.startEggTimer(); 
         });

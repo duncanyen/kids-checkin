@@ -1,19 +1,8 @@
 import { requireGameMembership } from './game-members.js';
 import { readGameContext, watchGameContext } from './game-context.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, runTransaction, collection, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { db } from './firebase-config.js';
+import { ensureFarmSave, isFarmSave } from './farm/save-store.js';
+import { doc, onSnapshot, runTransaction, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // ==========================================
 // 1. 動態取得當下登入的群組與人員資訊
@@ -46,28 +35,19 @@ const btnBuyHen = document.getElementById('btn-buy-hen');
 const groupList = document.getElementById('group-list');
 
 // 2. 初始化 / 監聽自己的農場狀態 (Realtime Snapshot)
+let initializingFarm, hasSeenFarm = false;
 async function initMyFarm() {
   onSnapshot(myFarmRef, (docSnap) => {
-    if (!docSnap.exists()) {
-      // 首次進入遊戲，初始化農場資料
-      setDoc(myFarmRef, {
-        farm: {
-          coins: 0,
-          inventoryEggs: 0,
-          hens: 1,
-          eggsReady: 0, // 巢裡等待收成的蛋
-          todayLaid: 0, // 今日已生數量
-          lastLayTime: Date.now()
-        }
-      }, { merge: true });
+    const farm = docSnap.exists() ? docSnap.data()?.farm : null;
+    if (!isFarmSave(farm)) {
+      if (!initializingFarm) initializingFarm = ensureFarmSave(db, context, { canCreate: () => !hasSeenFarm })
+        .catch(() => { elEggTimer.textContent = '存檔尚未確認，請重新連線；不會自動重置農場'; })
+        .finally(() => { initializingFarm = null; });
       return;
     }
-
-    const data = docSnap.data().farm;
-    if (!data) return;
-
-    updateMyUI(data);
-    checkEggProduction(data);
+    hasSeenFarm = true;
+    updateMyUI(farm);
+    checkEggProduction(farm);
   });
 }
 

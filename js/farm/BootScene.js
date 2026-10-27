@@ -3,7 +3,9 @@ import { registerPoultryAnimations } from './poultry-art.js';
 import { registerGorillaAnimations } from './gorilla.js';
 import { registerDragonAnimations } from './dragon.js';
 import { registerPredatorAnimations } from './predators.js';
-import { myFarmRef } from './constants.js';
+import { db } from '../firebase-config.js';
+import { ensureFarmSave, startFarmSaveSession } from './save-store.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef } from './constants.js';
 
 export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
@@ -69,10 +71,18 @@ export default class BootScene extends Phaser.Scene {
         // 全域監聽設定
         if (!this.game.registry.has('isListeningFarm')) {
             this.game.registry.set('isListeningFarm', true);
-            this.game.myFarmUnsubscribe = watchFarm(myFarmRef, (docSnap) => {
-                if (docSnap.exists() && docSnap.data().farm) {
-                    this.game.registry.set('myFarmData', docSnap.data().farm);
-                }
+            const session = startFarmSaveSession({
+                watch: (next, error) => watchFarm(myFarmRef, next, error),
+                verify: options => ensureFarmSave(db, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID }, options),
+                receive: farm => this.game.registry.set('myFarmData', farm),
+                status: state => this.game.registry.set('farmLoadState', state)
+            });
+            this.game.retryFarmSave = session.retry;
+            this.game.myFarmUnsubscribe = session.stop;
+            window.addEventListener('online', session.retry);
+            this.game.events.once('destroy', () => {
+                session.stop();
+                window.removeEventListener('online', session.retry);
             });
         }
 
