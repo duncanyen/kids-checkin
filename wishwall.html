@@ -35,42 +35,42 @@
         .btn-back { background: var(--n-soft, #f3f4f6); border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: var(--n-text, #292c30); cursor: pointer; }
         
         .panel { background: var(--n-surface, #fff); max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .system-title { color: var(--primary-color); font-size: 22px; margin-top: 0; text-align: center; }
+        .system-title { color: var(--primary-color); font-size: calc(22px * var(--n-font-scale, 1)); margin-top: 0; text-align: center; }
         .admin-title { color: var(--admin-color); }
 
-        .points-banner { background: #fff8e1; border: 2px solid #ffe0b2; padding: 15px; border-radius: 12px; text-align: center; font-size: 22px; font-weight: bold; color: #f57c00; margin-bottom: 20px; }
+        .points-banner { background: #fff8e1; border: 2px solid #ffe0b2; padding: 15px; border-radius: 12px; text-align: center; font-size: calc(22px * var(--n-font-scale, 1)); font-weight: bold; color: #f57c00; margin-bottom: 20px; }
         
-        .section-title { font-size: 16px; font-weight: bold; color: #444; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+        .section-title { font-size: calc(16px * var(--n-font-scale, 1)); font-weight: bold; color: #444; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
         
         /* 表單樣式 */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-group { margin-bottom: 12px; }
         .form-group.full-width { grid-column: span 2; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: var(--n-text, #292c30); }
-        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: calc(14px * var(--n-font-scale, 1)); color: var(--n-text, #292c30); }
+        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: calc(15px * var(--n-font-scale, 1)); box-sizing: border-box; }
         
-        .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 5px; }
+        .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 12px; font-size: calc(16px * var(--n-font-scale, 1)); font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 5px; }
         .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
         .btn-admin { background: var(--admin-color); }
-        .btn-small { padding: 8px 12px; font-size: 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        .btn-small { padding: 8px 12px; font-size: calc(14px * var(--n-font-scale, 1)); border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; }
 
         /* 禮物卡片區 */
         .gift-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .gift-card { background: var(--n-soft, #f3f4f6); border: 2px solid #eee; border-radius: 12px; padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: space-between;}
-        .gift-icon { font-size: 42px; margin-bottom: 8px; }
-        .gift-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; color: var(--n-text, #292c30); }
-        .gift-cost { font-size: 14px; color: #e65100; font-weight: bold; margin-bottom: 12px; }
-        .btn-exchange { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
+        .gift-icon { font-size: calc(42px * var(--n-font-scale, 1)); margin-bottom: 8px; }
+        .gift-title { font-size: calc(16px * var(--n-font-scale, 1)); font-weight: bold; margin-bottom: 5px; color: var(--n-text, #292c30); }
+        .gift-cost { font-size: calc(14px * var(--n-font-scale, 1)); color: #e65100; font-weight: bold; margin-bottom: 12px; }
+        .btn-exchange { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; font-size: calc(14px * var(--n-font-scale, 1)); }
         .btn-exchange:disabled { background: #ccc; cursor: not-allowed; }
 
         /* 紀錄清單 */
         .list-container { max-height: 350px; overflow-y: auto; background: var(--n-soft, #f3f4f6); border-radius: 8px; padding: 10px; border: 1px solid #eee; }
-        .list-item { background: var(--n-surface, #fff); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .list-item { background: var(--n-surface, #fff); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; font-size: calc(14px * var(--n-font-scale, 1)); }
         .list-item-details { flex: 1; }
-        .list-item-meta { font-size: 12px; color: #888; margin-top: 4px; }
-        .btn-delete { background: var(--cancel-color); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        .list-item-meta { font-size: calc(12px * var(--n-font-scale, 1)); color: #888; margin-top: 4px; }
+        .btn-delete { background: var(--cancel-color); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: calc(12px * var(--n-font-scale, 1)); cursor: pointer; font-weight: bold; }
         
-        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: calc(12px * var(--n-font-scale, 1)); font-weight: bold; color: white; }
         .status-pending { background: #ff9800; }
         .status-processing { background: #2196F3; }
         .status-done { background: #4caf50; }
@@ -78,7 +78,7 @@
         .status-rejected { background: var(--reject-color); }
 
         .admin-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; width: 100%; }
-        .btn-action { font-size: 12px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; min-width: 60px; }
+        .btn-action { font-size: calc(12px * var(--n-font-scale, 1)); padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; flex: 1; min-width: 60px; }
         
         .setting-box { border: 1px dashed #bbb; padding: 10px; border-radius: 8px; margin-bottom: 15px; background: var(--n-soft, #f3f4f6); }
         .setting-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
@@ -87,7 +87,7 @@
         .member-score-badge { display: inline-block; background: #e3f2fd; color: #1565c0; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin: 5px; border: 1px solid #bbdefb;}
 
         .legacy-binding { margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 6px; }
-        .legacy-binding p { margin: 0 0 6px; font-size: 12px; }
+        .legacy-binding p { margin: 0 0 6px; font-size: calc(12px * var(--n-font-scale, 1)); }
         .legacy-binding select { width: 100%; max-width: 100%; box-sizing: border-box; padding: 8px; }
         .legacy-binding button { margin-top: 6px; padding: 7px 10px; }
         /* RWD 響應式手機版面設定 */
@@ -109,7 +109,7 @@
         <span id="userNameDisplay" style="font-weight: bold; color: var(--primary-color);">載入中...</span>
     </div>
 
-    <div class="panel" style="padding:10px 15px"><strong id="wishGroupLabel">目前群組 · 許願牆</strong><div id="wishSyncStatus" role="status" style="font-size:13px;margin-top:5px">同步中…</div></div>
+    <div class="panel" style="padding:10px 15px"><strong id="wishGroupLabel">目前群組 · 許願牆</strong><div id="wishSyncStatus" role="status" style="font-size:calc(13px * var(--n-font-scale, 1));margin-top:5px">同步中…</div></div>
 
     <!-- ==================== 小孩專屬介面 ==================== -->
     <div id="childView" style="display: none;">
@@ -199,7 +199,7 @@
 
             <!-- 📝 加入收合功能的審核區塊 -->
             <h3 class="section-title" id="adminScoreListTitle" style="cursor: pointer; user-select: none;">
-                <span>📝 得分紀錄審核 <span style="font-size:12px; font-weight:normal; color:var(--n-muted, #62676e);">(若查核不實可刪除)</span></span>
+                <span>📝 得分紀錄審核 <span style="font-size:calc(12px * var(--n-font-scale, 1)); font-weight:normal; color:var(--n-muted, #62676e);">(若查核不實可刪除)</span></span>
                 <span id="adminScoreToggleIcon" style="color:var(--primary-color);">▼ 點此展開</span>
             </h3>
             <div id="adminScoreListWrapper" style="display: none;">
@@ -255,7 +255,7 @@
     <div class="panel" id="redeemListPanel">
         <h3 class="section-title">
             🛒 禮物兌換清單
-            <span style="font-size: 13px; font-weight: normal; color: #888;" id="adminNotice"></span>
+            <span style="font-size: calc(13px * var(--n-font-scale, 1)); font-weight: normal; color: #888;" id="adminNotice"></span>
         </h3>
         <div class="list-container" id="redeemListContainer">
             <div style="text-align:center; color:#888; padding: 10px;">資料載入中...</div>

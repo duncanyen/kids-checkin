@@ -462,7 +462,7 @@ async function loadLeaderboard(tabType) {
 
         dataList.forEach((item, index) => {
             let rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
-            const scoreText = currentLbGame === 'rps' ? `總分: ${item.totalScore || 0} <br><span style="font-size:12px;color:var(--text-sub);">最高連勝: ${item.maxStreak || 0}</span>` : `最高分: ${item.bestScore || 0}`;
+            const scoreText = currentLbGame === 'rps' ? `總分: ${item.totalScore || 0} <br><span style="font-size:calc(12px * var(--n-font-scale, 1));color:var(--text-sub);">最高連勝: ${item.maxStreak || 0}</span>` : `最高分: ${item.bestScore || 0}`;
             const groupDisplay = tabType === 'global' ? `<div class="lb-group">群組: ${item.groupId || '未知'}</div>` : '';
             
             listEl.innerHTML += `

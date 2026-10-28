@@ -224,7 +224,7 @@ function renderAllMessages() {
     let lastDateStr = ""; // 紀錄上一則訊息的日期
 
     if (chatState.currentMessagesList.length === 0) {
-        msgContainer.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:13px; margin-top:20px; font-weight:600;">發個訊息打招呼吧！</div>';
+        msgContainer.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); margin-top:20px; font-weight:600;">發個訊息打招呼吧！</div>';
     }
 
     chatState.currentMessagesList.forEach(msg => {

@@ -264,7 +264,7 @@ function renderPersonalAvatars() {
     const users = Object.values(usersMap);
     
     if(users.length === 0) {
-        avatarDiv.innerHTML = '<div style="font-size:13px; color:#999;">當月尚無紀錄</div>';
+        avatarDiv.innerHTML = '<div style="font-size:calc(13px * var(--n-font-scale, 1)); color:#999;">當月尚無紀錄</div>';
         return;
     }
 
@@ -640,19 +640,19 @@ function renderManageCategories() {
     const container = document.getElementById('manageCategoryList');
     container.innerHTML = '';
     if(customCategories.length === 0) {
-        container.innerHTML = '<div style="color:#999; font-size:13px; text-align:center; padding:10px;">尚未新增任何自訂類別</div>';
+        container.innerHTML = '<div style="color:#999; font-size:calc(13px * var(--n-font-scale, 1)); text-align:center; padding:10px;">尚未新增任何自訂類別</div>';
         return;
     }
     
     customCategories.forEach(cat => {
         const div = document.createElement('div');
         div.style = "display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:10px; border-radius:8px;";
-        let iconHtml = cat.imgBase64 ? `<img src="${cat.imgBase64}" style="width:24px;border-radius:4px;">` : `<span style="font-size:20px;">${cat.icon}</span>`;
+        let iconHtml = cat.imgBase64 ? `<img src="${cat.imgBase64}" style="width:24px;border-radius:4px;">` : `<span style="font-size:calc(20px * var(--n-font-scale, 1));">${cat.icon}</span>`;
         
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
                 ${iconHtml}
-                <span style="font-weight:bold;">${cat.name} <span style="font-size:11px; color:#888;">(${cat.type==='income'?'收入':'支出'})</span></span>
+                <span style="font-weight:bold;">${cat.name} <span style="font-size:calc(11px * var(--n-font-scale, 1)); color:#888;">(${cat.type==='income'?'收入':'支出'})</span></span>
             </div>
             <div style="display:flex; gap:10px;">
                 <button onclick="editCategory('${cat.id}')" style="background:none; border:none; color:var(--primary-color); cursor:pointer;">✏️</button>
@@ -824,7 +824,7 @@ function renderDayList() {
     if (!canViewIncome) dayRecords = dayRecords.filter(e => e.type !== 'income');
 
     if (dayRecords.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa; font-size:13px;">當日尚無紀錄</div>';
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa; font-size:calc(13px * var(--n-font-scale, 1));">當日尚無紀錄</div>';
         return;
     }
 

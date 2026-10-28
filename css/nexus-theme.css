@@ -37,7 +37,7 @@ input::placeholder,textarea::placeholder {color:var(--n-muted);opacity:1;}
 .sidebar-item:only-child {border-radius:20px;}
 .sidebar-icon {width:40px;height:40px;}
 .sidebar-item:hover,.sidebar-item:active {background:var(--n-soft);border-right:0;}
-.sidebar-title {font-size:13px;letter-spacing:.04em;text-transform:none;}
+.sidebar-title {font-size:calc(13px * var(--n-font-scale, 1));letter-spacing:.04em;text-transform:none;}
 .quick-action-btn {width:44px;height:44px;display:grid;place-items:center;}
 .sidebar-edit-btn {background:var(--n-soft);color:var(--n-text);}
 .sidebar-edit-btn .nexus-icon {width:14px;height:14px;}
@@ -66,7 +66,7 @@ button {color:var(--n-text);}
 
 /* Static placeholders only: no shimmer, timers, or motion preference exception. */
 .nexus-skeleton {color:var(--n-muted);}
-.nexus-skeleton p {margin:12px 0;padding:0 12px;text-align:center;font-size:13px;}
+.nexus-skeleton p {margin:12px 0;padding:0 12px;text-align:center;font-size:calc(13px * var(--n-font-scale, 1));}
 .nexus-skeleton-row {display:flex;align-items:center;gap:12px;min-height:72px;padding:12px;}
 .nexus-skeleton-row i {display:block;flex:none;width:44px;height:44px;border-radius:50%;background:var(--n-soft);}
 .nexus-skeleton-row span {flex:1;}
@@ -74,3 +74,6 @@ button {color:var(--n-text);}
 .nexus-skeleton-row b:last-child {width:45%;}
 .nexus-loading-card {border:1px solid var(--n-border);border-radius:20px;overflow:hidden;background:var(--n-surface);}
 .nexus-skeleton-photo {width:100%;aspect-ratio:1.15;background:var(--n-soft);}
+
+/* Scale rem and inherited browser text; fixed px text uses the same multiplier. */
+html {font-size:calc(100% * var(--n-font-scale, 1));}

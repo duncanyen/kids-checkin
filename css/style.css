@@ -35,7 +35,7 @@ body {
 }
 
 .section-header { display: flex; margin: 24px 0 12px 4px; align-items: center; }
-.section-title { font-size: 15px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px; position: relative; }
+.section-title { font-size: calc(15px * var(--n-font-scale, 1)); font-weight: 800; color: var(--text-main); letter-spacing: 0.5px; position: relative; }
 .section-title::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 24px; height: 3px; background: var(--primary); border-radius: 2px; }
 
 /* === 視圖共用設定 === */
@@ -45,10 +45,10 @@ body {
 /* === 認證 (登入/註冊) 畫面 === */
 .auth-card { background: white; padding: 32px 24px; border-radius: var(--radius-lg); width: 100%; max-width: 400px; box-shadow: var(--shadow-hover); text-align: left; position: relative; border: 1px solid var(--border-color); }
 .auth-logo { width: 70px; border-radius: 18px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto; box-shadow: var(--shadow-soft); }
-.auth-title { font-size: 24px; font-weight: 900; margin-bottom: 8px; text-align: center; }
-.auth-sub { font-size: 14px; color: var(--text-sub); text-align: center; margin-bottom: 24px; }
+.auth-title { font-size: calc(24px * var(--n-font-scale, 1)); font-weight: 900; margin-bottom: 8px; text-align: center; }
+.auth-sub { font-size: calc(14px * var(--n-font-scale, 1)); color: var(--text-sub); text-align: center; margin-bottom: 24px; }
 
-.auth-toggle { text-align: center; margin-top: 20px; font-size: 14px; font-weight: 600; color: var(--text-sub); }
+.auth-toggle { text-align: center; margin-top: 20px; font-size: calc(14px * var(--n-font-scale, 1)); font-weight: 600; color: var(--text-sub); }
 .auth-toggle span { color: var(--primary); cursor: pointer; font-weight: 800; margin-left: 4px; }
 .auth-toggle span:hover { text-decoration: underline; }
 
@@ -60,12 +60,12 @@ body {
 .group-card { cursor: pointer; background: white; padding: 24px 16px; border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); border: 2px solid transparent; transition: 0.3s; }
 .group-card:active { transform: scale(0.96); }
 .group-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow-hover); }
-.group-icon { font-size: 48px; margin-bottom: 12px; display: inline-block; }
+.group-icon { font-size: calc(48px * var(--n-font-scale, 1)); margin-bottom: 12px; display: inline-block; }
 .group-icon-img { width: 64px; height: 64px; border-radius: 20px; object-fit: cover; margin-bottom: 12px; }
-.group-name { font-size: 18px; font-weight: 800; color: var(--text-main); }
+.group-name { font-size: calc(18px * var(--n-font-scale, 1)); font-weight: 800; color: var(--text-main); }
 
 .preset-icons-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
-.preset-icon { font-size: 28px; background: var(--bg-body); padding: 10px; border-radius: 12px; cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; }
+.preset-icon { font-size: calc(28px * var(--n-font-scale, 1)); background: var(--bg-body); padding: 10px; border-radius: 12px; cursor: pointer; text-align: center; border: 2px solid transparent; transition: 0.2s; }
 .preset-icon.selected { border-color: var(--primary); background: var(--primary-light); }
 
 /* === 邀請碼彈窗與共用 Modal 樣式 === */
@@ -73,26 +73,26 @@ body {
 .modal-content { background: white; padding: 32px 28px; border-radius: var(--radius-lg); width: 90%; max-width: 360px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; animation: slideUp 0.3s ease-out; border: 1px solid var(--border-color); }
 .modal-content.text-center { text-align: center; }
 .modal-btns { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
-.modal-btns button { flex: 1; padding: 14px; border-radius: var(--radius-md); font-size: 16px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
+.modal-btns button { flex: 1; padding: 14px; border-radius: var(--radius-md); font-size: calc(16px * var(--n-font-scale, 1)); font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
 
 .modal-btns button:first-child { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
 .modal-btns button:last-child { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
 .modal-btns button:active { transform: scale(0.96); }
 
-.invite-code-display { font-size: 40px; font-weight: 900; color: var(--primary-dark); letter-spacing: 4px; text-align: center; margin: 20px 0; background: var(--primary-light); padding: 16px; border-radius: 16px; border: 2px dashed var(--primary); }
-.btn-line-share { background: #06C755; color: white; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; margin-top: 16px; }
+.invite-code-display { font-size: calc(40px * var(--n-font-scale, 1)); font-weight: 900; color: var(--primary-dark); letter-spacing: 4px; text-align: center; margin: 20px 0; background: var(--primary-light); padding: 16px; border-radius: 16px; border: 2px dashed var(--primary); }
+.btn-line-share { background: #06C755; color: white; padding: 14px; border-radius: 12px; font-weight: 800; width: 100%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: calc(16px * var(--n-font-scale, 1)); margin-top: 16px; }
 .btn-line-share:active { background: #05a746; }
 
 /* === 主選單 Dashboard 框架更新 === */
 #dashboardView { display: none; max-width: 500px; margin: 0 auto; animation: fadeIn 0.4s ease-out forwards; opacity: 0; padding-bottom: 40px; }
 .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 8px 0; position: sticky; top: 0; background: var(--bg-body); z-index: 100; backdrop-filter: blur(10px); }
-.app-brand { font-size: 24px; font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
-.hamburger-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; color: var(--text-main); background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: 0.2s; border: 1px solid var(--border-color); }
+.app-brand { font-size: calc(24px * var(--n-font-scale, 1)); font-weight: 900; color: var(--text-main); display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+.hamburger-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: calc(24px * var(--n-font-scale, 1)); cursor: pointer; color: var(--text-main); background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: 0.2s; border: 1px solid var(--border-color); }
 .hamburger-btn:active { background: var(--border-color); transform: scale(0.95); }
 .current-user-badge { background: white; padding: 6px 16px 6px 6px; border-radius: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid var(--border-color); transition: 0.2s; }
 .current-user-badge:active { transform: scale(0.96); }
 .mini-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); }
-.user-badge-name { font-size: 14px; font-weight: 800; color: var(--text-main); }
+.user-badge-name { font-size: calc(14px * var(--n-font-scale, 1)); font-weight: 800; color: var(--text-main); }
 
 /* === 待辦與記帳 (雙欄並排 Widget) === */
 .dash-2col { 
@@ -141,17 +141,17 @@ body {
     display: flex; 
     align-items: center; 
     justify-content: center; 
-    font-size: 20px; 
+    font-size: calc(20px * var(--n-font-scale, 1));
 }
 
 .mini-widget-title { 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     font-weight: 800; 
     color: var(--text-main); 
 }
 
 .mini-widget-value { 
-    font-size: 22px; /* 放大重要數據 */
+    font-size: calc(22px * var(--n-font-scale, 1)); /* 放大重要數據 */
     font-weight: 900; 
     color: var(--text-main); 
     z-index: 1; 
@@ -159,7 +159,7 @@ body {
 }
 
 .mini-widget-sub { 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     font-weight: 600; 
     color: var(--text-sub); 
     z-index: 1; 
@@ -173,7 +173,7 @@ body {
 
 /* === 手機版底部快捷導覽列 (Floating Dock) === */
 .bottom-dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 8px 12px; border-radius: 30px; display: flex; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); z-index: 1000; }
-.dock-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 50%; cursor: pointer; transition: 0.2s; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+.dock-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: calc(20px * var(--n-font-scale, 1)); border-radius: 50%; cursor: pointer; transition: 0.2s; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
 .dock-item:active { transform: scale(0.92); background: var(--primary-light); border-color: var(--primary); }
 
 /* === 卡片樣式 === */
@@ -181,18 +181,18 @@ body {
 .agenda-card:active, .card-hero:active { transform: translateY(2px) scale(0.99); box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fafafa; }
 
 .agenda-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px; }
-.agenda-date { font-size: 16px; font-weight: 800; color: var(--text-main); }
-.agenda-count { font-size: 13px; font-weight: 700; color: var(--primary-dark); background: var(--primary-light); padding: 4px 10px; border-radius: 12px; }
+.agenda-date { font-size: calc(16px * var(--n-font-scale, 1)); font-weight: 800; color: var(--text-main); }
+.agenda-count { font-size: calc(13px * var(--n-font-scale, 1)); font-weight: 700; color: var(--primary-dark); background: var(--primary-light); padding: 4px 10px; border-radius: 12px; }
 .agenda-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding-right: 4px; }
 .agenda-item { display: flex; align-items: center; gap: 10px; background: var(--bg-body); padding: 8px 10px; border-radius: 12px; }
-.agenda-time { font-size: 13px; font-weight: 800; color: var(--text-sub); min-width: 70px; text-align: left; }
+.agenda-time { font-size: calc(13px * var(--n-font-scale, 1)); font-weight: 800; color: var(--text-sub); min-width: 70px; text-align: left; }
 .agenda-divider { width: 3px; height: 16px; background: var(--primary); border-radius: 2px; }
-.agenda-title { flex: 1; font-weight: 700; font-size: 14px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-title { flex: 1; font-weight: 700; font-size: calc(14px * var(--n-font-scale, 1)); color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .agenda-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 
 .card-hero { display: flex; flex-direction: row; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
-.card-hero .dash-icon { background: var(--bg-body); border: 1px solid var(--border-color); width: 56px; height: 56px; border-radius: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
-.notification-badge { display: none; position: absolute; top: 12px; left: 12px; background-color: var(--danger); color: white; font-size: 12px; font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; border: 2px solid white; z-index: 10; }
+.card-hero .dash-icon { background: var(--bg-body); border: 1px solid var(--border-color); width: 56px; height: 56px; border-radius: 16px; font-size: calc(28px * var(--n-font-scale, 1)); display: flex; align-items: center; justify-content: center; color: var(--text-main); }
+.notification-badge { display: none; position: absolute; top: 12px; left: 12px; background-color: var(--danger); color: white; font-size: calc(12px * var(--n-font-scale, 1)); font-weight: 800; height: 22px; min-width: 22px; line-height: 22px; border-radius: 11px; padding: 0 6px; text-align: center; border: 2px solid white; z-index: 10; }
 
 /* === Photo Dump 輪播樣式 === */
 .photo-carousel-section { margin-top: 0px; }
@@ -204,12 +204,12 @@ body {
 .carousel-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: space-between; align-items: flex-end; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%); color: white; pointer-events: none; }
 .carousel-author { display: flex; align-items: center; gap: 10px; }
 .carousel-author-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.8); }
-.carousel-author-name { font-size: 15px; font-weight: 800; color: white; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-.carousel-date { font-size: 12px; color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.3); margin-top: 2px; }
+.carousel-author-name { font-size: calc(15px * var(--n-font-scale, 1)); font-weight: 800; color: white; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.carousel-date { font-size: calc(12px * var(--n-font-scale, 1)); color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.3); margin-top: 2px; }
 .carousel-actions { pointer-events: auto; }
-.like-btn { background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 6px 12px; font-size: 18px; cursor: pointer; color: white; display: flex; align-items: center; gap: 6px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.like-btn { background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 6px 12px; font-size: calc(18px * var(--n-font-scale, 1)); cursor: pointer; color: white; display: flex; align-items: center; gap: 6px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 .like-btn.liked { background: rgba(255,255,255,0.9); border-color: white; }
-.like-count { font-size: 14px; font-weight: 800; color: white; }
+.like-count { font-size: calc(14px * var(--n-font-scale, 1)); font-weight: 800; color: white; }
 .like-btn.liked .like-count { color: var(--danger); }
 
 /* === 側邊選單 Sidebar === */
@@ -221,40 +221,40 @@ body {
 .sidebar-profile { background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 24px 16px 16px 16px; color: white; display: flex; align-items: center; gap: 14px; position: relative; }
 .sidebar-avatar-wrapper { position: relative; display: inline-block; flex-shrink: 0; }
 .sidebar-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.8); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-.sidebar-edit-btn { position: absolute; bottom: -2px; right: -2px; background: white; color: var(--primary-dark); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; border: none; }
+.sidebar-edit-btn { position: absolute; bottom: -2px; right: -2px; background: white; color: var(--primary-dark); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: calc(11px * var(--n-font-scale, 1)); box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer; border: none; }
 
 .sidebar-profile-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.sidebar-username { font-size: 18px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-.sidebar-role { font-size: 13px; opacity: 0.9; margin-top: 4px; font-weight: 500; }
+.sidebar-username { font-size: calc(18px * var(--n-font-scale, 1)); font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.sidebar-role { font-size: calc(13px * var(--n-font-scale, 1)); opacity: 0.9; margin-top: 4px; font-weight: 500; }
 
 .sidebar-quick-actions { display: flex; gap: 10px; margin-top: 10px; width: 100%; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; justify-content: flex-end; }
-.quick-action-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.3); }
+.quick-action-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: calc(15px * var(--n-font-scale, 1)); cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.3); }
 .quick-action-btn:active { background: rgba(255,255,255,0.35); transform: scale(0.95); }
 
 .sidebar-section { padding: 12px 0; border-bottom: 1px solid var(--border-color); }
-.sidebar-title { font-size: 12px; font-weight: 800; color: #94a3b8; padding: 0 24px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.5px; }
-.sidebar-item { display: flex; align-items: center; padding: 10px 24px; color: var(--text-main); text-decoration: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.sidebar-title { font-size: calc(12px * var(--n-font-scale, 1)); font-weight: 800; color: #94a3b8; padding: 0 24px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.5px; }
+.sidebar-item { display: flex; align-items: center; padding: 10px 24px; color: var(--text-main); text-decoration: none; font-size: calc(15px * var(--n-font-scale, 1)); font-weight: 600; cursor: pointer; transition: 0.2s; }
 .sidebar-item:hover, .sidebar-item:active { background: var(--primary-light); color: var(--primary-dark); border-right: 4px solid var(--primary); }
-.sidebar-icon { font-size: 16px; margin-right: 12px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-body); transition: 0.2s; }
+.sidebar-icon { font-size: calc(16px * var(--n-font-scale, 1)); margin-right: 12px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-body); transition: 0.2s; }
 
 .sidebar-members { display: flex; gap: 12px; padding: 8px 24px 12px; overflow-x: auto; scrollbar-width: none; }
 .sidebar-members::-webkit-scrollbar { display: none; }
 .member-avatar-container { text-align: center; flex-shrink: 0; }
 .member-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); margin-bottom: 4px; }
-.member-name { font-size: 11px; font-weight: 600; color: var(--text-sub); width: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-name { font-size: calc(11px * var(--n-font-scale, 1)); font-weight: 600; color: var(--text-sub); width: 44px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* === 表單設計 === */
 .form-group { margin-bottom: 20px; text-align: left; }
-.form-label { display: block; font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
-.form-control { width: 100%; padding: 14px; border: 2px solid var(--border-color); border-radius: var(--radius-md); font-size: 15px; font-family: inherit; transition: 0.2s; background: var(--bg-body); }
+.form-label { display: block; font-size: calc(14px * var(--n-font-scale, 1)); font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+.form-control { width: 100%; padding: 14px; border: 2px solid var(--border-color); border-radius: var(--radius-md); font-size: calc(15px * var(--n-font-scale, 1)); font-family: inherit; transition: 0.2s; background: var(--bg-body); }
 .form-control:focus { outline: none; border-color: var(--primary); background: white; }
 textarea.form-control { resize: vertical; min-height: 120px; }
 
-.btn-full { width: 100%; padding: 14px; border-radius: var(--radius-md); font-size: 16px; font-weight: 800; cursor: pointer; border: none; transition: 0.2s; background: var(--primary); color: white; margin-top: 10px;}
+.btn-full { width: 100%; padding: 14px; border-radius: var(--radius-md); font-size: calc(16px * var(--n-font-scale, 1)); font-weight: 800; cursor: pointer; border: none; transition: 0.2s; background: var(--primary); color: white; margin-top: 10px;}
 .btn-full:active { transform: scale(0.96); }
 .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); }
 
-.loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); justify-content: center; align-items: center; font-size: 18px; font-weight: 800; color: var(--primary); z-index: 6000; flex-direction: column; gap: 16px; }
+.loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); justify-content: center; align-items: center; font-size: calc(18px * var(--n-font-scale, 1)); font-weight: 800; color: var(--primary); z-index: 6000; flex-direction: column; gap: 16px; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

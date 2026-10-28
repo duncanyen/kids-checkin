@@ -519,7 +519,7 @@ function renderDayEvents(dateKey) {
                 <div class="event-item-meta">
                     <span>${timeStr}</span> | <span>🔔 ${reminderStr}</span>
                 </div>
-                ${evt.desc ? `<div style="font-size:12px; color:var(--text-sub); margin-top:6px;">${evt.desc}</div>` : ''}
+                ${evt.desc ? `<div style="font-size:calc(12px * var(--n-font-scale, 1)); color:var(--text-sub); margin-top:6px;">${evt.desc}</div>` : ''}
             </div>
             ${isOwnerOrAdmin ? `
             <div class="event-actions">

@@ -24,7 +24,7 @@
 .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .checkbox-label { 
     display: flex; align-items: center; gap: 4px; 
-    font-size: 13px; font-weight: normal; 
+    font-size: calc(13px * var(--n-font-scale, 1)); font-weight: normal;
     padding: 6px 10px; background: #f8faf9; 
     border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
 }
@@ -69,7 +69,7 @@
 }
 .calendar-day:hover { background: var(--mint); }
 .calendar-day.active { background: var(--green); color: white; }
-.calendar-weekday { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.calendar-weekday { font-size: calc(12px * var(--n-font-scale, 1)); color: var(--muted); margin-bottom: 5px; }
 
 /* Wheel Segment Colors */
 .wheel-segment {
@@ -88,7 +88,7 @@
     top: 50%;
     transform: translateY(-50%) rotate(0deg); /* Adjust based on segment */
     transform-origin: left center;
-    font-size: 14px;
+    font-size: calc(14px * var(--n-font-scale, 1));
     font-weight: bold;
     color: var(--ink);
     white-space: nowrap;
@@ -141,7 +141,7 @@
   <div class="card" style="padding:13px">
     <div class="vote-header">
       <div>
-        <div style="font-size:11px;color:var(--muted)">我的投票身份</div>
+        <div style="font-size:calc(11px * var(--n-font-scale, 1));color:var(--muted)">我的投票身份</div>
         <div class="row" style="margin-top:4px">
           <div id="voteFaceContainer"></div> 
           <b id="voteMemberName">載入中...</b>
@@ -149,13 +149,13 @@
       </div>
       <div class="vote-status" id="voteStatus">尚未投票</div>
     </div>
-    <div style="font-size:12px; color:var(--muted); margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">群組投票動態：</div>
+    <div style="font-size:calc(12px * var(--n-font-scale, 1)); color:var(--muted); margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">群組投票動態：</div>
     <div class="member-strip" id="voteMemberStrip" style="pointer-events: none; margin-top:4px;"></div>
   </div>
 
   <div class="mode-grid">
-    <button class="mode" onclick="window.foodApp.showWheel()"><span style="font-size:31px">🎡</span><strong>交給命運</strong><span>大家都不想決定？讓輪盤幫你選。</span></button>
-    <button class="mode" onclick="window.foodApp.showList()"><span style="font-size:31px">🗳️</span><strong>大家票選</strong><span>每人一票，看誰最受歡迎。</span></button>
+    <button class="mode" onclick="window.foodApp.showWheel()"><span style="font-size:calc(31px * var(--n-font-scale, 1))">🎡</span><strong>交給命運</strong><span>大家都不想決定？讓輪盤幫你選。</span></button>
+    <button class="mode" onclick="window.foodApp.showList()"><span style="font-size:calc(31px * var(--n-font-scale, 1))">🗳️</span><strong>大家票選</strong><span>每人一票，看誰最受歡迎。</span></button>
   </div>
 
   <div id="wheelPanel" class="card wheel-card" style="display:none;margin-top:14px">
@@ -199,7 +199,7 @@
 
   <div class="card winner-stat stats-hero">
     <div class="trophy">🏆</div>
-    <div style="font-size:11px;color:var(--green2);font-weight:900">目前領先 · <span id="statsMealName">晚餐</span></div>
+    <div style="font-size:calc(11px * var(--n-font-scale, 1));color:var(--green2);font-weight:900">目前領先 · <span id="statsMealName">晚餐</span></div>
     <h2 id="winnerStatName">尚未有人投票</h2>
     <p id="winnerStatScore">投下第一票吧</p>
     <div class="people" id="peopleFaces"></div>

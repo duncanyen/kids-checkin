@@ -298,7 +298,7 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
                 </div>`;
         });
     } else {
-        commentsHtml = '<div style="color:var(--text-sub); font-size:13px; text-align:center; font-weight:600;">成為第一個留言的人吧！</div>';
+        commentsHtml = '<div style="color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); text-align:center; font-weight:600;">成為第一個留言的人吧！</div>';
     }
 
     // 🚀 修正頭像顯示：判斷發文者如果是自己，且 localStorage 中有最新頭像，則優先載入最新的頭像

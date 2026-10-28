@@ -13,7 +13,7 @@ const report = error => {
     if (!document.getElementById('nexusLiveError')) {
         const banner = document.createElement('div'); banner.id = 'nexusLiveError'; banner.setAttribute('role', 'alert');
         banner.textContent = '即時資料連線無法使用，請重新登入或重新選擇群組。';
-        banner.style.cssText = 'position:fixed;bottom:12px;left:5%;width:90%;box-sizing:border-box;padding:12px;background:#542723;color:#fff2cc;border-radius:8px;z-index:10000;text-align:center;font-size:14px';
+        banner.style.cssText = 'position:fixed;bottom:12px;left:5%;width:90%;box-sizing:border-box;padding:12px;background:#542723;color:#fff2cc;border-radius:8px;z-index:10000;text-align:center;font-size:calc(14px * var(--n-font-scale, 1))';
         document.body.appendChild(banner);
     }
 };

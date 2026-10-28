@@ -2,7 +2,7 @@
 .recurring-trigger { border: 1px solid var(--primary); background: var(--primary-light); color: var(--primary-dark); border-radius: 12px; padding: 9px 12px; font: inherit; font-size: .85rem; font-weight: 800; cursor: pointer; }
 button:disabled { opacity: .5; cursor: wait; }
 .category-filter { display: inline-flex; align-items: center; flex-shrink: 0; }
-.delete-category { border: 0; border-radius: 50%; background: transparent; color: var(--text-sub); font-size: 18px; cursor: pointer; padding: 4px; }
+.delete-category { border: 0; border-radius: 50%; background: transparent; color: var(--text-sub); font-size: calc(18px * var(--n-font-scale, 1)); cursor: pointer; padding: 4px; }
 .person-avatar, .assignee-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid white; background: var(--primary-light); }
 .assignee-chip { font: inherit; font-size: .85rem; padding: 6px 10px; }
 .assignee-avatar-grid { max-height: 190px; }

@@ -50,7 +50,7 @@
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: -10px; margin-bottom: 20px;">
                     <input type="checkbox" id="rememberMe" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
-                    <label for="rememberMe" style="font-size: 14px; color: var(--text-sub); cursor: pointer; user-select: none;">記住帳號</label>
+                    <label for="rememberMe" style="font-size: calc(14px * var(--n-font-scale, 1)); color: var(--text-sub); cursor: pointer; user-select: none;">記住帳號</label>
                 </div>
                 <button class="btn-full" onclick="processLogin()">登入</button>
                 <div class="auth-toggle">還沒有帳號？<span onclick="toggleAuth('register')">立即註冊</span></div>
@@ -125,7 +125,7 @@
                 <div class="auth-sub">請輸入家人或朋友分享給您的邀請碼</div>
                 <div class="form-group">
                     <label class="form-label">邀請碼 (6碼)</label>
-                    <input type="text" id="obInviteCode" class="form-control" placeholder="請輸入邀請碼" style="text-transform: uppercase; text-align: center; font-size: 24px; letter-spacing: 4px;" maxlength="6">
+                    <input type="text" id="obInviteCode" class="form-control" placeholder="請輸入邀請碼" style="text-transform: uppercase; text-align: center; font-size: calc(24px * var(--n-font-scale, 1)); letter-spacing: 4px;" maxlength="6">
                 </div>
                 <button class="btn-full" onclick="processJoinGroup()">確認加入</button>
                 <button class="btn-full btn-outline" style="margin-top: 12px; border: none; color: var(--text-sub);" onclick="goToActionStep('obStepAction')">返回</button>
@@ -137,7 +137,7 @@
     <!-- 3. 群組選擇列表 -->
     <div id="groupSelectionSection" class="view-section">
         <img src="Nexus.png" alt="Nexus Logo" style="width: 80px; border-radius: 20px; margin-bottom: 16px; box-shadow: var(--shadow-soft);">
-        <h2 style="margin-top: 0; font-size: 24px; font-weight: 900;">切換群組</h2>
+        <h2 style="margin-top: 0; font-size: calc(24px * var(--n-font-scale, 1)); font-weight: 900;">切換群組</h2>
         <p style="color: var(--text-sub); margin-bottom: 30px;">選擇已參與的群組，或建立、加入新群組</p>
         <div class="group-grid" id="groupListContainer"></div>
         <button class="btn-full btn-outline" style="max-width: 300px; padding: 14px;" onclick="showActionSection()">➕ 建立或加入新群組</button>
@@ -147,8 +147,8 @@
     <!-- Modal 彈窗區域 -->
     <div class="modal" id="inviteModal">
         <div class="modal-content text-center">
-            <h3 style="margin-top:0; font-size:22px; font-weight:800; color:var(--text-main);">邀請家人朋友</h3>
-            <p style="font-size:14px; color:var(--text-sub); margin-top:-10px; margin-bottom:10px;">分享專屬邀請碼，讓他們加入同一個家</p>
+            <h3 style="margin-top:0; font-size:calc(22px * var(--n-font-scale, 1)); font-weight:800; color:var(--text-main);">邀請家人朋友</h3>
+            <p style="font-size:calc(14px * var(--n-font-scale, 1)); color:var(--text-sub); margin-top:-10px; margin-bottom:10px;">分享專屬邀請碼，讓他們加入同一個家</p>
             <div class="invite-code-display" id="displayInviteCode">------</div>
             <button class="btn-line-share" onclick="shareToLine()">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 10.3039C24 4.6128 18.6274 0 12 0C5.37258 0 0 4.6128 0 10.3039C0 15.4215 4.31602 19.7126 9.94828 20.448C10.334 20.5283 11.1444 20.9168 10.9701 21.6508C10.9701 21.6508 10.6385 23.0189 10.5732 23.3619C10.5217 23.6337 10.222 24.1611 11.2334 23.7547C12.2452 23.3486 16.7115 20.6973 19.4674 17.6534C22.2536 14.5772 24 12.6022 24 10.3039Z" fill="white"/></svg>
@@ -162,7 +162,7 @@
 
     <div class="modal" id="contactModal">
         <div class="modal-content">
-            <h3 style="margin-top:0; font-size:22px; font-weight:800; border-bottom:2px solid var(--border-color); padding-bottom:16px; margin-bottom:20px;">聯絡 Nexus</h3>
+            <h3 style="margin-top:0; font-size:calc(22px * var(--n-font-scale, 1)); font-weight:800; border-bottom:2px solid var(--border-color); padding-bottom:16px; margin-bottom:20px;">聯絡 Nexus</h3>
             <div class="form-group">
                 <label class="form-label">諮詢類型</label>
                 <select id="contactType" class="form-control">
@@ -192,7 +192,7 @@
             <div class="app-brand">
                 <div class="hamburger-btn" role="button" tabindex="0" aria-label="開啟功能選單" aria-expanded="false" onclick="toggleSidebar()" data-ui-icon="menu"></div>
                 <img src="Nexus.png" alt="Nexus Logo" style="width: 32px; height: 32px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <span style="font-size: 20px; font-weight: 900; letter-spacing: 0;">Nexus</span>
+                <span style="font-size: calc(20px * var(--n-font-scale, 1)); font-weight: 900; letter-spacing: 0;">Nexus</span>
             </div>
             <div class="current-user-badge" onclick="window.navTo('settings.html', '個人設定')" title="個人設定">
                 <span id="dashUserName" class="user-badge-name"></span>
@@ -238,7 +238,7 @@
         <div class="sidebar-section">
             <div class="sidebar-title" style="display: flex; justify-content: space-between; align-items: center;">
                 <span>群組成員</span>
-                <span style="cursor:pointer; color:var(--primary); font-size: 14px; text-transform:none; letter-spacing:0;" onclick="openInviteModal()">➕ 邀請</span>
+                <span style="cursor:pointer; color:var(--primary); font-size: calc(14px * var(--n-font-scale, 1)); text-transform:none; letter-spacing:0;" onclick="openInviteModal()">➕ 邀請</span>
             </div>
             <div class="sidebar-members" id="sideMembersList"></div>
         </div>

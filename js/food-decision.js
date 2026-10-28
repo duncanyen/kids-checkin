@@ -62,7 +62,7 @@ function initIdentity() {
     if (headerAvatar) {
         headerAvatar.innerHTML = avatarUrl
             ? `<img src="${escapeHtml(avatarUrl)}" class="real-avatar">`
-            : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:16px;background:#edf6f1;color:var(--green2);font-weight:bold;">${fallbackChar}</div>`;
+            : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:calc(16px * var(--n-font-scale, 1));background:#edf6f1;color:var(--green2);font-weight:bold;">${fallbackChar}</div>`;
     }
 }
 

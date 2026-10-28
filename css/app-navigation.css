@@ -11,8 +11,8 @@ html[data-navigation-entry=nav] [data-main-menu-back] {display:none!important;}
 :is(.has-app-navigation,[data-navigation-entry=nav]) .todo-container {padding-bottom:84px;}
 :is(.has-app-navigation,[data-navigation-entry=nav]) .fab-container {bottom:calc(var(--app-nav-height) + 18px);}
 .has-app-navigation body[data-app-page=food] .app>.nav {position:static;left:auto;bottom:auto;transform:none;width:100%;height:auto;min-height:64px;border-bottom:1px solid var(--n-border);padding:8px 12px;background:var(--n-surface);}
-body[data-app-page=food] header>[data-main-menu-back] {width:auto;max-width:145px;padding:8px 10px;font-size:13px;}
-@media(min-width:900px){.app-nav-link{max-width:130px;font-size:12px;}}
+body[data-app-page=food] header>[data-main-menu-back] {width:auto;max-width:145px;padding:8px 10px;font-size:calc(13px * var(--n-font-scale, 1));}
+@media(min-width:900px){.app-nav-link{max-width:130px;font-size:calc(12px * var(--n-font-scale, 1));}}
 
 /* Immediate feedback during native navigation, without delaying navigation or
    fading content. No animation, including under prefers-reduced-motion. */

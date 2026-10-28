@@ -135,7 +135,7 @@ function renderMenuCheckboxes(containerId, isEdit) {
     container.innerHTML = '';
     
     if (systemMenuOptions.length === 0) {
-        container.innerHTML = '<div style="color:#e53935; font-size:12px; grid-column: 1 / -1;">無法載入選單，請重新整理網頁。</div>';
+        container.innerHTML = '<div style="color:#e53935; font-size:calc(12px * var(--n-font-scale, 1)); grid-column: 1 / -1;">無法載入選單，請重新整理網頁。</div>';
         return;
     }
 
@@ -236,7 +236,7 @@ function renderRequests() {
             <div class="user-info">
                 <img class="user-avatar" src="${req.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${req.userName}'">
                 <div>
-                    <div class="user-name">${req.userName} <span style="font-size:12px; color:var(--warning-color); font-weight:normal;">(${typeLabel})</span></div>
+                    <div class="user-name">${req.userName} <span style="font-size:calc(12px * var(--n-font-scale, 1)); color:var(--warning-color); font-weight:normal;">(${typeLabel})</span></div>
                     <div class="user-subtext">帳號 ID: ${req.accountId || '無'}</div>
                     <div class="user-features" style="color:#666;">申請時間: ${req.requestTime || '剛剛'}</div>
                 </div>
@@ -385,7 +385,7 @@ async function loadParentAdminData() {
     const chipsContainer = document.getElementById('memberChipsList');
     if (!chipsContainer) return;
     
-    chipsContainer.innerHTML = '<div style="padding:10px; font-size:12px; color:var(--text-sub);">載入「目前群組」成員中...</div>';
+    chipsContainer.innerHTML = '<div style="padding:10px; font-size:calc(12px * var(--n-font-scale, 1)); color:var(--text-sub);">載入「目前群組」成員中...</div>';
 
     try {
         const members = await loadGameGroupMembers(groupId, currentUser.accountId);
@@ -412,7 +412,7 @@ async function loadParentAdminData() {
         renderMemberChips();
     } catch (error) {
         console.error("載入成員權限失敗:", error);
-        chipsContainer.innerHTML = '<div style="color:red; font-size:12px;">載入成員失敗</div>';
+        chipsContainer.innerHTML = '<div style="color:red; font-size:calc(12px * var(--n-font-scale, 1));">載入成員失敗</div>';
     }
 }
 
@@ -422,7 +422,7 @@ function renderMemberChips() {
     
     chipsContainer.innerHTML = '';
     if (groupMembers.length === 0) {
-        chipsContainer.innerHTML = '<div style="font-size:12px; color:var(--text-sub);">尚無成員資料</div>';
+        chipsContainer.innerHTML = '<div style="font-size:calc(12px * var(--n-font-scale, 1)); color:var(--text-sub);">尚無成員資料</div>';
         return;
     }
 
@@ -546,7 +546,7 @@ function renderUserList() {
             <div class="user-info">
                 <img class="user-avatar" src="${user.avatar || 'homebase_icon.jpg'}" onerror="this.src='https://ui-avatars.com/api/?name=${user.name}'">
                 <div>
-                    <div class="user-name">${user.name} <span style="font-size:12px; color:var(--primary-color); font-weight:normal;">(${roleDisplay})</span></div>
+                    <div class="user-name">${user.name} <span style="font-size:calc(12px * var(--n-font-scale, 1)); color:var(--primary-color); font-weight:normal;">(${roleDisplay})</span></div>
                     <div class="user-subtext">${idDisplay}</div>
                     <div class="user-features">✓ 開放權限: ${menuLabels || '無'}</div>
                 </div>
@@ -782,7 +782,7 @@ function renderLogs() {
         div.style.alignItems = 'flex-start';
         div.innerHTML = `
             <div class="user-info">
-                <div class="user-avatar" style="border:none; font-size:24px; background:transparent;">📝</div>
+                <div class="user-avatar" style="border:none; font-size:calc(24px * var(--n-font-scale, 1)); background:transparent;">📝</div>
                 <div style="flex:1;">
                     <div class="user-name" style="color:var(--primary-color);">${log.actionType || '系統操作'}</div>
                     <div class="user-subtext"><b>操作人員:</b> ${log.operator || '未知'}</div>

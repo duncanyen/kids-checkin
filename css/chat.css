@@ -76,7 +76,7 @@ body {
 }
 
 .list-title { 
-    font-size: 18px; 
+    font-size: calc(18px * var(--n-font-scale, 1));
     font-weight: 800; 
     color: var(--text-main); 
 }
@@ -89,7 +89,7 @@ body {
     border-radius: 12px; 
     font-weight: 700; 
     cursor: pointer; 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     transition: background 0.2s; 
 }
 
@@ -131,7 +131,7 @@ body {
 
 .room-name { 
     font-weight: 800; 
-    font-size: 16px; 
+    font-size: calc(16px * var(--n-font-scale, 1));
     color: var(--text-main); 
     white-space: nowrap; 
     overflow: hidden; 
@@ -139,14 +139,14 @@ body {
 }
 
 .room-time { 
-    font-size: 11px; 
+    font-size: calc(11px * var(--n-font-scale, 1));
     color: var(--text-sub); 
     flex-shrink: 0; 
     font-weight: 600; 
 }
 
 .room-last-msg { 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     color: var(--text-sub); 
     white-space: nowrap; 
     overflow: hidden; 
@@ -159,7 +159,7 @@ body {
 .unread-badge { 
     background: var(--danger); 
     color: white; 
-    font-size: 11px; 
+    font-size: calc(11px * var(--n-font-scale, 1));
     font-weight: 800; 
     padding: 2px 8px; 
     border-radius: 10px; 
@@ -198,7 +198,7 @@ body {
 
 .chat-header-name { 
     font-weight: 800; 
-    font-size: 16px; 
+    font-size: calc(16px * var(--n-font-scale, 1));
     max-width: 180px; 
     white-space: nowrap; 
     overflow: hidden; 
@@ -211,7 +211,7 @@ body {
     width: 36px; 
     height: 36px; 
     border-radius: 50%; 
-    font-size: 16px; 
+    font-size: calc(16px * var(--n-font-scale, 1));
     cursor: pointer; 
     display: flex; 
     align-items: center; 
@@ -235,7 +235,7 @@ body {
 .chat-msg { 
     padding: 12px 16px; 
     border-radius: 18px; 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     position: relative; 
     line-height: 1.5; 
     word-wrap: break-word; 
@@ -258,18 +258,18 @@ body {
     border: 1px solid rgba(0,0,0,0.03); 
 }
 
-.msg-sender { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 700; padding-left: 4px; }
+.msg-sender { font-size: calc(11px * var(--n-font-scale, 1)); color: var(--text-sub); margin-bottom: 4px; font-weight: 700; padding-left: 4px; }
 
 .msg-status-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding: 0 4px; }
-.msg-time { font-size: 10px; color: var(--text-sub); font-weight: 600; }
-.msg-read { font-size: 10px; color: var(--text-sub); font-weight: 600; }
+.msg-time { font-size: calc(10px * var(--n-font-scale, 1)); color: var(--text-sub); font-weight: 600; }
+.msg-read { font-size: calc(10px * var(--n-font-scale, 1)); color: var(--text-sub); font-weight: 600; }
 
 .reply-quote { 
     background: rgba(0,0,0,0.05); 
     border-left: 4px solid #cbd5e1; 
     padding: 6px 10px; 
     border-radius: 6px; 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     margin-bottom: 8px; 
     max-width: 100%; 
     display: -webkit-box; 
@@ -295,7 +295,7 @@ body {
     cursor: default; 
     box-shadow: none; 
     border-radius: 12px; 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
 }
 
 .chat-photo { 
@@ -314,7 +314,7 @@ body {
     display: flex; 
     align-items: center; 
     color: var(--primary); 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     font-weight: 800; 
 }
 
@@ -340,7 +340,7 @@ body {
     padding: 10px 16px; 
     background: var(--n-soft, #f3f4f6);
     border-left: 4px solid var(--primary); 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     color: var(--text-sub); 
     justify-content: space-between; 
     align-items: center; 
@@ -361,7 +361,7 @@ body {
 .btn-cancel-reply { 
     background: var(--n-soft, #f3f4f6);
     border: none; 
-    font-size: 14px; 
+    font-size: calc(14px * var(--n-font-scale, 1));
     width: 24px; 
     height: 24px; 
     border-radius: 50%; 
@@ -393,7 +393,7 @@ body {
 
 .mention-item { 
     padding: 10px 14px; 
-    font-size: 14px; 
+    font-size: calc(14px * var(--n-font-scale, 1));
     font-weight: 700; 
     color: var(--text-main); 
     cursor: pointer; 
@@ -437,7 +437,7 @@ body {
     width: 40px; 
     height: 40px; 
     border-radius: 50%; 
-    font-size: 18px; 
+    font-size: calc(18px * var(--n-font-scale, 1));
     cursor: pointer; 
     display: flex; 
     align-items: center; 
@@ -452,7 +452,7 @@ body {
     border: 1px solid #e5e7eb; 
     border-radius: 20px; 
     outline: none; 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     background: var(--n-soft, #f3f4f6);
     font-family: inherit; 
 }
@@ -470,7 +470,7 @@ body {
     font-weight: 800; 
     border-radius: 20px; 
     cursor: pointer; 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     box-shadow: 0 4px 10px rgba(16,185,129,0.2); 
     transition: transform 0.1s; 
 }
@@ -511,7 +511,7 @@ body {
     padding: 16px; 
     background: var(--n-soft, #f3f4f6);
     border: none; 
-    font-size: 16px; 
+    font-size: calc(16px * var(--n-font-scale, 1));
     font-weight: 700; 
     border-radius: 14px; 
     margin-bottom: 10px; 
@@ -553,11 +553,11 @@ body {
     background: var(--n-surface, #fff);
 }
 
-.modal-header h3 { margin: 0; font-size: 18px; font-weight: 800; }
+.modal-header h3 { margin: 0; font-size: calc(18px * var(--n-font-scale, 1)); font-weight: 800; }
 .modal-header .btn-close { 
     background: none; 
     border: none; 
-    font-size: 20px; 
+    font-size: calc(20px * var(--n-font-scale, 1));
     cursor: pointer; 
     color: var(--text-main); 
     font-weight: bold; 
@@ -578,13 +578,13 @@ body {
     align-items: center; 
     gap: 8px; 
     cursor: pointer; 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     font-weight: 700; 
     color: var(--text-main); 
 }
 
 .settings-icon-btn .icon { 
-    font-size: 24px; 
+    font-size: calc(24px * var(--n-font-scale, 1));
     background: var(--n-soft, #f3f4f6);
     width: 50px; 
     height: 50px; 
@@ -601,7 +601,7 @@ body {
     justify-content: space-between; 
     border-bottom: 1px solid #f1f5f9; 
     font-weight: 700; 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     cursor: pointer; 
     align-items: center; 
 }
@@ -632,7 +632,7 @@ body {
 .form-group { margin-bottom: 16px; padding: 0 20px; }
 .form-group label { 
     display: block; 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     font-weight: 700; 
     margin-bottom: 8px; 
     color: var(--text-sub); 
@@ -643,7 +643,7 @@ body {
     padding: 12px; 
     border: 1px solid #e5e7eb; 
     border-radius: 12px; 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     background: var(--n-soft, #f3f4f6);
     outline: none; 
 }
@@ -671,7 +671,7 @@ body {
 }
 
 .btn-upload { 
-    font-size: 13px; 
+    font-size: calc(13px * var(--n-font-scale, 1));
     font-weight: 700; 
     background: #f1f5f9; 
     color: var(--text-main); 
@@ -697,7 +697,7 @@ body {
     display: flex; 
     align-items: center; 
     gap: 10px; 
-    font-size: 15px; 
+    font-size: calc(15px * var(--n-font-scale, 1));
     font-weight: 700; 
     cursor: pointer; 
 }
@@ -715,7 +715,7 @@ body {
     border: none; 
     padding: 14px; 
     font-weight: 800; 
-    font-size: 16px; 
+    font-size: calc(16px * var(--n-font-scale, 1));
     width: calc(100% - 40px); 
     margin: 20px; 
     border-radius: 14px; 
@@ -736,7 +736,7 @@ body {
     top: 20px; 
     right: 20px; 
     color: #fff; 
-    font-size: 24px; 
+    font-size: calc(24px * var(--n-font-scale, 1));
     font-weight: bold; 
     cursor: pointer; 
     background: rgba(0,0,0,0.6); 

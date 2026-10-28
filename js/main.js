@@ -125,6 +125,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
         if (!isCurrent()) return;
         personalSettings = data;
         window.NexusTheme?.hydrate(user.accountId, data.appearance);
+        window.NexusFontSize?.hydrate(user.accountId, data.appearance);
         if (data.modules) modules = data.modules;
         if (Array.isArray(data.order)) order = data.order.filter(key => allowedMenus.includes(key));
         allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
@@ -135,7 +136,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
         chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">${icon('chat')}</span>聊天室</div>`,
         checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">${icon('checkin')}</span>到家打卡</div>`,
         calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">${icon('calendar')}</span>行事曆</div>`,
-        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">${icon('photodump')}</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
+        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">${icon('photodump')}</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:calc(11px * var(--n-font-scale, 1)); padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
         gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">${icon('gamezone')}</span>遊戲區</div>`,
         wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">${icon('wishlist')}</span>許願牆</div>`,
         finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">${icon('finance')}</span>記帳本</div>`,
@@ -159,7 +160,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
                     <div style="display: flex; align-items: center; gap: 16px;">
                         <div class="mini-widget-icon" style="background: #e0f2fe; color: #0284c7;">${icon('chat')}</div>
                         <div>
-                            <div class="mini-widget-title" style="font-size: 16px;">群組聊天室</div>
+                            <div class="mini-widget-title" style="font-size: calc(16px * var(--n-font-scale, 1));">群組聊天室</div>
                             <div class="mini-widget-sub" style="margin-top: 2px;">點擊進入與成員保持聯繫</div>
                         </div>
                     </div>
@@ -191,7 +192,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
                         <div class="mini-widget-title">吃什麼？</div>
                     </div>
                     <div>
-                        <div class="mini-widget-value" style="font-size: 16px;">票選進行中</div>
+                        <div class="mini-widget-value" style="font-size: calc(16px * var(--n-font-scale, 1));">票選進行中</div>
                         <div class="mini-widget-sub">點擊決定下一餐</div>
                     </div>
                 </div>
@@ -206,7 +207,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
                         <div class="mini-widget-title">待辦清單</div>
                     </div>
                     <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto; padding-right:4px;">
-                        <div style="font-size: 13px; color: var(--text-sub);">連線取得中...</div>
+                        <div style="font-size: calc(13px * var(--n-font-scale, 1)); color: var(--text-sub);">連線取得中...</div>
                     </div>
                 </div>
             `;

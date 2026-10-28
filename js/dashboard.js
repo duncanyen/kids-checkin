@@ -162,7 +162,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
         chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">${icon('chat')}</span>聊天室</div>`,
         checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">${icon('checkin')}</span>到家打卡</div>`,
         calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">${icon('calendar')}</span>行事曆</div>`,
-        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">${icon('photodump')}</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
+        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">${icon('photodump')}</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:calc(11px * var(--n-font-scale, 1)); padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
         gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">${icon('gamezone')}</span>遊戲區</div>`,
         wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">${icon('wishlist')}</span>許願牆</div>`,
         finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">${icon('finance')}</span>記帳本</div>`,
@@ -189,7 +189,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
                         <div class="mini-widget-title">待辦清單</div>
                     </div>
                     <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding-right:4px;">
-                        <div style="font-size: 13px; color: var(--text-sub);">連線取得中...</div>
+                        <div style="font-size: calc(13px * var(--n-font-scale, 1)); color: var(--text-sub);">連線取得中...</div>
                     </div>
                 </div>
             `;
@@ -203,7 +203,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
                         <div class="mini-widget-icon" style="background: #fbbf24; color: white;">${icon('food')}</div>
                         <div class="mini-widget-title" style="">吃什麼？</div>
                     </div>
-                    <div class="mini-widget-value" style=" font-size: 16px; margin-top: 8px;">群組票選中</div>
+                    <div class="mini-widget-value" style=" font-size: calc(16px * var(--n-font-scale, 1)); margin-top: 8px;">群組票選中</div>
                     <div class="mini-widget-sub" style="">點擊決定下一餐</div>
                 </div>
             `;
@@ -328,8 +328,8 @@ window.checkWidgetData = function(user) {
                     html += `
                         <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-body); padding:10px 12px; border-radius:12px; border:1px solid var(--border-color);">
                             <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
-                                <span style="font-size:11px; font-weight:800; ${badgeStyle} padding:3px 8px; border-radius:8px; white-space:nowrap;">${displayDate}</span>
-                                <span style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap;">${title}</span>
+                                <span style="font-size:calc(11px * var(--n-font-scale, 1)); font-weight:800; ${badgeStyle} padding:3px 8px; border-radius:8px; white-space:nowrap;">${displayDate}</span>
+                                <span style="font-size:calc(14px * var(--n-font-scale, 1)); font-weight:700; color:var(--text-main); white-space:nowrap;">${title}</span>
                             </div>
                             <div style="display:flex; align-items:center; flex-shrink:0; margin-left:8px;">${avatarsHtml}</div>
                         </div>
@@ -338,14 +338,14 @@ window.checkWidgetData = function(user) {
                 container.innerHTML = html;
             } else {
                 container.innerHTML = `
-                    <div style="display:flex; align-items:center; justify-content:center; padding:20px; color:var(--text-sub); font-size:13px; font-weight:700; background:var(--bg-body); border-radius:12px; border:1px dashed var(--border-color);">
+                    <div style="display:flex; align-items:center; justify-content:center; padding:20px; color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); font-weight:700; background:var(--bg-body); border-radius:12px; border:1px dashed var(--border-color);">
                         ✨ 目前無待辦事項，太棒了！
                     </div>
                 `;
             }
         }, (err) => { 
             console.error("【待辦 Debug】讀取錯誤:", err); 
-            document.getElementById('todoWidgetContent').innerHTML = `<div style="color:var(--danger); font-size:13px;">讀取失敗，請確認權限</div>`;
+            document.getElementById('todoWidgetContent').innerHTML = `<div style="color:var(--danger); font-size:calc(13px * var(--n-font-scale, 1));">讀取失敗，請確認權限</div>`;
         });
     }
 
@@ -527,7 +527,7 @@ window.renderAgendaUI = function() {
                 <div class="agenda-header">
                     <div class="agenda-date">${dateTitle}</div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <div style="font-size:16px;">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
+                        <div style="font-size:calc(16px * var(--n-font-scale, 1));">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
                         <div class="agenda-count">今天有 ${validEvents.length} 個行程</div>
                     </div>
                 </div>
@@ -537,11 +537,11 @@ window.renderAgendaUI = function() {
         agendaContainer.innerHTML = `
             <div class="agenda-card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
                 <div>
-                    <div class="agenda-date" style="font-size: 15px;">${dateTitle}</div>
-                    <div style="font-size: 13px; color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
+                    <div class="agenda-date" style="font-size: calc(15px * var(--n-font-scale, 1));">${dateTitle}</div>
+                    <div style="font-size: calc(13px * var(--n-font-scale, 1)); color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
                 </div>
                 <!-- 這裡使用動態生成的 HTML 替換原本的 📅 Emoji -->
-                <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; color:var(--text-main);">${icon('calendar')}</div>
+                <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: calc(24px * var(--n-font-scale, 1)); color:var(--text-main);">${icon('calendar')}</div>
             </div>`;
     }
 };

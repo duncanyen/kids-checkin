@@ -36,7 +36,7 @@
     <div class="top-nav">
         <button class="btn-back" data-main-menu-back onclick="window.location.href='index.html'">返回主選單</button>
         <div class="page-title"><span data-ui-icon="finance"></span>記帳本</div>
-        <button aria-label="帳本設定" data-ui-icon="settings" class="btn-settings" onclick="openModal('settingsModal')" style="background:transparent; border:none; font-size:20px; cursor:pointer;"></button>
+        <button aria-label="帳本設定" data-ui-icon="settings" class="btn-settings" onclick="openModal('settingsModal')" style="background:transparent; border:none; font-size:calc(20px * var(--n-font-scale, 1)); cursor:pointer;"></button>
     </div>
 
     <!-- 頂部 Tab 切換 -->
@@ -132,7 +132,7 @@
                     <div class="summary-label" id="revYearTitle">年度累計</div>
                     <div class="summary-val exp" id="revYearExpense">支: $0</div>
                     <div class="summary-val inc require-income" id="revYearIncome">收: $0</div>
-                    <div class="summary-label require-income" style="margin-top:8px;">結餘: <span id="revYearBalance" style="color:var(--primary-color);font-size:14px;">$0</span></div>
+                    <div class="summary-label require-income" style="margin-top:8px;">結餘: <span id="revYearBalance" style="color:var(--primary-color);font-size:calc(14px * var(--n-font-scale, 1));">$0</span></div>
                 </div>
             </div>
         </div>
@@ -141,7 +141,7 @@
         <div class="review-card">
             <div class="review-card-title">🗓️ 歷史月度清單</div>
             <div class="month-list-container" id="monthlyHistoryList">
-                <div style="text-align:center; color:#999; font-size:14px;">資料載入中...</div>
+                <div style="text-align:center; color:#999; font-size:calc(14px * var(--n-font-scale, 1));">資料載入中...</div>
             </div>
         </div>
 
@@ -221,12 +221,12 @@
                 <input type="text" id="newCatEmoji" class="note-input" placeholder="例如：🐶、☕" maxlength="2">
             </div>
             <div class="input-group" style="text-align: center; margin: 15px 0;">
-                <span style="font-size:13px; color:#888;">--- 或 ---</span>
+                <span style="font-size:calc(13px * var(--n-font-scale, 1)); color:#888;">--- 或 ---</span>
             </div>
             <div class="input-group">
                 <label class="cat-form-label">上傳代表照片 (選填)</label>
                 <input type="file" id="newCatImage" accept="image/*" class="note-input" style="padding: 5px;">
-                <div style="font-size:11px; color:#999; margin-top:4px;">系統會自動壓縮，不佔用空間</div>
+                <div style="font-size:calc(11px * var(--n-font-scale, 1)); color:#999; margin-top:4px;">系統會自動壓縮，不佔用空間</div>
             </div>
             <button class="btn-save expense" id="btnSaveCustomCat">儲存類別</button>
         </div>

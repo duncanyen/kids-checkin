@@ -33,7 +33,7 @@
         document.querySelector('meta[name="theme-color"]')?.setAttribute('content',t.bg);
         window.dispatchEvent(new CustomEvent('nexus-theme-change',{detail:{id:t.id,theme:t}}));return t;
     }
-    function refresh(){const next=user()?.accountId||null;owner=next;return apply(next?cached(next)||'honey':'honey');}
+    function refresh(){window.NexusFontSize?.refresh();const next=user()?.accountId||null;owner=next;return apply(next?cached(next)||'honey':'honey');}
     function remember(accountId,id){if(!accountId||!valid(id))return false;try{localStorage.setItem(key(accountId),JSON.stringify({theme:id}));return true;}catch{return false;}}
     function hydrate(accountId,appearance){
         if(user()?.accountId!==accountId)return;owner=accountId;
@@ -43,5 +43,23 @@
     window.NexusTheme=Object.freeze({themes:catalog,valid,apply,refresh,remember,hydrate,user,get current(){return current;},get accountId(){return owner;}});
     window.addEventListener('storage',event=>{if(event.key===key(owner)||event.key==='familyCheckInUser'||event.key===null)refresh();});
     window.addEventListener('pageshow',refresh);
+    refresh();
+})();
+
+/* Font scale shares account identity with themes, but uses an independent cache. */
+(() => {
+    const values = [80,90,100,110,120], root = document.documentElement;
+    let current = 100;
+    const user = () => window.NexusTheme.user();
+    const valid = n => values.includes(n);
+    const key = id => `nexus.font-size.v1:${id}`;
+    function cached(id) { try { const n = JSON.parse(localStorage.getItem(key(id))); return valid(n) ? n : 100; } catch { return 100; } }
+    function apply(n) { current = valid(n) ? n : 100; root.style.setProperty('--n-font-scale', String(current/100)); root.dataset.nexusFontScale = String(current); }
+    function refresh() { const id = user()?.accountId; apply(id ? cached(id) : 100); }
+    function remember(id,n) { if (!id || !valid(n)) return false; try { localStorage.setItem(key(id),JSON.stringify(n));return true; } catch { return false; } }
+    function hydrate(id,appearance) { if (user()?.accountId !== id) return; const n = valid(appearance?.fontScale) ? appearance.fontScale : cached(id); remember(id,n); apply(n); }
+    window.NexusFontSize = Object.freeze({values,valid,user,apply,refresh,remember,hydrate,get current(){return current;}});
+    window.addEventListener('pageshow',refresh);
+    window.addEventListener('storage',e=>{if(e.key === null || e.key === key(user()?.accountId) || e.key === 'familyCheckInUser')refresh();});
     refresh();
 })();

@@ -31,26 +31,26 @@
         .container { max-width: 600px; margin: 0 auto; }
         
         /* 管理員新增按鈕 */
-        .btn-add-notice { display: none; background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 20px; font-size: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .btn-add-notice { display: none; background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 20px; font-size: calc(16px * var(--n-font-scale, 1)); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
         .btn-add-notice:active { transform: scale(0.98); }
 
         /* 通知卡片 */
         .notice-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; position: relative; }
         .notice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .notice-date { font-size: 13px; font-weight: 800; color: var(--primary-dark); background: #d1fae5; padding: 4px 10px; border-radius: 20px; }
+        .notice-date { font-size: calc(13px * var(--n-font-scale, 1)); font-weight: 800; color: var(--primary-dark); background: #d1fae5; padding: 4px 10px; border-radius: 20px; }
         .notice-actions { display: none; gap: 8px; }
-        .btn-action { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-sub); padding: 4px; border-radius: 4px; }
+        .btn-action { background: none; border: none; cursor: pointer; font-size: calc(14px * var(--n-font-scale, 1)); color: var(--text-sub); padding: 4px; border-radius: 4px; }
         .btn-action:hover { background: var(--n-soft, #f3f4f6); color: var(--text-main); }
-        .notice-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; line-height: 1.4; }
-        .notice-content { font-size: 15px; color: var(--n-text, #292c30); line-height: 1.6; white-space: pre-wrap; }
+        .notice-title { font-size: calc(18px * var(--n-font-scale, 1)); font-weight: 800; color: var(--text-main); margin-bottom: 8px; line-height: 1.4; }
+        .notice-content { font-size: calc(15px * var(--n-font-scale, 1)); color: var(--n-text, #292c30); line-height: 1.6; white-space: pre-wrap; }
         .empty-state { text-align: center; color: var(--text-sub); padding: 40px 0; font-weight: 600; display: none; }
 
         /* 表單區塊 */
         .form-section { display: none; background: var(--bg-card); border-radius: var(--radius-md); padding: 20px; border: 2px dashed var(--primary); margin-bottom: 20px; }
-        .form-title { margin-top: 0; color: var(--primary-dark); font-size: 18px; margin-bottom: 16px; }
+        .form-title { margin-top: 0; color: var(--primary-dark); font-size: calc(18px * var(--n-font-scale, 1)); margin-bottom: 16px; }
         .form-group { margin-bottom: 16px; }
-        .form-label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-        .form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 15px; font-family: inherit; box-sizing: border-box; }
+        .form-label { display: block; font-size: calc(14px * var(--n-font-scale, 1)); font-weight: 700; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: calc(15px * var(--n-font-scale, 1)); font-family: inherit; box-sizing: border-box; }
         .form-control:focus { outline: none; border-color: var(--primary); }
         .form-actions { display: flex; gap: 10px; margin-top: 20px; }
         .btn-cancel { flex: 1; padding: 12px; background: var(--n-soft, #f3f4f6); color: var(--n-text, #292c30); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 700; cursor: pointer; }
@@ -62,7 +62,7 @@
 <body>
     <div class="top-nav">
         <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回首頁</button>
-        <span style="font-weight: 900; font-size: 18px; color: var(--primary-dark);">系統通知 & 改版紀錄</span>
+        <span style="font-weight: 900; font-size: calc(18px * var(--n-font-scale, 1)); color: var(--primary-dark);">系統通知 & 改版紀錄</span>
     </div>
 
     <div class="container">
