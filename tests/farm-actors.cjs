@@ -74,7 +74,7 @@ const {execFileSync}=require('node:child_process');
   await p.waitForTimeout(180);
   await p.evaluate(kind=>{const a=window.__farmGame.scene.getScene('VisitScene')[kind];if(a.y>=window.__hitPosition.y)throw Error('Attack stopped forward movement');},kind);
   if(process.env.FARM_SCREENSHOTS)await p.screenshot({path:process.env.FARM_SCREENSHOTS+'/'+kind+'-hit.png',fullPage:true});
-  await p.waitForTimeout(500);
+  await p.waitForFunction(kind=>window.__farmGame.scene.getScene('VisitScene')[kind].anims.currentAnim.key===kind+'_walk',kind);
   await p.evaluate(kind=>{const a=window.__farmGame.scene.getScene('VisitScene')[kind];if(a.anims.currentAnim.key!==kind+'_walk'||a.moveTween.isPaused())throw Error('Stun did not recover');},kind);
   await p.evaluate(({kind,cap})=>{
    const s=window.__farmGame.scene.getScene('VisitScene'),a=s[kind];window.__beforeTransactions=window.__transactionCount||0;

@@ -30,6 +30,7 @@ const {execFileSync}=require('node:child_process');
    await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('VisitScene',{targetAccountId:'render-test',targetName:'Test'}));
    await p.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.hensGroup?.length===2);
   }
+  await p.waitForFunction(key=>!!window.__farmGame.scene.getScene(key)?.hensGroup?.[0]?.walkTween,key);
   const result=await p.evaluate(key=>{
    const g=window.__farmGame,s=g.scene.getScene(key),old=s.hensGroup.slice();
    old[0].walkTween.setTimeScale(100);

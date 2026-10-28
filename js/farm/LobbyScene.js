@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { readFarm } from '../live-reads.js';
 import { villageButton, selectVillageButton, villageText } from './village-ui.js';
@@ -38,7 +39,7 @@ export default class LobbyScene extends Phaser.Scene {
             if (Math.abs(dx) > 65 && Math.abs(dy) < 60) this.showPublic();
             this.swipeStart = null;
         });
-        this.events.once('shutdown', () => { this.lobbyToken = null; this.requestId++; this.searchResizeObserver.disconnect(); this.searchRoot.remove(); });
+        onSceneExit(this, () => { this.lobbyToken = null; this.requestId++; this.searchResizeObserver.disconnect(); this.searchRoot.remove(); });
         this.loadNeighbors();
     }
 

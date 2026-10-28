@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES } from './item-categories.js';
 import { addPoultryGuide } from './poultry-guide.js';
@@ -33,7 +34,7 @@ export default class ShopScene extends Phaser.Scene {
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5);
         this.initGlobalData();
 
-        this.events.on('shutdown', () => { 
+        onSceneExit(this, () => {
             this.registry.events.off('changedata-myFarmData', this.onFarmDataChanged, this);
         });
     }

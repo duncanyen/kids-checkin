@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
 import { configureFarmViewport } from './viewport.js';
 import { visitorNotice } from './mail-store.js';
@@ -72,7 +73,7 @@ export default class VisitScene extends Phaser.Scene {
         this.createConfirmDialog();
         this.initFirebase();
 
-        this.events.once('shutdown', () => {
+        onSceneExit(this, () => {
             this.visitToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy();
@@ -99,9 +100,10 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     avoidPredators() {
-        if (!getThreatZones(this).length) return;
+        const zones = getThreatZones(this);
+        if (!zones.length) return;
         for (const hen of this.hensGroup || []) {
-            if (!hen.active || henRouteIsSafe(this, hen)) continue;
+            if (!hen.active || henRouteIsSafe(this, hen, zones)) continue;
             this.tweens.killTweensOf(hen);
             hen.walkTimer?.remove();
             this.wanderSingleHen(hen, true);

@@ -1,8 +1,10 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { farmView } from './viewport.js';
 import { getFarmMapLayout } from './scenery.js';
 import { atmosphereAt, WEATHER, villageSeed } from './atmosphere-core.js';
 
 function glow(graphics, x, y, radius, color, strength) {
+    if (strength <= 0) return; // Exactly transparent: no visible output to tessellate.
     for (let i = 8; i >= 1; i--) graphics.fillStyle(color, strength * .035 * (9 - i)).fillCircle(x, y, radius * i / 8);
 }
 export function attachFarmAtmosphere(scene, { groupId }) {
@@ -102,7 +104,7 @@ export function attachFarmAtmosphere(scene, { groupId }) {
     scene.farmAtmosphere = { groupId, get state() { return state; }, refresh };
     scene.events.on('update', tick);
     tick();
-    scene.events.once('shutdown', () => {
+    onSceneExit(scene, () => {
         stopped = true;
         scene.events.off('update', tick);
         document.removeEventListener('visibilitychange', refresh); window.removeEventListener('pageshow', refresh);

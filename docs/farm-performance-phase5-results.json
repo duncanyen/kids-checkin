@@ -1,0 +1,431 @@
+{
+  "baselineCommit": "699cd54",
+  "before": {
+    "initial": {
+      "version": "3.60.0",
+      "objects": 67,
+      "textures": 39,
+      "firstEnterMs": 1447
+    },
+    "samples": [
+      {
+        "shopShutdown": 2,
+        "warehouseShutdown": 2,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 2
+      },
+      {
+        "shopShutdown": 3,
+        "warehouseShutdown": 3,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 3
+      },
+      {
+        "shopShutdown": 4,
+        "warehouseShutdown": 4,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 4
+      },
+      {
+        "shopShutdown": 5,
+        "warehouseShutdown": 5,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 5
+      },
+      {
+        "shopShutdown": 6,
+        "warehouseShutdown": 6,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 6
+      },
+      {
+        "shopShutdown": 7,
+        "warehouseShutdown": 7,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 7
+      },
+      {
+        "shopShutdown": 8,
+        "warehouseShutdown": 8,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 8
+      },
+      {
+        "shopShutdown": 9,
+        "warehouseShutdown": 9,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 9
+      },
+      {
+        "shopShutdown": 10,
+        "warehouseShutdown": 10,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 10
+      },
+      {
+        "shopShutdown": 11,
+        "warehouseShutdown": 11,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 11
+      },
+      {
+        "shopShutdown": 12,
+        "warehouseShutdown": 12,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 12
+      },
+      {
+        "shopShutdown": 13,
+        "warehouseShutdown": 13,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 13
+      },
+      {
+        "shopShutdown": 14,
+        "warehouseShutdown": 14,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 14
+      },
+      {
+        "shopShutdown": 15,
+        "warehouseShutdown": 15,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 15
+      },
+      {
+        "shopShutdown": 16,
+        "warehouseShutdown": 16,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 16
+      },
+      {
+        "shopShutdown": 17,
+        "warehouseShutdown": 17,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 17
+      },
+      {
+        "shopShutdown": 18,
+        "warehouseShutdown": 18,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 18
+      },
+      {
+        "shopShutdown": 19,
+        "warehouseShutdown": 19,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 19
+      },
+      {
+        "shopShutdown": 20,
+        "warehouseShutdown": 20,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 20
+      },
+      {
+        "shopShutdown": 21,
+        "warehouseShutdown": 21,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 21
+      }
+    ],
+    "spriteCheck": {
+      "sameSprite": false,
+      "sameTimer": false
+    },
+    "soakMs": 5000,
+    "frames": {
+      "count": 91,
+      "median": 54.89999997615814,
+      "p95": 66.5,
+      "p99": 76.60000002384186,
+      "averageFps": 18.326083454076663
+    },
+    "errors": [],
+    "destroyed": {
+      "event": true,
+      "canvasRemoved": true,
+      "running": false,
+      "atmosphere": "true"
+    }
+  },
+  "after": {
+    "initial": {
+      "version": "3.60.0",
+      "objects": 67,
+      "textures": 39,
+      "firstEnterMs": 1447
+    },
+    "samples": [
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      },
+      {
+        "shopShutdown": 1,
+        "warehouseShutdown": 1,
+        "registry": 1,
+        "objects": 67,
+        "timers": 1,
+        "listeners": 1,
+        "subscriptions": 1
+      }
+    ],
+    "spriteCheck": {
+      "sameSprite": true,
+      "sameTimer": true
+    },
+    "soakMs": 5000,
+    "frames": {
+      "count": 104,
+      "median": 45.5,
+      "p95": 61.80000001192093,
+      "p99": 68.60000002384186,
+      "averageFps": 20.837507513524343
+    },
+    "errors": [],
+    "destroyed": {
+      "event": true,
+      "canvasRemoved": true,
+      "running": false,
+      "atmosphere": "false"
+    }
+  },
+  "environment": "Headless Chromium, real Phaser 3.60.0, local assets, isolated Firestore fixture; mailbox stubbed; 5 second frame sample",
+  "notMeasured": [
+    "15 minute soak",
+    "physical iPhone Safari/iOS PWA/Android",
+    "GPU load",
+    "heap retention",
+    "Long Tasks",
+    "production Firestore reads/writes",
+    "weak network first entry"
+  ]
+}

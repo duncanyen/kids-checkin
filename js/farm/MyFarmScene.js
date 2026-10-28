@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
 import { isFarmSave, copyFarmSave } from './save-store.js';
 import { configureFarmViewport } from './viewport.js';
@@ -22,6 +23,7 @@ export default class MyFarmScene extends Phaser.Scene {
         configureFarmViewport(this);
         const cx = 195;
         this.farmData = null;
+        this.henVisualKey = null;
         this.isHenSitting = false;
         this.emptyClickCount = 0;
         this.isHarvesting = false;
@@ -69,11 +71,12 @@ export default class MyFarmScene extends Phaser.Scene {
         this.initFirebase();
         this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
 
-        this.events.once('shutdown', () => {
+        onSceneExit(this, () => {
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
+            this.farmInterval = null;
             if (this.cleanFlashTween) this.cleanFlashTween.stop();
             this.hensGroup.forEach(hen => {
                 hen.walkTimer?.remove();
@@ -93,9 +96,10 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     avoidPredators() {
-        if (!getThreatZones(this).length) return;
+        const zones = getThreatZones(this);
+        if (!zones.length) return;
         for (const hen of this.hensGroup || []) {
-            if (!hen.active || henRouteIsSafe(this, hen)) continue;
+            if (!hen.active || henRouteIsSafe(this, hen, zones)) continue;
             this.tweens.killTweensOf(hen);
             hen.walkTimer?.remove();
             this.wanderSingleHen(hen, true);
@@ -129,7 +133,13 @@ export default class MyFarmScene extends Phaser.Scene {
             this.farmData.coopLevel ||= 1;
             this.updateUI();
             this.renderCleanlinessVisual();
-            this.syncHens();
+            // Coins and inventory updates do not replace moving hens. Include
+            // illness age so a fresh snapshot can still update sick/skull art.
+            const now = Date.now();
+            const key = JSON.stringify([this.farmData.coopLevel, this.farmData.hensState,
+                this.farmData.hensState.map(h => h.isSick && h.sickTimestamp
+                    ? Math.floor((now - h.sickTimestamp) / 86400000) : 0)]);
+            if (key !== this.henVisualKey || this.farmData.hensState.some(h => h.isSick && h.sickTimestamp && now - h.sickTimestamp > 48 * 3600000)) { this.henVisualKey = key; this.syncHens(); }
             this.startEggTimer();
         };
         const showState = state => {
@@ -399,9 +409,9 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     startEggTimer() {
-        if (this.farmInterval) clearInterval(this.farmInterval);
+        if (this.farmInterval) return;
         const tick = async () => {
-            if (!this.scene.isActive() || !this.timerText?.active || !this.farmData) return;
+            if (document.hidden || !this.scene.isActive() || !this.timerText?.active || !this.farmData) return;
             const connection = this.registry.get('farmLoadState');
             if (connection && connection.phase !== 'ready') { this.timerText.setText(connection.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…'); return; }
             const now = Date.now(), status = nextEggStatus(this.farmData, now);

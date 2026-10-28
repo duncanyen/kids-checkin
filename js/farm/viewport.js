@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 // Keep the existing HUD/character units while the canvas fills its container.
 export const FARM_WIDTH = 390;
 export const FARM_HEIGHT = 844;
@@ -20,5 +21,5 @@ export function configureFarmViewport(scene) {
     };
     resize();
     scene.scale.on('resize', resize);
-    scene.events.once('shutdown', () => scene.scale.off('resize', resize));
+    onSceneExit(scene, () => scene.scale.off('resize', resize));
 }

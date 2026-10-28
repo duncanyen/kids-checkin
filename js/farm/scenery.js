@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { farmView } from './viewport.js';
 import { chooseHenPosition, getThreatZones } from './hen-navigation.js';
 
@@ -20,7 +21,7 @@ export function addFarmBackground(scene, field = false) {
     };
     resize();
     scene.events.on('farm-viewport-resize', resize);
-    scene.events.once('shutdown', () => scene.events.off('farm-viewport-resize', resize));
+    onSceneExit(scene, () => scene.events.off('farm-viewport-resize', resize));
     return image;
 }
 

@@ -1,5 +1,5 @@
+import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
-import { watchFarm } from '../live-reads.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
 import { BREEDS, poultryState, feedPoultry, coopCapacity } from './poultry.js';
 import { addFarmBackground } from './scenery.js';
@@ -57,7 +57,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
         this.initFirebase();
-        this.events.on('shutdown', () => { if (this.unsubscribe) this.unsubscribe(); });
+        onSceneExit(this, () => { if (this.unsubscribe) this.unsubscribe(); });
     }
 
     createActionPanel() {
@@ -85,14 +85,23 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     initFirebase() {
-        this.unsubscribe = watchFarm(myFarmRef, (docSnap) => {
-            if (docSnap.exists() && docSnap.data().farm) {
-                this.farmData = docSnap.data().farm;
-                const usedSpace = getUsedSpace(this.farmData);
-                this.capacityText.setText(`容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
-                this.renderWarehouseItems();
-            }
-        });
+        let closed = false;
+        const apply = farm => {
+            if (closed || !farm) return;
+            this.farmData = farm;
+            this.capacityText.setText(`容量: ${getUsedSpace(farm)}/${farm.warehouseLimit || 10}`);
+            this.renderWarehouseItems();
+        };
+        const changed = (_parent, farm) => apply(farm);
+        const first = (_parent, key, farm) => { if (key === 'myFarmData') apply(farm); };
+        this.registry.events.on('changedata-myFarmData', changed);
+        this.registry.events.on('setdata', first);
+        apply(this.registry.get('myFarmData'));
+        this.unsubscribe = () => {
+            closed = true;
+            this.registry.events.off('changedata-myFarmData', changed);
+            this.registry.events.off('setdata', first);
+        };
     }
 
     renderWarehouseItems() {

@@ -1,3 +1,4 @@
+import { onSceneExit } from './scene-cleanup.js';
 const ITEMS = {
     worms: { name: '菜蟲', body: 0x9ecb58, light: 0xdaec9c, edge: 0x486a32, ink: '#44652c' },
     earthworms: { name: '蚯蚓', body: 0xde9a87, light: 0xffd4b5, edge: 0x855244, ink: '#995c45' },
@@ -36,7 +37,7 @@ function star(graphics, color) {
 export class GardenFeedback {
     constructor(scene) {
         this.scene = scene; this.alive = true; this.queue = []; this.busy = false; this.roots = new Set();
-        scene.events.once('shutdown', () => {
+        onSceneExit(scene, () => {
             this.alive = false; this.queue = [];
             [...this.roots].forEach(root=>this.remove(root));
         });

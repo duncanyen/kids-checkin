@@ -84,8 +84,7 @@ export function chooseHenPosition(scene, area) {
     return candidates.sort((a, b) => clearance(b) - clearance(a))[0];
 }
 
-export function henRouteIsSafe(scene, hen) {
-    const zones = getThreatZones(scene);
+export function henRouteIsSafe(scene, hen, zones = getThreatZones(scene)) {
     let start = { x: hen.x, y: hen.y };
     const path = hen.walkPath || [];
     if (!path.length) return pointIsSafe(start, zones);
