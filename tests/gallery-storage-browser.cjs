@@ -6,6 +6,8 @@ const sdk = `
 window.__photos={writes:[],uploads:[],deletes:[],rows:[{id:'legacy',groupId:'group-a',uploader:'Alice',imageUrl:'https://legacy.test/photo.jpg',comments:[],likes:[]}]};
 const t=window.__photos;
 export const collection=(_,path)=>({path}),doc=(ref,...parts)=>({id:parts.at(-1)||'new-post',path:parts.length?parts.join('/'):ref.path+'/new-post'});
+export const limit=()=>({}),startAfter=()=>({}),endAt=()=>({});
+export const getDocs=async()=>{const s=snapshot();const docs=[];s.forEach(d=>docs.push(d));return {...s,docs};};
 export const query=(ref,...filters)=>ref,where=()=>({}),orderBy=()=>({}),serverTimestamp=()=>1,arrayUnion=()=>[],arrayRemove=()=>[];
 const snapshot=()=>({empty:!t.rows.length,forEach:cb=>t.rows.forEach(({id,...data})=>cb({id,data:()=>data}))});
 let listener;

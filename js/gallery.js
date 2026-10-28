@@ -1,5 +1,5 @@
 import {
-    collection, addDoc, query, orderBy, onSnapshot, where,
+    collection, addDoc, query, orderBy, onSnapshot, where, getDocs, limit, startAfter, endAt,
     serverTimestamp, doc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { db } from './firebase-config.js';
@@ -57,30 +57,112 @@ window.onload = async function() {
     localStorage.setItem('homebase_photodump_last_read', Date.now().toString());
 };
 
-function listenToGallery() {
-    const q = query(
-        collection(db, "photos"), 
-        where("groupId", "==", currentGroupId), 
-        orderBy("timestamp", "desc")
-    );
-
-    onSnapshot(q, (snapshot) => {
-        allPhotosData = [];
-        if (snapshot.empty) {
-            feedContainer.innerHTML = '<div style="text-align:center; padding:50px; color:var(--text-sub); font-weight:600;">相簿空空的，趕快點擊右下角發佈第一張照片吧！</div>';
-            updateUnreadBadge([]);
-            return;
-        }
-        snapshot.forEach((docSnap) => {
-            allPhotosData.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        renderFeed();
-        updateUnreadBadge(allPhotosData);
-    }, (error) => {
-        console.error("載入相簿失敗：", error);
-        feedContainer.innerHTML = '<div style="text-align:center; padding:30px; color:red;">載入失敗，請檢查網路連線。</div>';
-    });
+// Fixed cursor ranges keep realtime updates without a listener per document.
+const PAGE_SIZE = 15;
+const posts = new Map(), cards = new Map();
+let ranges = [], subscriptions = [], cursor = null, loading = false, exhausted = false;
+let generation = 0, observer = null, active = false, liveRetry = false;
+const paging = document.createElement('div');
+paging.className = 'gallery-paging';
+const pagingButton = document.createElement('button');
+pagingButton.type = 'button';
+pagingButton.addEventListener('click', () => {
+    if (liveRetry) { liveRetry = false; pauseGallery(); resumeGallery(); }
+    else loadNextPage();
+});
+paging.append(pagingButton);
+feedContainer.after(paging);
+function baseQuery(...constraints) {
+    return query(collection(db, 'photos'), where('groupId', '==', currentGroupId),
+        orderBy('timestamp', 'desc'), ...constraints);
 }
+function pagingState(message) {
+    pagingButton.textContent = message || (exhausted ? '已載入所有貼文' : '載入更多');
+    pagingButton.disabled = loading || exhausted;
+}
+function subscribeRange(range, token) {
+    const constraints = range.after ? [startAfter(range.after)] : [];
+    if (range.end) constraints.push(endAt(range.end));
+    const stop = onSnapshot(baseQuery(...constraints), snapshot => {
+        if (!active || token !== generation) return;
+        const next = new Set();
+        snapshot.forEach(d => { next.add(d.id); posts.set(d.id, {id:d.id, ...d.data()}); });
+        const previousIds = range.ids;
+        // A cache-only snapshot can be incomplete after restore. Keep visible
+        // records until a server snapshot confirms their removal.
+        range.ids = snapshot.metadata?.fromCache ? new Set([...previousIds, ...next]) : next;
+        for (const id of previousIds) if (!snapshot.metadata?.fromCache && !next.has(id) && !ranges.some(r=>r.ids.has(id))) posts.delete(id);
+        syncFeed();
+    }, error => {
+        if (!active || token !== generation) return;
+        console.error('相簿即時更新失敗', error);
+        pagingButton.disabled = false;
+        pagingButton.textContent = '即時更新中斷，點此重新連線';
+        liveRetry = true;
+    });
+    subscriptions.push(stop);
+}
+async function loadNextPage() {
+    if (!active || loading || exhausted) return;
+    loading = true; pagingState('載入中…');
+    const token = generation, after = cursor;
+    let notice = '';
+    try {
+        const snapshot = await getDocs(baseQuery(...(after ? [startAfter(after)] : []), limit(PAGE_SIZE)));
+        if (!active || token !== generation) return;
+        const docs = snapshot.docs;
+        // An empty initial group still needs a live head. A nonempty tail is
+        // bounded by the last fetched document, including equal timestamps by ID.
+        if (docs.length || !ranges.length) {
+            const range = {after, end:docs.at(-1) || null, ids:new Set(docs.map(d=>d.id))};
+            ranges.push(range);
+            docs.forEach(d => posts.set(d.id, {id:d.id, ...d.data()}));
+            if (docs.length) cursor = docs.at(-1);
+            subscribeRange(range, token);
+        }
+        exhausted = !snapshot.metadata?.fromCache && docs.length < PAGE_SIZE;
+        if (snapshot.metadata?.fromCache) notice = '目前顯示快取資料，點此重試載入更多';
+        syncFeed();
+    } catch (error) {
+        if (active && token === generation) {
+            console.error('載入相簿失敗：', error);
+            if (!posts.size) feedContainer.textContent = '載入失敗，請檢查網路連線並點下方重試。';
+            pagingState('載入失敗，點此重試');
+        }
+    } finally {
+        if (token === generation) {
+            loading = false;
+            if (!liveRetry && !pagingButton.textContent.includes('失敗')) pagingState(notice);
+            else pagingButton.disabled = false;
+        }
+    }
+}
+function pauseGallery() {
+    active = false; generation++; loading = false;
+    subscriptions.splice(0).forEach(stop=>stop());
+    observer?.disconnect(); observer = null;
+}
+function resumeGallery() {
+    if (active || !currentUser || !currentGroupId) return;
+    // A restored document must never resume the previous group's subscriptions.
+    const saved = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+    if (localStorage.getItem('lastGroupId') !== currentGroupId || JSON.parse(saved || 'null')?.accountId !== currentUser.accountId) {
+        window.location.replace('index.html'); return;
+    }
+    active = true; const token = ++generation;
+    ranges.forEach(range=>subscribeRange(range, token));
+    if ('IntersectionObserver' in window) {
+        observer = new IntersectionObserver(entries=>{
+            if (entries.some(e=>e.isIntersecting)) loadNextPage();
+        }, {rootMargin:'400px'});
+        observer.observe(paging);
+    }
+    if (!ranges.length) loadNextPage();
+    else pagingState();
+}
+window.addEventListener('pagehide', pauseGallery);
+window.addEventListener('pageshow', event=>{if(event.persisted) resumeGallery();});
+function listenToGallery() { resumeGallery(); }
 
 function updateUnreadBadge(photos) {
     const lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
@@ -101,28 +183,77 @@ function updateUnreadBadge(photos) {
 
 window.changeSortMethod = function(method) { currentSort = method; renderFeed(); };
 
-function renderFeed() {
-    feedContainer.innerHTML = '';
-    window.viewerQueue = []; 
-    let globalImageIndex = 0;
-
-    let sortedList = [...allPhotosData];
-    if (currentSort === 'likes') {
-        sortedList.sort((a, b) => ((b.likes?.length||0) - (a.likes?.length||0)));
-    } else if (currentSort === 'comments') {
-        sortedList.sort((a, b) => ((b.comments?.length||0) - (a.comments?.length||0)));
-    } else {
-        sortedList.sort((a, b) => ((b.timestamp?.toDate?.()?.getTime()||0) - (a.timestamp?.toDate?.()?.getTime()||0)));
-    }
-
-    sortedList.forEach((photo) => {
-        renderPhotoCard(photo.id, photo, globalImageIndex);
-        const images = photo.imageUrls || (photo.imageUrl ? [photo.imageUrl] : []);
-        images.forEach(img => { window.viewerQueue.push(img); globalImageIndex++; });
-    });
+function syncFeed() {
+    allPhotosData = [...posts.values()];
+    renderFeed(); updateUnreadBadge(allPhotosData);
 }
+function renderFeed() {
+    window.viewerQueue = [];
+    let globalImageIndex = 0;
+    const sortedList = [...allPhotosData];
+    sortedList.sort((a,b)=>{
+        const score = currentSort === 'likes' ? (b.likes?.length||0)-(a.likes?.length||0)
+            : currentSort === 'comments' ? (b.comments?.length||0)-(a.comments?.length||0) : 0;
+        return score || (b.timestamp?.toMillis?.() || b.timestamp?.toDate?.()?.getTime() || 0)
+            -(a.timestamp?.toMillis?.() || a.timestamp?.toDate?.()?.getTime() || 0) || b.id.localeCompare(a.id);
+    });
+    if (!cards.size) feedContainer.replaceChildren();
+    for (const [id, entry] of cards) if (!posts.has(id)) { entry.card.remove(); cards.delete(id); delete window.replyState[id]; }
+    let previous = null;
+    const viewedUrl = photoViewerModal?.style.display === 'flex' ? viewerImage.getAttribute('src') : null;
+    for (const photo of sortedList) {
+        const signature = JSON.stringify(photo);
+        let entry = cards.get(photo.id);
+        if (!entry) {
+            const card = renderPhotoCard(photo.id, photo, globalImageIndex);
+            entry = {card, signature}; cards.set(photo.id, entry);
+        } else if (signature !== entry.signature) {
+            // Patch only changed regions; image nodes, draft inputs and carousel
+            // scroll positions survive likes/comments and unrelated updates.
+            const imagesChanged = JSON.stringify(entry.images) !== JSON.stringify(photo.imageUrls || (photo.imageUrl ? [photo.imageUrl] : []));
+            const fresh = renderPhotoCard(photo.id, photo, globalImageIndex, !imagesChanged);
+            for (const selector of ['.card-caption','.interaction-bar']) {
+                const old = entry.card.querySelector(selector), next = fresh.querySelector(selector);
+                if (old?.outerHTML === next?.outerHTML) continue;
+                if (old && next) old.replaceWith(next);
+                else if (old) old.remove();
+                else if (next) entry.card.querySelector('.interaction-bar').before(next);
+            }
+            const oldComments = entry.card.querySelector('.comments-list'), newComments = fresh.querySelector('.comments-list');
+            // Compare comments individually so appending a reply preserves existing nodes.
+            Array.from(newComments.children).forEach((node,index)=>{
+                const existing = oldComments.children[index];
+                if (!existing) oldComments.append(node.cloneNode(true));
+                else if (existing.outerHTML !== node.outerHTML) existing.replaceWith(node.cloneNode(true));
+            });
+            while (oldComments.children.length > newComments.children.length) oldComments.lastElementChild.remove();
+            if (imagesChanged)
+                entry.card.querySelector('.photo-carousel').replaceWith(fresh.querySelector('.photo-carousel'));
+            const name = entry.card.querySelector('.uploader-name'), time = entry.card.querySelector('.upload-time');
+            name.textContent = photo.uploader;
+            time.textContent = fresh.querySelector('.upload-time').textContent;
+            const avatar = entry.card.querySelector('.uploader-avatar');
+            const avatarUrl = photo.uploader === currentUser.name && currentUser.avatar ? currentUser.avatar
+                : photo.uploaderAvatar || `https://ui-avatars.com/api/?name=${photo.uploader}&background=10b981&color=fff`;
+            if (avatar.getAttribute('src') !== avatarUrl) avatar.src = avatarUrl;
+            entry.signature = signature;
+        }
+        entry.images = photo.imageUrls || (photo.imageUrl ? [photo.imageUrl] : []);
+        entry.card.querySelectorAll('.card-image').forEach((img,i)=>img.onclick=()=>window.openPhotoViewer(globalIndex+i));
+        const globalIndex = globalImageIndex;
+        const expected = previous ? previous.nextSibling : feedContainer.firstChild;
+        if (expected !== entry.card) feedContainer.insertBefore(entry.card, expected);
+        previous = entry.card;
+        entry.images.forEach(img=>{window.viewerQueue.push(img); globalImageIndex++;});
+    }
+    if (viewedUrl && window.viewerQueue.includes(viewedUrl)) currentViewerIndex = window.viewerQueue.indexOf(viewedUrl);
+    if (!sortedList.length) feedContainer.textContent = '相簿空空的，趕快點擊右下角發佈第一張照片吧！';
+}
+feedContainer.addEventListener('keypress', event=>{
+    if (event.key === 'Enter' && event.target.matches('.comment-input')) window.submitComment(event.target.id.slice(6));
+});
 
-function renderPhotoCard(photoId, data, startGlobalIndex) {
+function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
     let timeStr = "剛才";
     if (data.timestamp?.toDate) {
         const d = data.timestamp.toDate();
@@ -138,10 +269,10 @@ function renderPhotoCard(photoId, data, startGlobalIndex) {
 
     const images = data.imageUrls || (data.imageUrl ? [data.imageUrl] : []);
     let imagesHtml = `<div class="photo-carousel">`;
-    images.forEach((imgUrl, i) => {
+    (skipMedia ? [] : images).forEach((imgUrl, i) => {
         const currentImgIndex = startGlobalIndex + i;
         const counterHtml = images.length > 1 ? `<div class="img-counter">${i + 1} / ${images.length}</div>` : '';
-        imagesHtml += `<div class="carousel-item-wrapper"><img src="${imgUrl}" class="card-image" onclick="window.openPhotoViewer(${currentImgIndex})">${counterHtml}</div>`;
+        imagesHtml += `<div class="carousel-item-wrapper"><img src="${imgUrl}" loading="lazy" decoding="async" class="card-image" onclick="window.openPhotoViewer(${currentImgIndex})">${counterHtml}</div>`;
     });
     imagesHtml += `</div>`;
 
@@ -184,7 +315,7 @@ function renderPhotoCard(photoId, data, startGlobalIndex) {
     card.className = 'photo-card';
     card.innerHTML = `
         <div class="card-header">
-            <img src="${displayAvatar}" class="uploader-avatar">
+            <img ${skipMedia ? '' : `src="${displayAvatar}"`} loading="lazy" decoding="async" width="40" height="40" class="uploader-avatar">
             <div class="uploader-info"><div class="uploader-name">${data.uploader}</div><div class="upload-time">${timeStr}</div></div>
             ${delBtnHtml}
         </div>
@@ -206,8 +337,7 @@ function renderPhotoCard(photoId, data, startGlobalIndex) {
                 <button class="btn-comment" onclick="window.submitComment('${photoId}')">留言</button>
             </div>
         </div>`;
-    feedContainer.appendChild(card);
-    document.getElementById(`input-${photoId}`).addEventListener('keypress', (e) => { if (e.key === 'Enter') window.submitComment(photoId); });
+    return card;
 }
 
 window.setupReply = function(photoId, targetName) {
@@ -220,11 +350,13 @@ window.setupReply = function(photoId, targetName) {
 window.cancelReply = function(photoId) { window.replyState[photoId] = null; document.getElementById(`reply-indicator-${photoId}`).style.display = 'none'; };
 
 window.toggleLike = async function(photoId, hasLiked) {
+    if (posts.get(photoId)?.groupId !== currentGroupId) return;
     const photoRef = doc(db, "photos", photoId);
     hasLiked ? await updateDoc(photoRef, { likes: arrayRemove(currentUser.name) }) : await updateDoc(photoRef, { likes: arrayUnion(currentUser.name) });
 };
 
 window.submitComment = async function(photoId) {
+    if (posts.get(photoId)?.groupId !== currentGroupId) return;
     const inputField = document.getElementById(`input-${photoId}`);
     const text = inputField.value.trim();
     if (!text) return;
@@ -240,9 +372,8 @@ window.deleteComment = async function(photoId, commentIndex) {
     if (!confirm("確定要刪除這則留言嗎？")) return;
     const targetPhoto = allPhotosData.find(p => p.id === photoId);
     if (targetPhoto && targetPhoto.comments) {
-        let updatedComments = [...targetPhoto.comments];
-        updatedComments.splice(commentIndex, 1);
-        await updateDoc(doc(db, "photos", photoId), { comments: updatedComments });
+        const comment = targetPhoto.comments[commentIndex];
+        if (comment) await updateDoc(doc(db, "photos", photoId), { comments: arrayRemove(comment) });
     }
 };
 
@@ -371,13 +502,15 @@ const drawModal = document.getElementById('drawingBoardModal');
 const drawCanvas = document.getElementById('drawCanvas');
 const ctx = drawCanvas.getContext('2d', { willReadFrequently: true });
 const stickerLayer = document.getElementById('stickerLayer');
+const stickerControllers = new Set();
+function clearStickers() { stickerControllers.forEach(controller=>controller.abort()); stickerControllers.clear(); stickerLayer.replaceChildren(); }
 let isDrawing = false, drawColor = '#000000', drawSize = 8, activeTool = 'pen', undoStack = [];
 
 window.openDrawingBoard = function() {
     fabMenu.style.display = 'none'; btnToggleFab.style.transform = 'rotate(0deg)'; drawModal.style.display = 'flex';
     const container = document.getElementById('canvasContainer'); drawCanvas.width = container.offsetWidth; drawCanvas.height = container.offsetHeight;
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-    stickerLayer.innerHTML = ''; undoStack = []; saveCanvasState(); 
+    clearStickers(); undoStack = []; saveCanvasState();
 };
 window.closeDrawingBoard = function() { if(confirm("確定要取消塗鴉嗎？未儲存的內容將會遺失。")) drawModal.style.display = 'none'; };
 window.setColor = function(color, btnElem) { drawColor = color; activeTool = 'pen'; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); btnElem.classList.add('active'); };
@@ -394,16 +527,18 @@ drawCanvas.addEventListener('touchstart', startDrawing, {passive: false}); drawC
  
 function saveCanvasState() { if (undoStack.length >= 20) undoStack.shift(); undoStack.push(drawCanvas.toDataURL()); }
 window.undoDraw = function() { if (undoStack.length > 1) { undoStack.pop(); const img = new Image(); img.onload = () => { ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height); ctx.drawImage(img, 0, 0); }; img.src = undoStack[undoStack.length - 1]; } else if (undoStack.length === 1) window.clearDraw(); };
-window.clearDraw = function() { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height); stickerLayer.innerHTML = ''; undoStack = []; saveCanvasState(); };
+window.clearDraw = function() { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height); clearStickers(); undoStack = []; saveCanvasState(); };
 window.addSticker = function(emoji) {
     const wrapper = document.createElement('div'); wrapper.className = 'sticker-item'; wrapper.style.left = '50%'; wrapper.style.top = '50%'; wrapper.style.transform = 'translate(-50%, -50%)';
     wrapper.innerHTML = `<span>${emoji}</span>`; stickerLayer.appendChild(wrapper);
+    const controller = new AbortController(); stickerControllers.add(controller);
+    const signal = controller.signal;
     let isDraggingSticker = false, startX, startY, initialLeft, initialTop, lastTapTime = 0; 
-    function onDragStart(e) { if (Date.now() - lastTapTime < 300) return wrapper.remove(); lastTapTime = Date.now(); isDraggingSticker = true; startX = e.touches ? e.touches[0].clientX : e.clientX; startY = e.touches ? e.touches[0].clientY : e.clientY; initialLeft = wrapper.offsetLeft; initialTop = wrapper.offsetTop; wrapper.style.zIndex = 1000; if(e.cancelable) e.preventDefault(); }
+    function onDragStart(e) { if (Date.now() - lastTapTime < 300) { controller.abort(); stickerControllers.delete(controller); return wrapper.remove(); } lastTapTime = Date.now(); isDraggingSticker = true; startX = e.touches ? e.touches[0].clientX : e.clientX; startY = e.touches ? e.touches[0].clientY : e.clientY; initialLeft = wrapper.offsetLeft; initialTop = wrapper.offsetTop; wrapper.style.zIndex = 1000; if(e.cancelable) e.preventDefault(); }
     function onDragMove(e) { if(!isDraggingSticker) return; wrapper.style.left = `${initialLeft + ((e.touches ? e.touches[0].clientX : e.clientX) - startX)}px`; wrapper.style.top = `${initialTop + ((e.touches ? e.touches[0].clientY : e.clientY) - startY)}px`; if(e.cancelable) e.preventDefault(); }
     function onDragEnd() { isDraggingSticker = false; wrapper.style.zIndex = ''; }
-    wrapper.addEventListener('touchstart', onDragStart, {passive: false}); window.addEventListener('touchmove', onDragMove, {passive: false}); window.addEventListener('touchend', onDragEnd);
-    wrapper.addEventListener('mousedown', onDragStart); window.addEventListener('mousemove', onDragMove); window.addEventListener('mouseup', onDragEnd);
+    wrapper.addEventListener('touchstart', onDragStart, {passive: false, signal}); window.addEventListener('touchmove', onDragMove, {passive: false, signal}); window.addEventListener('touchend', onDragEnd, {signal});
+    wrapper.addEventListener('mousedown', onDragStart, {signal}); window.addEventListener('mousemove', onDragMove, {signal}); window.addEventListener('mouseup', onDragEnd, {signal});
 };
 window.saveDraw = function() {
     const tCanvas = document.createElement('canvas'); tCanvas.width = drawCanvas.width; tCanvas.height = drawCanvas.height; const tCtx = tCanvas.getContext('2d');
@@ -422,7 +557,7 @@ window.saveDraw = function() {
 const photoViewerModal = document.getElementById('photoViewerModal'); const viewerImage = document.getElementById('viewerImage'); const viewerCounter = document.getElementById('viewerCounter');
 window.openPhotoViewer = function(idx) { currentViewerIndex = idx; isZoomed = false; viewerImage.style.transform = 'scale(1)'; updateViewerContent(); photoViewerModal.style.display = 'flex'; };
 window.closePhotoViewer = function() { photoViewerModal.style.display = 'none'; viewerImage.src = ''; isZoomed = false; viewerImage.style.transform = 'scale(1)'; };
-function updateViewerContent() { if (window.viewerQueue.length === 0) return; if (currentViewerIndex < 0) currentViewerIndex = window.viewerQueue.length - 1; if (currentViewerIndex >= window.viewerQueue.length) currentViewerIndex = 0; viewerImage.src = window.viewerQueue[currentViewerIndex]; viewerCounter.innerText = `${currentViewerIndex + 1} / ${window.viewerQueue.length}`; }
+function updateViewerContent() { if (window.viewerQueue.length === 0) return; if (currentViewerIndex < 0) currentViewerIndex = window.viewerQueue.length - 1; if (currentViewerIndex >= window.viewerQueue.length) currentViewerIndex = 0; viewerImage.decoding = 'async'; viewerImage.src = window.viewerQueue[currentViewerIndex]; viewerCounter.innerText = `${currentViewerIndex + 1} / ${window.viewerQueue.length}`; }
 window.prevPhoto = function(e) { e.stopPropagation(); isZoomed = false; viewerImage.style.transform = 'scale(1)'; currentViewerIndex--; updateViewerContent(); };
 window.nextPhoto = function(e) { e.stopPropagation(); isZoomed = false; viewerImage.style.transform = 'scale(1)'; currentViewerIndex++; updateViewerContent(); };
 let lastViewerTapTime = 0; viewerImage.addEventListener('click', (e) => { e.stopPropagation(); if (new Date().getTime() - lastViewerTapTime < 300) { isZoomed = !isZoomed; viewerImage.style.transform = isZoomed ? 'scale(2.5)' : 'scale(1)'; } lastViewerTapTime = new Date().getTime(); });

@@ -23,3 +23,5 @@ export const runTransaction=async(_,fn)=>fn({get:getDoc,set:()=>{}});
 export const getAuth=()=>({}),setPersistence=async()=>{},inMemoryPersistence={},signInWithCustomToken=async()=>({user:{uid:'fixture'}});
 export const getFunctions=()=>({}),httpsCallable=(_,name)=>async()=>{record('callable',{path:name});return{data:{token:'fixture'}};};
 export const getStorage=()=>({}),ref=(_,path)=>({path}),uploadString=async()=>{},getDownloadURL=async()=>'/Nexus.png',deleteObject=async()=>{};
+
+export const startAfter=s=>({after:s.id}),endAt=s=>({end:s.id});

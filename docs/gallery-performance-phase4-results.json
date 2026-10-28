@@ -1,0 +1,673 @@
+{
+  "before": {
+    "baseline": true,
+    "comments": 1,
+    "slow": false,
+    "results": [
+      {
+        "count": 10,
+        "initial": {
+          "cards": 10,
+          "nodes": 330,
+          "reads": 10,
+          "requests": 0,
+          "listeners": 1,
+          "images": 10,
+          "longTasks": [],
+          "first": 238.5,
+          "dcl": 196.39999997615814,
+          "jsMs": 6.34,
+          "heapBytes": 3018028,
+          "taskMs": 228.329,
+          "layoutMs": 73.11
+        },
+        "interaction": {
+          "sameImage": false,
+          "sameComment": false,
+          "draft": ""
+        }
+      },
+      {
+        "count": 100,
+        "initial": {
+          "cards": 100,
+          "nodes": 3300,
+          "reads": 100,
+          "requests": 0,
+          "listeners": 1,
+          "images": 100,
+          "longTasks": [],
+          "first": 188,
+          "dcl": 137.39999997615814,
+          "jsMs": 7.427,
+          "heapBytes": 2882684,
+          "taskMs": 428.13,
+          "layoutMs": 104.534
+        },
+        "interaction": {
+          "sameImage": false,
+          "sameComment": false,
+          "draft": ""
+        }
+      },
+      {
+        "count": 500,
+        "initial": {
+          "cards": 500,
+          "nodes": 16500,
+          "reads": 500,
+          "requests": 0,
+          "listeners": 1,
+          "images": 236,
+          "longTasks": [
+            158
+          ],
+          "first": 283.9000000357628,
+          "dcl": 155.80000001192093,
+          "jsMs": 38.824,
+          "heapBytes": 3813656,
+          "taskMs": 2953.049,
+          "layoutMs": 187.485
+        },
+        "interaction": {
+          "sameImage": false,
+          "sameComment": false,
+          "draft": ""
+        }
+      },
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 1000,
+          "nodes": 33000,
+          "reads": 1000,
+          "requests": 0,
+          "listeners": 1,
+          "images": 237,
+          "longTasks": [
+            257
+          ],
+          "first": 334.60000002384186,
+          "dcl": 161.5,
+          "jsMs": 7.34,
+          "heapBytes": 5355352,
+          "taskMs": 11641.628,
+          "layoutMs": 299.65799999999996
+        },
+        "interaction": {
+          "sameImage": false,
+          "sameComment": false,
+          "draft": ""
+        }
+      }
+    ]
+  },
+  "after": {
+    "baseline": false,
+    "comments": 1,
+    "slow": false,
+    "results": [
+      {
+        "count": 10,
+        "initial": {
+          "cards": 10,
+          "nodes": 330,
+          "reads": 20,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 207.79999995231628,
+          "dcl": 164,
+          "jsMs": 7.227,
+          "heapBytes": 3082180,
+          "taskMs": 245.775,
+          "layoutMs": 90.295
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 100,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 211.69999998807907,
+          "dcl": 168,
+          "jsMs": 5.611,
+          "heapBytes": 3234520,
+          "taskMs": 217.19,
+          "layoutMs": 75.69800000000001
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 500,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 238.30000001192093,
+          "dcl": 202.89999997615814,
+          "jsMs": 8.836,
+          "heapBytes": 3119788,
+          "taskMs": 282.77000000000004,
+          "layoutMs": 86.96
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 207.0999999642372,
+          "dcl": 154.89999997615814,
+          "jsMs": 7.652,
+          "heapBytes": 3389392,
+          "taskMs": 253.13000000000002,
+          "layoutMs": 78.431
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      }
+    ]
+  },
+  "slow-before": {
+    "baseline": true,
+    "comments": 1,
+    "slow": true,
+    "results": [
+      {
+        "count": 10,
+        "initial": {
+          "cards": 10,
+          "nodes": 330,
+          "reads": 10,
+          "requests": 0,
+          "listeners": 1,
+          "images": 10,
+          "longTasks": [],
+          "first": 400.39999997615814,
+          "dcl": 215.69999998807907,
+          "jsMs": 6.229,
+          "heapBytes": 3068684,
+          "taskMs": 235.204,
+          "layoutMs": 63.977000000000004
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 100,
+        "initial": {
+          "cards": 100,
+          "nodes": 3300,
+          "reads": 100,
+          "requests": 0,
+          "listeners": 1,
+          "images": 100,
+          "longTasks": [],
+          "first": 356.89999997615814,
+          "dcl": 162.39999997615814,
+          "jsMs": 6.518000000000001,
+          "heapBytes": 2892000,
+          "taskMs": 415.529,
+          "layoutMs": 85.414
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 500,
+        "initial": {
+          "cards": 500,
+          "nodes": 16500,
+          "reads": 500,
+          "requests": 0,
+          "listeners": 1,
+          "images": 236,
+          "longTasks": [
+            115
+          ],
+          "first": 417.39999997615814,
+          "dcl": 161.89999997615814,
+          "jsMs": 8.818,
+          "heapBytes": 3308860,
+          "taskMs": 2684.411,
+          "layoutMs": 253.14700000000002
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 1000,
+          "nodes": 33000,
+          "reads": 1000,
+          "requests": 0,
+          "listeners": 1,
+          "images": 236,
+          "longTasks": [
+            258
+          ],
+          "first": 508,
+          "dcl": 179.60000002384186,
+          "jsMs": 15.263,
+          "heapBytes": 5292656,
+          "taskMs": 10169.524,
+          "layoutMs": 330.365
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      }
+    ]
+  },
+  "slow-after": {
+    "baseline": false,
+    "comments": 1,
+    "slow": true,
+    "results": [
+      {
+        "count": 10,
+        "initial": {
+          "cards": 10,
+          "nodes": 330,
+          "reads": 20,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 345.69999998807907,
+          "dcl": 160.80000001192093,
+          "jsMs": 7.93,
+          "heapBytes": 3133380,
+          "taskMs": 228.269,
+          "layoutMs": 79.984
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 100,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 351.5,
+          "dcl": 164.60000002384186,
+          "jsMs": 9.421000000000001,
+          "heapBytes": 3286696,
+          "taskMs": 289.48699999999997,
+          "layoutMs": 79.926
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 500,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 336,
+          "dcl": 148.89999997615814,
+          "jsMs": 8.155000000000001,
+          "heapBytes": 3354456,
+          "taskMs": 219.899,
+          "layoutMs": 63.164
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      },
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [
+            74
+          ],
+          "first": 264.7999999523163,
+          "dcl": 76.89999997615814,
+          "jsMs": 7.429,
+          "heapBytes": 3793756,
+          "taskMs": 240.588,
+          "layoutMs": 65.776
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      }
+    ]
+  },
+  "comments-before": {
+    "baseline": true,
+    "comments": 50,
+    "slow": false,
+    "results": [
+      {
+        "count": 100,
+        "initial": {
+          "cards": 100,
+          "nodes": 47400,
+          "reads": 100,
+          "requests": 0,
+          "listeners": 1,
+          "images": 100,
+          "longTasks": [
+            195
+          ],
+          "first": 577.8999999761581,
+          "dcl": 371.5999999642372,
+          "jsMs": 12.078,
+          "heapBytes": 7112856,
+          "taskMs": 1332.038,
+          "layoutMs": 337.343
+        },
+        "interaction": {
+          "sameImage": false,
+          "sameComment": false,
+          "draft": ""
+        }
+      }
+    ]
+  },
+  "comments-after": {
+    "baseline": false,
+    "comments": 50,
+    "slow": false,
+    "results": [
+      {
+        "count": 100,
+        "initial": {
+          "cards": 15,
+          "nodes": 7110,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 3,
+          "longTasks": [],
+          "first": 269.19999998807907,
+          "dcl": 192.5,
+          "jsMs": 7.882,
+          "heapBytes": 3770812,
+          "taskMs": 398.804,
+          "layoutMs": 128.67999999999998
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      }
+    ]
+  },
+  "regression": {
+    "baseline": false,
+    "comments": 1,
+    "slow": false,
+    "results": [
+      {
+        "count": 10,
+        "initial": {
+          "cards": 10,
+          "nodes": 330,
+          "reads": 20,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 236.89999997615814,
+          "dcl": 200.69999998807907,
+          "imageRequests": 4,
+          "jsMs": 14.735,
+          "heapBytes": 3081860,
+          "taskMs": 284.334,
+          "layoutMs": 89.271
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        },
+        "nextPageReads": null
+      },
+      {
+        "count": 100,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 195.10000002384186,
+          "dcl": 160.10000002384186,
+          "imageRequests": 4,
+          "jsMs": 15.548,
+          "heapBytes": 3234972,
+          "taskMs": 260.47999999999996,
+          "layoutMs": 80.223
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        },
+        "nextPageReads": 30
+      },
+      {
+        "count": 500,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 223.39999997615814,
+          "dcl": 187.80000001192093,
+          "imageRequests": 4,
+          "jsMs": 6.6290000000000004,
+          "heapBytes": 3183736,
+          "taskMs": 288.084,
+          "layoutMs": 93.586
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        },
+        "nextPageReads": 30
+      },
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 196.4000000357628,
+          "dcl": 156.4000000357628,
+          "imageRequests": 4,
+          "jsMs": 11.976,
+          "heapBytes": 3282932,
+          "taskMs": 265.952,
+          "layoutMs": 75.824
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        },
+        "nextPageReads": 30
+      }
+    ]
+  },
+  "edges-final": {
+    "baseline": false,
+    "comments": 1,
+    "slow": false,
+    "results": [
+      {
+        "count": 100,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 247,
+          "dcl": 212.5,
+          "imageRequests": 4,
+          "jsMs": 15.988,
+          "heapBytes": 3235416,
+          "taskMs": 313.232,
+          "layoutMs": 91.46700000000001
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        },
+        "nextPageReads": 30
+      }
+    ]
+  },
+  "images-before": {
+    "baseline": true,
+    "comments": 1,
+    "slow": false,
+    "results": [
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 1000,
+          "nodes": 33000,
+          "reads": 1000,
+          "requests": 0,
+          "listeners": 1,
+          "images": 236,
+          "longTasks": [
+            215
+          ],
+          "first": 356.9000000357628,
+          "dcl": 186.30000001192093,
+          "imageRequests": 1000,
+          "jsMs": 5.101,
+          "heapBytes": 5357268,
+          "taskMs": 11366.732,
+          "layoutMs": 330.411
+        },
+        "interaction": {
+          "sameImage": false,
+          "sameComment": false,
+          "draft": ""
+        }
+      }
+    ]
+  },
+  "images-after": {
+    "baseline": false,
+    "comments": 1,
+    "slow": false,
+    "results": [
+      {
+        "count": 1000,
+        "initial": {
+          "cards": 15,
+          "nodes": 495,
+          "reads": 30,
+          "requests": 1,
+          "listeners": 1,
+          "images": 4,
+          "longTasks": [],
+          "first": 267.60000002384186,
+          "dcl": 238.39999997615814,
+          "imageRequests": 4,
+          "jsMs": 8.165000000000001,
+          "heapBytes": 3329088,
+          "taskMs": 348.629,
+          "layoutMs": 127.90299999999999
+        },
+        "interaction": {
+          "sameImage": true,
+          "sameComment": true,
+          "draft": "draft"
+        }
+      }
+    ]
+  }
+}

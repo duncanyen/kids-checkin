@@ -22,7 +22,7 @@ module.exports=async function start({baseline=false,chartPath=process.env.CHART_
    if(gates[url.pathname])await gates[url.pathname];
    if(delays[url.pathname])await new Promise(resolve=>setTimeout(resolve,delays[url.pathname]));
    if(failures[url.pathname]){requests.push({path:url.pathname,status:failures[url.pathname]});res.writeHead(failures[url.pathname]);res.end('fixture failure');return;}
-   if(name.startsWith('__sdk/')){body=fs.readFileSync(path.join(root,'tests/fixtures/navigation-performance-sdk.js'));type='text/javascript';}
+   if(name.startsWith('__sdk/')){body=overrides.__sdk ? Buffer.from(overrides.__sdk) : fs.readFileSync(path.join(root,'tests/fixtures/navigation-performance-sdk.js'));type='text/javascript';}
    else if(name==='__cdn/chart.js'){body=fs.readFileSync(chartPath);type='text/javascript';}
    else if(name==='__avatar.svg'){body=Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>');type='image/svg+xml';}
    else{

@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
 const mock=`
 export const doc=(_, ...parts)=>({path:parts.join('/'),id:parts.at(-1)});
-export const collection=doc,query=ref=>ref,where=()=>({}),orderBy=()=>({}),limit=()=>({});
+export const collection=doc,query=ref=>ref,where=()=>({}),orderBy=()=>({}),limit=()=>({}),startAfter=()=>({}),endAt=()=>({});
 export const increment=n=>n;export const initializeApp=()=>({});export const getFirestore=()=>({});export const arrayUnion=(...values)=>values,arrayRemove=(...values)=>values;export const serverTimestamp=()=>1234;
 export const getDoc=async ref=>{if(window.__delayPreferences)await new Promise(resolve=>window.__releasePreferences=resolve);const data=window.__docs[ref.path];return{exists:()=>!!data,data:()=>structuredClone(data)};};
 export const getDocs=async ref=>{const user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||'null');const data=ref.path==='users'&&user?[{id:'alice-doc',data:()=>user}]:[];return {docs:data,empty:!data.length,forEach:cb=>data.forEach(cb)};};
