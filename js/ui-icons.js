@@ -23,6 +23,15 @@ const paths = {
     edit:'<path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14Z"/>',
     heart:'<path d="M20 5c-3-3-6-1-8 1C10 4 7 2 4 5c-5 5 8 15 8 15S25 10 20 5Z"/>',
     share:'<path d="M12 16V3m-5 5 5-5 5 5M5 13v8h14v-8"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    school:'<path d="m3 10 9-6 9 6M5 9v12h14V9M9 21v-6h6v6"/><path d="M10 10h4"/>',
+    briefcase:'<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V3h8v4M3 12a22 22 0 0 0 18 0M12 11v4"/>',
+    cake:'<path d="M4 21v-8h16v8M3 21h18M8 13V9h8v4M12 9V6"/><path d="M12 3c-2 2-2 3 0 3s2-1 0-3M4 16c2 2 4-2 6 0s4-2 6 0 4 0 4 0"/>',
+    pin:'<path d="m9 3 6 0-1 6 4 4H6l4-4-1-6ZM12 13v8"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+    lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
+    trash:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
     warning:'<path d="m12 3 10 18H2Z"/><path d="M12 9v5m0 3h.01"/>'
 };
 export function icon(key, extra='') {

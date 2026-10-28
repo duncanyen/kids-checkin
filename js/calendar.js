@@ -1,3 +1,4 @@
+import { icon as uiIcon } from './ui-icons.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
     getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
@@ -28,7 +29,7 @@ let selectedDateKey = '';
 let allFetchedEvents = [];
 let editingEventId = null;
 
-const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽️', birthday: '🎂', personal: '👤', other: '📌' };
+const categoryIcons = { school: 'school', company: 'briefcase', restaurant: 'food', birthday: 'cake', personal: 'user', other: 'pin' };
 
 const publicHolidays = {
     "01-01": "元旦", "02-28": "和平紀念日", "04-04": "兒童節", 
@@ -503,28 +504,29 @@ function renderDayEvents(dateKey) {
         item.className = `event-item ${evt.visibility || 'public'}`;
         
         const isOwnerOrAdmin = (evt.operator === currentUser.name || currentUser.role === 'admin' || currentUser.role === '家長');
-        const icon = categoryIcons[evt.category] || '📌';
-        const timeStr = (evt.isAllDay !== false) ? '🕒 全天' : `🕒 ${evt.startTime} - ${evt.endTime}`;
+        const categoryIcon = uiIcon(categoryIcons[evt.category] || 'pin');
+        const timeStr = (evt.isAllDay !== false) ? '全天' : `${evt.startTime} - ${evt.endTime}`;
         
         let reminderStr = '無提醒';
         if (evt.reminderUnit === 'minutes') reminderStr = `提前 ${evt.reminderValue} 分鐘提醒`;
         if (evt.reminderUnit === 'hours') reminderStr = `提前 ${evt.reminderValue} 小時提醒`;
-        if (isEventExpired(evt, dateKey)) reminderStr = '✅ 已結束';
+        const expired = isEventExpired(evt, dateKey);
+        if (expired) reminderStr = '已結束';
 
         item.innerHTML = `
             <div class="event-item-main">
                 <div class="event-item-title">
-                    ${evt.visibility === 'private' ? '🔒' : ''} ${icon} ${evt.title}
+                    ${evt.visibility === 'private' ? uiIcon('lock') : ''} ${categoryIcon} ${evt.title}
                 </div>
                 <div class="event-item-meta">
-                    <span>${timeStr}</span> | <span>🔔 ${reminderStr}</span>
+                    <span>${uiIcon('clock')}${timeStr}</span> | <span>${uiIcon(expired ? 'check' : 'bell')}${reminderStr}</span>
                 </div>
                 ${evt.desc ? `<div style="font-size:calc(12px * var(--n-font-scale, 1)); color:var(--text-sub); margin-top:6px;">${evt.desc}</div>` : ''}
             </div>
             ${isOwnerOrAdmin ? `
             <div class="event-actions">
-                <button class="btn-icon edit" data-id="${evt.id}">✏️</button>
-                <button class="btn-icon del" data-id="${evt.id}">🗑️</button>
+                <button class="btn-icon edit" data-id="${evt.id}" title="編輯行程" aria-label="編輯行程">${uiIcon('edit')}</button>
+                <button class="btn-icon del" data-id="${evt.id}" title="刪除行程" aria-label="刪除行程">${uiIcon('trash')}</button>
             </div>` : ''}
         `;
         container.appendChild(item);

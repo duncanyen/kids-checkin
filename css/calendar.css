@@ -132,3 +132,13 @@
 .modal-btns { display: flex; gap: 10px; margin-top: 20px; flex-shrink: 0; }
 .btn-cancel { flex: 1; background: #f1f5f9; color: var(--text-main); border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: calc(15px * var(--n-font-scale, 1)); }
 .btn-save { flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: calc(15px * var(--n-font-scale, 1)); box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
+
+/* Shared outline icons, matching the application navigation. */
+.btn-icon-nav .nexus-icon {width:22px;height:22px;}
+.btn-add-new {display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn-add-new .nexus-icon {width:18px;height:18px;}
+.event-item-title .nexus-icon {width:18px;height:18px;}
+.event-item-meta>span {display:inline-flex;align-items:center;gap:4px;}
+.event-item-meta .nexus-icon {width:14px;height:14px;}
+.event-actions .btn-icon {display:inline-flex;align-items:center;justify-content:center;}
+.event-actions .nexus-icon {width:18px;height:18px;pointer-events:none;}

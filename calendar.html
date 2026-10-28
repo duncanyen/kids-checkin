@@ -67,8 +67,8 @@
         <div class="top-nav">
             <button class="btn-back" id="btnBack" data-main-menu-back>返回主選單</button>
             <div class="nav-actions">
-                <button class="btn-icon-nav" id="btnToggleView" title="切換視圖">🔄</button>
-                <button class="btn-icon-nav" id="btnSettings" title="視圖設定">⚙️</button>
+                <button class="btn-icon-nav" id="btnToggleView" title="切換視圖" aria-label="切換視圖"><span data-ui-icon="switch"></span></button>
+                <button class="btn-icon-nav" id="btnSettings" title="視圖設定" aria-label="視圖設定"><span data-ui-icon="settings"></span></button>
             </div>
         </div>
     </div>
@@ -122,7 +122,7 @@
                 <!-- 視圖 1：當日待辦清單 -->
                 <div id="listView">
                     <div class="day-event-list" id="dayEventsContainer"></div>
-                    <button class="btn-add-new" id="btnShowAddForm">➕ 新增待辦事項</button>
+                    <button class="btn-add-new" id="btnShowAddForm"><span data-ui-icon="plus"></span> 新增待辦事項</button>
                 </div>
 
                 <!-- 視圖 2：新增/編輯表單 -->
@@ -136,19 +136,19 @@
                         <div class="form-group">
                             <label>分類圖示</label>
                             <select id="evCategory">
-                                <option value="school">🏫 學校</option>
-                                <option value="company">💼 公司</option>
-                                <option value="restaurant">🍽️ 餐廳</option>
-                                <option value="birthday">🎂 生日</option>
-                                <option value="personal">👤 個人</option>
-                                <option value="other">📌 其他</option>
+                                <option value="school">學校</option>
+                                <option value="company">公司</option>
+                                <option value="restaurant">餐廳</option>
+                                <option value="birthday">生日</option>
+                                <option value="personal">個人</option>
+                                <option value="other">其他</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>權限</label>
                             <select id="evVisibility">
-                                <option value="public">🌐 全體</option>
-                                <option value="private">🔒 僅自己</option>
+                                <option value="public">全體</option>
+                                <option value="private">僅自己</option>
                             </select>
                         </div>
                     </div>
