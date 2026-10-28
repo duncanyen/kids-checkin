@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#10b981">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OurBase - 家庭記帳本</title>
+    <title>OurBase - 記帳本</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     
     <!-- 引入 Chart.js 繪製圖表 -->
@@ -19,12 +19,14 @@
     <link rel="stylesheet" href="css/expense.css">
     <link rel="stylesheet" href="css/nexus-theme.css">
     <script type="module" src="js/ui-icons.js"></script>
+    <link rel="stylesheet" href="css/app-navigation.css">
+    <script type="module" src="js/app-navigation.js"></script>
 </head>
-<body>
+<body data-app-page="finance">
 
     <div class="top-nav">
-        <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回</button>
-        <div class="page-title"><span data-ui-icon="finance"></span>家庭記帳本</div>
+        <button class="btn-back" data-main-menu-back onclick="window.location.href='index.html'">返回主選單</button>
+        <div class="page-title"><span data-ui-icon="finance"></span>記帳本</div>
         <button aria-label="帳本設定" data-ui-icon="settings" class="btn-settings" onclick="openModal('settingsModal')" style="background:transparent; border:none; font-size:20px; cursor:pointer;"></button>
     </div>
 

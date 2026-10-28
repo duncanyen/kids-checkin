@@ -17,8 +17,10 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="css/nexus-theme.css">
     <script type="module" src="js/ui-icons.js"></script>
+    <link rel="stylesheet" href="css/app-navigation.css">
+    <script type="module" src="js/app-navigation.js"></script>
 </head>
-<body>
+<body data-app-page="home">
 
     <div class="loading-overlay" id="loadingView"><span>處理中，請稍候...</span></div>
     <input type="file" id="avatarUploadInput" accept="image/*" style="display:none;">
@@ -201,7 +203,7 @@
         </div>
         
         <!-- 動態手機底部快捷導覽列容器 -->
-        <div class="bottom-dock" id="bottomDockContainer"></div>
+        <nav class="app-bottom-navigation" id="bottomDockContainer" hidden aria-label="主要功能導覽"></nav>
     </div>
 
     <!-- 側邊選單 Sidebar -->

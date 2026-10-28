@@ -159,15 +159,17 @@
     <link rel="stylesheet" href="css/todo-enhancements.css">
     <link rel="stylesheet" href="css/nexus-theme.css">
     <script type="module" src="js/ui-icons.js"></script>
+    <link rel="stylesheet" href="css/app-navigation.css">
+    <script type="module" src="js/app-navigation.js"></script>
 </head>
-<body>
+<body data-app-page="todo">
 
     <div class="loading-overlay" id="loadingView"><span>處理中，請稍候...</span></div>
 
     <div class="todo-container">
         <!-- 頂端導覽 -->
         <div class="top-nav">
-            <button class="back-btn" onclick="window.location.href='index.html'">← 返回主頁</button>
+            <button class="back-btn" data-main-menu-back onclick="window.location.href='index.html'">返回主選單</button>
             <span id="todo-loading-status" style="font-size:0.8rem; color:var(--text-sub);"></span>
         </div>
 

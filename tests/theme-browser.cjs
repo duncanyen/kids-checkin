@@ -56,7 +56,7 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  assert.equal(await page.locator('html').getAttribute('data-nexus-theme'),'grape');
  await page.evaluate(()=>{window.NexusTheme.apply('honey');});
  await page.screenshot({path:'/tmp/nexus-home-light.png',fullPage:true,animations:'disabled'});
- const dock=await page.locator('.bottom-dock').boundingBox();assert.ok(dock.y+dock.height>800,'Bottom navigation must stay at viewport bottom');
+ const dock=await page.locator('.app-bottom-navigation').boundingBox();assert.ok(dock.y+dock.height>800,'Bottom navigation must stay at viewport bottom');
  await page.locator('.hamburger-btn').focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>document.getElementById('sidebar').classList.contains('active'));await page.screenshot({path:'/tmp/nexus-sidebar-light.png',animations:'disabled'});await page.keyboard.press('Escape');
  assert.equal(await page.locator('.hamburger-btn').getAttribute('aria-expanded'),'false');
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('#dashboardView').evaluate(el=>getComputedStyle(el).opacity),'1');

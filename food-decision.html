@@ -90,12 +90,14 @@
 </style>
     <link rel="stylesheet" href="css/nexus-theme.css">
     <script type="module" src="js/ui-icons.js"></script>
+    <link rel="stylesheet" href="css/app-navigation.css">
+    <script type="module" src="js/app-navigation.js"></script>
 </head>
-<body>
+<body data-app-page="food">
 <p id="foodSyncStatus" role="status" style="text-align:center;padding:8px;margin:0">載入群組資料中…</p>
 <div class="app">
 <header>
-  <button class="back-btn" onclick="window.location.href='index.html'">❮</button>
+  <button class="back-btn" data-main-menu-back onclick="window.location.href='index.html'">返回主選單</button>
   <div class="brand"></div>
   <div class="header-actions">
     <div class="avatar-btn" id="headerAvatarBtn" style="pointer-events: none;"></div>

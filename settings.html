@@ -55,6 +55,7 @@
     </style>
     <link rel="stylesheet" href="css/nexus-theme.css">
     <link rel="stylesheet" href="css/appearance-settings.css">
+    <link rel="stylesheet" href="css/navigation-settings.css">
     <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
@@ -110,6 +111,14 @@
             <button class="btn-save" onclick="saveUserProfile()">更新資料與密碼</button>
         </div>
 
+        <section class="section-card" id="navigationSettings" aria-labelledby="navigationSettingsTitle">
+            <h3 class="section-title" id="navigationSettingsTitle"><span data-ui-icon="menu"></span>底部導覽列<span class="navigation-settings-count" data-nav-count></span></h3>
+            <p class="navigation-settings-intro">首頁固定保留，另外最多可選擇 6 個功能。勾選後可調整順序，僅列出管理者已開放的功能；遊戲區會進入獨立大廳。</p>
+            <div class="navigation-choices" data-nav-options></div>
+            <div class="navigation-order" data-nav-order aria-label="導覽順序"></div>
+            <p class="theme-status" role="status" aria-live="polite" data-nav-status>儲存後，會跟隨你的帳號套用。</p>
+            <div class="theme-actions"><button type="button" data-nav-reset>還原</button><button type="button" data-nav-save>儲存導覽列</button></div>
+        </section>
         <!-- 版面模組與順序自訂區塊 -->
         <div class="section-card">
             <h3 class="section-title"><span data-ui-icon="menu"></span>主選單卡片排序</h3>
@@ -133,6 +142,7 @@
 
     <script type="module">
         import { icon } from './js/ui-icons.js';
+        import { mountNavigationSettings } from './js/navigation-settings.js';
         import { mountAppearanceSettings } from './js/appearance-settings.js';
         import { MODULE_META } from './js/menu-catalog.js';
         import { readPersonalLayout } from './js/personal-layout.js';
@@ -140,7 +150,7 @@
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
         let currentUser = null;
-        let appearanceSettings;
+        let appearanceSettings, navigationSettings;
         
         // ★ 對齊管理者後台的 keys
         const moduleMeta = MODULE_META;
@@ -153,6 +163,7 @@
             const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
             if (!userStr) { alert('請先登入！'); window.location.href = 'index.html'; return; }
             currentUser = JSON.parse(userStr);
+            navigationSettings = mountNavigationSettings({ db, user: currentUser, root: document.getElementById('navigationSettings') });
             appearanceSettings = mountAppearanceSettings({ db, user: currentUser, root: document.getElementById('appearanceSettings') });
             document.getElementById('settingsDisplayName').textContent = currentUser.name || currentUser.accountId;
             if (currentUser.avatar) { const image = document.getElementById('settingsAvatar'); image.onerror = () => { image.hidden = true; document.getElementById('settingsAvatarFallback').hidden = false; }; image.src = currentUser.avatar; image.hidden = false; document.getElementById('settingsAvatarFallback').hidden = true; }
@@ -180,6 +191,7 @@
             try {
                 const data = await readPersonalLayout(db, currentUser);
                 appearanceSettings?.hydrate(data.appearance);
+                navigationSettings?.hydrate(data);
                 let savedOrder = Array.isArray(data.order) ? data.order : [];
                 if (data.modules) currentModules = { ...currentModules, ...data.modules };
 

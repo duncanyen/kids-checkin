@@ -1,3 +1,4 @@
+import { mountAppNavigation } from './app-navigation.js';
 import { icon, enhanceNavigation } from './ui-icons.js';
 import { watchRooms } from './live-reads.js';
 import { readPersonalLayout } from './personal-layout.js';
@@ -89,9 +90,10 @@ window.renderDynamicModules = async function(user) {
     window.NexusTheme?.refresh();
     const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food']; 
     const allowedMenus = user.menus || defaultAllowed;
-    let modules = {}, order = [];
+    let modules = {}, order = [], personalSettings;
     try {
         const data = await readPersonalLayout(db, user);
+        personalSettings = data;
         window.NexusTheme?.hydrate(user.accountId, data.appearance);
         if (data.modules) modules = data.modules;
         if (Array.isArray(data.order)) order = data.order.filter(key => allowedMenus.includes(key));
@@ -188,25 +190,7 @@ window.renderDynamicModules = async function(user) {
         }
     }
 
-    let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">${icon('home')}</div>`;
-    const dockMap = {
-        calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">${icon('calendar')}</div>`,
-        chat: `<div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">${icon('chat')}</div>`,
-        photodump: `<div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">${icon('photodump')}</div>`,
-        todo: `<div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">${icon('todo')}</div>`,
-        finance: `<div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">${icon('finance')}</div>`,
-        checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">${icon('checkin')}</div>`,
-        gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">${icon('gamezone')}</div>`,
-        wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">${icon('wishlist')}</div>`,
-        food: `<div class="dock-item" onclick="window.navTo('food-decision.html', '吃什麼？')" title="吃什麼">${icon('food')}</div>`
-    };
-    
-    order.forEach(modKey => {
-        if (allowedMenus.includes(modKey) && dockMap[modKey]) {
-            dockHtml += dockMap[modKey];
-        }
-    });
-    dockContainer.innerHTML = dockHtml;
+    mountAppNavigation({ user, settings: personalSettings, container: dockContainer });
     enhanceNavigation();
 };
 
