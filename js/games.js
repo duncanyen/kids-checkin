@@ -468,7 +468,7 @@ async function loadLeaderboard(tabType) {
             listEl.innerHTML += `
                 <li class="lb-item">
                     <div class="lb-rank ${rankClass}">${index + 1}</div>
-                    <div class="lb-info"><div class="lb-name">${item.userName || '匿名玩家'}</div>${groupDisplay}</div>
+                    <div class="lb-info"><div class="lb-name">${tabType === 'global' ? '匿名玩家' : (item.userName || '匿名玩家')}</div>${groupDisplay}</div>
                     <div class="lb-score">${scoreText}</div>
                 </li>
             `;
