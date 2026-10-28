@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -14,6 +15,8 @@
     <link rel="icon" href="Nexus.png" type="image/png">
     <!-- 引入拆分後的 CSS -->
     <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
 
@@ -178,7 +181,7 @@
     <div id="dashboardView">
         <div class="app-header">
             <div class="app-brand">
-                <div class="hamburger-btn" onclick="toggleSidebar()">☰</div>
+                <div class="hamburger-btn" role="button" tabindex="0" aria-label="開啟功能選單" aria-expanded="false" onclick="toggleSidebar()" data-ui-icon="menu"></div>
                 <img src="Nexus.png" alt="Nexus Logo" style="width: 32px; height: 32px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <span style="font-size: 20px; font-weight: 900; letter-spacing: 0;">Nexus</span>
             </div>
@@ -208,15 +211,15 @@
         <div class="sidebar-profile">
             <div class="sidebar-avatar-wrapper">
                 <img id="sideAvatar" class="sidebar-avatar" src="">
-                <button class="sidebar-edit-btn" onclick="triggerAvatarUpload()">✎</button>
+                <button class="sidebar-edit-btn" onclick="triggerAvatarUpload()" data-ui-icon="edit"></button>
             </div>
             <div class="sidebar-profile-info">
                 <div class="sidebar-username" id="sideUserName"></div>
                 <div class="sidebar-role" id="sideUserRole"></div>
             </div>
             <div class="sidebar-quick-actions" style="position: absolute; right: 16px; top: 12px; border: none; padding: 0; width: auto; margin: 0;">
-                <div class="quick-action-btn" onclick="window.navTo('notifications.html', '系統通知')" title="系統通知">🔔</div>
-                <div class="quick-action-btn" onclick="window.navTo('settings.html', '使用者設定')" title="使用者設定">⚙️</div>
+                <div class="quick-action-btn" onclick="window.navTo('notifications.html', '系統通知')" title="系統通知" data-ui-icon="notification"></div>
+                <div class="quick-action-btn" onclick="window.navTo('settings.html', '使用者設定')" title="使用者設定" data-ui-icon="settings"></div>
             </div>
         </div>
         <div class="sidebar-section">
@@ -232,9 +235,9 @@
         </div>
         <div class="sidebar-section" style="border-bottom: none; margin-bottom: 20px;">
             <div class="sidebar-title">關於 Nexus</div>
-            <div class="sidebar-item" onclick="openContactModal()"><span class="sidebar-icon">📝</span>聯絡我們</div>
-            <div class="sidebar-item" onclick="rateApp()"><span class="sidebar-icon">⭐</span>給予評價支持我們</div>
-            <div class="sidebar-item" onclick="shareApp()"><span class="sidebar-icon">📤</span>推薦 Nexus</div>
+            <div class="sidebar-item" onclick="openContactModal()"><span class="sidebar-icon" data-ui-icon="todo"></span>聯絡我們</div>
+            <div class="sidebar-item" onclick="rateApp()"><span class="sidebar-icon" data-ui-icon="heart"></span>給予評價支持我們</div>
+            <div class="sidebar-item" onclick="shareApp()"><span class="sidebar-icon" data-ui-icon="share"></span>推薦 Nexus</div>
         </div>
     </div>
 

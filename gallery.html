@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -15,12 +16,14 @@
     
     <!-- 引入外部 CSS -->
     <link rel="stylesheet" href="css/gallery.css">
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
     <div class="top-nav">
         <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
         <div class="page-title">
-            📸 Photo Dump 
+            <span data-ui-icon="photodump"></span>Photo Dump
             <span id="unreadBadge" class="unread-badge-global">0</span>
         </div>
         <div style="width: 80px;"></div>

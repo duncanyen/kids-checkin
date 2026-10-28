@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -16,13 +17,15 @@
     <!-- 引入 Chart.js 繪製圖表 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/expense.css">
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
 
     <div class="top-nav">
         <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回</button>
-        <div class="page-title">💰 家庭記帳本</div>
-        <button class="btn-settings" onclick="openModal('settingsModal')" style="background:transparent; border:none; font-size:20px; cursor:pointer;">⚙️</button>
+        <div class="page-title"><span data-ui-icon="finance"></span>家庭記帳本</div>
+        <button aria-label="帳本設定" data-ui-icon="settings" class="btn-settings" onclick="openModal('settingsModal')" style="background:transparent; border:none; font-size:20px; cursor:pointer;"></button>
     </div>
 
     <!-- 頂部 Tab 切換 -->

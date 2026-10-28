@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -38,6 +39,8 @@
         /* 移除成員的按鈕 */
         .btn-kick-member { background: #fee2e2; color: #ef4444; border: none; font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: 600; cursor: pointer; margin-left: auto; }
     </style>
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
     <div class="top-nav" id="mainTopNav">
@@ -48,7 +51,7 @@
     <!-- 視圖 1：群組清單 -->
     <div class="view-container" id="viewRoomList">
         <div class="list-header">
-            <span class="list-title">💬 聊天群組</span>
+            <span class="list-title"><span data-ui-icon="chat"></span>聊天群組</span>
             <button class="btn-new-chat" id="btnOpenCreateModal">➕ 建立群組</button>
         </div>
         <div class="room-list-content" id="roomListContainer">
@@ -65,7 +68,7 @@
                 <span id="activeRoomName" class="chat-header-name">載入中...</span>
             </div>
             <!-- 開啟設定選單 -->
-            <button class="btn-room-settings" id="btnOpenSettingsMenu">⚙️</button>
+            <button class="btn-room-settings" id="btnOpenSettingsMenu" aria-label="聊天室設定" data-ui-icon="settings"></button>
         </div>
         
         <div class="chat-messages" id="chatMessages"></div>
@@ -144,7 +147,7 @@
             </div>
             <div class="settings-top-bar">
                 <div class="settings-icon-btn" onclick="window.chatRooms.openViewMembers()">
-                    <div class="icon">👥</div>
+                    <div class="icon" data-ui-icon="user"></div>
                     <span>成員</span>
                 </div>
                 <div class="settings-icon-btn" onclick="window.chatRooms.openInviteMembers()">

@@ -22,7 +22,7 @@ header{
 .back-btn {
   position: absolute; left: 18px;
   width: 36px; height: 36px;
-  border-radius: 12px; background: #fff;
+  border-radius: 12px; background: var(--n-surface, #fff);
   display: grid; place-items: center;
   font-size: 16px; font-weight: bold; color: var(--ink);
   box-shadow: 0 4px 12px rgba(20,50,38,.08);
@@ -30,14 +30,14 @@ header{
 .brand{font-size:18px;font-weight:900;letter-spacing:-.02em; text-align: center;}
 .brand span{color:var(--green)}
 .header-actions{position: absolute; right: 18px; display:flex; gap:8px; align-items:center}
-.iconbtn, .avatar-btn{width:36px; height:36px; border-radius:50%; background:#fff; box-shadow:0 4px 12px rgba(20,50,38,.08); padding:0; overflow:hidden;}
+.iconbtn, .avatar-btn{width:36px; height:36px; border-radius:50%; background:var(--n-surface, #fff); box-shadow:0 4px 12px rgba(20,50,38,.08); padding:0; overflow:hidden;}
 .real-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .face.real-avatar { width: 27px; height: 27px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .people .face.real-avatar { width: 34px; height: 34px; margin-left: -6px; border: 3px solid #fff; }
 
 /* 日期選擇器 */
 .date-selector-container {
-    background: #fff; padding: 12px 18px; border-bottom: 1px solid var(--line);
+    background: var(--n-surface, #fff); padding: 12px 18px; border-bottom: 1px solid var(--line);
     position: sticky; top: 60px; z-index: 20; display: flex; justify-content: space-between; align-items: center;
 }
 .date-btn {
@@ -47,7 +47,7 @@ header{
     position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center;
 }
 .calendar-modal.show { display: flex; }
-.calendar-content { background: white; width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; }
+.calendar-content { background: var(--n-surface, #fff); width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
 .calendar-day { padding: 10px 0; border-radius: 8px; cursor: pointer; }
@@ -61,7 +61,7 @@ main{padding:0 18px calc(var(--nav) + 30px)}
 .hero{padding:14px 0 19px}.eyebrow{font-size:13px;color:var(--green2);font-weight:900;margin-bottom:8px}
 h1{font-size:33px;line-height:1.10;margin:0 0 10px;letter-spacing:-.07em}
 .sub{color:var(--muted);font-size:14px;line-height:1.65}
-.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:0 5px 25px #173c2d06;margin-bottom:14px}
+.card{background:var(--n-surface, #fff);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:0 5px 25px #173c2d06;margin-bottom:14px}
 .row{display:flex;gap:10px;align-items:center}.between{justify-content:space-between}
 .meta{font-size:12px;color:var(--muted)}
 .meal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -72,14 +72,14 @@ h1{font-size:33px;line-height:1.10;margin:0 0 10px;letter-spacing:-.07em}
 .section-title{font-size:15px;font-weight:950;margin:21px 0 10px}
 .primary{width:100%;padding:15px 18px;border-radius:18px;background:var(--green);color:#fff;font-weight:950;box-shadow:0 10px 24px #10aa7828}
 .secondary{padding:12px 15px;border-radius:15px;background:#f0f4f1;color:var(--ink);font-weight:850}
-.chip{white-space:nowrap;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:800}.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip{white-space:nowrap;padding:8px 12px;border-radius:999px;background:var(--n-surface, #fff);border:1px solid var(--line);font-size:12px;font-weight:800}.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .chips{display:flex;gap:8px;overflow:auto;padding-bottom:3px}
 .member-strip{display:flex;align-items:center;gap:8px;overflow:auto;padding:4px 1px}
-.member{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;background:#fff;border:1px solid var(--line);border-radius:999px;white-space:nowrap;font-size:12px;font-weight:850}
+.member{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;background:var(--n-surface, #fff);border:1px solid var(--line);border-radius:999px;white-space:nowrap;font-size:12px;font-weight:850}
 .member.current{border-color:var(--green);box-shadow:0 0 0 3px #10aa7812}
 .face{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#edf6f1;font-size:15px}
 .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.mode{padding:20px 16px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:22px;box-shadow:0 5px 20px #173c2d05}
+.mode{padding:20px 16px;text-align:left;border:1px solid var(--line);background:var(--n-surface, #fff);border-radius:22px;box-shadow:0 5px 20px #173c2d05}
 .mode strong{display:block;font-size:16px;margin:9px 0 5px}.mode span{font-size:12px;color:var(--muted);line-height:1.5}
 
 /* ====== 重新設計的命運輪盤 ====== */
@@ -184,7 +184,7 @@ h1{font-size:33px;line-height:1.10;margin:0 0 10px;letter-spacing:-.07em}
 .nav button.active{color:var(--green2)}
 
 .modal{position:fixed;inset:0;background:#0c171280;z-index:70;display:none;align-items:flex-end;justify-content:center}.modal.show{display:flex}
-.sheet{width:min(520px,100%);background:#fff;border-radius:28px 28px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));max-height:90svh;overflow:auto;animation:sheet .25s ease}
+.sheet{width:min(520px,100%);background:var(--n-surface, #fff);border-radius:28px 28px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));max-height:90svh;overflow:auto;animation:sheet .25s ease}
 @keyframes sheet{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .handle{width:42px;height:5px;background:#d9dfdc;border-radius:99px;margin:0 auto 18px}
 label{display:block;font-size:12px;font-weight:900;margin:12px 0 7px}

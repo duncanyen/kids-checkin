@@ -1,0 +1,65 @@
+/* Semantic surfaces shared by the application shell and feature pages. */
+html { background:var(--n-bg); }
+body { background:var(--n-bg)!important;color:var(--n-text)!important; }
+button,input,select,textarea {font-family:inherit;}
+button,a,[role=button],summary {touch-action:manipulation;}
+:where(button,a,[role=button],input,select,textarea,summary):focus-visible {outline:3px solid var(--n-primary);outline-offset:3px;}
+.nexus-icon {width:24px;height:24px;display:inline-block;vertical-align:middle;flex-shrink:0;}
+:where(.auth-card,.group-card,.mini-widget,.agenda-card,.card-hero,.carousel-item,.section-card,.notice-card,.nexus-card,.todo-item,.modal-content,.view-container,.calendar-container,.checkin-config-box,.current-user-badge,.panel,.gift-card,.list-item,.setting-box,.chat-container,.room-card,.room-item,.chat-sidebar,.chat-main,.room-list-container,.message-input-container,.input-area,.input-container,.chat-input-area,.game-card,.stat-card,.summary-card,.record-card,.card,.sheet,.restaurant-card) {background:var(--n-surface)!important;color:var(--n-text);border-color:var(--n-border)!important;box-shadow:var(--shadow-soft);}
+:where(.btn-back,.back-btn,.btn-icon-nav,.order-btn,.month-btn,.iconbtn,.btn-settings,.date-selector-container,.calendar-modal,.calendar-day,.member-select-btn,.recurring-trigger,.completed-tabs,.view-tabs,.module-sort-item,.chat-input,.chat-input-box,.search-box,.search-input,.tab-btn,.secondary) {background:var(--n-soft)!important;color:var(--n-text)!important;border-color:var(--n-border)!important;}
+:where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),textarea,select,.form-control) {background-color:var(--n-surface)!important;color:var(--n-text)!important;border-color:var(--n-border)!important;}
+input::placeholder,textarea::placeholder {color:var(--n-muted);opacity:1;}
+:where(.btn-full,.btn-save,.btn-submit,.btn-check,.fab-btn,.cat-btn.active,.view-tab-btn.active,.category-btn.selected,.deadline-btn.selected) {background:var(--n-primary)!important;color:var(--n-on-primary)!important;box-shadow:none;}
+:where(.btn-outline,.btn-cancel,.modal-btns button:first-child) {background:var(--n-soft)!important;color:var(--n-text)!important;border-color:var(--n-border)!important;}
+:where(.modal-btns button:last-child,.btn-send,.send-btn) {background:var(--n-primary);color:var(--n-on-primary);}
+:where(.btn-back,.back-btn,.btn-icon-nav,.order-btn,.sidebar-item,.quick-action-btn) {min-height:44px;}
+:where(.btn-back,.back-btn,.btn-icon-nav,.order-btn) {min-width:44px;}
+:where(.top-nav,.page-title,.section-title,.mini-widget-title,.mini-widget-value,.modal-title,.todo-title,.room-name) {color:var(--n-text)!important;}
+:where(.mini-widget-sub,.section-sub-title,.form-label,.sidebar-title,.sidebar-role,.record-date,.notice-content,.todo-meta) {color:var(--n-muted)!important;}
+:where(.page-title,.section-title) .nexus-icon {margin-right:7px;}
+:where(.mini-widget-icon,.sidebar-icon,.quick-action-btn,.dash-icon,.settings-icon) {background:var(--n-soft)!important;color:var(--n-text)!important;border:none!important;border-radius:14px;}
+.app-header {border-bottom:1px solid var(--n-border);padding-bottom:18px;}
+.hamburger-btn {color:var(--n-text);min-width:44px;min-height:44px;display:grid;place-items:center;}
+.mini-widget,.agenda-card,.card-hero {border:1px solid var(--n-border)!important;border-radius:24px;box-shadow:none!important;}
+.mini-widget:active,.agenda-card:active {background:var(--n-soft)!important;}
+.mini-widget-icon-bg {display:none!important;}
+.mini-widget-title {font-weight:700;}
+.mini-widget-sub {line-height:1.65;}
+.bottom-dock {background:var(--n-surface)!important;border:1px solid var(--n-border)!important;border-radius:24px;padding:8px;gap:4px;max-width:calc(100vw - 24px);overflow-x:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));}
+.dock-item {background:var(--n-surface)!important;color:var(--n-text);border:none;box-shadow:none;min-width:44px;min-height:44px;border-radius:14px;}
+.dock-item:hover {background:var(--n-soft)!important;}
+.sidebar {background:var(--n-bg)!important;width:min(360px,90vw);}
+.sidebar-profile {background:var(--n-bg)!important;color:var(--n-text)!important;border-color:var(--n-border)!important;}
+.sidebar-section {border-bottom:0;padding:12px 16px;}
+.sidebar-item {background:var(--n-surface);margin:0;min-height:62px;border-bottom:1px solid var(--n-border);padding:12px 16px;color:var(--n-text)!important;}
+.sidebar-item:first-child {border-radius:20px 20px 0 0;}
+.sidebar-item:last-child {border-radius:0 0 20px 20px;border-bottom:0;}
+.sidebar-item:only-child {border-radius:20px;}
+.sidebar-icon {width:40px;height:40px;}
+.sidebar-item:hover,.sidebar-item:active {background:var(--n-soft);border-right:0;}
+.sidebar-title {font-size:13px;letter-spacing:.04em;text-transform:none;}
+.quick-action-btn {width:44px;height:44px;display:grid;place-items:center;}
+.sidebar-edit-btn {background:var(--n-soft);color:var(--n-text);}
+.sidebar-edit-btn .nexus-icon {width:14px;height:14px;}
+.nexus-page-heading {display:flex;align-items:center;gap:8px;}
+/* Keep semantic warning/success colors and game illustrations independent. */
+html[data-color-mode=dark] :where(.loading-overlay,.fixed-bottom-bar,header,.header,.chat-header,.date-nav,.calendar-day,.list-container,.category-bar,.room-header,.notice-date) {background:var(--n-surface)!important;color:var(--n-text)!important;border-color:var(--n-border)!important;}
+html[data-color-mode=dark] :where(.calendar-cell,.calendar-cell-header,.day,.date-cell,.calendar-grid,.message-bubble,.message-content,.chat-bubble,.member-option,.completed-section,.recurring-panel) {background-color:var(--n-soft);color:var(--n-text);border-color:var(--n-border);}
+html[data-color-mode=dark] .mini-widget :where([style*="color:"]) {color:var(--n-text)!important;}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important;}}
+[hidden] {display:none!important;}
+/* Neutral app chrome on feature pages also follows the selected palette. */
+:where(.nav,header,.list-header,.chat-header,.input-bar,.fixed-bottom-bar) {background-color:var(--n-surface);border-color:var(--n-border);}
+:where(.system-title,.brand,.brand span) {color:var(--n-text);}
+:where(.btn-save,.btn-full,.fab-btn) {box-shadow:none!important;}
+@media(prefers-reduced-motion:reduce){#dashboardView{opacity:1!important;transform:none!important;}}
+.hamburger-btn {background:var(--n-surface)!important;color:var(--n-text)!important;border-color:var(--n-border)!important;}
+#dashboardView {animation:nexus-reveal .25s ease-out;opacity:1;}
+@keyframes nexus-reveal {from{opacity:0}to{opacity:1}}
+button {color:var(--n-text);}
+:where(.meal,.mode,.chip,.restaurant,.date-selector-container) {background:var(--n-surface)!important;color:var(--n-text);border-color:var(--n-border)!important;}
+:where(.meal small,.mode span) {color:var(--n-muted)!important;}
+:where(.primary,.chip.active,.calendar-day.active) {background:var(--n-primary)!important;color:var(--n-on-primary)!important;}
+.sidebar-profile-info {padding-right:100px;}
+.sidebar-item::after {content:'›';margin-left:auto;color:var(--n-muted);padding-left:10px;}
+:where(button,a,[role=button],input,select,textarea,summary):focus-visible {outline:3px solid var(--n-primary)!important;outline-offset:3px;}

@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -23,27 +24,27 @@
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: var(--text-main); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--n-soft, #f3f4f6); margin: 0; padding: 20px; color: var(--text-main); }
         
         .settings-container { max-width: 500px; margin: 0 auto; animation: fadeIn 0.3s ease-out; }
         .top-nav { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-        .btn-back { background: white; border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
+        .btn-back { background: var(--n-surface, #fff); border: 1px solid #e5e7eb; padding: 8px 16px; border-radius: 20px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); }
         
-        .section-card { background: white; padding: 24px; border-radius: 22px; box-shadow: var(--shadow-sm); margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.03); }
+        .section-card { background: var(--n-surface, #fff); padding: 24px; border-radius: 22px; box-shadow: var(--shadow-sm); margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.03); }
         .section-title { font-size: 18px; font-weight: 800; margin-top: 0; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
         
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text-sub); }
-        .form-group input[type="text"], .form-group input[type="password"] { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 15px; outline: none; background: #f9fafb; font-family: inherit; transition: border 0.2s; }
-        .form-group input:focus { border-color: var(--primary); background: white; }
+        .form-group input[type="text"], .form-group input[type="password"] { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 15px; outline: none; background: var(--n-soft, #f3f4f6); font-family: inherit; transition: border 0.2s; }
+        .form-group input:focus { border-color: var(--primary); background: var(--n-surface, #fff); }
         
         /* 排序清單 */
         .module-sort-list { display: flex; flex-direction: column; gap: 10px; }
-        .module-sort-item { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 14px; border: 1px solid #e2e8f0; font-weight: 700; }
+        .module-sort-item { display: flex; align-items: center; justify-content: space-between; background: var(--n-soft, #f3f4f6); padding: 12px 16px; border-radius: 14px; border: 1px solid #e2e8f0; font-weight: 700; }
         .module-sort-item div { display: flex; align-items: center; gap: 10px; }
         .module-sort-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
         .order-btns { display: flex; gap: 6px; }
-        .order-btn { background: #e2e8f0; border: none; width: 32px; height: 32px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
+        .order-btn { background: var(--n-soft, #f3f4f6); border: none; width: 32px; height: 32px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
         .order-btn:active { background: #cbd5e1; }
 
         .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
@@ -52,6 +53,9 @@
         .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); justify-content: center; align-items: center; font-size: 16px; font-weight: 700; color: var(--primary); z-index: 4000; flex-direction: column; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <link rel="stylesheet" href="css/appearance-settings.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
 
@@ -60,12 +64,33 @@
     <div class="settings-container">
         <div class="top-nav">
             <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
-            <span style="font-weight: 800; font-size: 18px;">⚙️ 個人設定</span>
+            <span style="font-weight: 800; font-size: 18px;">個人設定</span>
         </div>
+
+        <div class="section-card settings-profile">
+            <img id="settingsAvatar" class="settings-profile-avatar" alt="個人大頭照" hidden>
+            <span id="settingsAvatarFallback" class="settings-icon" data-ui-icon="user"></span>
+            <div><strong id="settingsDisplayName"></strong><small>讓 Nexus 更像你的日常</small></div>
+        </div>
+        <h2 class="settings-section-label">外觀與主題</h2>
+        <details class="section-card appearance-card" id="appearanceSettings">
+            <summary><span class="settings-icon" data-ui-icon="palette"></span><strong>顏色主題設定</strong><span data-theme-name>蜂蜜</span><span data-ui-icon="arrow"></span></summary>
+            <div class="appearance-content">
+                <p class="appearance-intro">挑選喜歡的顏色，點選即可預覽。儲存後會套用至主頁與功能頁，並跟隨你的帳號。</p>
+                <div class="theme-options" role="radiogroup" aria-label="顏色主題" data-theme-options></div>
+                <div class="theme-preview">
+                    <p class="theme-preview-title">即時預覽</p>
+                    <div class="theme-preview-row"><span class="settings-icon" data-ui-icon="todo"></span><div><strong>一起完成今天的小事</strong><small>待辦事項 · 生活有條不紊</small></div><span class="theme-preview-mark" data-ui-icon="check"></span></div>
+                </div>
+                <p class="theme-status" role="status" aria-live="polite" data-theme-status>目前使用此主題。</p>
+                <div class="theme-actions"><button type="button" data-theme-cancel disabled>還原</button><button type="button" data-theme-save disabled>儲存主題</button></div>
+            </div>
+        </details>
+        <h2 class="settings-section-label">帳號與個人化</h2>
 
         <!-- 基本資料與密碼設定 -->
         <div class="section-card">
-            <h3 class="section-title">👤 基本資料與安全</h3>
+            <h3 class="section-title"><span data-ui-icon="user"></span>基本資料與安全</h3>
             <div class="form-group">
                 <label>使用者名稱 (家族內不可重複)</label>
                 <input type="text" id="settingsName" placeholder="請輸入使用者名稱">
@@ -87,7 +112,7 @@
 
         <!-- 版面模組與順序自訂區塊 -->
         <div class="section-card">
-            <h3 class="section-title">🎨 主選單卡片排序</h3>
+            <h3 class="section-title"><span data-ui-icon="menu"></span>主選單卡片排序</h3>
             <p style="font-size: 13px; color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">您可以勾選要顯示的功能，並調整卡片出現的順序。(僅顯示管理者開放給您的功能)</p>
             <div class="module-sort-list" id="moduleSortListContainer"></div>
             <br>
@@ -95,7 +120,7 @@
         </div>
 
         <!-- 登出與刪除按鈕 -->
-        <button class="btn-logout" style="background: white; border: 1px solid #e5e7eb; color: var(--text-main);" onclick="logoutSystem()">🚪 登出系統</button>
+        <button class="btn-logout" style="background: var(--n-surface, #fff); border: 1px solid #e5e7eb; color: var(--text-main);" onclick="logoutSystem()">🚪 登出系統</button>
         
         <div class="section-card" style="border-color: #fecaca; background: #fff5f5; margin-top: 20px;">
             <h3 class="section-title" style="color: var(--danger);">⚠️ 危險區域</h3>
@@ -107,24 +132,15 @@
     </div>
 
     <script type="module">
+        import { icon } from './js/ui-icons.js';
+        import { mountAppearanceSettings } from './js/appearance-settings.js';
         import { MODULE_META } from './js/menu-catalog.js';
         import { readPersonalLayout } from './js/personal-layout.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { db } from './js/firebase-config.js';
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-            authDomain: "homebasedb.firebaseapp.com",
-            projectId: "homebasedb",
-            storageBucket: "homebasedb.firebasestorage.app",
-            messagingSenderId: "476832900272",
-            appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
         let currentUser = null;
+        let appearanceSettings;
         
         // ★ 對齊管理者後台的 keys
         const moduleMeta = MODULE_META;
@@ -137,6 +153,9 @@
             const userStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
             if (!userStr) { alert('請先登入！'); window.location.href = 'index.html'; return; }
             currentUser = JSON.parse(userStr);
+            appearanceSettings = mountAppearanceSettings({ db, user: currentUser, root: document.getElementById('appearanceSettings') });
+            document.getElementById('settingsDisplayName').textContent = currentUser.name || currentUser.accountId;
+            if (currentUser.avatar) { const image = document.getElementById('settingsAvatar'); image.onerror = () => { image.hidden = true; document.getElementById('settingsAvatarFallback').hidden = false; }; image.src = currentUser.avatar; image.hidden = false; document.getElementById('settingsAvatarFallback').hidden = true; }
             document.getElementById('settingsName').value = currentUser.name;
 
             // 取得此使用者被管理者允許的功能 (若無紀錄則預設帶入所有模組)
@@ -160,6 +179,7 @@
         async function loadPersonalConfig() {
             try {
                 const data = await readPersonalLayout(db, currentUser);
+                appearanceSettings?.hydrate(data.appearance);
                 let savedOrder = Array.isArray(data.order) ? data.order : [];
                 if (data.modules) currentModules = { ...currentModules, ...data.modules };
 
@@ -192,10 +212,10 @@
                 itemDiv.className = 'module-sort-item';
                 itemDiv.innerHTML = `
                     <div><input type="checkbox" id="chk_${modKey}" ${isChecked ? 'checked' : ''}>
-                    <label for="chk_${modKey}" style="cursor:pointer;">${moduleMeta[modKey].name}</label></div>
+                    <label for="chk_${modKey}" style="cursor:pointer;">${icon(modKey)}${moduleMeta[modKey].name.replace(/^[^\p{L}\p{N}]+/u, '')}</label></div>
                     <div class="order-btns">
-                        <button class="order-btn" onclick="moveItem(${index}, -1)">⬆</button>
-                        <button class="order-btn" onclick="moveItem(${index}, 1)">⬇</button>
+                        <button class="order-btn" aria-label="向上移動" onclick="moveItem(${index}, -1)">⬆</button>
+                        <button class="order-btn" aria-label="向下移動" onclick="moveItem(${index}, 1)">⬇</button>
                     </div>
                 `;
                 container.appendChild(itemDiv);

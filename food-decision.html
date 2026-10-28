@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#10b981">
 <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>吃什麼｜一起投票，吃出好心情</title>
 <link rel="stylesheet" href="css/food-decision.css">
@@ -22,7 +23,7 @@
 }
 .checkbox-label input { width: auto; margin: 0; }
 .date-selector-container {
-    background: #fff;
+    background: var(--n-surface, #fff);
     padding: 12px 18px;
     border-bottom: 1px solid var(--line);
     position: sticky;
@@ -47,7 +48,7 @@
 }
 .calendar-modal.show { display: flex; }
 .calendar-content {
-    background: white; width: 90%; max-width: 400px;
+    background: var(--n-surface, #fff); width: 90%; max-width: 400px;
     border-radius: 20px; padding: 20px;
 }
 .calendar-header {
@@ -87,6 +88,8 @@
 }
 
 </style>
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
 <p id="foodSyncStatus" role="status" style="text-align:center;padding:8px;margin:0">載入群組資料中…</p>

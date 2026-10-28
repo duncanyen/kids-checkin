@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <script src="js/theme-bootstrap.js"></script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -22,10 +23,10 @@
             --bg-color: #f0f4f8; 
             --text-sub: #666;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg-color); margin: 0; padding: 20px; color: var(--n-text, #292c30); }
         .top-nav { display: flex; justify-content: space-between; max-width: 600px; margin: 0 auto 15px auto; align-items: center; }
-        .btn-back { background: #e0e0e0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; color: #555; }
-        .panel { background: white; max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .btn-back { background: #e0e0e0; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; color: var(--n-text, #292c30); }
+        .panel { background: var(--n-surface, #fff); max-width: 600px; margin: 0 auto 20px auto; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .system-title { color: var(--primary-color); font-size: 20px; margin-top: 0; margin-bottom: 15px; text-align: center; }
         
         .filter-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: var(--primary-light); padding: 10px; border-radius: 8px; flex-wrap: wrap; }
@@ -34,11 +35,11 @@
         .btn-query:active { opacity: 0.9; }
 
         .user-reset-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding: 5px;}
-        .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; flex-wrap: wrap; gap: 10px;}
+        .user-reset-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--n-soft, #f3f4f6); border: 1px solid #e0e0e0; border-radius: 8px; flex-wrap: wrap; gap: 10px;}
         .user-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 150px; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); background: white; display: flex; justify-content: center; align-items: center; font-size: 20px;}
-        .user-name { font-weight: bold; font-size: 16px; color: #333; }
-        .user-subtext { font-size: 13px; color: #666; margin-top: 4px; line-height: 1.4; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); background: var(--n-surface, #fff); display: flex; justify-content: center; align-items: center; font-size: 20px;}
+        .user-name { font-weight: bold; font-size: 16px; color: var(--n-text, #292c30); }
+        .user-subtext { font-size: 13px; color: var(--n-muted, #62676e); margin-top: 4px; line-height: 1.4; }
         .user-features { font-size: 12px; color: var(--primary-color); font-weight: 600; margin-top: 4px; }
         
         .action-buttons { display: flex; gap: 8px; }
@@ -53,45 +54,47 @@
         .toggle-form-btn { background: #e3f2fd; color: var(--primary-color); border: 1px dashed var(--primary-color); padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; transition: background 0.2s;}
         .toggle-form-btn:hover { background: #bbdefb; }
 
-        .form-group { display: none; flex-direction: column; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; animation: fadeIn 0.3s ease;}
+        .form-group { display: none; flex-direction: column; gap: 10px; background: var(--n-soft, #f3f4f6); padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; animation: fadeIn 0.3s ease;}
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
         .form-row { display: flex; flex-direction: column; gap: 4px; }
-        .form-row label { font-size: 13px; font-weight: bold; color: #555; }
+        .form-row label { font-size: 13px; font-weight: bold; color: var(--n-text, #292c30); }
         .form-row input, .form-row select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 15px; }
         .form-row input[readonly] { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; border-style: dashed; }
         
-        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: white; padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0; }
-        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; color: #333;}
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--n-surface, #fff); padding: 10px; border-radius: 6px; border: 1px solid #e0e0e0; }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; color: var(--n-text, #292c30);}
         .checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;}
-        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content { background: var(--n-surface, #fff); width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { font-size: 18px; font-weight: bold; color: var(--primary-color); margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-        .btn-cancel { background: #e0e0e0; color: #333; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-cancel { background: #e0e0e0; color: var(--n-text, #292c30); flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-save { background: var(--primary-color); color: white; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
         /* 🌟 遊戲進入權限管理專屬 CSS */
-        .config-box { background: #f8fafc; padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; }
-        .config-box select { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; outline: none; background: white; }
+        .config-box { background: var(--n-soft, #f3f4f6); padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; }
+        .config-box select { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; outline: none; background: var(--n-surface, #fff); }
         
         .section-label { font-size: 13px; font-weight: bold; color: #64748b; margin-bottom: 8px; }
         .member-chips-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; }
-        .member-chip { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; color: #334155; transition: all 0.2s; }
+        .member-chip { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; color: var(--n-text, #292c30); transition: all 0.2s; }
         .member-chip.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
-        .member-games-container { background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; }
+        .member-games-container { background: var(--n-soft, #f3f4f6); border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; }
         .selected-member-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 14px; }
         
         .game-perm-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #cbd5e1; }
         .game-perm-row:last-child { border-bottom: none; }
         .game-perm-info { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; }
         .perm-action-group { display: flex; gap: 6px; }
-        .btn-perm { padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #e2e8f0; color: #64748b; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-perm { padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: var(--n-soft, #f3f4f6); color: #64748b; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
         .btn-perm.allow-active { background: #dcfce7; color: #15803d; border-color: #22c55e; }
         .btn-perm.ban-active { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
     </style>
+    <link rel="stylesheet" href="css/nexus-theme.css">
+    <script type="module" src="js/ui-icons.js"></script>
 </head>
 <body>
     <div class="top-nav">

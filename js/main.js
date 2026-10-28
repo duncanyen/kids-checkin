@@ -1,3 +1,4 @@
+import { icon, enhanceNavigation } from './ui-icons.js';
 import { readPersonalLayout } from './personal-layout.js';
 import { db } from "./firebase-config.js";
 import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -17,6 +18,7 @@ window.groupMembers = [];
 window.toggleSidebar = function() {
     document.getElementById('sidebar').classList.toggle('active');
     document.getElementById('sidebarOverlay').classList.toggle('active');
+    document.querySelector('.hamburger-btn')?.setAttribute('aria-expanded', String(document.getElementById('sidebar').classList.contains('active')));
 };
 
 // 頭像上傳相關
@@ -152,34 +154,36 @@ window.renderDynamicModules = async function(user) {
     sideList.innerHTML = ''; 
     chatContainer.innerHTML = ''; 
     
+    window.NexusTheme?.refresh();
     const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food']; 
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [];
     try {
         const data = await readPersonalLayout(db, user);
+        window.NexusTheme?.hydrate(user.accountId, data.appearance);
         if (data.modules) modules = data.modules;
         if (Array.isArray(data.order)) order = data.order.filter(key => allowedMenus.includes(key));
         allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
     } catch (e) { order = [...allowedMenus]; }
 
     const sideMenuTemplates = {
-        chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">💬</span>聊天室</div>`,
-        checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">📍</span>到家打卡</div>`,
-        calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">📅</span>行事曆</div>`,
-        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">📸</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
-        gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">🎮</span>遊戲區</div>`,
-        wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">✨</span>許願牆</div>`,
-        finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">💰</span>記帳本</div>`,
-        todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">📋</span>待辦事項</div>`,
-        food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">🍽️</span>吃什麼？</div>`
+        chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">${icon('chat')}</span>聊天室</div>`,
+        checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">${icon('checkin')}</span>到家打卡</div>`,
+        calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">${icon('calendar')}</span>行事曆</div>`,
+        photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">${icon('photodump')}</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
+        gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲區')"><span class="sidebar-icon">${icon('gamezone')}</span>遊戲區</div>`,
+        wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">${icon('wishlist')}</span>許願牆</div>`,
+        finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">${icon('finance')}</span>記帳本</div>`,
+        todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">${icon('todo')}</span>待辦事項</div>`,
+        food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">${icon('food')}</span>吃什麼？</div>`
     };
     
     order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
     
     if (user.role === 'admin' || user.role === 'parent') {
-        sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">🛡️</span>管理者後台</div>`;
+        sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">${icon('admin')}</span>管理者後台</div>`;
     }
-    sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">🔄</span>切換群組</div>`;
+    sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">${icon('switch')}</span>切換群組</div>`;
 
     if (miniCardsContainer) {
         let miniCardsHtml = '';
@@ -188,7 +192,7 @@ window.renderDynamicModules = async function(user) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('chat.html', '聊天室')" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; justify-content: space-between; min-height: 80px;">
                     <div style="display: flex; align-items: center; gap: 16px;">
-                        <div class="mini-widget-icon" style="background: #e0f2fe; color: #0284c7;">💬</div>
+                        <div class="mini-widget-icon" style="background: #e0f2fe; color: #0284c7;">${icon('chat')}</div>
                         <div>
                             <div class="mini-widget-title" style="font-size: 16px;">群組聊天室</div>
                             <div class="mini-widget-sub" style="margin-top: 2px;">點擊進入與成員保持聯繫</div>
@@ -199,11 +203,11 @@ window.renderDynamicModules = async function(user) {
             `;
         }
 
-        if (allowedMenus.includes('finance')) {
+        if (allowedMenus.includes('finance') && modules.finance !== false) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('expense.html', '記帳本')">
                     <div class="mini-widget-header">
-                        <div class="mini-widget-icon" style="background: #dcfce7; color: #16a34a;">💰</div>
+                        <div class="mini-widget-icon" style="background: #dcfce7; color: #16a34a;">${icon('finance')}</div>
                         <div class="mini-widget-title">記帳本</div>
                     </div>
                     <div>
@@ -218,7 +222,7 @@ window.renderDynamicModules = async function(user) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')">
                     <div class="mini-widget-header">
-                        <div class="mini-widget-icon" style="background: #fef08a; color: #ca8a04;">🍽️</div>
+                        <div class="mini-widget-icon" style="background: #fef08a; color: #ca8a04;">${icon('food')}</div>
                         <div class="mini-widget-title">吃什麼？</div>
                     </div>
                     <div>
@@ -229,11 +233,11 @@ window.renderDynamicModules = async function(user) {
             `;
         }
 
-        if (allowedMenus.includes('todo')) {
+        if (allowedMenus.includes('todo') && modules.todo !== false) {
             miniCardsHtml += `
                 <div class="mini-widget" onclick="window.navTo('todo.html', '待辦事項')" style="grid-column: 1 / -1; min-height: auto; padding-bottom: 20px;">
                     <div class="mini-widget-header" style="margin-bottom: 16px;">
-                        <div class="mini-widget-icon" style="background: #f3f4f6; color: #4b5563;">📋</div>
+                        <div class="mini-widget-icon" style="background: #f3f4f6; color: #4b5563;">${icon('todo')}</div>
                         <div class="mini-widget-title">待辦清單</div>
                     </div>
                     <div id="todoWidgetContent" style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto; padding-right:4px;">
@@ -252,17 +256,17 @@ window.renderDynamicModules = async function(user) {
         }
     }
 
-    let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">🏠</div>`;
+    let dockHtml = `<div class="dock-item" onclick="window.scrollTo({top:0, behavior:'smooth'});" title="主頁">${icon('home')}</div>`;
     const dockMap = {
-        calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">📅</div>`,
-        chat: `<div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">💬</div>`,
-        photodump: `<div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">📸</div>`,
-        todo: `<div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">📋</div>`,
-        finance: `<div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">💰</div>`,
-        checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">📍</div>`,
-        gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">🎮</div>`,
-        wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">⭐</div>`,
-        food: `<div class="dock-item" onclick="window.navTo('food-decision.html', '吃什麼？')" title="吃什麼">🍽️</div>`
+        calendar: `<div class="dock-item" onclick="window.navTo('calendar.html', '行事曆')" title="行事曆">${icon('calendar')}</div>`,
+        chat: `<div class="dock-item" onclick="window.navTo('chat.html', '聊天室')" title="聊天室">${icon('chat')}</div>`,
+        photodump: `<div class="dock-item" onclick="window.navTo('gallery.html', 'Photo Dump')" title="Photo Dump">${icon('photodump')}</div>`,
+        todo: `<div class="dock-item" onclick="window.navTo('todo.html', '待辦事項')" title="待辦">${icon('todo')}</div>`,
+        finance: `<div class="dock-item" onclick="window.navTo('expense.html', '記帳本')" title="記帳本">${icon('finance')}</div>`,
+        checkin: `<div class="dock-item" onclick="window.navTo('checkin.html', '到家打卡')" title="打卡">${icon('checkin')}</div>`,
+        gamezone: `<div class="dock-item" onclick="window.navTo('games.html', '遊戲區')" title="遊戲區">${icon('gamezone')}</div>`,
+        wishlist: `<div class="dock-item" onclick="window.navTo('wishwall.html', '許願牆')" title="許願牆">${icon('wishlist')}</div>`,
+        food: `<div class="dock-item" onclick="window.navTo('food-decision.html', '吃什麼？')" title="吃什麼">${icon('food')}</div>`
     };
     
     order.forEach(modKey => {
@@ -271,6 +275,7 @@ window.renderDynamicModules = async function(user) {
         }
     });
     dockContainer.innerHTML = dockHtml;
+    enhanceNavigation();
 };
 
 // 初始化主流程
