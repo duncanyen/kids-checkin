@@ -20,7 +20,7 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  await context.route('https://ui-avatars.com/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="16" fill="#eee"/></svg>'}));
  await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:mock}));
  await context.route('**/js/gallery-storage.js',r=>r.fulfill({contentType:'text/javascript',body:'export const uploadPhotoPost=async()=>({}),removePhotoFiles=async()=>{};'}));
- await context.route('https://cdn.jsdelivr.net/npm/chart.js',r=>r.fulfill({contentType:'text/javascript',body:'window.Chart=class {constructor(ctx){if(ctx?.canvas)ctx.canvas.style.maxWidth="100%";}destroy(){}};'}));
+ await context.route('https://cdn.jsdelivr.net/npm/chart.js**',r=>r.fulfill({contentType:'text/javascript',body:'window.Chart=class {constructor(ctx){if(ctx?.canvas)ctx.canvas.style.maxWidth="100%";}destroy(){}};'}));
  await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await page.addInitScript(()=>{
   if(!sessionStorage.getItem('familyCheckInUser'))sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',name:'小明',avatar:'Nexus.png',groupId:'A',menus:['chat','calendar','finance','todo','photodump','gamezone','wishlist','food']}));

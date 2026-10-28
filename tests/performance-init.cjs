@@ -60,7 +60,8 @@ export const deleteDoc=async()=>{},runTransaction=()=>{};
  await ctx.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await ctx.route('https://ui-avatars.com/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg"/>'}));
  await ctx.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:'window.Chart=class {constructor(ctx,config){window.__chart=config;}destroy(){}};'}));
- if(baseline)await ctx.route(/\/js\/(main|dashboard|expense|auth)\.js$/,r=>{const path=new URL(r.request().url()).pathname.slice(1);r.fulfill({contentType:'text/javascript',body:execFileSync('git',['show',`${baselineRef}:${path}`],{encoding:'utf8'})});});
+ if(baseline)await ctx.route(/\/(index|expense)\.html(?:\?.*)?$/,r=>{const path=new URL(r.request().url()).pathname.slice(1);return r.fulfill({contentType:'text/html',body:execFileSync('git',['show',`${baselineRef}:${path}`],{encoding:'utf8'})});});
+ if(baseline)await ctx.route(/\/js\/(main|dashboard|expense|auth)\.js(?:\?.*)?$/,r=>{const path=new URL(r.request().url()).pathname.slice(1);r.fulfill({contentType:'text/javascript',body:execFileSync('git',['show',`${baselineRef}:${path}`],{encoding:'utf8'})});});
  const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  await page.addInitScript(user=>{
   sessionStorage.setItem('familyCheckInUser',JSON.stringify(user));sessionStorage.setItem('nexus_active_group_id','A');localStorage.setItem('lastGroupId','A');window.__subs={};
@@ -164,7 +165,7 @@ export const deleteDoc=async()=>{},runTransaction=()=>{};
   assert.equal(await page.locator('#monthTotalExpense').innerText(),'讀取中...');
   assert.equal(await page.evaluate(()=>window.__chart),undefined);
   await page.waitForFunction(()=>document.getElementById('monthTotalExpense').textContent==='$125');
-  assert.ok(await page.evaluate(()=>window.__chart.data.labels.includes('測試分類')));
+  await page.waitForFunction(()=>window.__chart?.data.labels.includes('測試分類'));
   slowCategories=false;
  }
  assert.deepEqual(errors,[]);

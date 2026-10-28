@@ -5,11 +5,15 @@
 .app-nav-link span {max-width:100%;white-space:nowrap;letter-spacing:-.02em;}
 .app-nav-link[aria-current=page] {color:var(--n-primary,#956018);font-weight:800;}
 .app-nav-link:active {background:var(--n-soft,#f1eee4);}
-.has-app-navigation body {padding-bottom:calc(var(--app-nav-height) + 24px)!important;}
+:is(.has-app-navigation,[data-navigation-entry=nav]) body {padding-bottom:calc(var(--app-nav-height) + 24px)!important;}
 html[data-navigation-entry=nav] [data-main-menu-back] {display:none!important;}
-.has-app-navigation .fixed-bottom-bar {bottom:var(--app-nav-height);}
-.has-app-navigation .todo-container {padding-bottom:84px;}
-.has-app-navigation .fab-container {bottom:calc(var(--app-nav-height) + 18px);}
+:is(.has-app-navigation,[data-navigation-entry=nav]) .fixed-bottom-bar {bottom:var(--app-nav-height);}
+:is(.has-app-navigation,[data-navigation-entry=nav]) .todo-container {padding-bottom:84px;}
+:is(.has-app-navigation,[data-navigation-entry=nav]) .fab-container {bottom:calc(var(--app-nav-height) + 18px);}
 .has-app-navigation body[data-app-page=food] .app>.nav {position:static;left:auto;bottom:auto;transform:none;width:100%;height:auto;min-height:64px;border-bottom:1px solid var(--n-border);padding:8px 12px;background:var(--n-surface);}
 body[data-app-page=food] header>[data-main-menu-back] {width:auto;max-width:145px;padding:8px 10px;font-size:13px;}
 @media(min-width:900px){.app-nav-link{max-width:130px;font-size:12px;}}
+
+/* Immediate feedback during native navigation, without delaying navigation or
+   fading content. No animation, including under prefers-reduced-motion. */
+.app-nav-link[aria-busy=true] {background:var(--n-soft,#f1eee4);color:var(--n-primary,#956018);}

@@ -3,7 +3,15 @@ import {
     serverTimestamp, doc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { db } from './firebase-config.js';
-import { uploadPhotoPost, removePhotoFiles } from './gallery-storage.js';
+// Viewing the feed needs only Firestore. Auth/Functions/Storage load when an
+// upload or storage-backed delete actually needs them; native ESM shares the load.
+async function uploadPhotoPost(options) {
+    return (await import('./gallery-storage.js')).uploadPhotoPost(options);
+}
+async function removePhotoFiles(paths, ...args) {
+    if (!paths?.length) return [];
+    return (await import('./gallery-storage.js')).removePhotoFiles(paths, ...args);
+}
 
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -243,6 +251,8 @@ window.deletePhoto = async function(photoId) {
         try {
             const photo = allPhotosData.find(item => item.id === photoId);
             if (!photo || photo.groupId !== currentGroupId) return;
+            // Confirm the lazy cleanup code is available before deleting metadata.
+            if (photo.storagePaths?.length) await import('./gallery-storage.js');
             await deleteDoc(doc(db, "photos", photoId));
             try {
                 const results = await removePhotoFiles(photo.storagePaths, currentUser, currentGroupId);

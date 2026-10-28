@@ -105,6 +105,7 @@ function listenToRooms() {
         });
     }, (error) => {
         console.error("【索引錯誤】讀取群組清單失敗！", error.message);
+        document.getElementById('roomListContainer').textContent = '聊天室載入失敗，請檢查網路後重新整理。';
     });
 }
 

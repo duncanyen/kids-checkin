@@ -1,6 +1,14 @@
 import { icon } from './ui-icons.js';
 import { NAV_FEATURES, resolveNavigation, cachedNavigation, cacheNavigation } from './navigation-config.js';
 
+let feedbackFrame=null;
+function resetPendingNavigation(){
+    if(feedbackFrame!==null){cancelAnimationFrame(feedbackFrame);feedbackFrame=null;}
+    document.querySelectorAll('.app-nav-link[aria-busy]').forEach(link=>link.removeAttribute('aria-busy'));
+}
+// These are document-lifetime handlers, independent of repeated nav rendering.
+window.addEventListener('pagehide',resetPendingNavigation);
+window.addEventListener('pageshow',resetPendingNavigation);
 function currentUser(){try{return JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{return null;}}
 export function mountAppNavigation({user=currentUser(),settings,container}={}){
     const page=document.body.dataset.appPage;
@@ -16,7 +24,13 @@ export function mountAppNavigation({user=currentUser(),settings,container}={}){
         link.dataset.navFeature=item.id;link.setAttribute('aria-label',item.label);
         if(item.id===(page||'home'))link.setAttribute('aria-current','page');
         link.addEventListener('click',event=>{
-            if(item.id==='home'||event.button||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||currentUser()?.accountId!==user.accountId)return;
+            if(event.defaultPrevented||event.button||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||currentUser()?.accountId!==user.accountId)return;
+            // Reselecting this exact URL should preserve the current view and
+            // subscriptions instead of downloading/reinitializing the same page.
+            if(link.href===location.href){event.preventDefault();return;}
+            resetPendingNavigation();link.setAttribute('aria-busy','true');
+            feedbackFrame=requestAnimationFrame(()=>{feedbackFrame=null;if(event.defaultPrevented)resetPendingNavigation();});
+            if(item.id==='home')return;
             // Preserve the existing deferred activity log without blocking native/PWA navigation.
             try{
                 const existing=JSON.parse(localStorage.getItem('nexus_pending_logs')||'[]');

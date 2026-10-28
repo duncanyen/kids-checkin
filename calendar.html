@@ -2,7 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="modulepreload" href="js/navigation-config.js">
     <script src="js/theme-bootstrap.js"></script>
+    <script>
+    // Reserve navigation space and hide the return link before the first paint.
+    // This reads layout context only; page permissions and data still initialize normally.
+    try { if (new URLSearchParams(location.search).get('nav') === '1' && JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null')?.accountId) document.documentElement.dataset.navigationEntry = 'nav'; } catch {}
+    </script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">

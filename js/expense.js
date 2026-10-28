@@ -1,3 +1,4 @@
+import { loadChart } from './chart-loader.js';
 import { loadScopedProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
@@ -47,6 +48,8 @@ let categoriesReady = Promise.resolve();
 let monthData = [];            
 let pieChartInstance = null;      
 let barChartInstance = null;
+let pieRenderVersion = 0;
+let reviewRenderVersion = 0;
 
 let currentModalType = 'expense';
 let currentChartType = 'expense'; 
@@ -141,6 +144,8 @@ async function loadMonthData(year, month) {
     document.getElementById('monthTotalIncome').innerText = '讀取中...';
     if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
     const grid = document.getElementById('calendarGrid');
+    grid.dataset.loading = '';
+    document.documentElement.style.setProperty('--ledger-week-count', Math.ceil((new Date(year, month - 1, 1).getDay() + new Date(year, month, 0).getDate()) / 7));
     while (grid.children.length > 7) grid.removeChild(grid.lastChild);
     document.getElementById('avatarContainer').innerHTML = '';
     document.getElementById('expenseModal').style.display = 'none';
@@ -166,6 +171,7 @@ async function loadMonthData(year, month) {
         });
 
         document.getElementById('calendarMonthTitle').innerText = `${year}年 ${month}月`;
+        delete grid.dataset.loading;
         renderCalendar(year, month);
         allUsersMap = {};
         renderPersonalAvatars();
@@ -295,7 +301,33 @@ window.switchChartType = function(type) {
     renderPieChart();
 }
 
-function renderPieChart() {
+// This state occupies the existing chart area only; amounts remain independent.
+async function chartConstructor(canvasId, retry) {
+    const canvas = document.getElementById(canvasId);
+    let status = document.getElementById(canvasId + 'Status');
+    if (!status) {
+        status = document.createElement('div');
+        status.id = canvasId + 'Status'; status.className = 'chart-load-status';
+        status.setAttribute('role', 'status'); canvas.parentElement.append(status);
+    }
+    status.hidden = !!window.Chart;
+    if (!window.Chart) status.textContent = '圖表載入中...';
+    try {
+        const Chart = await loadChart();
+        status.hidden = true;
+        return Chart;
+    } catch (error) {
+        status.hidden = false;
+        status.textContent = '圖表暫時無法載入，記帳金額仍可使用。 ';
+        const button = document.createElement('button');
+        button.type = 'button'; button.textContent = '重試載入圖表';
+        button.addEventListener('click', retry); status.append(button);
+        return null;
+    }
+}
+
+async function renderPieChart() {
+    const version = ++pieRenderVersion;
     if (!monthReady) return;
     let totalExpense = 0, totalIncome = 0;
     const categorySums = {};
@@ -329,6 +361,8 @@ function renderPieChart() {
         }
     });
 
+    const Chart = await chartConstructor('expensePieChart', renderPieChart);
+    if (!Chart || version !== pieRenderVersion || !monthReady) return;
     const ctx = document.getElementById('expensePieChart').getContext('2d');
     if (pieChartInstance) pieChartInstance.destroy();
 
@@ -408,7 +442,8 @@ window.renderReviewYearData = function() {
     document.getElementById('revYearBalance').innerText = `$${(yearInc - yearExp).toLocaleString()}`;
 }
 
-function processReviewData() {
+async function processReviewData() {
+    const version = ++reviewRenderVersion;
     const now = new Date();
     const currentY = now.getFullYear();
     const currentM = String(now.getMonth() + 1).padStart(2, '0');
@@ -483,6 +518,8 @@ function processReviewData() {
         chartExpData.push(monthlyStats[ym].expense);
     });
 
+    const Chart = await chartConstructor('sixMonthBarChart', processReviewData);
+    if (!Chart || version !== reviewRenderVersion) return;
     const ctxBar = document.getElementById('sixMonthBarChart').getContext('2d');
     if (barChartInstance) barChartInstance.destroy();
     barChartInstance = new Chart(ctxBar, {

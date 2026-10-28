@@ -2,7 +2,16 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="modulepreload" href="js/navigation-config.js">
     <script src="js/theme-bootstrap.js"></script>
+    <script>
+    { const ledgerToday = new Date();
+    document.documentElement.style.setProperty('--ledger-week-count', Math.ceil((new Date(ledgerToday.getFullYear(), ledgerToday.getMonth(), 1).getDay() + new Date(ledgerToday.getFullYear(), ledgerToday.getMonth() + 1, 0).getDate()) / 7)); }
+    // Reserve navigation space and hide the return link before the first paint.
+    // This reads layout context only; page permissions and data still initialize normally.
+    try { if (new URLSearchParams(location.search).get('nav') === '1' && JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null')?.accountId) document.documentElement.dataset.navigationEntry = 'nav'; } catch {}
+    </script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -14,8 +23,8 @@
     <title>OurBase - 記帳本</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     
-    <!-- 引入 Chart.js 繪製圖表 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!-- Charts load on demand after the ledger data, without blocking the shell. -->
     <link rel="stylesheet" href="css/expense.css">
     <link rel="stylesheet" href="css/nexus-theme.css">
     <script type="module" src="js/ui-icons.js"></script>
@@ -47,7 +56,7 @@
                 <div class="current-month" id="calendarMonthTitle">載入中...</div>
                 <button class="month-btn" onclick="changeMonth(1)">❯</button>
             </div>
-            <div class="calendar-grid" id="calendarGrid">
+            <div class="calendar-grid" id="calendarGrid" data-loading>
                 <div class="weekday">日</div><div class="weekday">一</div><div class="weekday">二</div>
                 <div class="weekday">三</div><div class="weekday">四</div><div class="weekday">五</div><div class="weekday">六</div>
             </div>
@@ -223,6 +232,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/expense.js"></script>
+    <script type="module" src="js/expense.js?v=navigation3"></script>
 </body>
 </html>

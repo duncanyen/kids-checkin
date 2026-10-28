@@ -2,7 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="modulepreload" href="js/navigation-config.js">
     <script src="js/theme-bootstrap.js"></script>
+    <script>
+    // Reserve navigation space and hide the return link before the first paint.
+    // This reads layout context only; page permissions and data still initialize normally.
+    try { if (new URLSearchParams(location.search).get('nav') === '1' && JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null')?.accountId) document.documentElement.dataset.navigationEntry = 'nav'; } catch {}
+    </script>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./Nexus.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -57,7 +64,11 @@
             <button class="btn-new-chat" id="btnOpenCreateModal">➕ 建立群組</button>
         </div>
         <div class="room-list-content" id="roomListContainer">
-            <div style="text-align:center; padding:30px; font-weight: 600; color: var(--text-sub);">讀取群組中...</div>
+            <div class="nexus-skeleton" role="status" aria-label="載入聊天室">
+                <div class="nexus-skeleton-row" aria-hidden="true"><i></i><span><b></b><b></b></span></div>
+                <div class="nexus-skeleton-row" aria-hidden="true"><i></i><span><b></b><b></b></span></div>
+                <p>讀取群組中...</p>
+            </div>
         </div>
     </div>
 

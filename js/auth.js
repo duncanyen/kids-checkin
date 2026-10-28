@@ -62,6 +62,8 @@ window.hideAllSections = function() {
 
 window.showAuthSection = function() {
     window.stopDashboardListeners?.();
+    delete document.documentElement.dataset.navigationEntry;
+    document.documentElement.classList.remove('has-app-navigation');
     document.getElementById('loadingView').style.display = 'none';
     window.hideAllSections();
     document.getElementById('authSection').classList.add('active');

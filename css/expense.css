@@ -143,3 +143,11 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 
 /* 自訂類別的內部表單樣式 */
 .cat-form-label { font-size: 13px; font-weight: bold; color: var(--n-text, #292c30); margin-bottom: 5px; display: block; }
+/* A static status, without shimmer or a full-page loading overlay. */
+.chart-container {position:relative;}
+.chart-load-status {position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;padding:16px;text-align:center;color:var(--text-sub);background:var(--bg-card,var(--bg-body));font-size:13px;}
+.chart-load-status button {min-height:44px;border:1px solid var(--border-color);border-radius:10px;padding:8px 12px;background:var(--bg-body);color:var(--text-main);}
+
+/* Existing day cells are 65px content + 12px padding/border, with 4px gaps.
+   Preserve the pending month's natural height instead of pushing the chart down. */
+#calendarGrid[data-loading]::after {content:"";grid-column:1/-1;height:calc(var(--ledger-week-count,5) * 77px + (var(--ledger-week-count,5) - 1) * 4px);border-radius:8px;background:var(--n-soft);}

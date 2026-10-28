@@ -63,3 +63,14 @@ button {color:var(--n-text);}
 .sidebar-profile-info {padding-right:100px;}
 .sidebar-item::after {content:'›';margin-left:auto;color:var(--n-muted);padding-left:10px;}
 :where(button,a,[role=button],input,select,textarea,summary):focus-visible {outline:3px solid var(--n-primary)!important;outline-offset:3px;}
+
+/* Static placeholders only: no shimmer, timers, or motion preference exception. */
+.nexus-skeleton {color:var(--n-muted);}
+.nexus-skeleton p {margin:12px 0;padding:0 12px;text-align:center;font-size:13px;}
+.nexus-skeleton-row {display:flex;align-items:center;gap:12px;min-height:72px;padding:12px;}
+.nexus-skeleton-row i {display:block;flex:none;width:44px;height:44px;border-radius:50%;background:var(--n-soft);}
+.nexus-skeleton-row span {flex:1;}
+.nexus-skeleton-row b {display:block;width:70%;height:12px;margin:8px 0;border-radius:6px;background:var(--n-soft);}
+.nexus-skeleton-row b:last-child {width:45%;}
+.nexus-loading-card {border:1px solid var(--n-border);border-radius:20px;overflow:hidden;background:var(--n-surface);}
+.nexus-skeleton-photo {width:100%;aspect-ratio:1.15;background:var(--n-soft);}
