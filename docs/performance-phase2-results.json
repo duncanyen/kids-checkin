@@ -1,0 +1,1320 @@
+{
+  "method": "Headless Chromium /usr/bin/chromium; 390x844 touch viewport; actual HTML/ES modules; isolated memory Firebase SDK fixture, not official Emulator; all Firebase SDK/CDN routes intercepted; 60 ms per SDK operation; same host, sequential runs; no production IO.",
+  "baselineRef": "8990aed",
+  "fixture": {
+    "usersTotal": 103,
+    "groupMemberIds": [
+      "alice",
+      "bob"
+    ],
+    "currentMonthGroupExpenses": 1,
+    "currentMonthAmount": 125,
+    "unrelatedGroupAmount": 999,
+    "customCategories": 1,
+    "photos": 3
+  },
+  "readiness": {
+    "homeReadyMs": "Navigation start through loading overlay hidden and dashboard visible",
+    "homeContentReadyMs": "Navigation start through carousel + two group members + correct finance widget amount",
+    "expenseReadyMs": "Navigation start through correct month expense sum $125; optional profiles may still be pending"
+  },
+  "runs": {
+    "baseline": [
+      {
+        "homeReadyMs": 490.179116,
+        "homeContentReadyMs": 562.351525,
+        "expenseReadyMs": 285.5027739999987
+      },
+      {
+        "homeReadyMs": 520.044569,
+        "homeContentReadyMs": 586.6856749999998,
+        "expenseReadyMs": 306.3204569999998
+      },
+      {
+        "homeReadyMs": 505.43707299999994,
+        "homeContentReadyMs": 575.4953709999999,
+        "expenseReadyMs": 295.77345200000127
+      }
+    ],
+    "optimized": [
+      {
+        "homeReadyMs": 354.839798,
+        "homeContentReadyMs": 429.86929599999996,
+        "expenseReadyMs": 119.12523800000054
+      },
+      {
+        "homeReadyMs": 348.73237499999993,
+        "homeContentReadyMs": 417.4228199999999,
+        "expenseReadyMs": 118.36651500000062
+      },
+      {
+        "homeReadyMs": 336.14501099999995,
+        "homeContentReadyMs": 416.67296599999986,
+        "expenseReadyMs": 155.2886210000006
+      }
+    ]
+  },
+  "medians": {
+    "baseline": {
+      "homeReadyMs": 505.43707299999994,
+      "homeContentReadyMs": 575.4953709999999,
+      "expenseReadyMs": 295.77345200000127
+    },
+    "optimized": {
+      "homeReadyMs": 348.73237499999993,
+      "homeContentReadyMs": 417.4228199999999,
+      "expenseReadyMs": 119.12523800000054
+    }
+  },
+  "lifecycle": {
+    "baseline": {
+      "cycles": [
+        {
+          "active": {
+            "photos": 3,
+            "intervals": 2,
+            "dom": 4
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 1,
+              "events": 1,
+              "todos": 1,
+              "expenses": 1,
+              "photos": 3
+            },
+            "intervals": 1,
+            "dom": 2
+          }
+        },
+        {
+          "active": {
+            "photos": 5,
+            "intervals": 3,
+            "dom": 6
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 2,
+              "events": 2,
+              "todos": 2,
+              "expenses": 2,
+              "photos": 5
+            },
+            "intervals": 2,
+            "dom": 4
+          }
+        },
+        {
+          "active": {
+            "photos": 7,
+            "intervals": 4,
+            "dom": 8
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 3,
+              "events": 3,
+              "todos": 3,
+              "expenses": 3,
+              "photos": 7
+            },
+            "intervals": 3,
+            "dom": 6
+          }
+        },
+        {
+          "active": {
+            "photos": 9,
+            "intervals": 5,
+            "dom": 10
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 4,
+              "events": 4,
+              "todos": 4,
+              "expenses": 4,
+              "photos": 9
+            },
+            "intervals": 4,
+            "dom": 8
+          }
+        },
+        {
+          "active": {
+            "photos": 11,
+            "intervals": 6,
+            "dom": 12
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 5,
+              "events": 5,
+              "todos": 5,
+              "expenses": 5,
+              "photos": 11
+            },
+            "intervals": 5,
+            "dom": 10
+          }
+        },
+        {
+          "active": {
+            "photos": 13,
+            "intervals": 7,
+            "dom": 14
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 6,
+              "events": 6,
+              "todos": 6,
+              "expenses": 6,
+              "photos": 13
+            },
+            "intervals": 6,
+            "dom": 12
+          }
+        },
+        {
+          "active": {
+            "photos": 15,
+            "intervals": 8,
+            "dom": 16
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 7,
+              "events": 7,
+              "todos": 7,
+              "expenses": 7,
+              "photos": 15
+            },
+            "intervals": 7,
+            "dom": 14
+          }
+        },
+        {
+          "active": {
+            "photos": 17,
+            "intervals": 9,
+            "dom": 18
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 8,
+              "events": 8,
+              "todos": 8,
+              "expenses": 8,
+              "photos": 17
+            },
+            "intervals": 8,
+            "dom": 16
+          }
+        },
+        {
+          "active": {
+            "photos": 19,
+            "intervals": 10,
+            "dom": 20
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 9,
+              "events": 9,
+              "todos": 9,
+              "expenses": 9,
+              "photos": 19
+            },
+            "intervals": 9,
+            "dom": 18
+          }
+        },
+        {
+          "active": {
+            "photos": 21,
+            "intervals": 11,
+            "dom": 22
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 10,
+              "events": 10,
+              "todos": 10,
+              "expenses": 10,
+              "photos": 21
+            },
+            "intervals": 10,
+            "dom": 20
+          }
+        },
+        {
+          "active": {
+            "photos": 23,
+            "intervals": 12,
+            "dom": 24
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 11,
+              "events": 11,
+              "todos": 11,
+              "expenses": 11,
+              "photos": 23
+            },
+            "intervals": 11,
+            "dom": 22
+          }
+        },
+        {
+          "active": {
+            "photos": 25,
+            "intervals": 13,
+            "dom": 26
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 12,
+              "events": 12,
+              "todos": 12,
+              "expenses": 12,
+              "photos": 25
+            },
+            "intervals": 12,
+            "dom": 24
+          }
+        },
+        {
+          "active": {
+            "photos": 27,
+            "intervals": 14,
+            "dom": 28
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 13,
+              "events": 13,
+              "todos": 13,
+              "expenses": 13,
+              "photos": 27
+            },
+            "intervals": 13,
+            "dom": 26
+          }
+        },
+        {
+          "active": {
+            "photos": 29,
+            "intervals": 15,
+            "dom": 30
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 14,
+              "events": 14,
+              "todos": 14,
+              "expenses": 14,
+              "photos": 29
+            },
+            "intervals": 14,
+            "dom": 28
+          }
+        },
+        {
+          "active": {
+            "photos": 31,
+            "intervals": 16,
+            "dom": 32
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 15,
+              "events": 15,
+              "todos": 15,
+              "expenses": 15,
+              "photos": 31
+            },
+            "intervals": 15,
+            "dom": 30
+          }
+        },
+        {
+          "active": {
+            "photos": 33,
+            "intervals": 17,
+            "dom": 34
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 16,
+              "events": 16,
+              "todos": 16,
+              "expenses": 16,
+              "photos": 33
+            },
+            "intervals": 16,
+            "dom": 32
+          }
+        },
+        {
+          "active": {
+            "photos": 35,
+            "intervals": 18,
+            "dom": 36
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 17,
+              "events": 17,
+              "todos": 17,
+              "expenses": 17,
+              "photos": 35
+            },
+            "intervals": 17,
+            "dom": 34
+          }
+        },
+        {
+          "active": {
+            "photos": 37,
+            "intervals": 19,
+            "dom": 38
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 18,
+              "events": 18,
+              "todos": 18,
+              "expenses": 18,
+              "photos": 37
+            },
+            "intervals": 18,
+            "dom": 36
+          }
+        },
+        {
+          "active": {
+            "photos": 39,
+            "intervals": 20,
+            "dom": 40
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 19,
+              "events": 19,
+              "todos": 19,
+              "expenses": 19,
+              "photos": 39
+            },
+            "intervals": 19,
+            "dom": 38
+          }
+        },
+        {
+          "active": {
+            "photos": 41,
+            "intervals": 21,
+            "dom": 42
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 20,
+              "events": 20,
+              "todos": 20,
+              "expenses": 20,
+              "photos": 41
+            },
+            "intervals": 20,
+            "dom": 40
+          }
+        }
+      ],
+      "errors": []
+    },
+    "optimized": {
+      "cycles": [
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        },
+        {
+          "active": {
+            "photos": 1,
+            "intervals": 1,
+            "dom": 2
+          },
+          "stopped": {
+            "subscriptions": {
+              "groups/A": 0,
+              "rooms": 0,
+              "events": 0,
+              "todos": 0,
+              "expenses": 0,
+              "photos": 0
+            },
+            "intervals": 0,
+            "dom": 0
+          }
+        }
+      ],
+      "errors": []
+    }
+  },
+  "baselineInitialOperations": {
+    "initialQueries": [
+      {
+        "path": "users",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "accountId",
+            "op": "==",
+            "value": "alice"
+          }
+        ],
+        "source": "getDocs",
+        "start": 839.117522,
+        "end": 899.939302,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "groups/A",
+        "id": "A",
+        "kind": "get",
+        "subscription": true,
+        "source": "snapshot",
+        "start": 906.653278,
+        "end": 966.14432
+      },
+      {
+        "path": "userSettings/alice",
+        "id": "alice",
+        "kind": "get",
+        "source": "getDoc",
+        "start": 908.041702,
+        "end": 968.864092
+      },
+      {
+        "path": "users",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "accountId",
+            "op": "in",
+            "value": [
+              "alice",
+              "bob"
+            ]
+          }
+        ],
+        "source": "getDocs",
+        "start": 974.147144,
+        "end": 1034.692432,
+        "returnedDocuments": 2
+      },
+      {
+        "path": "users",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "name",
+            "op": "in",
+            "value": [
+              "alice",
+              "bob"
+            ]
+          }
+        ],
+        "source": "getDocs",
+        "start": 1044.87544,
+        "end": 1106.216133,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "rooms",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "participants",
+            "op": "array-contains",
+            "value": "Alice"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 1110.001732,
+        "end": 1170.807498,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "photos",
+        "kind": "count",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "timestamp",
+            "op": ">",
+            "value": "2026-10-21T10:43:45.078Z"
+          }
+        ],
+        "source": "getCountFromServer",
+        "start": 1110.662859,
+        "end": 1171.241693,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "events",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "date",
+            "op": "==",
+            "value": "2026-10-28"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 1110.951395,
+        "end": 1171.892224,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "todos",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 1111.343396,
+        "end": 1172.159707,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "expenses",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "date",
+            "op": ">=",
+            "value": "2026-10-01"
+          },
+          {
+            "field": "date",
+            "op": "<=",
+            "value": "2026-10-31"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 1111.964883,
+        "end": 1172.648094,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "photos",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {},
+          {}
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 1112.024803,
+        "end": 1172.914916,
+        "returnedDocuments": 3
+      }
+    ],
+    "expenseQueries": [
+      {
+        "path": "users",
+        "kind": "query",
+        "source": "getDocs",
+        "start": 8293.670696,
+        "end": 8353.155537,
+        "returnedDocuments": 103
+      },
+      {
+        "path": "customCategories",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          }
+        ],
+        "source": "getDocs",
+        "start": 8361.628519,
+        "end": 8421.116725,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "expenses",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "date",
+            "op": ">=",
+            "value": "2026-10-01"
+          },
+          {
+            "field": "date",
+            "op": "<=",
+            "value": "2026-10-31"
+          }
+        ],
+        "source": "getDocs",
+        "start": 8423.826136,
+        "end": 8484.084034,
+        "returnedDocuments": 1
+      }
+    ]
+  },
+  "optimizedInitialOperations": {
+    "initialQueries": [
+      {
+        "path": "users",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "accountId",
+            "op": "==",
+            "value": "alice"
+          }
+        ],
+        "source": "getDocs",
+        "start": 836.464254,
+        "end": 896.926025,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "groups/A",
+        "id": "A",
+        "kind": "get",
+        "subscription": true,
+        "source": "snapshot",
+        "start": 906.351158,
+        "end": 966.668376
+      },
+      {
+        "path": "userSettings/alice",
+        "id": "alice",
+        "kind": "get",
+        "source": "getDoc",
+        "start": 906.703171,
+        "end": 967.917548
+      },
+      {
+        "path": "users",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "accountId",
+            "op": "in",
+            "value": [
+              "alice",
+              "bob"
+            ]
+          }
+        ],
+        "source": "getDocs",
+        "start": 973.279131,
+        "end": 1033.585745,
+        "returnedDocuments": 2
+      },
+      {
+        "path": "rooms",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "participants",
+            "op": "array-contains",
+            "value": "Alice"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 979.006008,
+        "end": 1040.215514,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "photos",
+        "kind": "count",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "timestamp",
+            "op": ">",
+            "value": "2026-10-21T10:44:11.622Z"
+          }
+        ],
+        "source": "getCountFromServer",
+        "start": 979.11319,
+        "end": 1040.547146,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "events",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "date",
+            "op": "==",
+            "value": "2026-10-28"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 979.650824,
+        "end": 1040.679306,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "todos",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 979.780531,
+        "end": 1040.794931,
+        "returnedDocuments": 0
+      },
+      {
+        "path": "expenses",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "date",
+            "op": ">=",
+            "value": "2026-10-01"
+          },
+          {
+            "field": "date",
+            "op": "<=",
+            "value": "2026-10-31"
+          }
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 980.469153,
+        "end": 1042.209263,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "photos",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {},
+          {}
+        ],
+        "subscription": true,
+        "source": "snapshot",
+        "start": 980.556896,
+        "end": 1044.488834,
+        "returnedDocuments": 3
+      }
+    ],
+    "expenseQueries": [
+      {
+        "path": "customCategories",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          }
+        ],
+        "source": "getDocs",
+        "start": 9132.122679,
+        "end": 9192.064143,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "expenses",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "groupId",
+            "op": "==",
+            "value": "A"
+          },
+          {
+            "field": "date",
+            "op": ">=",
+            "value": "2026-10-01"
+          },
+          {
+            "field": "date",
+            "op": "<=",
+            "value": "2026-10-31"
+          }
+        ],
+        "source": "getDocs",
+        "start": 9132.608192,
+        "end": 9192.761527,
+        "returnedDocuments": 1
+      },
+      {
+        "path": "users",
+        "kind": "query",
+        "filters": [
+          {
+            "field": "accountId",
+            "op": "in",
+            "value": [
+              "alice"
+            ]
+          }
+        ],
+        "source": "getDocs",
+        "start": 9195.585885,
+        "end": 9256.34219,
+        "returnedDocuments": 1
+      }
+    ]
+  }
+}

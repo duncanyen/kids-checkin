@@ -61,6 +61,7 @@ window.hideAllSections = function() {
 };
 
 window.showAuthSection = function() {
+    window.stopDashboardListeners?.();
     document.getElementById('loadingView').style.display = 'none';
     window.hideAllSections();
     document.getElementById('authSection').classList.add('active');

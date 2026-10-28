@@ -1,3 +1,4 @@
+import { loadScopedProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, 
@@ -40,6 +41,9 @@ if (!canViewIncome) {
 // --- 全域變數 ---
 let currentDate = new Date(); 
 let selectedDateStr = "";     
+let monthRequestVersion = 0;
+let monthReady = false;
+let categoriesReady = Promise.resolve();
 let monthData = [];            
 let pieChartInstance = null;      
 let barChartInstance = null;
@@ -78,30 +82,27 @@ function formatK(num) {
 }
 
 async function initApp() {
-    await loadAllUsers(); // 初始化時先載入所有成員的頭像
-    await loadCustomCategories(); 
-    loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+    // Category definitions and month records have no read dependency. The chart
+    // waits for both; only the calendar can be painted before categories arrive.
+    categoriesReady = loadCustomCategories();
+    await loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 }
 initApp();
 
-// 新增：從 users 集合抓取所有人的大頭照
-async function loadAllUsers() {
+// Only identities referenced by this group's current month need avatars. Never
+// scan users, and never hold up amounts while optional profile data is loading.
+async function loadMonthProfiles(records, version) {
     try {
-        const snap = await getDocs(collection(db, "users"));
-        allUsersMap = {};
-        snap.forEach(docSnap => {
-            const data = docSnap.data();
-            const uid = data.accountId || data.id || data.uid || docSnap.id;
-            const avatarUrl = data.avatar || data.photoURL || data.avatarUrl || null;
-            
-            allUsersMap[uid] = avatarUrl;
-            // 備用防呆：如果有舊資料只存了名字，也綁定一下頭像
-            if (data.name) {
-                allUsersMap[data.name] = avatarUrl;
-            }
-        });
+        const [accounts, legacy] = await Promise.all([
+            loadScopedProfiles(db, records.filter(item => item.accountId).map(item => item.accountId), { allowLegacyNames: false }),
+            loadScopedProfiles(db, records.filter(item => !item.accountId).map(item => item.operator))
+        ]);
+        const profiles = [...accounts, ...legacy];
+        if (version !== monthRequestVersion) return;
+        allUsersMap = profileAvatarMap(profiles);
+        renderPersonalAvatars();
     } catch (error) {
-        console.error("載入使用者清單失敗：", error);
+        console.error("載入使用者頭像失敗：", error);
     }
 }
 
@@ -133,6 +134,16 @@ window.switchMainView = function(view) {
 };
 
 async function loadMonthData(year, month) {
+    const version = ++monthRequestVersion;
+    monthReady = false;
+    // Pending means unknown, never a plausible but incorrect $0/old-month sum.
+    document.getElementById('monthTotalExpense').innerText = '讀取中...';
+    document.getElementById('monthTotalIncome').innerText = '讀取中...';
+    if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
+    const grid = document.getElementById('calendarGrid');
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+    document.getElementById('avatarContainer').innerHTML = '';
+    document.getElementById('expenseModal').style.display = 'none';
     const startStr = `${year}-${String(month).padStart(2,'0')}-01`;
     const endStr = `${year}-${String(month).padStart(2,'0')}-31`; 
     
@@ -146,6 +157,7 @@ async function loadMonthData(year, month) {
             where("date", "<=", endStr)
         );
         const snapshot = await getDocs(q);
+        if (version !== monthRequestVersion) return;
         monthData = [];
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -155,9 +167,16 @@ async function loadMonthData(year, month) {
 
         document.getElementById('calendarMonthTitle').innerText = `${year}年 ${month}月`;
         renderCalendar(year, month);
-        renderPersonalAvatars(); 
+        allUsersMap = {};
+        renderPersonalAvatars();
+        void loadMonthProfiles(monthData, version);
+        await categoriesReady;
+        if (version !== monthRequestVersion) return;
+        monthReady = true;
         renderPieChart();
     } catch (error) {
+        if (version !== monthRequestVersion) return;
+        document.getElementById('calendarMonthTitle').innerText = '讀取失敗，請切換月份重試';
         console.error("讀取資料失敗：", error);
         alert("讀取資料失敗，請檢查網路。");
     }
@@ -226,10 +245,10 @@ function renderPersonalAvatars() {
         const uname = item.operator || '未知';
         
         // 修正：優先從剛剛抓下來的全域使用者清單 (allUsersMap) 配對頭像
-        let userAvatar = allUsersMap[uid] || allUsersMap[uname] || null;
+        let userAvatar = allUsersMap[item.accountId || uname] || null;
 
         // 保底：如果是當前操作者且沒配對到，用暫存檔裡的
-        if(!userAvatar && (uid === currentAccountId || uname === currentUser.name)) {
+        if(!userAvatar && (uid === currentAccountId || (!item.accountId && uname === currentUser.name))) {
             userAvatar = currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl || null;
         }
         
@@ -277,6 +296,7 @@ window.switchChartType = function(type) {
 }
 
 function renderPieChart() {
+    if (!monthReady) return;
     let totalExpense = 0, totalIncome = 0;
     const categorySums = {};
     
@@ -495,6 +515,7 @@ function processReviewData() {
 
 window.openModal = function(modalId, dateStr = null) {
     if(dateStr) {
+        if (!monthReady) return;
         selectedDateStr = dateStr;
         const [y, m, d] = dateStr.split('-');
         document.getElementById('modalDateTitle').innerText = `${y}年${parseInt(m)}月${parseInt(d)}日`;

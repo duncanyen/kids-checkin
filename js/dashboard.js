@@ -7,6 +7,34 @@ import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, 
 
 let unreadUnsubscribe = null;
 let galleryUnsubscribe = null;
+let carouselUnsubscribe = null;
+let dashboardGeneration = 0;
+let memberRefreshes = [];
+let cancelGroupLoad = null;
+
+// Retain the latest snapshot only for the current dashboard lifetime, so late
+// avatars can update existing widgets without opening another database query.
+function watchMemberWidget(source, next, error) {
+    const generation = dashboardGeneration;
+    let latest;
+    const refresh = () => { if (latest && generation === dashboardGeneration) next(latest); };
+    memberRefreshes.push(refresh);
+    const unsubscribe = onSnapshot(source, snapshot => {
+        if (generation !== dashboardGeneration) return;
+        latest = snapshot;
+        next(snapshot);
+    }, reason => {
+        if (generation === dashboardGeneration) {
+            if (error) error(reason);
+            else console.warn('首頁小工具讀取失敗', reason);
+        }
+    });
+    return () => {
+        latest = null;
+        memberRefreshes = memberRefreshes.filter(item => item !== refresh);
+        unsubscribe();
+    };
+}
 let calendarUnsubscribe = null;
 let groupNameUnsubscribe = null; 
 let todoUnsubscribe = null;
@@ -29,6 +57,10 @@ window.switchGroup = async function() {
 };
 
 window.stopDashboardListeners = function() {
+    dashboardGeneration++;
+    cancelGroupLoad?.(); cancelGroupLoad = null;
+    memberRefreshes = [];
+    if (carouselUnsubscribe) { carouselUnsubscribe(); carouselUnsubscribe = null; }
     if (groupNameUnsubscribe) { groupNameUnsubscribe(); groupNameUnsubscribe = null; }
     if (unreadUnsubscribe) { unreadUnsubscribe(); unreadUnsubscribe = null; }
     if (galleryUnsubscribe) { galleryUnsubscribe(); galleryUnsubscribe = null; }
@@ -45,19 +77,28 @@ window.showDashboard = async function() {
     document.getElementById('dashboardView').style.display = 'block';
 
     window.stopDashboardListeners();
+    const generation = dashboardGeneration;
+    const isCurrent = () => generation === dashboardGeneration;
 
     const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
     if (!window.currentGroup && savedGroupId) {
         window.currentGroup = { id: savedGroupId };
     }
 
+    let groupReady = Promise.resolve(window.currentGroup);
     if (window.currentGroup && window.currentGroup.id) {
+        let resolveGroup, rejectGroup;
+        groupReady = new Promise((resolve, reject) => { resolveGroup = resolve; rejectGroup = reject; });
+        cancelGroupLoad = () => resolveGroup(null);
         sessionStorage.setItem('nexus_active_group_id', window.currentGroup.id);
         groupNameUnsubscribe = onSnapshot(doc(db, "groups", window.currentGroup.id), (docSnap) => {
-            if (docSnap.exists()) {
+            if (isCurrent() && docSnap.exists()) {
                 window.currentGroup = { id: docSnap.id, ...docSnap.data() };
+                resolveGroup(window.currentGroup);
+            } else {
+                resolveGroup(null);
             }
-        });
+        }, rejectGroup);
     }
     
     document.getElementById('dashUserAvatar').src = user.avatar;
@@ -66,8 +107,19 @@ window.showDashboard = async function() {
     document.getElementById('sideUserName').innerText = user.name;
     document.getElementById('sideUserRole').innerText = (user.role === 'admin' || user.role === 'parent') ? '管理員' : '一般成員';
 
-    await window.renderDynamicModules(user);
-    await window.fetchAndRenderGroupMembers();
+    window.groupMembers = [];
+    window.userAvatarMap = {};
+    document.getElementById('sideMembersList').innerHTML = '';
+    document.getElementById('miniCardsContainer').innerHTML = '';
+    document.getElementById('todayAgendaContainer').innerHTML = '';
+    cachedCalendarEvents = [];
+    document.getElementById('photoCarouselSection').style.display = 'none';
+    // Preferences control which widgets exist. Member avatars do not block them.
+    const membersReady = groupReady.then(group => {
+        if (isCurrent() && group) return window.fetchAndRenderGroupMembers(isCurrent, group);
+    }).catch(error => console.error('載入群組成員失敗', error));
+    await window.renderDynamicModules(user, isCurrent);
+    if (!isCurrent()) return;
     
     window.checkUnreadMessages(user);
     window.checkGalleryUnreads(user);
@@ -76,9 +128,12 @@ window.showDashboard = async function() {
     
     const allowedMenus = user.menus || ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food'];
     if (allowedMenus.includes('photodump')) window.fetchAndRenderPhotoCarousel(user);
+    membersReady.then(() => {
+        if (isCurrent()) memberRefreshes.forEach(refresh => refresh());
+    }).catch(error => console.error('載入群組成員失敗', error));
 };
 
-window.renderDynamicModules = async function(user) {
+window.renderDynamicModules = async function(user, isCurrent = () => true) {
     const sideList = document.getElementById('sideMenuFeatureList');
     const chatContainer = document.getElementById('chatMainCardContainer');
     const miniCardsContainer = document.getElementById('miniCardsContainer'); 
@@ -93,6 +148,7 @@ window.renderDynamicModules = async function(user) {
     let modules = {}, order = [], personalSettings;
     try {
         const data = await readPersonalLayout(db, user);
+        if (!isCurrent()) return;
         personalSettings = data;
         window.NexusTheme?.hydrate(user.accountId, data.appearance);
         if (data.modules) modules = data.modules;
@@ -101,6 +157,7 @@ window.renderDynamicModules = async function(user) {
     } catch (e) { order = [...allowedMenus]; }
 
 
+    if (!isCurrent()) return;
     const sideMenuTemplates = {
         chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">${icon('chat')}</span>聊天室</div>`,
         checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">${icon('checkin')}</span>到家打卡</div>`,
@@ -195,12 +252,14 @@ window.renderDynamicModules = async function(user) {
 };
 
 window.checkWidgetData = function(user) {
+    todoUnsubscribe?.(); todoUnsubscribe = null;
+    financeUnsubscribe?.(); financeUnsubscribe = null;
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
     if (document.getElementById('todoWidgetContent')) {
         const todoQ = query(collection(db, "todos"), where("groupId", "==", groupId));
-        todoUnsubscribe = onSnapshot(todoQ, (snap) => {
+        todoUnsubscribe = watchMemberWidget(todoQ, (snap) => {
             let incompleteTodos = [];
             snap.forEach(docSnap => {
                 const docData = docSnap.data();
@@ -337,6 +396,7 @@ window.checkWidgetData = function(user) {
 };
 
 window.checkUnreadMessages = function(user) {
+    unreadUnsubscribe?.(); unreadUnsubscribe = null;
     try {
         if (!window.currentGroup) return;
         const q = query(collection(db, "rooms"), where("groupId", "==", window.currentGroup.id), where("participants", "array-contains", user.name));
@@ -360,6 +420,9 @@ window.checkUnreadMessages = function(user) {
 };
 
 window.checkGalleryUnreads = function(user) {
+    galleryUnsubscribe?.(); galleryUnsubscribe = null;
+    let active = true;
+    let pending = false;
     if (!window.currentGroup) return;
     const groupId = window.currentGroup.id;
 
@@ -371,7 +434,8 @@ window.checkGalleryUnreads = function(user) {
     };
 
     const refreshGalleryBadge = async () => {
-        if (document.visibilityState !== 'visible') return;
+        if (!active || pending || document.visibilityState !== 'visible') return;
+        pending = true;
         let lastReadTime = parseInt(localStorage.getItem('homebase_photodump_last_read') || '0', 10);
         if (lastReadTime === 0) lastReadTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
         try {
@@ -381,26 +445,31 @@ window.checkGalleryUnreads = function(user) {
                 where("timestamp", ">", new Date(lastReadTime))
             );
             const snap = await getCountFromServer(q);
-            renderBadge(snap.data().count);
+            if (active) renderBadge(snap.data().count);
         } catch (e) {}
+        finally { pending = false; }
     };
 
     refreshGalleryBadge();
     window.addEventListener('focus', refreshGalleryBadge);
     document.addEventListener('visibilitychange', refreshGalleryBadge);
     galleryUnsubscribe = () => {
+        active = false;
         window.removeEventListener('focus', refreshGalleryBadge);
         document.removeEventListener('visibilitychange', refreshGalleryBadge);
     };
 };
 
 window.checkCalendarAlerts = function(user) {
+    calendarUnsubscribe?.(); calendarUnsubscribe = null;
+    if (calendarUIRenderInterval) clearInterval(calendarUIRenderInterval);
+    calendarUIRenderInterval = null;
     if (!window.currentGroup) return;
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     try {
         const q = query(collection(db, "events"), where("groupId", "==", window.currentGroup.id), where("date", "==", todayStr));
-        calendarUnsubscribe = onSnapshot(q, (snapshot) => {
+        calendarUnsubscribe = watchMemberWidget(q, (snapshot) => {
             cachedCalendarEvents = [];
             snapshot.forEach(docSnap => {
                 const evt = docSnap.data();
@@ -478,9 +547,10 @@ window.renderAgendaUI = function() {
 };
 
 window.fetchAndRenderPhotoCarousel = function(user) {
+    carouselUnsubscribe?.(); carouselUnsubscribe = null;
     if (!window.currentGroup) return;
     const q = query(collection(db, "photos"), where("groupId", "==", window.currentGroup.id), orderBy("timestamp", "desc"), limit(5));
-    onSnapshot(q, (snapshot) => {
+    carouselUnsubscribe = watchMemberWidget(q, (snapshot) => {
         const section = document.getElementById('photoCarouselSection');
         const container = document.getElementById('photoCarouselContainer');
         if (snapshot.empty) { section.style.display = 'none'; return; }

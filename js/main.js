@@ -1,3 +1,4 @@
+import { loadGroupProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { mountAppNavigation } from './app-navigation.js';
 import { icon, enhanceNavigation } from './ui-icons.js';
 import { readPersonalLayout } from './personal-layout.js';
@@ -59,59 +60,19 @@ document.getElementById('avatarUploadInput').addEventListener('change', function
     reader.readAsDataURL(file);
 });
 
-// 【核心修改】抓取群組成員改以 accountId 查詢，並完整建立雙向對應 Map
-window.fetchAndRenderGroupMembers = async function() {
+// Member profiles are secondary content; never let an old group paint the new one.
+window.fetchAndRenderGroupMembers = async function(isCurrent = () => true, group = window.currentGroup) {
+    if (!group?.id) return;
     try {
-        if (!window.currentGroup) return;
-        
-        // 若當前群組物件沒有 members 陣列，嘗試即時從 Firestore 讀取最新群組資料
-        let memberIdentifiers = window.currentGroup.members;
-        if (!memberIdentifiers || !Array.isArray(memberIdentifiers) || memberIdentifiers.length === 0) {
-            const groupSnap = await getDoc(doc(db, "groups", window.currentGroup.id));
-            if (groupSnap.exists()) {
-                window.currentGroup = { id: groupSnap.id, ...groupSnap.data() };
-                memberIdentifiers = window.currentGroup.members;
-            }
-        }
-
-        if (!memberIdentifiers || !Array.isArray(memberIdentifiers) || memberIdentifiers.length === 0) return;
-        
-        window.groupMembers = [];
-        window.userAvatarMap = {}; // 每次抓取前重新初始化
-        
-        for (let i = 0; i < memberIdentifiers.length; i += 10) {
-            const chunk = memberIdentifiers.slice(i, i + 10);
-            
-            // 雙重防護查詢：優先用 accountId 查
-            const qId = query(collection(db, "users"), where("accountId", "in", chunk));
-            const snapId = await getDocs(qId);
-            snapId.forEach(docSnap => {
-                let u = docSnap.data();
-                if (u.accountId) window.userAvatarMap[u.accountId] = u.avatar;
-                if (u.name) window.userAvatarMap[u.name] = u.avatar;
-                if (!window.groupMembers.some(m => m.accountId === u.accountId || m.name === u.name)) {
-                    window.groupMembers.push(u);
-                }
-            });
-
-            // 備用防護查詢：用 name 查（相容舊資料）
-            const qName = query(collection(db, "users"), where("name", "in", chunk));
-            const snapName = await getDocs(qName);
-            snapName.forEach(docSnap => {
-                let u = docSnap.data();
-                if (u.accountId) window.userAvatarMap[u.accountId] = u.avatar;
-                if (u.name) window.userAvatarMap[u.name] = u.avatar;
-                if (!window.groupMembers.some(m => m.accountId === u.accountId || m.name === u.name)) {
-                    window.groupMembers.push(u);
-                }
-            });
-        }
-
+        const profiles = await loadGroupProfiles(db, group.id, group);
+        if (!isCurrent() || window.currentGroup?.id !== group.id) return;
+        window.groupMembers = profiles;
+        window.userAvatarMap = profileAvatarMap(profiles);
         const sideList = document.getElementById('sideMembersList');
         if (sideList) {
-            sideList.innerHTML = window.groupMembers.map(u => `
+            sideList.innerHTML = profiles.map(u => `
                 <div class="member-avatar-container">
-                    <img class="member-avatar" src="${u.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff'">
+                    <img class="member-avatar" src="${u.avatar || u.photoURL || u.avatarUrl || ''}" onerror="this.src='https://ui-avatars.com/api/?name=${u.name}&background=10b981&color=fff'">
                     <div class="member-name">${u.name}</div>
                 </div>
             `).join('');
@@ -146,7 +107,7 @@ window.shareApp = async function() {
 };
 
 // 動態模組渲染邏輯，導入 Bento Box 網格系統
-window.renderDynamicModules = async function(user) {
+window.renderDynamicModules = async function(user, isCurrent = () => true) {
     const sideList = document.getElementById('sideMenuFeatureList');
     const chatContainer = document.getElementById('chatMainCardContainer');
     const miniCardsContainer = document.getElementById('miniCardsContainer'); 
@@ -161,6 +122,7 @@ window.renderDynamicModules = async function(user) {
     let modules = {}, order = [], personalSettings;
     try {
         const data = await readPersonalLayout(db, user);
+        if (!isCurrent()) return;
         personalSettings = data;
         window.NexusTheme?.hydrate(user.accountId, data.appearance);
         if (data.modules) modules = data.modules;
@@ -168,6 +130,7 @@ window.renderDynamicModules = async function(user) {
         allowedMenus.forEach(k => { if (!order.includes(k)) order.push(k); });
     } catch (e) { order = [...allowedMenus]; }
 
+    if (!isCurrent()) return;
     const sideMenuTemplates = {
         chat: `<div class="sidebar-item" onclick="window.navTo('chat.html', '聊天室')"><span class="sidebar-icon">${icon('chat')}</span>聊天室</div>`,
         checkin: `<div class="sidebar-item" onclick="window.navTo('checkin.html', '到家打卡')"><span class="sidebar-icon">${icon('checkin')}</span>到家打卡</div>`,
@@ -328,3 +291,11 @@ if (document.readyState === 'loading') {
 } else { 
     initializeAppFlow(); 
 }
+
+// A cached document must release dashboard work on leave and resume once on Back.
+window.addEventListener('pagehide', () => window.stopDashboardListeners?.());
+window.addEventListener('pageshow', event => {
+    if (event.persisted && document.getElementById('dashboardView').style.display === 'block') {
+        void window.showDashboard();
+    }
+});
