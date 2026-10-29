@@ -111,13 +111,14 @@ function write(path,data,merge){const next=merge?clone(docs[path]||{}):{};for(co
  await page.evaluate(async()=>{const {settleDragonEncounter}=await import('/js/farm/dragon.js');await settleDragonEncounter('public-loss','loss','neighbor','C');await settleDragonEncounter('public-win','win','neighbor','B');});
  assert.equal(docs['groups/C/users/neighbor'].farm.eggsReady,0);assert.equal(docs['groups/A/users/player'].farm.coins,150);assert.equal(docs['groups/A/users/player'].farm.dragonScales,1);assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady,6);
  checks.push('cross-group dragon loss and reward keep source and target farms separate');
- // Failure is a committed attempt: the target egg remains, cooldown and moral cost persist.
- await patch('groups/A/users/player',{'farm.villageStealCooldowns':{},'farm.moral':100});
- await page.evaluate(async()=>{Math.random=()=>0.99;const s=window.__farmGame.scene.getScene('VisitScene');s.targetFarmData.eggsReady=1;});
- await patch('groups/C/users/neighbor',{'farm.eggsReady':2,'farm.readyEggs':{hen:2,silkie:0,bresse:0}});
+ // Only an active rented guard can intercept; bites commit a four-hour block.
+ await patch('groups/A/users/player',{'farm.villageStealCooldowns':{},'farm.villageStealBlockedUntil':{},'farm.moral':100});
+ await page.evaluate(async()=>{Math.random=()=>0;const s=window.__farmGame.scene.getScene('VisitScene');s.targetFarmData.eggsReady=1;});
+ await patch('groups/C/users/neighbor',{'farm.eggsReady':2,'farm.readyEggs':{hen:2,silkie:0,bresse:0},'farm.guardDogs':[{id:'village-guard',breedId:'pyrenees',days:1,startedAt:Date.now(),expiresAt:Date.now()+86400000}]});
  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').attemptSteal());
  assert.equal(docs['groups/C/users/neighbor'].farm.eggsReady,2);assert.equal(docs['groups/A/users/player'].farm.moral,95);assert.equal(Object.keys(docs['groups/A/users/player'].farm.villageStealCooldowns).length,1);
- checks.push('failed theft commits cooldown and moral cost without taking an egg');
+ assert.ok(Object.values(docs['groups/A/users/player'].farm.villageStealBlockedUntil).some(until=>until>Date.now()+3.9*3600000));
+ checks.push('active rented guard intercepts theft with four-hour cooldown and moral cost without taking an egg');
  // Close a village during a visit; the live listener returns the player home.
  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.start('LobbyScene',{targetGroupId:'B'}));
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='B');await visit('B');

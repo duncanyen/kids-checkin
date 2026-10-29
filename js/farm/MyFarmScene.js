@@ -7,6 +7,7 @@ import { configureFarmViewport } from './viewport.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, nextEggStatus, collectPoultry } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
 import { GardenFeedback } from './garden-feedback.js';
+import { mountGuardDog } from './guard-dog-art.js';
 import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
 import { GorillaEncounter } from './gorilla.js';
@@ -74,6 +75,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.timerText.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.game.retryFarmSave?.());
         this.createConfirmDialog();
         this.initFirebase();
+        mountGuardDog(this,()=>this.farmData,true);
         this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
 
         onSceneExit(this, () => {

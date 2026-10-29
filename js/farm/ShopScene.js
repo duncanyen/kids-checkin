@@ -6,6 +6,8 @@ import { addPoultryGuide } from './poultry-guide.js';
 import { BREEDS, poultryState, coopCapacity, tradePoultry } from './poultry.js';
 import { hitsToDefeat } from './combat-rules.js';
 import { GORILLA_FANG_PRICE } from './gorilla-rules.js';
+import { GUARD_DOG_BREEDS } from './guard-dog-core.js';
+import { openGuardDogRental } from './guard-dog-ui.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -70,6 +72,7 @@ export default class ShopScene extends Phaser.Scene {
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
         const buy = this.catalog.buy, sell = this.catalog.sell;
+        for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,`${breed.name}\n${breed.dayPrice}／天\n${breed.weekPrice}／週`,()=>openGuardDogRental(this,breedId)]);
         for (const [key, breed] of Object.entries(BREEDS)) {
             buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣`, () => this.openTradeModal('buy', key, breed.name, breed.buy)]);
             sell.push([`bird:${key}`, breed.texture, `${breed.name}\n${breed.sell}金幣`, () => this.openTradeModal('sell', `bird:${key}`, breed.name, breed.sell)]);
@@ -131,7 +134,7 @@ export default class ShopScene extends Phaser.Scene {
             for (const object of container.list) object.setVisible(name === mode && object.catalogCategory === category && object.catalogPage === page);
         }
         this.categoryTabs.select(category);
-        this.emptyCategoryText?.setText(category === 'coops' ? '雞舍升級後直接使用，無法賣出。' : '此分類目前沒有可販售的商品。').setVisible(count === 0);
+        this.emptyCategoryText?.setText(category === 'coops' ? '雞舍升級後直接使用，無法賣出。' : category === 'dogs' ? '護衛犬為租用品，請到倉庫啟用，無法販售。' : '此分類目前沒有可販售的商品。').setVisible(count === 0);
         this.pageText.setText(`${page + 1} / ${total}`);
         for (const object of [this.pageText, this.previousPage, this.previousLabel, this.nextPage, this.nextLabel]) object.setVisible(total > 1);
         this.previousPage.setAlpha(page > 0 ? 1 : 0.4);

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
-for (const kind of ['tiger', 'wolf']) test(`${kind} atlas isolates all animation frames with transparent sampling gutters`, async () => {
+for (const kind of ['tiger', 'wolf', 'guard-dog']) test(`${kind} atlas isolates all animation frames with transparent sampling gutters`, async () => {
     const root = path.resolve(__dirname, '../assets/farm');
     const atlas = JSON.parse(fs.readFileSync(path.join(root, `${kind}-sheet.json`)));
     const { data, info } = await sharp(path.join(root, `${kind}-sheet.png`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });

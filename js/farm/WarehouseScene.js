@@ -3,6 +3,8 @@ import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
 import { BREEDS, poultryState, feedPoultry, coopCapacity } from './poultry.js';
+import { GUARD_DOG_BREEDS, guardDogLeases, guardDogStatus } from './guard-dog-core.js';
+import { openGuardDogAction, watchGuardDogInventory } from './guard-dog-ui.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -38,6 +40,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.warehousePages = {};
         this.categoryTabs = addCategoryTabs(this, 250, key => this.selectWarehouseCategory(key));
         this.allConfigItems = [
+            ...Object.entries(GUARD_DOG_BREEDS).map(([breedId,breed])=>({key:`guard:${breedId}`,name:breed.name,icon:breed.texture,type:'guardDog',breedId})),
             ...Object.entries(BREEDS).map(([key, breed]) => ({ key: `bird:${key}`, name: breed.name, icon: breed.texture, type: 'bird', breed: key })),
             { key: 'ownedCoop', name: '雞舍', icon: 'coop', type: 'coop' },
             { key: 'warehouseCapacity', name: '倉庫容量', icon: 'coop', type: 'warehouse' },
@@ -61,6 +64,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
         this.initFirebase();
+        watchGuardDogInventory(this,()=>this.farmData,()=>this.renderWarehouseItems());
         onSceneExit(this, () => { if (this.unsubscribe) this.unsubscribe(); });
     }
 
@@ -113,6 +117,11 @@ export default class WarehouseScene extends Phaser.Scene {
 
         if (!this.farmData) return;
 
+        const liveDogs=guardDogLeases(this.farmData),hasDogs=liveDogs.length>0;
+        const dialogId=this.guardDogDialog?.root.dataset.guardDogLeaseId;
+        if(dialogId&&!liveDogs.some(dog=>dog.id===dialogId))this.guardDogDialog.close();
+        this.categoryTabs.setCategories(ITEM_CATEGORIES.filter(item=>item.key!=='dogs'||hasDogs).map(item=>item.key));
+        if(this.warehouseCategory==='dogs'&&!hasDogs){this.warehouseCategory='chickens';this.actionPanel.setVisible(false);}
         const category = this.warehouseCategory;
         const ownedItems = this.allConfigItems.filter(item => itemCategory(item.key) === category && this.warehouseItemCount(item) > 0);
         const totalPages = Math.max(1, Math.ceil(ownedItems.length / 8));
@@ -142,6 +151,7 @@ export default class WarehouseScene extends Phaser.Scene {
             img.setScale(scale);
 
             let displayTxt = `${item.name}\nx ${count}`;
+            if(item.type==='guardDog'){const dog=guardDogLeases(this.farmData).find(dog=>dog.breedId===item.breedId);displayTxt=`${item.name}\n${dog?guardDogStatus(dog):'租期已結束'}`;}
             if (item.type === 'bird') displayTxt = `${item.name}\n雞舍中 × ${count}`;
             if (item.type === 'coop') displayTxt = `${coopName(this.farmData.coopLevel)}\n飼養 ${poultryState(this.farmData).hens.length}/${coopCapacity(this.farmData.coopLevel)}`;
             if (item.type === 'warehouse') displayTxt = `倉庫容量\n${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10} 格`;
@@ -149,7 +159,7 @@ export default class WarehouseScene extends Phaser.Scene {
                 displayTxt = `[裝備中]\n${displayTxt}`;
             }
 
-            const txt = this.add.text(x + 18, y - 10, displayTxt, { fontSize: '14px', color: '#fff', align: 'center', fontStyle: 'bold' }).setOrigin(0.5);
+            const txt = this.add.text(x + 18, y - 10, displayTxt, { fontSize: item.type==='guardDog'?'11px':'14px', wordWrap: item.type==='guardDog'?{width:96}:undefined, color: '#fff', align: 'center', fontStyle: 'bold' }).setOrigin(0.5);
 
             bg.on('pointerdown', () => this.handleItemClick(item.key, item.name));
             this.itemsPanel.add([bg, img, txt]);
@@ -161,6 +171,7 @@ export default class WarehouseScene extends Phaser.Scene {
         const count = this.farmData[key] || 0;
         
         const itemConfig = this.allConfigItems.find(i => i.key === key);
+        if(itemConfig?.type==='guardDog'){this.actionPanel.setVisible(false);openGuardDogAction(this,itemConfig.breedId);return;}
         if (itemConfig?.type === 'warehouse') {
             this.actionPanel.setVisible(false);
             this.showMsg(`倉庫容量 ${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10}\n擴充請到商店「其他」分類`, '#FFD54F');
@@ -230,6 +241,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     warehouseItemCount(item) {
+        if(item.type==='guardDog')return guardDogLeases(this.farmData).some(dog=>dog.breedId===item.breedId)?1:0;
         if (item.type === 'bird') return poultryState(this.farmData).hens.filter(h => h.breed === item.breed).length;
         if (item.type === 'coop' || item.type === 'warehouse') return 1;
         return this.farmData[item.key] || 0;

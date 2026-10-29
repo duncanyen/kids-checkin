@@ -160,27 +160,30 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
             try { await scene.attemptSteal(); } finally { Math.random = random; }
         });
         const visitorPrefix = 'groups/A/users/neighbor/farm_notifications/';
-        assert.equal(Object.keys(docs).filter(path => path.startsWith(visitorPrefix)).length, 0);
+        // No active guard: even a high roll succeeds and creates a visitor record.
+        assert.equal(Object.keys(docs).filter(path => path.startsWith(visitorPrefix)).length, 1);
         docs[owner].farm.villageStealCooldowns = {};
+        docs[owner].farm.villageStealBlockedUntil = {};
         // Force a committed failure; the target must not lose an egg or gain mail.
         const eggsBefore = docs['groups/A/users/neighbor'].farm.eggsReady;
         fail = true;
         await page.evaluate(async () => {
             const scene = window.__farmGame.scene.getScene('VisitScene');
             scene.myFarmData.villageStealCooldowns = {};
+            scene.myFarmData.villageStealBlockedUntil = {};
             const random = Math.random; Math.random = () => 0;
             try { await scene.attemptSteal(); } finally { Math.random = random; }
         });
         fail = false;
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore);
-        assert.equal(Object.keys(docs).filter(path => path.startsWith(visitorPrefix)).length, 0);
+        assert.equal(Object.keys(docs).filter(path => path.startsWith(visitorPrefix)).length, 1);
         await page.evaluate(async () => {
             const scene = window.__farmGame.scene.getScene('VisitScene');
             const random = Math.random; Math.random = () => 0;
             try { await scene.attemptSteal(); } finally { Math.random = random; }
         });
         const visits = Object.entries(docs).filter(([path]) => path.startsWith(visitorPrefix));
-        assert.equal(visits.length, 1);
+        assert.equal(visits.length, 2);
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore - 1);
         assert.deepEqual(Object.keys(visits[0][1]).sort(), ['createdAt', 'note', 'readAt', 'title', 'type']);
         // Visit records show no detail button, include Taiwan timestamps and can be deleted.

@@ -3,12 +3,15 @@ import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
 import { configureFarmViewport } from './viewport.js';
 import { visitorNotice } from './mail-store.js';
+import { stealBlockedUntil, guardDogInterception } from './guard-dog-core.js';
+import { prepareGuardDogNotice } from './guard-dog-notices.js';
 import { watchFarm } from '../live-reads.js';
 import { BREEDS, poultryState, settlePoultry, poultryPatch, productionChanged, takePoultryEgg } from './poultry.js';
 import { addPoultrySprite, poultryAnim } from './poultry-art.js';
 import { ENEMY_HEALTH, equippedWeapon, weaponDamage } from './combat-rules.js';
 import { GorillaEncounter } from './gorilla.js';
 import { GardenFeedback } from './garden-feedback.js';
+import { mountGuardDog } from './guard-dog-art.js';
 import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
 import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
@@ -74,6 +77,7 @@ export default class VisitScene extends Phaser.Scene {
 
         this.createConfirmDialog();
         this.initFirebase();
+        mountGuardDog(this,()=>this.targetFarmData);
 
         onSceneExit(this, () => {
             this.visitToken = null;
@@ -547,9 +551,8 @@ export default class VisitScene extends Phaser.Scene {
         }
         const safeX = 195, safeY = 422 - 60;
         const key = villageTargetKey(this.targetGroupId, this.targetAccountId);
-        const cooldown = farm => farm.villageStealCooldowns?.[key] ||
-            (this.targetGroupId === CURRENT_GROUP_ID ? farm.stealCooldowns?.[this.targetAccountId] : 0) || 0;
-        if (Date.now() - cooldown(this.myFarmData) < STEAL_COOLDOWN_MS) {
+        const blockedUntil = farm => stealBlockedUntil(farm, key, this.targetGroupId === CURRENT_GROUP_ID ? this.targetAccountId : null);
+        if (Date.now() < blockedUntil(this.myFarmData)) {
             this.showFloatingText('剛偷過這座雞舍，請稍後再來！', '#F44336', 15, safeX, safeY);
             return;
         }
@@ -577,33 +580,42 @@ export default class VisitScene extends Phaser.Scene {
         const eggRoll = Math.random();
         const visitMailRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId, 'farm_notifications', `visit-${crypto.randomUUID()}`);
         const visitTime = Date.now();
+        const attemptId = crypto.randomUUID();
         try {
-            const success = await this.runVisitTransaction(async transaction => {
+            const result = await this.runVisitTransaction(async transaction => {
                 const targetDoc = await transaction.get(targetRef);
                 const ownDoc = await transaction.get(myFarmRef);
                 const target = targetDoc.data()?.farm, own = ownDoc.data()?.farm;
                 if (!target || !own) throw new Error('農場資料不存在。');
-                if (Date.now() - cooldown(own) < STEAL_COOLDOWN_MS) throw new Error('剛偷過這座雞舍，請稍後再來！');
+                const now = Date.now();
+                if (now < blockedUntil(own)) throw new Error('這座雞舍仍在禁偷時間內，請稍後再來！');
                 if ((target.eggsReady || 0) <= 0) throw new Error('手腳太慢，蛋不見了！');
                 if (getUsedSpace(own) >= (own.warehouseLimit || 10)) throw new Error('你的倉庫滿了，偷不了！');
                 const moral = own.moral ?? 100;
-                const success = roll <= (moral < 50 ? 0.4 : 0.7);
-                const updates = { [`farm.villageStealCooldowns.${key}`]: Date.now(), 'farm.moral': Math.max(0, moral - 5) };
-                if (success) {
+                const interception = guardDogInterception(target, roll, now);
+                const notify = interception ? await prepareGuardDogNotice(transaction, {
+                    groupId: this.targetGroupId, accountId: this.targetAccountId, ownerName: this.targetName,
+                    thiefName: playerName, breedName: interception.breed.name, id: attemptId, now,
+                }) : null;
+                const updates = { [`farm.villageStealCooldowns.${key}`]: now,
+                    [`farm.villageStealBlockedUntil.${key}`]: now + (interception?.breed.blockMs || STEAL_COOLDOWN_MS),
+                    'farm.moral': Math.max(0, moral - 5) };
+                let eggName;
+                if (!interception) {
                     const egg = takePoultryEgg(target, eggRoll);
                     const itemKey = BREEDS[egg.breed].eggKey;
                     updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
-                    this.stolenEggName = BREEDS[egg.breed].eggName;
+                    eggName = BREEDS[egg.breed].eggName;
                     transaction.update(targetRef, egg.patch);
                     transaction.set(visitMailRef, visitorNotice(visitTime));
                 }
-                // A failed attempt still commits its cooldown and moral cost.
+                notify?.();
                 transaction.update(myFarmRef, updates);
-                return success;
+                return { success: !interception, eggName };
             });
-            this.showFloatingText(success ? `🕵️ 偷到${this.stolenEggName || '雞蛋'}` : '被狗咬了！偷竊失敗！', success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
-            if (!success) this.cameras.main.shake(300, 0.01);
-            if (success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
+            this.showFloatingText(result.success ? `🕵️ 偷到${result.eggName || '雞蛋'}` : '被護衛犬攔截！這座雞舍禁偷 4 小時', result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
+            if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
+            if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {
             this.showFloatingText(`❌ ${error.message || error}`, '#F44336', 16, safeX, safeY);
             this.cameras.main.shake(300, 0.01);

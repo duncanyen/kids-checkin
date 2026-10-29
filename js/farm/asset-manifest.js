@@ -1,5 +1,6 @@
 // Public file descriptions; safe to inspect without Phaser or Firebase.
 export const ASSET_MANIFEST = {
+    guard_dog: {type:'atlas',image:'guard-dog-sheet.png',json:'guard-dog-sheet.json'},
     ...Object.fromEntries(['hen','silkie','bresse','eagle','gorilla','tiger','wolf'].map(key => [key,{type:'atlas',image:`${key}-sheet.png`,json:`${key}-sheet.json`}])),
     dragon: {type:'sheet',image:'dragon-sheet.webp'},
     ...Object.fromEntries(Object.entries({egg:'egg.png',silkie_egg:'silkie-egg.png',bresse_egg:'bresse-egg.png',coin:'coin.png',worm:'worm.png',earthworm:'earthworm.png',fang:'wolf-fang.png',tiger_pelt:'tiger-pelt.png'}).map(([key,image]) => [key,{type:'image',image}])),
