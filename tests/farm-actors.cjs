@@ -63,9 +63,9 @@ const {execFileSync}=require('node:child_process');
   await p.evaluate(({kind,cap})=>{
    const s=window.__farmGame.scene.getScene('VisitScene');s['spawn'+cap+'Event']();
    if(s[kind].anims.currentAnim.key!==kind+'_walk')throw Error('Approach must start walking');
-   const animal=s[kind],duration=kind==='wolf'?60000:10000;
+   const animal=s[kind],duration=10000;
    if(animal.moveTween.duration!==duration)throw Error('Wrong approach duration');
-   if(kind==='tiger'&&animal.deadlineTimer.delay!==50000)throw Error('Tiger failure deadline changed');
+   if(animal.deadlineTimer.delay!==(kind==='wolf'?60000:50000))throw Error('Failure deadline changed');
    const expectedFlip=kind==='wolf';
    if(animal.flipX!==expectedFlip || animal.frame.width!==256 || animal.displayWidth!==192)throw Error('Pixel frame or direction mismatch');
    for(const action of ['walk','run','hit','dead']) if(s.anims.get(kind+'_'+action).frames.length!==4)throw Error('Missing animation frames');

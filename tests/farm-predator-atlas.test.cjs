@@ -4,10 +4,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
-test('tiger atlas isolates all animation frames with transparent sampling gutters', async () => {
+for (const kind of ['tiger', 'wolf']) test(`${kind} atlas isolates all animation frames with transparent sampling gutters`, async () => {
     const root = path.resolve(__dirname, '../assets/farm');
-    const atlas = JSON.parse(fs.readFileSync(path.join(root, 'tiger-sheet.json')));
-    const { data, info } = await sharp(path.join(root, 'tiger-sheet.png')).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const atlas = JSON.parse(fs.readFileSync(path.join(root, `${kind}-sheet.json`)));
+    const { data, info } = await sharp(path.join(root, `${kind}-sheet.png`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     assert.equal(Object.keys(atlas.frames).length, 16);
     for (const { frame: r } of Object.values(atlas.frames)) {
         let opaque = 0;
@@ -19,7 +19,7 @@ test('tiger atlas isolates all animation frames with transparent sampling gutter
                 if (alpha > 128) opaque++;
             }
         }
-        assert.ok(opaque > 1000, 'every frame must contain a complete visible tiger');
+        assert.ok(opaque > 1000, 'every frame must contain a complete visible animal');
     }
 });
 

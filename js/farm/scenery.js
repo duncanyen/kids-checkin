@@ -1,7 +1,7 @@
 import { onSceneExit } from './scene-cleanup.js';
 import { farmView } from './viewport.js';
 import { chooseHenPosition, getThreatZones } from './hen-navigation.js';
-import { predatorDestination, reflowTigerPatrol } from './predators.js';
+import { predatorDestination, reflowPredatorPatrol } from './predators.js';
 
 // Single continuous panorama: the renderer fills the viewport, not a CSS backdrop.
 export function addFarmBackground(scene, field = false) {
@@ -82,8 +82,8 @@ function reflowFarm(scene, oldMap, map) {
     for (const name of ['wolf','tiger','dragon','gorilla','eagle']) move(scene[name]);
     for (const name of ['wolf','tiger']) {
         const predator=scene[name],dest=predator?predatorDestination(scene,name):null;
-        if (name === 'tiger' && predator?.active && predator.getData('patrolling') && !predator.getData('resolved')) {
-            reflowTigerPatrol(scene,predator);
+        if (predator?.active && predator.getData('patrolling') && !predator.getData('resolved')) {
+            reflowPredatorPatrol(scene,predator);
             continue;
         }
         if (dest && predator.moveTween?.isPlaying()) { predator.moveTween.updateTo('x',dest.x,true); predator.moveTween.updateTo('y',dest.y,true); }

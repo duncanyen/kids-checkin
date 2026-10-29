@@ -13,7 +13,7 @@ import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
 import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
 import { DragonEncounter, rollVisitEncounter } from './dragon.js';
-import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint, startTigerPatrol, TIGER_APPROACH_MS, TIGER_DEADLINE_MS } from './predators.js';
+import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint, startPredatorPatrol, PREDATOR_APPROACH_MS, TIGER_DEADLINE_MS, WOLF_DEADLINE_MS } from './predators.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
@@ -368,8 +368,8 @@ export default class VisitScene extends Phaser.Scene {
         this.tiger.warning = warnText;
 
         this.tigerTween = this.tweens.add({
-            targets: this.tiger, ...predatorDestination(this, 'tiger'), duration: TIGER_APPROACH_MS, ease: 'Linear',
-            onComplete: () => startTigerPatrol(this, this.tiger),
+            targets: this.tiger, ...predatorDestination(this, 'tiger'), duration: PREDATOR_APPROACH_MS, ease: 'Linear',
+            onComplete: () => startPredatorPatrol(this, this.tiger),
         });
 
         this.tiger.moveTween = this.tigerTween;
@@ -445,11 +445,15 @@ export default class VisitScene extends Phaser.Scene {
         this.wolf.warning = warnText;
 
         this.wolfTween = this.tweens.add({
-            targets: this.wolf, ...predatorDestination(this), duration: 60000, ease: 'Linear',
-            onComplete: () => { if (!this.isWolfDefeated) this.wolfEscapes(); }
+            targets: this.wolf, ...predatorDestination(this, 'wolf'), duration: PREDATOR_APPROACH_MS, ease: 'Linear',
+            onComplete: () => startPredatorPatrol(this, this.wolf),
         });
 
         this.wolf.moveTween = this.wolfTween;
+        // Patrol attacks are visual; the original egg-loss deadline stays 60s.
+        this.wolf.deadlineTimer = this.time.delayedCall(WOLF_DEADLINE_MS, () => {
+            if (!this.isWolfDefeated) this.wolfEscapes();
+        });
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
             this.wolfHitCount += damage;

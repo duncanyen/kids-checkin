@@ -1,13 +1,14 @@
 import { farmView } from './viewport.js';
 
-export const TIGER_APPROACH_MS = 10000;
+export const PREDATOR_APPROACH_MS = 10000;
 export const TIGER_DEADLINE_MS = 50000;
-export const TIGER_ATTACK_INTERVAL_MS = 5000;
-const TIGER_PATROL_SPEED = 45;
+export const WOLF_DEADLINE_MS = 60000;
+export const PREDATOR_ATTACK_INTERVAL_MS = 5000;
+const PREDATOR_PATROL_SPEED = 45;
 
 // Use the painted landmarks, so the route stays in the hens' clearing on both
-// portrait and panoramic maps. Coordinates describe the tiger's grounded feet.
-export function tigerPatrolArea(scene) {
+// portrait and panoramic maps. Coordinates describe the predator's grounded feet.
+export function predatorPatrolArea(scene) {
     const view = farmView(scene);
     const garden = scene.gardenBounds;
     const left = Math.max(view.left + 84, garden.left + 32);
@@ -17,49 +18,47 @@ export function tigerPatrolArea(scene) {
     return { left, right, top, bottom, y: top + (bottom - top) * 0.55 };
 }
 
-export function nearestTigerHen(scene, sprite) {
+export function nearestPredatorHen(scene, sprite) {
     return (scene.hensGroup || []).filter(hen => hen.active && hen.visible)
         .reduce((nearest, hen) => !nearest || Math.hypot(hen.x - sprite.x, hen.y - sprite.y) <
             Math.hypot(nearest.x - sprite.x, nearest.y - sprite.y) ? hen : nearest, null);
 }
 
-function resumeTigerPatrol(sprite) {
-    sprite.setFlipX(sprite.patrolDirection < 0).play('tiger_walk');
+function resumePredatorPatrol(sprite) {
+    sprite.setFlipX(sprite.patrolDirection < 0).play(`${sprite.texture.key}_walk`);
     sprite.moveTween?.resume();
 }
 
-function walkTigerPatrol(scene, sprite) {
+function walkPredatorPatrol(scene, sprite) {
     if (!sprite.active || sprite.getData('resolved')) return;
-    const area = tigerPatrolArea(scene);
+    const area = predatorPatrolArea(scene);
     const x = sprite.patrolDirection > 0 ? area.right : area.left;
     sprite.moveTween = scene.tweens.add({
         targets: sprite, x, y: area.y,
-        duration: Math.max(200, Math.abs(x - sprite.x) / TIGER_PATROL_SPEED * 1000), ease: 'Linear',
+        duration: Math.max(200, Math.abs(x - sprite.x) / PREDATOR_PATROL_SPEED * 1000), ease: 'Linear',
         onComplete: () => {
             sprite.patrolDirection *= -1;
-            walkTigerPatrol(scene, sprite);
+            walkPredatorPatrol(scene, sprite);
         },
     });
-    if (['tiger_attack', 'tiger_hit'].includes(sprite.anims.currentAnim?.key)) sprite.moveTween.pause();
-    else resumeTigerPatrol(sprite);
+    const kind = sprite.texture.key;
+    if ([`${kind}_attack`, `${kind}_hit`].includes(sprite.anims.currentAnim?.key)) sprite.moveTween.pause();
+    else resumePredatorPatrol(sprite);
 }
 
-export function reflowTigerPatrol(scene, sprite) {
-    const area = tigerPatrolArea(scene);
+export function reflowPredatorPatrol(scene, sprite) {
+    const area = predatorPatrolArea(scene);
     sprite.moveTween?.stop();
     sprite.setPosition(Math.max(area.left, Math.min(area.right, sprite.x)), area.y);
-    walkTigerPatrol(scene, sprite);
+    walkPredatorPatrol(scene, sprite);
 }
 
 export function registerPredatorAnimations(scene) {
     for (const kind of ['wolf', 'tiger']) {
         if (!scene.textures.exists(kind)) continue;
-        const actions = kind === 'tiger' ? [
+        const actions = [
             ['idle', 0, 1, -1, 0], ['walk', 0, 6, -1], ['run', 0, 12, -1],
             ['attack', 4, 8, 0], ['hit', 8, 8, 0], ['dead', 12, 7, 0],
-        ] : [
-            ['walk', 0, 4, -1], ['run', 4, 10, -1],
-            ['hit', 8, 8, 0], ['dead', 12, 7, 0],
         ];
         for (const [action, start, rate, repeat, end = start + 3] of actions) {
             const key = `${kind}_${action}`;
@@ -83,12 +82,12 @@ export function createPredator(scene, kind, x, y) {
             hitArea: new Phaser.Geom.Rectangle(24, 16, 208, 224),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
-    // Both tiger walk and attack frames face right in the atlas.
+    // Both predator atlases face right; mirroring handles leftward movement.
     sprite.setFlipX(scene.coop.x < x);
     sprite.play(`${kind}_walk`);
     sprite.on('animationcomplete', animation => {
         if ([`${kind}_hit`, `${kind}_attack`].includes(animation.key) && sprite.active && !sprite.getData('resolved')) {
-            if (kind === 'tiger' && sprite.getData('patrolling')) resumeTigerPatrol(sprite);
+            if (sprite.getData('patrolling')) resumePredatorPatrol(sprite);
             else sprite.play(`${kind}_walk`);
         }
     });
@@ -122,38 +121,29 @@ export function finishPredator(sprite, action) {
 }
 
 export function predatorDestination(scene, kind = 'wolf') {
-    if (kind === 'tiger') {
-        const area = tigerPatrolArea(scene);
-        return { x: area.left, y: area.y };
-    }
-    return { x: scene.coop.x, y: scene.coop.y + scene.coop.displayHeight / 2 + 20 };
+    const area = predatorPatrolArea(scene);
+    return { x: kind === 'wolf' ? area.right : area.left, y: area.y };
 }
 
 export function predatorSpawnPoint(scene, kind) {
-    if (kind === 'tiger') {
-        const view = farmView(scene);
-        return { x: view.left + 65, y: view.top + view.height - 60 };
-    }
-    const destination = predatorDestination(scene);
-    const x = kind === 'wolf' ? 390 - 70 : 70;
-    // Equal horizontal/vertical travel matches the sheet's 45-degree heading.
-    return { x, y: destination.y + Math.abs(destination.x - x) };
+    const view = farmView(scene);
+    return { x: view.left + (kind === 'wolf' ? view.width - 65 : 65), y: view.top + view.height - 60 };
 }
 
-export function startTigerPatrol(scene, sprite) {
+export function startPredatorPatrol(scene, sprite) {
     if (!sprite.active || sprite.getData('resolved')) return;
     sprite.setData('patrolling', true);
-    sprite.patrolDirection = 1;
-    walkTigerPatrol(scene, sprite);
+    sprite.patrolDirection = sprite.texture.key === 'wolf' ? -1 : 1;
+    walkPredatorPatrol(scene, sprite);
     sprite.attackTimer = scene.time.addEvent({
-        delay: TIGER_ATTACK_INTERVAL_MS, loop: true,
+        delay: PREDATOR_ATTACK_INTERVAL_MS, loop: true,
         callback: () => {
             if (sprite.active && !sprite.getData('resolved')) {
-                const hen = nearestTigerHen(scene, sprite);
+                const hen = nearestPredatorHen(scene, sprite);
                 if (!hen) return;
                 sprite.moveTween?.pause();
                 sprite.attackTarget = hen;
-                sprite.setFlipX(hen.x < sprite.x).play('tiger_attack');
+                sprite.setFlipX(hen.x < sprite.x).play(`${sprite.texture.key}_attack`);
             }
         },
     });
