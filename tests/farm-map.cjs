@@ -72,6 +72,27 @@ const {execFileSync}=require('node:child_process');
   }
   if(process.env.FARM_SCREENSHOTS)await p.screenshot({path:process.env.FARM_SCREENSHOTS+'/farm-map-'+key+'.png',fullPage:true});
   checks.push({scene:key,plants:map.plants,coopClick:'passed',plantClicks:'passed'});
+  // Each painting has a different doorway; the egg belongs on its inner straw.
+  for(const viewport of [{width:390,height:960},{width:1440,height:900}]) {
+   await p.setViewportSize(viewport);await p.waitForTimeout(120);
+   const target=await p.evaluate(async key=>{
+    const s=window.__farmGame.scene.getScene(key),egg=s.coopEgg;
+    const {getFarmMapLayout}=await import('/js/farm/scenery.js');const map=getFarmMapLayout(s);
+    const x=(egg.x-map.offsetX)/map.artScale,y=(egg.y-map.offsetY)/map.artScale;
+    const inside=map.texture==='farm_map'?x>312&&x<357&&y>344&&y<370:x>1018&&x<1050&&y>242&&y<264;
+    if(!inside||!egg.input.enabled||egg.texture.getSourceImage().width!==128)throw Error('Painted egg is outside doorway '+JSON.stringify({x,y,texture:map.texture}));
+    if(egg.input.hitArea.width*egg.scaleX*s.cameras.main.zoom<43.9)throw Error('Egg touch target is too small');
+    egg.setVisible(true);window.__eggClicks=0;
+    s[key==='MyFarmScene'?'harvestEgg':'attemptSteal']=()=>{window.__eggClicks++;};
+    const camera=s.cameras.main;
+    return{x:camera.width/2+(egg.x-195)*camera.zoom,y:camera.height/2+(egg.y-422)*camera.zoom};
+   },key);
+   const box=await p.locator('#game-container canvas').boundingBox();
+   await p.mouse.click(box.x+target.x,box.y+target.y);
+   await p.waitForFunction(()=>window.__eggClicks===1);
+   await p.screenshot({path:'/tmp/farm-eggs-'+key+'-'+viewport.width+'.png',fullPage:true});
+  }
+  await p.setViewportSize({width:390,height:960});await p.waitForTimeout(120);
  }
  if(errors.length)throw Error(JSON.stringify(errors));
  console.log(JSON.stringify({passed:true,checks,errors}));await b.close();

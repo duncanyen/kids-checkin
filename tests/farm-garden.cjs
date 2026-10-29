@@ -5,7 +5,10 @@ const {execFileSync}=require('node:child_process');
 const assert=require('node:assert/strict');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
 const clone=value=>value===undefined?undefined:structuredClone(value);
-const farm={coins:250,hens:2,coopLevel:1,eggsReady:6,inventoryEggs:0,lastLayTime:Date.now(),cleanliness:0,warehouseLimit:30,hensState:[{},{}],equippedWeapon:'mace',moral:100};
+// Use current-format poultry so unrelated legacy migration cannot race the
+// assertion that finding insects leaves the neighbor's farm unchanged.
+const seededAt=Date.now();
+const farm={coins:250,hens:2,coopLevel:1,eggsReady:6,readyEggs:{hen:6,silkie:0,bresse:0},poultryVersion:2,inventoryEggs:0,lastLayTime:seededAt,cleanliness:0,warehouseLimit:30,hensState:[0,1].map(i=>({id:'garden-'+i,breed:'hen',laidAt:seededAt})),equippedWeapon:'mace',moral:100};
 const docs={
  'groups/A':{name:'自己的小屋',members:['player','neighbor']},
  'groups/B':{name:'太陽花',members:['neighbor','newbie'],farmVillageVisibility:'public'},
@@ -81,6 +84,7 @@ function write(path,data,merge){const next=merge?clone(docs[path]||{}):{};for(co
   await page.waitForTimeout(430);
   const banner=await page.evaluate(key=>{const s=window.__farmGame.scene.getScene(key),card=s.children.list.find(o=>o.getData?.('gardenFind'));return{alpha:card.alpha,width:card.list.find(o=>o.texture?.key==='ui_parchment').displayWidth,text:card.list.filter(o=>o.type==='Text').map(o=>o.text),interactive:!!card.input};},key);
   assert.ok(banner.alpha>.95);assert.equal(banner.width,308);assert.ok(banner.text.includes('抓到菜蟲！'));assert.ok(banner.text.includes('+1'));assert.equal(banner.interactive,false);
+  assert.equal(await page.evaluate(key=>window.__farmGame.scene.getScene(key).children.list.find(o=>o.getData?.('gardenFind')).list.find(o=>o.texture?.key==='worm').texture.getSourceImage().width,key),128);
   if(key==='MyFarmScene')await page.screenshot({path:'/tmp/farm-garden-worm.png',fullPage:true});
   await page.waitForFunction(key=>window.__farmGame.scene.getScene(key).gardenFeedback.roots.size===0,key);
   await search(key,1);assert.equal(docs[own].farm.earthworms,(before.earthworms||0)+1);

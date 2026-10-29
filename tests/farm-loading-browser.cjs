@@ -61,7 +61,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  await page.waitForFunction(()=>document.querySelector('[data-farm-loading]').hidden);
  assert.equal(await page.locator('[data-loading-hen-fallback]').getAttribute('hidden'),'');
  const initial=[...requests];
- assert.equal(initial.length,6);assert.ok(!initial.some(f=>/wolf|tiger|dragon|gorilla|eagle|mace|battleaxe|silkie|bresse/.test(f)));
+ assert.equal(initial.length,10);assert.ok(!initial.some(f=>/wolf|tiger|dragon|gorilla|eagle|mace|battleaxe|silkie|bresse/.test(f)));
  const progress=await page.evaluate(()=>__progress);assert.ok(progress.includes(100));assert.ok(progress.every((n,i)=>!i||n>=progress[i-1]),'initial progress never moves backward');
  assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').farmData.coins),3141);
  if(process.env.FARM_LOADING_SCREENSHOT){await page.evaluate(async()=>{const {farmLoading}=await import('/js/farm/loading-ui.js');farmLoading.begin('載入農莊素材');farmLoading.progress(42);});await page.screenshot({path:process.env.FARM_LOADING_SCREENSHOT});await page.evaluate(async()=>{const {farmLoading}=await import('/js/farm/loading-ui.js');farmLoading.complete(true);});}

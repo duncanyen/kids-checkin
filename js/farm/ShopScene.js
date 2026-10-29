@@ -27,7 +27,8 @@ export default class ShopScene extends Phaser.Scene {
         this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnBack.on('pointerdown', () => this.scene.start('MyFarmScene'));
 
-        this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'center', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
+        this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'left', backgroundColor: '#000', padding: { left: 34, right: 10, top: 6, bottom: 6 } }).setOrigin(0.5);
+        this.assetCoin = this.add.image(this.assetText.getBounds().left + 17, this.assetText.getBounds().top + 16, 'coin').setDisplaySize(24, 24);
 
         this.isProcessing = false; 
         this.createConfirmDialog();
@@ -317,6 +318,7 @@ export default class ShopScene extends Phaser.Scene {
         this.farmData = value;
         const usedSpace = getUsedSpace(this.farmData);
         this.assetText.setText(`持有金幣: ${this.farmData.coins || 0}\n庫存容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
+        this.assetCoin.setPosition(this.assetText.getBounds().left + 17, this.assetText.getBounds().top + 16);
     }
 
     async executeBuyWeapon(key, qty, price) {

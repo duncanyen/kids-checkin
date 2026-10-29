@@ -1,32 +1,12 @@
 import { onSceneExit } from './scene-cleanup.js';
 const ITEMS = {
-    worms: { name: '菜蟲', body: 0x9ecb58, light: 0xdaec9c, edge: 0x486a32, ink: '#44652c' },
-    earthworms: { name: '蚯蚓', body: 0xde9a87, light: 0xffd4b5, edge: 0x855244, ink: '#995c45' },
+    worms: { name: '菜蟲', ink: '#44652c' },
+    earthworms: { name: '蚯蚓', ink: '#995c45' },
 };
 
-// Original vector mascots: rounded ink outlines, soft segments and small faces.
+// Share the same painted item art as the warehouse and shop.
 function drawMascot(scene, type) {
-    const style = ITEMS[type], g = scene.add.graphics();
-    const points = type === 'worms' ? [[-26,9],[-18,5],[-9,7],[0,4],[9,0],[18,-6]] : [[-27,12],[-21,4],[-13,0],[-5,3],[3,3],[11,-4],[19,-10]];
-    for (const [x,y] of points) g.fillStyle(style.edge).fillCircle(x,y,8.5);
-    points.forEach(([x,y],i) => {
-        g.fillStyle(style.body).fillCircle(x,y,6.5);
-        g.fillStyle(style.light,.7).fillEllipse(x-1,y-3,7,3);
-        if (type === 'earthworms' && i > 0 && i < 5) g.lineStyle(1,style.edge,.4).lineBetween(x+3,y-4,x+4,y+4);
-        if (type === 'worms' && i < 4) g.fillStyle(style.edge).fillEllipse(x-1,y+7,4,3);
-    });
-    const [x,y] = points.at(-1);
-    if (type === 'worms') {
-        g.lineStyle(2,style.edge).lineBetween(x-3,y-8,x-8,y-17).lineBetween(x+5,y-8,x+8,y-18);
-        g.fillStyle(style.body).fillCircle(x-8,y-17,3).fillCircle(x+8,y-18,3);
-    }
-    g.fillStyle(style.edge).fillEllipse(x,y,23,22);
-    g.fillStyle(style.body).fillEllipse(x,y-1,19,18);
-    g.fillStyle(0xfff8df).fillEllipse(x-4,y-3,5,7).fillEllipse(x+4,y-3,5,7);
-    g.fillStyle(0x40352d).fillCircle(x-3,y-3,1.6).fillCircle(x+5,y-3,1.6);
-    g.fillStyle(0xf29680,.7).fillEllipse(x-7,y+2,4,2).fillEllipse(x+7,y+2,4,2);
-    g.lineStyle(1.4,style.edge).beginPath().arc(x+1,y+1,3,0,Math.PI).strokePath();
-    return g;
+    return scene.add.image(0, 0, type === 'worms' ? 'worm' : 'earthworm').setDisplaySize(66, 66);
 }
 
 function star(graphics, color) {
@@ -77,7 +57,7 @@ export class GardenFeedback {
         const shadow=scene.add.graphics().fillStyle(0x3d321f,.2).fillRoundedRect(-147,-48,300,112,18);
         const paper=scene.add.image(0,0,'ui_parchment').setDisplaySize(308,120);
         const badge=scene.add.graphics().fillStyle(0xfff7d9,.95).fillCircle(-103,0,37).lineStyle(2,0xccad65,.8).strokeCircle(-103,0,37);
-        const mascot=drawMascot(scene,type).setPosition(-103,0).setScale(1.05);
+        const mascot=drawMascot(scene,type).setPosition(-103,0);
         const textStyle={fontFamily:'system-ui, sans-serif',color:'#74542f'};
         const eyebrow=scene.add.text(-53,-35,'菜園小驚喜',{...textStyle,fontSize:'11px'});
         const title=scene.add.text(-53,-16,`抓到${style.name}！`,{...textStyle,fontSize:'20px',fontStyle:'bold',color:style.ink});

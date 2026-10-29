@@ -13,7 +13,7 @@ import { GorillaEncounter } from './gorilla.js';
 import { rollHomeBossEncounter } from './gorilla-rules.js';
 import { DragonEncounter } from './dragon.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
-import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
+import { addFarmBackground, addFarmCoop, addFarmSign, addFarmEgg, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, CURRENT_GROUP_ID, playerName, getUsedSpace } from './constants.js';
@@ -49,9 +49,7 @@ export default class MyFarmScene extends Phaser.Scene {
         
         this.coop = addFarmCoop(this, () => this.askCleanMyFarm());
 
-        const eggPosition = farmEggPosition(this);
-        this.coopEgg = this.add.image(eggPosition.x, eggPosition.y, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
-        this.coopEgg.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.harvestEgg());
+        this.coopEgg = addFarmEgg(this, () => this.harvestEgg());
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
@@ -66,7 +64,8 @@ export default class MyFarmScene extends Phaser.Scene {
         this.createMinBtn(235, 40, '🎒 倉庫', 0xE65100, () => this.scene.start('WarehouseScene'));
 
         this.add.rectangle(335, 40, 95, 48, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
-        this.coinsText = this.add.text(295, 24, '💰 —', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
+        this.coinIcon = this.add.image(302, 31, 'coin').setDisplaySize(18, 18).setDepth(31);
+        this.coinsText = this.add.text(314, 24, '—', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
         this.cleanText = this.add.text(295, 42, '🗑️ —', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
 
         this.timerBg = this.add.rectangle(cx, 90, 200, 26, 0x000000, 0.6).setOrigin(0.5);
@@ -197,7 +196,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     updateUI() {
         if (!this.farmData) return;
-        this.coinsText.setText(`💰 ${this.farmData.coins || 0}`);
+        this.coinsText.setText(`${this.farmData.coins || 0}`);
         this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
 
         const cleanVal = this.farmData.cleanliness || 0;

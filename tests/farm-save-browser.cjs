@@ -77,7 +77,8 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         await page.waitForTimeout(600);
         assert.equal(writes.length, 0);
         assert.deepEqual(docs[owner].farm, farm);
-        assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').coinsText.text), '💰 —');
+        assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').coinsText.text), '—');
+        assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').coinIcon.texture.key), 'coin');
         assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').farmData), null);
         // Slow loading cannot enter a shop that would misleadingly show defaults.
         await page.evaluate(() => {

@@ -14,7 +14,7 @@ import { attachFarmAtmosphere } from './atmosphere.js';
 import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
 import { DragonEncounter, rollVisitEncounter } from './dragon.js';
 import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint, startPredatorPatrol, PREDATOR_APPROACH_MS, TIGER_DEADLINE_MS, WOLF_DEADLINE_MS } from './predators.js';
-import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
+import { addFarmBackground, addFarmCoop, addFarmSign, addFarmEgg, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -55,9 +55,7 @@ export default class VisitScene extends Phaser.Scene {
 
         this.coop = addFarmCoop(this, () => this.askCleanTargetFarm());
 
-        const eggPosition = farmEggPosition(this);
-        this.coopEgg = this.add.image(eggPosition.x, eggPosition.y, 'egg').setScale(0.8).setOrigin(0.5).setDepth(6).setVisible(false);
-        this.coopEgg.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.attemptSteal());
+        this.coopEgg = addFarmEgg(this, () => this.attemptSteal());
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();

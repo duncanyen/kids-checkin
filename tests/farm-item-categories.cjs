@@ -56,6 +56,11 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
  await page.evaluate(async()=>{
   const s=window.__farmGame.scene.getScene('ShopScene');
+  for(const key of ['egg','silkie_egg','bresse_egg','worm','earthworm','fang','tiger_pelt']) {
+   const icon=s.sellContainer.list.find(item=>item.texture?.key===key);
+   if(!icon||icon.texture.getSourceImage().width!==128)throw Error('Painted item missing from shop '+key);
+  }
+  if(s.assetCoin.texture.key!=='coin'||s.assetCoin.texture.getSourceImage().width!==128)throw Error('Shop balance uses different coin art');
   const keys=()=>[...new Set((s.shopMode==='buy'?s.buyContainer:s.sellContainer).list.filter(o=>o.visible).map(o=>o.catalogKey))];
   const same=(actual,expected)=>{if(actual.sort().join(',')!==expected.sort().join(','))throw Error('Wrong category '+actual);};
   same(keys(),['hen','silkie','bresse']);if(s.pageText.visible)throw Error('Single page controls should hide');
@@ -96,6 +101,17 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  });
  checks.push('configured extra items paginate inside category, independent buy/sell/category page memory, no cross-category leakage');
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene')&&window.__farmGame.scene.getScene('WarehouseScene').farmData);
+ await page.evaluate(()=>{
+  const warehouse=window.__farmGame.scene.getScene('WarehouseScene');
+  const keys=['egg','silkie_egg','bresse_egg','coin','worm','earthworm','fang','tiger_pelt'];
+  for(const key of keys){
+   const source=warehouse.textures.get(key).getSourceImage();
+   // Phaser may decode downloaded PNGs through blob URLs; generated matrices
+   // use canvas sources instead of image sources.
+   if(source.width!==128||source.height!==128||source.tagName==='CANVAS')throw Error('Inventory item still uses generated matrix '+key);
+   if(!warehouse.allConfigItems.some(item=>item.icon===key))throw Error('Painted item missing from warehouse '+key);
+  }
+ });
  await page.evaluate(()=>{
   const s=window.__farmGame.scene.getScene('WarehouseScene'),keys=()=>s.visibleWarehouseItems.map(i=>i.key).sort().join(',');
   if(keys()!==['bird:hen','bird:silkie','bird:bresse','inventoryEggs','silkieEggs','bresseEggs'].sort().join(','))throw Error('Warehouse chicken/egg category wrong');

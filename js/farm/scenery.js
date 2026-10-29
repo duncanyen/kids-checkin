@@ -67,7 +67,8 @@ function reflowFarm(scene, oldMap, map) {
         scene.coop.input?.hitArea.setSize(size.width,size.height);
         scene.coop.levelBadge?.setPosition(p.x,p.y+size.height/2+9);
     }
-    [scene.coopEgg,scene.farmSign,...(scene.gardenPlants || []),...(scene.rubbishGroup?.getChildren() || [])].forEach(move);
+    if (scene.coopEgg?.active) positionFarmEgg(scene, scene.coopEgg);
+    [scene.farmSign,...(scene.gardenPlants || []),...(scene.rubbishGroup?.getChildren() || [])].forEach(move);
     if (scene.gardenBounds) {
         const a=map.point(145,900),b=map.point(596,1194);
         scene.gardenBounds={left:a.x,top:a.y,right:b.x,bottom:b.y};
@@ -110,7 +111,31 @@ export function addFarmCoop(scene, onClick) {
 }
 
 export function farmEggPosition(scene) {
-    return getFarmMapLayout(scene).point(327, 395);
+    const map = getFarmMapLayout(scene);
+    // Anchor on the straw inside each painted doorway, above the wooden ramp.
+    // The panoramic painting's doorway does not follow the generic y mapping.
+    return map.texture === 'farm_panorama'
+        ? { x: map.offsetX + 1034 * map.artScale, y: map.offsetY + 254 * map.artScale }
+        : map.point(334, 358);
+}
+
+export function positionFarmEgg(scene, egg) {
+    const map = getFarmMapLayout(scene), point = farmEggPosition(scene);
+    const size = Math.min(26, (map.texture === 'farm_panorama' ? 28 : 34) * map.artScale);
+    egg.setPosition(point.x, point.y).setDisplaySize(size, size);
+    if (egg.input) {
+        // Keep the small door-aligned artwork easy to tap on a phone.
+        const target = 44 / farmView(scene).zoom / egg.scaleX;
+        egg.input.hitArea.setTo((egg.width - target) / 2, (egg.height - target) / 2, target, target);
+    }
+    return egg;
+}
+
+export function addFarmEgg(scene, onClick) {
+    const egg = scene.add.image(0, 0, 'egg').setOrigin(0.5).setDepth(6).setVisible(false);
+    egg.setInteractive({ cursor: 'pointer', hitArea: new Phaser.Geom.Rectangle(), hitAreaCallback: Phaser.Geom.Rectangle.Contains });
+    egg.on('pointerdown', onClick);
+    return positionFarmEgg(scene, egg);
 }
 
 export function addFarmSign(scene, onClick) {
