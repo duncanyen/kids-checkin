@@ -49,7 +49,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const scene=async(key,data)=>{await page.evaluate(({key,data})=>new Promise(resolve=>{const current=__farmGame.scene.getScenes(true).find(s=>['MyFarmScene','ShopScene','WarehouseScene','VisitScene'].includes(s.sys.settings.key));if(current.sys.settings.key===key&&key!=='VisitScene'){resolve(true);return;}__farmGame.scene.getScene(key).events.once('create',()=>resolve(true));current.scene.start(key,data);}),{key,data});await page.waitForFunction(key=>{const s=__farmGame.scene.getScene(key);return s.sys.isActive()&&(key==='ShopScene'?s.buyContainer?.scene===s:key==='VisitScene'?!!s.targetFarmData:!!s.farmData);},key);};
  const clock=async now=>page.evaluate(now=>{window.__dogNow=now;sessionStorage.setItem('guard-clock',String(now));},now);
  const identity=async(accountId,name)=>{await page.evaluate(({accountId,name})=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name})),{accountId,name});await page.reload();await ready();};
- const rent=async days=>{await scene('ShopScene');await page.evaluate(()=>{const s=__farmGame.scene.getScene('ShopScene');s.selectShopCategory('dogs');s.catalog.buy.find(row=>row[0]==='guard:pyrenees')[3]();});await page.getByLabel('租用天數').fill(String(days));};
+ const rent=async(days,breedId='pyrenees')=>{await scene('ShopScene');await page.evaluate(breedId=>{const s=__farmGame.scene.getScene('ShopScene');s.selectShopCategory('dogs');s.catalog.buy.find(row=>row[0]===`guard:${breedId}`)[3]();},breedId);await page.getByLabel('租用天數').fill(String(days));};
  await page.goto(base+'/farmgame.html');await ready();
  await scene('WarehouseScene');assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').categoryTabs.tabs.get('dogs').background.visible),false);
  await rent(8);await page.getByText('8 天 · 480 金幣',{exact:true}).waitFor();await page.screenshot({path:'/tmp/guard-dog-rental.png',fullPage:true});await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
@@ -109,6 +109,38 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  });
  assert.equal(concurrency.rent.filter(s=>s==='fulfilled').length,1);assert.equal(concurrency.activate.filter(s=>s==='fulfilled').length,1);
  assert.equal(docs['groups/A/users/owner'].farm.coins,coins-160);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,0);
- assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release');
+ // The real second breed uses its own quote, art, interception and notification.
+ await rent(8,'beagle');await page.getByRole('heading',{name:'租用米格魯',exact:true}).waitFor();
+ await page.getByText('8 天 · 120 金幣',{exact:true}).waitFor();
+ await page.getByText('攔截小偷 33% · 對該雞舍禁偷 2 小時',{exact:true}).waitFor();
+ assert.ok((await page.getByRole('dialog').textContent()).includes('20 金幣／天、100 金幣／週'));
+ await page.screenshot({path:'/tmp/beagle-rental.png',fullPage:true});
+ await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ await rent(1);await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ assert.equal(docs['groups/A/users/owner'].farm.coins,coins-360);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,2);
+ await scene('WarehouseScene');await page.evaluate(()=>{const s=__farmGame.scene.getScene('WarehouseScene');s.selectWarehouseCategory('dogs');s.handleItemClick('guard:beagle','米格魯');});
+ await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ const beagle=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='beagle');assert.equal(beagle.expiresAt,beagle.startedAt+8*DAY);
+ await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+ assert.equal(await page.getByRole('button',{name:'開始護衛',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'取消',exact:true}).click();
+ await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_beagle');
+ await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');for(const action of ['rest','walk','run','guard'])if(s.anims.get('guard_beagle_'+action).frames.some(f=>f.textureKey!=='guard_beagle'))throw Error('Beagle reused another breed artwork');});
+ await page.screenshot({path:'/tmp/beagle-home.png',fullPage:true});
+ await clock(beagle.startedAt+3600000);await identity('thief','小偷');await scene('VisitScene',{targetAccountId:'owner',targetName:'主人',targetGroupId:'A'});
+ await page.waitForFunction(()=>__farmGame.scene.getScene('VisitScene').guardDog?.texture.key==='guard_beagle');
+ const eggsBefore=docs['groups/A/users/owner'].farm.eggsReady,inventoryBefore=docs['groups/A/users/thief'].farm.inventoryEggs;
+ await page.evaluate(async()=>{window.__retryDogTransaction=true;Math.random=()=>.32999;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
+ const beagleBlock=Math.max(...Object.values(docs['groups/A/users/thief'].farm.villageStealBlockedUntil));
+ assert.equal(beagleBlock,beagle.startedAt+3*3600000);assert.equal(docs['groups/A/users/owner'].farm.eggsReady,eggsBefore);
+ const beagleNotice=docs[notices().at(-1)];assert.ok(beagleNotice.text.includes('米格魯'));assert.ok(beagleNotice.text.includes('2 小時'));assert.ok(!beagleNotice.text.includes('4 小時'));
+ await page.evaluate(()=>{const s=__farmGame.scene.getScene('VisitScene');if(!s.children.list.some(o=>o.text?.includes('禁偷 2 小時')))throw Error('Wrong beagle cooldown label');});
+ await clock(beagleBlock);await page.evaluate(async()=>{Math.random=()=>.33;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
+ assert.equal(docs['groups/A/users/owner'].farm.eggsReady,eggsBefore-1);assert.equal(docs['groups/A/users/thief'].farm.inventoryEggs,inventoryBefore+1);
+ await identity('owner','主人');await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:beagle','米格魯'));
+ await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_dog');
+ assert.equal(docs['groups/A/users/owner'].farm.coins,coins-360);
+ assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

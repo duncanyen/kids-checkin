@@ -51,3 +51,25 @@ test('four-hour blocks survive reload and remain scoped to their group and coop'
     assert.equal(stealBlockedUntil({stealCooldowns:{alice:now}},'A','alice'),now+3600000);
     assert.equal(stealBlockedUntil({stealCooldowns:{alice:now}},'B',null),0);
 });
+
+test('beagle uses its own prices, 33 percent bite boundary and two-hour block',()=>{
+    for(const [days,cost] of [[1,20],[2,40],[5,100],[6,100],[7,100],[8,120],[12,200],[14,200]])assert.equal(rentalPrice('beagle',days),cost);
+    let farm=apply({coins:500},rentGuardDog({coins:500},'beagle',7,'beagle-1',now));
+    assert.equal(farm.coins,400);assert.equal(guardDogInterception(farm,0,now),null);
+    farm=apply(farm,activateGuardDog(farm,'beagle-1',now));
+    assert.ok(guardDogInterception(farm,.32999,now));assert.equal(guardDogInterception(farm,.33,now),null);
+    assert.equal(guardDogInterception(farm,0,now).breed.blockMs,2*3600000);
+    assert.equal(guardDogInterception(farm,0,now+7*DAY_MS),null);
+    assert.equal(GUARD_DOG_BREEDS.pyrenees.biteChance,.7);assert.equal(GUARD_DOG_BREEDS.pyrenees.blockMs,4*3600000);
+});
+
+test('pyrenees and beagle can both be rented, but cannot guard at the same time',()=>{
+    let farm=rented();farm=apply(farm,rentGuardDog(farm,'beagle',1,'beagle-1',now));
+    assert.equal(farm.guardDogs.length,2);assert.equal(farm.coins,1580);
+    assert.throws(()=>rentGuardDog(farm,'beagle',1,'duplicate',now),/同一品種/);
+    farm=apply(farm,activateGuardDog(farm,'dog-1',now));
+    assert.throws(()=>activateGuardDog(farm,'beagle-1',now),/先解除/);
+    farm=apply(farm,releaseGuardDog(farm,'dog-1',now+1));
+    farm=apply(farm,activateGuardDog(farm,'beagle-1',now+2));
+    assert.equal(activeGuardDog(farm,now+2).breedId,'beagle');assert.equal(farm.guardDogs[0].expiresAt,now+2+DAY_MS);
+});

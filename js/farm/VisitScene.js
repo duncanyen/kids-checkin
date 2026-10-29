@@ -595,7 +595,7 @@ export default class VisitScene extends Phaser.Scene {
                 const interception = guardDogInterception(target, roll, now);
                 const notify = interception ? await prepareGuardDogNotice(transaction, {
                     groupId: this.targetGroupId, accountId: this.targetAccountId, ownerName: this.targetName,
-                    thiefName: playerName, breedName: interception.breed.name, id: attemptId, now,
+                    thiefName: playerName, breedName: interception.breed.name, blockMs: interception.breed.blockMs, id: attemptId, now,
                 }) : null;
                 const updates = { [`farm.villageStealCooldowns.${key}`]: now,
                     [`farm.villageStealBlockedUntil.${key}`]: now + (interception?.breed.blockMs || STEAL_COOLDOWN_MS),
@@ -611,9 +611,9 @@ export default class VisitScene extends Phaser.Scene {
                 }
                 notify?.();
                 transaction.update(myFarmRef, updates);
-                return { success: !interception, eggName };
+                return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0 };
             });
-            this.showFloatingText(result.success ? `🕵️ 偷到${result.eggName || '雞蛋'}` : '被護衛犬攔截！這座雞舍禁偷 4 小時', result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
+            this.showFloatingText(result.success ? `🕵️ 偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
             if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {

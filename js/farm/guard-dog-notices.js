@@ -3,13 +3,13 @@ import { db } from '../firebase-config.js';
 
 // Read channel permissions before any transaction write. The same attempt ID
 // is reused on Firestore retries, so one interception produces one notification.
-export async function prepareGuardDogNotice(transaction, { groupId, accountId, ownerName, thiefName, breedName, id, now }) {
+export async function prepareGuardDogNotice(transaction, { groupId, accountId, ownerName, thiefName, breedName, blockMs, id, now }) {
     const settings = await transaction.get(doc(db, 'groups', groupId, 'settings', 'gameConfig'));
     const roomId = settings.data()?.targetRoomId;
     const roomRef = typeof roomId === 'string' && roomId && !roomId.includes('/') ? doc(db, 'rooms', roomId) : null;
     const room = roomRef ? await transaction.get(roomRef) : null;
     const channelReady = room?.exists() && room.data().groupId === groupId;
-    const text = `${ownerName}的${breedName}成功攔截${thiefName}偷蛋，保護了雞蛋！對方 4 小時內無法再偷這座雞舍。`;
+    const text = `${ownerName}的${breedName}成功攔截${thiefName}偷蛋，保護了雞蛋！對方 ${blockMs / 3600000} 小時內無法再偷這座雞舍。`;
     return () => {
         transaction.set(doc(db, 'groups', groupId, 'users', accountId, 'farm_notifications', `guard-${id}`), {
             type: 'system', title: '護衛犬成功保護雞蛋', body: text, createdAt: now, readAt: null,
