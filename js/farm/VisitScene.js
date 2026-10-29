@@ -13,7 +13,7 @@ import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
 import { readVillageAccess, isPublicVillage, villageTargetKey } from './villages.js';
 import { DragonEncounter, rollVisitEncounter } from './dragon.js';
-import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint, startTigerAttack, TIGER_APPROACH_MS, TIGER_DEADLINE_MS } from './predators.js';
+import { createPredator, hitPredator, finishPredator, predatorDestination, predatorSpawnPoint, startTigerPatrol, TIGER_APPROACH_MS, TIGER_DEADLINE_MS } from './predators.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, farmEggPosition, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { db } from '../firebase-config.js';
@@ -363,18 +363,17 @@ export default class VisitScene extends Phaser.Scene {
         this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
         const warnText = this.add.text(195, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
-        // Keep the warning below the coop, clear of the tiger's new rooftop pose.
-        warnText.setY(this.coop.getBounds().bottom + 60);
+        // Keep the warning above the clearing, clear of the patrol and hens.
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
         this.tiger.warning = warnText;
 
         this.tigerTween = this.tweens.add({
             targets: this.tiger, ...predatorDestination(this, 'tiger'), duration: TIGER_APPROACH_MS, ease: 'Linear',
-            onComplete: () => startTigerAttack(this, this.tiger),
+            onComplete: () => startTigerPatrol(this, this.tiger),
         });
 
         this.tiger.moveTween = this.tigerTween;
-        // The new stationary attack is visual only; keep the original 50s deadline.
+        // Patrolling and attacking are visual only; keep the original 50s deadline.
         this.tiger.deadlineTimer = this.time.delayedCall(TIGER_DEADLINE_MS, () => {
             if (!this.isTigerDefeated) this.tigerEscapes();
         });
