@@ -34,19 +34,48 @@ const {execFileSync}=require('node:child_process');
   for(const kind of ['wolf','tiger']) {
    const original=s[kind+'Escapes'].bind(s);
    s[kind+'Escapes']=()=>{
-    const a=s[kind];window.__arrivals.push({kind,elapsed:performance.now()-a.startedAt,x:a.x,y:a.y,targetX:s.coop.x,targetY:s.coop.y+s.coop.displayHeight/2+20});original();
+    const a=s[kind];window.__arrivals.push({kind,elapsed:kind==='tiger'?a.deadlineTimer.elapsed:a.moveTween.elapsed,x:a.x,y:a.y,targetX:kind==='tiger'?s.coop.x-s.coop.displayWidth*.35:s.coop.x,targetY:kind==='tiger'?s.coop.y-s.coop.displayHeight/2-12:s.coop.y+s.coop.displayHeight/2+20});original();
    };
-   const cap=kind[0].toUpperCase()+kind.slice(1);s['spawn'+cap+'Event']();s[kind].startedAt=performance.now();
+   const cap=kind[0].toUpperCase()+kind.slice(1);s['spawn'+cap+'Event']();
   }
+  const tiger=s.tiger;
+  if(tiger.y<700||tiger.x>100)throw Error('Tiger did not enter from lower left');
+  if(tiger.moveTween.duration!==10000||tiger.deadlineTimer.delay!==50000)throw Error('Incorrect approach/deadline duration');
+  tiger.moveTween.on('complete',()=>{window.__tigerArrivedAt=tiger.deadlineTimer.elapsed;});
+  window.__tigerAttacks=[];
+  tiger.on('animationstart',animation=>{if(animation.key==='tiger_attack')window.__tigerAttacks.push(tiger.deadlineTimer.elapsed);});
  });
- console.log('Verifying real-time 50/60-second arrival while repeatedly attacking...');
+ console.log('Verifying 50/60-second Phaser deadlines while repeatedly attacking...');
  for(let n=0;n<5;n++) {
   await p.waitForTimeout(400);
   await p.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');for(const kind of ['wolf','tiger']){const a=s[kind];a.emit('pointerdown',{x:a.x,y:a.y});if(a.moveTween.isPaused())throw Error('Hit paused deadline');}});
  }
+ await p.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').tiger.getData('atCoop'),null,{timeout:12000});
+ await p.evaluate(()=>{
+  const s=window.__farmGame.scene.getScene('VisitScene'),a=s.tiger;
+  if(a.y>=s.coop.getBounds().top||a.flipX||a.anims.currentAnim.key!=='tiger_idle')throw Error('Wrong coop attack position/idle');
+  const remaining=a.deadlineTimer.getRemaining();a.emit('pointerdown',{x:a.x,y:a.y});
+  if(remaining!==a.deadlineTimer.getRemaining())throw Error('Hit extended 50s deadline');
+ });
+ for(const viewport of [{width:1440,height:900},{width:390,height:960}]) {
+  await p.setViewportSize(viewport);await p.waitForTimeout(100);
+  await p.evaluate(()=>{
+   const s=window.__farmGame.scene.getScene('VisitScene'),a=s.tiger;
+   if(Math.abs(a.x-(s.coop.x-s.coop.displayWidth*.35))>.1||Math.abs(a.y-(s.coop.y-s.coop.displayHeight/2-12))>.1)throw Error('Resize moved tiger away from coop');
+   if(a.deadlineTimer.delay!==50000||a.getData('resolved'))throw Error('Resize reset encounter');
+  });
+ }
+ await p.waitForFunction(()=>window.__tigerAttacks.length>=2,null,{timeout:12000});
+ await p.evaluate(()=>{
+  const times=window.__tigerAttacks;
+  if(Math.abs(times[0]-window.__tigerArrivedAt-5000)>100||Math.abs(times[1]-times[0]-5000)>100)throw Error('Incorrect attack cadence '+times);
+ });
+ await p.screenshot({path:'/tmp/tiger-coop-attack.png',fullPage:true});
  await p.waitForFunction(()=>window.__arrivals.length===2,null,{timeout:65000});
  const arrivals=await p.evaluate(()=>window.__arrivals);
  for(const a of arrivals)if(Math.abs(a.elapsed-(a.kind==='wolf'?60000:50000))>500 || Math.abs(a.y-a.targetY)>0.01 || Math.abs(a.x-a.targetX)>0.01)throw Error(JSON.stringify(a));
  if(errors.length)throw Error(JSON.stringify(errors));
- console.log(JSON.stringify({passed:true,arrivals,errors}));await b.close();
+ const attacks=await p.evaluate(()=>window.__tigerAttacks);
+ if(attacks.some(t=>t>=50500))throw Error('Attack continued after escape');
+ console.log(JSON.stringify({passed:true,arrivals,attacks,errors}));await b.close();
 })().catch(e=>{console.error(e);process.exit(1)});

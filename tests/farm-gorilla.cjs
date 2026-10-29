@@ -57,7 +57,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
    const before=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter;return{id:b.id,health:b.health,remaining:b.deadlineTimer.getRemaining(),commits:window.__farmTest.commits};});
    for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
     await page.setViewportSize(viewport);await page.waitForTimeout(80);
-    await page.evaluate(before=>{const b=window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter;if(b.id!==before.id||b.health!==before.health||b.deadlineTimer.getRemaining()>before.remaining+10||window.__farmTest.commits!==before.commits)throw Error('Resizing reset battle or wrote economy data');},before);
+    await page.evaluate(before=>{const b=window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter;if(b.id!==before.id||b.health!==before.health||b.deadlineTimer.getRemaining()>before.remaining+10||window.__farmTest.commits!==before.commits)throw Error('Resizing reset battle or wrote economy data '+JSON.stringify({before,after:{id:b.id,health:b.health,remaining:b.deadlineTimer.getRemaining(),commits:window.__farmTest.commits}}));},before);
    }
    checkedResize=true;
   }
@@ -67,7 +67,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   await start(weapon);
   await page.evaluate(async hits=>{
    const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.gorillaEncounter;
-   if(b.health!==1000||Math.abs(b.sprite.displayWidth-208)>1||(b.sprite.frame.width<313||b.sprite.frame.width>314))throw Error('Wrong boss health/size/texture');
+   if(b.health!==1000||Math.abs(b.sprite.displayWidth-208)>1||b.sprite.frame.realWidth!==314||b.sprite.frame.width<300)throw Error('Wrong boss health/size/texture');
    for(const action of ['run','attack','hit','dead'])if(s.anims.get('gorilla_'+action).frames.length!==4)throw Error('Missing animation');
    if(b.sprite.flipX||(b.phase==='flight'&&b.sprite.y<b.destination.y-1)||b.destination.x>=s.coop.x||b.destination.x<90)throw Error('Wrong approach route '+JSON.stringify({x:b.sprite.x,y:b.sprite.y,destination:b.destination,coopX:s.coop.x,remaining:b.deadlineTimer.getRemaining()}));
    await s.harvestEgg();if(s.gorillaEncounter!==b||s.farmData.eggsReady!==2)throw Error('Collection bypassed active boss');

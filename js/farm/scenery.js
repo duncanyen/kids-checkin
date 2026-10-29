@@ -1,6 +1,7 @@
 import { onSceneExit } from './scene-cleanup.js';
 import { farmView } from './viewport.js';
 import { chooseHenPosition, getThreatZones } from './hen-navigation.js';
+import { predatorDestination } from './predators.js';
 
 // Single continuous panorama: the renderer fills the viewport, not a CSS backdrop.
 export function addFarmBackground(scene, field = false) {
@@ -80,8 +81,9 @@ function reflowFarm(scene, oldMap, map) {
     }
     for (const name of ['wolf','tiger','dragon','gorilla','eagle']) move(scene[name]);
     for (const name of ['wolf','tiger']) {
-        const predator=scene[name],dest=predator?{x:scene.coop.x,y:scene.coop.getBounds().bottom+20}:null;
+        const predator=scene[name],dest=predator?predatorDestination(scene,name):null;
         if (dest && predator.moveTween?.isPlaying()) { predator.moveTween.updateTo('x',dest.x,true); predator.moveTween.updateTo('y',dest.y,true); }
+        else if (dest && predator.active && predator.getData('atCoop') && !predator.getData('resolved')) predator.setPosition(dest.x,dest.y);
     }
     for (const boss of [scene.eagleEncounter,scene.dragonEncounter,scene.gorillaEncounter].filter(Boolean)) {
         boss.destination=boss.spec.destination ? boss.spec.destination() : {x:Math.max(boss.spec.minX||80,scene.coop.getBounds().left-(boss.spec.approachInset||34)),y:scene.coop.getBounds().bottom+10};
