@@ -1,3 +1,5 @@
+import { FarmAssetScene } from './assets.js';
+import { farmLoading } from './loading-ui.js';
 import BootScene from './BootScene.js';
 import MyFarmScene from './MyFarmScene.js';
 import LobbyScene from './LobbyScene.js';
@@ -23,9 +25,10 @@ const config = {
     // Smooth painted scenery; the hen texture opts into nearest filtering in BootScene.
     pixelArt: false,
     antialias: true,
-    scene: [BootScene, MyFarmScene, LobbyScene, VisitScene, ShopScene, WarehouseScene] 
+    scene: [BootScene, MyFarmScene, LobbyScene, VisitScene, ShopScene, WarehouseScene, FarmAssetScene]
 };
 
 // 確保在 HTML 中 <script type="module" src="js/farm/main.js"></script>
 const game = new Phaser.Game(config);
+game.events.once('destroy',()=>farmLoading.dispose());
 mountFarmMail(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });

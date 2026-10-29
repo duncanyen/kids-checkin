@@ -1,5 +1,6 @@
 export function registerPredatorAnimations(scene) {
     for (const kind of ['wolf', 'tiger']) {
+        if (!scene.textures.exists(kind)) continue;
         for (const [action, start, rate, repeat] of [
             ['walk', 0, 4, -1], ['run', 4, 10, -1],
             ['hit', 8, 8, 0], ['dead', 12, 7, 0],

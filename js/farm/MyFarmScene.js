@@ -1,3 +1,5 @@
+import { ensureAssets, bossAssets } from './assets.js';
+import { farmLoading } from './loading-ui.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
 import { isFarmSave, copyFarmSave } from './save-store.js';
@@ -23,6 +25,10 @@ export default class MyFarmScene extends Phaser.Scene {
         configureFarmViewport(this);
         const cx = 195;
         this.farmData = null;
+        this.henAssetsPending = false;
+        this.preparingEncounter = false;
+        this.pendingEncounter = null;
+        this.farmSceneToken = Symbol();
         this.henVisualKey = null;
         this.isHenSitting = false;
         this.emptyClickCount = 0;
@@ -72,6 +78,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
 
         onSceneExit(this, () => {
+            this.farmSceneToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
@@ -110,7 +117,7 @@ export default class MyFarmScene extends Phaser.Scene {
         const btn = this.add.rectangle(x, y, 80, 36, color, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(x, y, label, { fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btn.on('pointerdown', () => {
-            if (!this.farmData || this.registry.get('farmLoadState')?.phase !== 'ready') {
+            if (!this.isSaveReady()) {
                 this.timerText?.setText('請等待存檔連線完成');
                 return;
             }
@@ -120,9 +127,23 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     initFirebase() {
-        let closed = false;
+        let closed = false, revision = 0;
         const apply = farm => {
             if (!farm || closed) return;
+            const token = ++revision;
+            const keys = [...new Set(poultryState(farm).hens.map(h=>h.breed))];
+            if(keys.some(key=>!this.textures.exists(key))){
+                this.henAssetsPending = true;
+                ensureAssets(this, keys, n=>{
+                    if(!this.game.registry.get('farmInitialReady'))farmLoading.progress(90+n*8,'準備雞隻');
+                }).then(()=>{if(!closed && token===revision)apply(farm);},()=>{
+                    if(closed || token!==revision)return;
+                    farmLoading.error('雞隻素材載入失敗，存檔未變更。',()=>apply(this.registry.get('myFarmData')));
+                });
+                return;
+            }
+            const resumedAssets = this.henAssetsPending;
+            this.henAssetsPending = false;
             // Work on a view copy; never turn incomplete snapshots into defaults.
             this.farmData = copyFarmSave(farm);
             if (!this.farmData.equippedWeapon) this.farmData.equippedWeapon = 'club';
@@ -141,6 +162,12 @@ export default class MyFarmScene extends Phaser.Scene {
                     ? Math.floor((now - h.sickTimestamp) / 86400000) : 0)]);
             if (key !== this.henVisualKey || this.farmData.hensState.some(h => h.isSick && h.sickTimestamp && now - h.sickTimestamp > 48 * 3600000)) { this.henVisualKey = key; this.syncHens(); }
             this.startEggTimer();
+            if(!this.game.registry.get('farmInitialReady')){
+                this.game.registry.set('farmInitialReady',true);
+                // Let the first populated farm frame render before hiding the shell.
+                const readyToken=this.farmSceneToken;
+                this.game.events.once('postrender',()=>{if(this.sys.isActive() && this.farmSceneToken===readyToken)farmLoading.complete();});
+            } else if(resumedAssets && !this.preparingEncounter) farmLoading.complete(true);
         };
         const showState = state => {
             if (state && state.phase !== 'ready' && this.timerText?.active) this.timerText.setText(state.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…');
@@ -165,7 +192,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     isSaveReady() {
-        return !!this.farmData && this.registry.get('farmLoadState')?.phase === 'ready';
+        return !this.henAssetsPending && !this.preparingEncounter && !!this.farmData && this.registry.get('farmLoadState')?.phase === 'ready';
     }
 
     updateUI() {
@@ -515,8 +542,20 @@ export default class MyFarmScene extends Phaser.Scene {
         }
 
         const defended = [this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
-        const encounter = defended ? null : rollHomeBossEncounter(this.farmData.coopLevel);
+        const encounter = this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
         if (encounter) {
+            this.pendingEncounter = encounter;
+            this.harvestPreparedEncounter = () => this.harvestEgg();
+            this.preparingEncounter = true;
+            const currentScene = this.farmSceneToken;
+            if(bossAssets(encounter).some(key=>!this.textures.exists(key)))farmLoading.begin('準備迎戰');
+            try { await ensureAssets(this,bossAssets(encounter),n=>farmLoading.progress(n*95,'準備迎戰')); }
+            catch { if(this.sys.isActive() && this.farmSceneToken===currentScene){this.preparingEncounter=false;farmLoading.error('怪物素材載入失敗，尚未開始戰鬥。',()=>this.harvestPreparedEncounter?.());}return; }
+            if(!this.sys.isActive() || this.farmSceneToken!==currentScene)return;
+            this.preparingEncounter = false;
+            if(!this.isSaveReady()){farmLoading.error('存檔連線尚未確認，請重試。',async()=>{await this.game.retryFarmSave?.();if(this.sys.isActive() && this.farmSceneToken===currentScene)await this.harvestPreparedEncounter?.();});return;}
+            this.pendingEncounter = null;
+            farmLoading.complete(true);
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
             this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;

@@ -7,6 +7,7 @@ import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, getUsedSpace } from '.
 import { readVillageAccess } from './villages.js';
 
 export function registerGorillaAnimations(scene) {
+    if (!scene.textures.exists('gorilla')) return;
     for (const [action, row, repeat] of [['run',0,-1],['attack',1,-1],['hit',2,0],['dead',3,0]]) {
         if (!scene.anims.exists(`gorilla_${action}`)) scene.anims.create({
             key: `gorilla_${action}`,

@@ -1,40 +1,49 @@
-import { registerEagleAnimations } from './eagle.js';
 import { watchFarm } from '../live-reads.js';
-import { registerPoultryAnimations } from './poultry-art.js';
-import { registerGorillaAnimations } from './gorilla.js';
-import { registerDragonAnimations } from './dragon.js';
-import { registerPredatorAnimations } from './predators.js';
 import { db } from '../firebase-config.js';
 import { ensureFarmSave, startFarmSaveSession } from './save-store.js';
-import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef } from './constants.js';
+import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, membershipReady } from './constants.js';
+import { CORE_ASSETS, queueAssets, registerAvailableAnimations } from './assets.js';
+import { farmLoading } from './loading-ui.js';
 
 export default class BootScene extends Phaser.Scene {
     constructor() { super({ key: 'BootScene' }); }
-
     preload() {
-        for (const breed of ['hen', 'silkie', 'bresse']) this.load.atlas(breed, `assets/farm/${breed}-sheet.png`, `assets/farm/${breed}-sheet.json`);
-        this.load.image('farm_background', 'assets/farm/background.webp');
-        this.load.image('farm_map', 'assets/farm/farm-map.jpg');
-        this.load.image('farm_panorama', 'assets/farm/farm-panorama.webp');
-        for (const name of ['wood', 'wood-selected', 'parchment', 'page']) {
-            this.load.image('ui_' + name.replaceAll('-', '_'), `assets/farm/ui-${name}.webp`);
-        }
-        this.load.atlas('eagle', 'assets/farm/eagle-sheet.png', 'assets/farm/eagle-sheet.json');
-        for (const key of ['shortbow', 'huntingbow', 'eagle-feather', 'arrow']) this.load.image(key, `assets/farm/${key}.png`);
-        this.load.image('mace', 'assets/farm/mace.png');
-        this.load.image('battleaxe', 'assets/farm/battleaxe.png');
-        this.load.image('coop', 'assets/farm/coop.webp');
-        this.load.spritesheet('dragon', 'assets/farm/dragon-sheet.webp', { frameWidth: 256, frameHeight: 256 });
-        this.load.image('dragon_scale', 'assets/farm/dragon-scale.webp');
-        this.load.atlas('gorilla', 'assets/farm/gorilla-sheet.png', 'assets/farm/gorilla-sheet.json');
-        this.load.image('gorilla_fang', 'assets/farm/gorilla-fang.png');
-        this.load.image('signboard', 'assets/farm/signboard.webp');
-        for (const kind of ['wolf', 'tiger']) {
-            this.load.spritesheet(kind, `assets/farm/${kind}-sheet.webp`, { frameWidth: 256, frameHeight: 256 });
-        }
+        this.bootDisposed=false;
+        this.game.events.once('destroy',()=>{this.bootDisposed=true;});
+        this.assetProgress=0;this.memberDone=false;this.saveDone=false;this.assetFailed=false;
+        const update=()=>farmLoading.progress(5+this.assetProgress*65+(this.memberDone?10:0)+(this.saveDone?10:0),
+            this.game.registry.get('farmLoadState')?.phase==='error' ? undefined : this.assetProgress<1?'載入農莊素材':'確認群組與存檔');
+        this.load.on('progress',progress=>{this.assetProgress=progress;update();});
+        this.load.on('loaderror',()=>{this.assetFailed=true;});
+        this.load.on('filecomplete',()=>{if(this.textures.exists('hen'))farmLoading.attachHen(this.textures.get('hen'));});
+        queueAssets(this,CORE_ASSETS);
+        // Public images load while membership is checked. Private save access
+        // starts only once that membership promise has resolved successfully.
+        membershipReady.then(()=>{
+            if(this.bootDisposed || this.game.pendingDestroy || !this.game.scene) return;
+            this.memberDone=true;update();
+            if(this.game.registry.has('isListeningFarm'))return;
+            this.game.registry.set('isListeningFarm',true);
+            const session=startFarmSaveSession({
+                watch:(next,error)=>watchFarm(myFarmRef,next,error),
+                verify:options=>ensureFarmSave(db,{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID},options),
+                receive:farm=>this.game.registry.set('myFarmData',farm),
+                status:state=>{
+                    this.game.registry.set('farmLoadState',state);
+                    if(this.game.registry.get('farmInitialReady'))return;
+                    this.saveDone=state.phase==='ready';
+                    if(state.phase==='error')farmLoading.error('存檔尚未確認，請重試；不會重設農莊。',()=>this.game.retryFarmSave?.());
+                    else update();
+                }
+            });
+            this.game.retryFarmSave=session.retry;this.game.myFarmUnsubscribe=session.stop;
+            window.addEventListener('online',session.retry);
+            this.game.events.once('destroy',()=>{session.stop();window.removeEventListener('online',session.retry);});
+        }).catch(()=>farmLoading.error('無法確認群組資格，請返回重試。'));
     }
-
     create() {
+        if(this.assetFailed || CORE_ASSETS.some(key=>!this.textures.exists(key))){farmLoading.error('農莊素材載入失敗，請檢查連線後重試。');return;}
+        farmLoading.attachHen(this.textures.get('hen'));
         const palette = {
             '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 
             '7': '#FFCA28', '8': '#BDBDBD', '9': '#7CB342', 'A': '#388E3C', 
@@ -45,10 +54,6 @@ export default class BootScene extends Phaser.Scene {
             'e': '#FDE047', 'f': '#D97706', 'g': '#FCA5A5', 'P': '#8BC34A'
         };
 
-        // 所有角色採用一致的清晰像素邊緣。
-        for (const kind of ['wolf', 'tiger', 'dragon', 'gorilla', 'hen', 'silkie', 'bresse']) {
-            this.textures.get(kind).setFilter(Phaser.Textures.FilterMode.NEAREST);
-        }
         this.textures.generate('egg', { data: ['..11..', '.1111.', '111111', '111118', '.1118.', '..88..'], pixelWidth: 6, palette: palette });
         this.textures.generate('silkie_egg', { data: ['..LL..', '.LLLL.', 'LLLLLL', 'LLLLLF', '.LLLF.', '..FF..'], pixelWidth: 6, palette });
         this.textures.generate('bresse_egg', { data: ['..11..', '.1111.', '111111', '11111I', '.111I.', '..II..'], pixelWidth: 6, palette });
@@ -66,30 +71,10 @@ export default class BootScene extends Phaser.Scene {
         this.textures.generate('fang', { data: ['..44..', '.4114.', '.4114.', '..414.', '..44..'], pixelWidth: 4, palette: palette });
         this.textures.generate('star', { data: ['.E.', 'EEE', '.E.'], pixelWidth: 4, palette: palette });
 
-        registerPoultryAnimations(this);
-        registerPredatorAnimations(this);
-        registerDragonAnimations(this);
-        registerEagleAnimations(this);
-        registerGorillaAnimations(this);
-
-        // 全域監聽設定
-        if (!this.game.registry.has('isListeningFarm')) {
-            this.game.registry.set('isListeningFarm', true);
-            const session = startFarmSaveSession({
-                watch: (next, error) => watchFarm(myFarmRef, next, error),
-                verify: options => ensureFarmSave(db, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID }, options),
-                receive: farm => this.game.registry.set('myFarmData', farm),
-                status: state => this.game.registry.set('farmLoadState', state)
-            });
-            this.game.retryFarmSave = session.retry;
-            this.game.myFarmUnsubscribe = session.stop;
-            window.addEventListener('online', session.retry);
-            this.game.events.once('destroy', () => {
-                session.stop();
-                window.removeEventListener('online', session.retry);
-            });
-        }
-
-        this.scene.start('MyFarmScene');
+        registerAvailableAnimations(this);
+        this.scene.launch('FarmAssetScene');
+        membershipReady.then(()=>{
+            if(!this.bootDisposed && this.sys.isActive() && !this.game.pendingDestroy)this.scene.start('MyFarmScene');
+        }).catch(()=>{});
     }
 }

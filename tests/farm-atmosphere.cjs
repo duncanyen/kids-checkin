@@ -70,7 +70,7 @@ const fs=require('node:fs');
  checks.push('Taiwan day/night, all four weather types, built-in rain animation ignores old preferences, no player controls or environment audio');
  // Lighting and weather never intercept existing coop/plant hit zones.
  await p.evaluate(()=>{window.__farmGame.scene.getScene('MyFarmScene').farmData.cleanliness=20;});
- const box=await p.locator('canvas').boundingBox();
+ const box=await p.locator('#game-container canvas').boundingBox();
  await p.mouse.click(box.x+244*box.width/390,box.y+213*box.height/844);
  await p.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dialogContainer.visible);
  await p.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').dialogContainer.setVisible(false));

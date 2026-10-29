@@ -1,3 +1,4 @@
+import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
@@ -10,7 +11,10 @@ import { myFarmRef, getUsedSpace, WEAPONS_CONFIG } from './constants.js';
 export default class WarehouseScene extends Phaser.Scene {
     constructor() { super({ key: 'WarehouseScene' }); }
 
+    preload() { preloadSceneAssets(this); }
+
     create() {
+        if (!finishSceneAssets(this)) return;
         configureFarmViewport(this);
         addFarmBackground(this);
         

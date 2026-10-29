@@ -1,0 +1,23 @@
+.farm-loading{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:#f5efddeF;color:#543b25;font-family:system-ui,-apple-system,sans-serif;--farm-load-progress:0%;--farm-load-fraction:0}
+.farm-loading[hidden],.farm-loading [hidden]{display:none!important}
+.farm-loading-card{width:min(100%,380px);box-sizing:border-box;padding:30px 26px 24px;border:1px solid #cdb68e;border-radius:24px;background:#fffaf0;box-shadow:0 12px 32px #573c2014;text-align:center}
+.farm-loading-kicker{margin:0 0 8px;font-size:12px;letter-spacing:.14em;color:#806c4c}
+.farm-loading h1{font-size:25px;margin:0;font-weight:700;letter-spacing:.06em}
+.farm-loading-path{position:relative;margin:20px 0 12px;padding-top:76px}
+.farm-loading-track{height:12px;overflow:hidden;border-radius:8px;border:1px solid #bfa87b;background:#e8debf;box-shadow:inset 0 2px 3px #60451e12}
+.farm-loading-fill{height:100%;width:100%;background:#7c994e;transform-origin:left;transform:scaleX(var(--farm-load-fraction));transition:transform .2s ease-out}
+.farm-loading-walker-lane{position:absolute;inset:0 36px auto;height:76px}
+.farm-loading-walker{position:absolute;left:0;top:0;width:100%;height:72px;transform:translateX(var(--farm-load-progress));transition:transform .2s ease-out}
+.farm-loading-walker canvas,.farm-loading-walker svg{width:72px;height:72px;display:block;margin-left:-36px}
+.farm-loading-walker svg{animation:farm-hen-step .5s ease-in-out infinite alternate}
+.farm-loading-endpoints{display:flex;justify-content:space-between;font-size:11px;color:#89785a;margin-top:7px}
+.farm-loading-percent{font-size:22px;font-variant-numeric:tabular-nums;color:#627c3e;font-weight:700;margin:16px 0 6px}
+.farm-loading-status{min-height:44px;margin:0;font-size:14px;line-height:1.6;color:#79674c}
+.farm-loading-retry{margin-top:14px;border:1px solid #b99762;border-radius:10px;min-height:44px;padding:10px 22px;background:#ead4a4;color:#543b25;font:inherit;cursor:pointer}
+@keyframes farm-hen-step{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-3px) rotate(3deg)}}
+@media(prefers-reduced-motion:reduce){.farm-loading-fill,.farm-loading-walker{transition:none}.farm-loading-walker svg{animation:none}}
+
+.farm-loading-back{display:block;width:fit-content;min-height:44px;box-sizing:border-box;margin:10px auto -10px;padding:12px 8px;color:#79674c;font-size:13px;text-underline-offset:4px}
+
+.farm-loading[data-failed=true] .farm-loading-walker svg{animation-play-state:paused}
+@media(max-height:540px){.farm-loading{padding:12px;overflow-y:auto;align-items:start}.farm-loading-card{padding:16px 22px;margin:auto}.farm-loading-path{margin-top:8px}.farm-loading-percent{margin-top:10px}.farm-loading-status{min-height:24px}}

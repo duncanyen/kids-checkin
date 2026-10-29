@@ -7,6 +7,7 @@ import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, getUsedSpace } from '.
 
 export const EAGLE_CONFIG=Object.freeze({health:ENEMY_HEALTH.eagle,flightMs:10000,durationMs:60000,coinPenalty:100});
 export function registerEagleAnimations(scene){
+    if (!scene.textures.exists('eagle')) return;
     for(const [action,frames,repeat] of [['fly',[0,1,2,3],-1],['dive',[4,5],-1],['hit',[6],0],['dead',[7],0]]) {
         if(!scene.anims.exists(`eagle_${action}`))scene.anims.create({key:`eagle_${action}`,frames:frames.map(frame=>({key:'eagle',frame})),frameRate:action==='hit'?5:8,repeat});
     }

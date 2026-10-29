@@ -59,9 +59,9 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   const keys=()=>[...new Set((s.shopMode==='buy'?s.buyContainer:s.sellContainer).list.filter(o=>o.visible).map(o=>o.catalogKey))];
   const same=(actual,expected)=>{if(actual.sort().join(',')!==expected.sort().join(','))throw Error('Wrong category '+actual);};
   same(keys(),['hen','silkie','bresse']);if(s.pageText.visible)throw Error('Single page controls should hide');
-  s.categoryTabs.tabs.get('weapons').background.emit('pointerdown');same(keys(),['mace','battleaxe']);
+  s.categoryTabs.tabs.get('weapons').background.emit('pointerdown');same(keys(),['mace','battleaxe','shortbow','huntingbow']);
   s.buyContainer.list.find(o=>o.catalogKey==='mace'&&o.type==='Rectangle').emit('pointerdown');if(!s.dialogContainer.visible||!s.dialogTitle.text.includes('狼牙棒'))throw Error('Weapon purchase click broken');s.dialogContainer.setVisible(false);
-  s.children.list.find(o=>o.type==='Rectangle'&&o.x===290&&o.y===180).emit('pointerdown');same(keys(),['mace']);
+  s.children.list.find(o=>o.type==='Rectangle'&&o.x===290&&o.y===180).emit('pointerdown');same(keys(),['mace','shortbow','huntingbow']);
   s.selectShopCategory('chickens');same(keys(),['bird:hen','inventoryEggs','bird:silkie','silkieEggs','bird:bresse','bresseEggs']);
   s.selectShopCategory('coops');if(!s.emptyCategoryText.visible||!s.emptyCategoryText.text.includes('無法賣出'))throw Error('Coop sale empty explanation missing');same(keys(),[]);
   s.children.list.find(o=>o.type==='Rectangle'&&o.x===100&&o.y===180).emit('pointerdown');same(keys(),['coop2','coop3','coop4','coop5']);
@@ -86,7 +86,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   const s=window.__farmGame.scene.getScene('ShopScene');s.selectShopCategory('weapons');
   if(s.pageText.text!=='1 / 2'||!s.pageText.visible)throw Error('Category pagination missing');
   s.nextPage.emit('pointerdown');if(s.pageText.text!=='2 / 2')throw Error('Next category page failed');
-  const visible=s.buyContainer.list.filter(o=>o.visible);if(new Set(visible.map(o=>o.catalogKey)).size!==3||visible.some(o=>o.catalogCategory!=='weapons'||o.catalogPage!==1))throw Error('Mixed/duplicated page items');
+  const visible=s.buyContainer.list.filter(o=>o.visible);if(new Set(visible.map(o=>o.catalogKey)).size!==5||visible.some(o=>o.catalogCategory!=='weapons'||o.catalogPage!==1))throw Error('Mixed/duplicated page items');
   s.selectShopCategory('other');if(s.pageText.visible)throw Error('Other category inherited weapon pages');
   s.selectShopCategory('weapons');if(s.pageText.text!=='2 / 2')throw Error('Category page not remembered');
   s.children.list.find(o=>o.type==='Rectangle'&&o.x===290&&o.y===180).emit('pointerdown');if(s.pageText.text!=='1 / 2')throw Error('Sale page must be independent');

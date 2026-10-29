@@ -1,0 +1,40 @@
+{
+  "initialRequests": [
+    "hen-sheet.png",
+    "hen-sheet.json",
+    "farm-map.jpg",
+    "farm-panorama.webp",
+    "ui-parchment.webp",
+    "signboard.webp"
+  ],
+  "initialBytes": 3359024,
+  "baselineBootBytes": 14750327,
+  "initialProgress": [
+    0,
+    5,
+    5,
+    15,
+    25,
+    36,
+    47,
+    58,
+    69,
+    80,
+    90,
+    100
+  ],
+  "checks": [
+    "images overlap membership",
+    "save overlaps images",
+    "no private access before membership",
+    "no 100 before safe save",
+    "missing breeds only",
+    "boss asset failure retry preserves roll and 60s",
+    "feature assets demand load and reuse",
+    "asset scene zero objects/timers",
+    "core/feature/engine failures retry safely",
+    "reduced motion",
+    "destroy during pending membership starts no later private reads"
+  ],
+  "errors": []
+}

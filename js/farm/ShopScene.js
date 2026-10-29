@@ -1,3 +1,4 @@
+import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES } from './item-categories.js';
@@ -13,7 +14,10 @@ import { myFarmRef, WORM_PRICE, EARTHWORM_PRICE, FANG_PRICE, DRAGON_SCALE_PRICE,
 export default class ShopScene extends Phaser.Scene {
     constructor() { super({ key: 'ShopScene' }); }
 
+    preload() { preloadSceneAssets(this); }
+
     create() {
+        if (!finishSceneAssets(this)) return;
         configureFarmViewport(this);
         addFarmBackground(this);
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);

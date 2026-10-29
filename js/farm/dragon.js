@@ -8,6 +8,7 @@ import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, DRAGON_CONFIG, DRAGON_SCALE_PRICE, getUsedSpace } from './constants.js';
 
 export function registerDragonAnimations(scene) {
+    if (!scene.textures.exists('dragon')) return;
     for (const [action, row, repeat] of [['fly', 0, -1], ['fire', 1, -1], ['hit', 2, 0], ['dead', 3, 0]]) {
         if (!scene.anims.exists(`dragon_${action}`)) scene.anims.create({
             key: `dragon_${action}`,

@@ -77,7 +77,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   const button=b.archery.button.getBounds(),bow=b.archery.bow.getBounds();if(button.right>=bow.left||button.bottom>800||button.centerX>=100)throw Error('Switch button overlaps bow or is not at lower left');b.archery.button.emit('pointerdown');if(!b.archery.selected||!b.archery.bow.visible)throw Error('Switch bow failed');
   b.flight.stop();b.sprite.setPosition(195,350);b.phase='test';
  });
- async function point(x,y){const box=await page.locator('canvas').boundingBox();return page.evaluate(({x,y,box})=>{const c=window.__farmGame.scene.getScene('MyFarmScene').cameras.main;return{x:box.x+c.width/2+(x-195)*c.zoom,y:box.y+c.height/2+(y-422)*c.zoom};},{x,y,box});}
+ async function point(x,y){const box=await page.locator('#game-container canvas').boundingBox();return page.evaluate(({x,y,box})=>{const c=window.__farmGame.scene.getScene('MyFarmScene').cameras.main;return{x:box.x+c.width/2+(x-195)*c.zoom,y:box.y+c.height/2+(y-422)*c.zoom};},{x,y,box});}
  async function shoot(x,y){const a=await point(195,730),b=await point(x,y);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});const dots=await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.path.commandBuffer.length);if(!dots)throw Error('No aiming trajectory');await page.mouse.up();}
  await page.screenshot({path:'/tmp/eagle-archery.png'});
  await shoot(195,830);

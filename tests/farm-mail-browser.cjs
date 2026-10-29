@@ -81,7 +81,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
             await page.setViewportSize(viewport);
             await page.waitForTimeout(150);
             const layout = await page.evaluate(() => {
-                const parent=document.querySelector('#game-container').getBoundingClientRect(),canvas=document.querySelector('canvas').getBoundingClientRect();
+                const parent=document.querySelector('#game-container').getBoundingClientRect(),canvas=document.querySelector('#game-container canvas').getBoundingClientRect();
                 return {width:innerWidth,height:innerHeight,parent:{x:parent.x,y:parent.y,width:parent.width,height:parent.height,bottom:parent.bottom},canvas:{x:canvas.x,y:canvas.y,width:canvas.width,height:canvas.height,right:canvas.right,bottom:canvas.bottom},scroll:document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight,bg:getComputedStyle(document.querySelector('#game-container'),'::before').backgroundImage};
             });
             assert.equal(Math.round(layout.parent.width),viewport.width);

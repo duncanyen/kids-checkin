@@ -1,3 +1,4 @@
+import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
 import { configureFarmViewport } from './viewport.js';
@@ -22,6 +23,8 @@ import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, pla
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
 
+    preload() { preloadSceneAssets(this); }
+
     init(data) {
         this.targetGroupId = data.targetGroupId || CURRENT_GROUP_ID;
         this.targetGroupName = data.targetGroupName || '';
@@ -30,6 +33,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     create() {
+        if (!finishSceneAssets(this)) return;
         configureFarmViewport(this);
         this.visitToken = Symbol('visit');
         this.emptyClickCount = 0;

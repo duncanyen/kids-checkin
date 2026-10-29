@@ -10,7 +10,9 @@ import { doc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firesto
 // ==========================================
 const context = readGameContext();
 watchGameContext(context);
-await requireGameMembership(context);
+export const membershipReady = requireGameMembership(context);
+// Entry/Boot owns the error UI; attach a handler before the engine finishes loading.
+membershipReady.catch(() => {});
 export const currentUser = context.user;
 export const CURRENT_GROUP_ID = context.groupId;
 export const CURRENT_ACCOUNT_ID = context.accountId;

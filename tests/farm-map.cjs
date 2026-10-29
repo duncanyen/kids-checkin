@@ -47,7 +47,7 @@ const {execFileSync}=require('node:child_process');
    farm.cleanliness=20;
    return {coop:{x:s.coop.x,y:s.coop.y},first:{x:s.gardenPlants[0].x,y:s.gardenPlants[0].y},last:{x:s.gardenPlants[41].x,y:s.gardenPlants[41].y},plants:s.gardenPlants.length};
   },key);
-  const box=await p.locator('canvas').boundingBox();
+  const box=await p.locator('#game-container canvas').boundingBox();
   const click=async pos=>{
    const screen=await p.evaluate(({key,pos})=>{const c=window.__farmGame.scene.getScene(key).cameras.main;return{x:c.width/2+(pos.x-195)*c.zoom,y:c.height/2+(pos.y-422)*c.zoom};},{key,pos});
    await p.mouse.click(box.x+screen.x,box.y+screen.y);

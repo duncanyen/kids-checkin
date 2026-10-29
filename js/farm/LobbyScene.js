@@ -1,3 +1,4 @@
+import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { readFarm } from '../live-reads.js';
@@ -11,9 +12,12 @@ import { isPublicVillage, villageTitle, filterVillages, listPublicVillages, load
 export default class LobbyScene extends Phaser.Scene {
     constructor() { super({ key: 'LobbyScene' }); }
 
+    preload() { preloadSceneAssets(this); }
+
     init(data = {}) { this.selectedGroupId = data.targetGroupId || CURRENT_GROUP_ID; this.openPublic = data.openPublic || false; this.notice = data.notice || ''; }
 
     create() {
+        if (!finishSceneAssets(this)) return;
         configureFarmViewport(this);
         this.lobbyToken = Symbol('lobby');
         this.requestId = (this.requestId || 0) + 1;

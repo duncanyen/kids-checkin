@@ -79,7 +79,7 @@ function write(path,data,merge){const next=merge?clone(docs[path]||{}):{};for(co
  await openLobby();
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('LobbyScene');if(!s.publicEnabled||s.mode!=='own'||s.titleText.text!=='自己的小屋村落')throw Error('Public village must start at home roster');});
  // Swipe using actual canvas coordinates; the right-arrow button is also present.
- const canvas=await page.locator('canvas').boundingBox();
+ const canvas=await page.locator('#game-container canvas').boundingBox();
  await page.mouse.move(canvas.x+260*canvas.width/390,canvas.y+680*canvas.height/844);await page.mouse.down();await page.mouse.move(canvas.x+110*canvas.width/390,canvas.y+680*canvas.height/844,{steps:6});await page.mouse.up();
  await page.waitForFunction(()=>{const s=window.__farmGame.scene.getScene('LobbyScene');return s.mode==='public'&&!s.loadingText.visible;});
  const first=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('LobbyScene');return s.content.list.map(object=>object.getData('villageGroupId')).filter(Boolean);});
