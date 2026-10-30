@@ -1,3 +1,4 @@
+import { getUsedSpace } from './inventory-core.js';
 // Pure breed/production rules, shared by home, visits, shop, feeding and boss loss.
 export const HOUR = 3600000;
 export const BREEDS = Object.freeze({
@@ -67,10 +68,24 @@ export function clearPoultryEggs(farm, now = Date.now()) {
     return poultryPatch(state);
 }
 export function collectPoultry(farm, now = Date.now()) {
-    const state = settlePoultry(farm, now), inventory = {}, collected = { ...state.ready };
-    for (const [key, config] of Object.entries(BREEDS)) inventory[`farm.${config.eggKey}`] = count(farm[config.eggKey]) + state.ready[key];
-    state.ready = { hen: 0, silkie: 0, bresse: 0 }; releaseFullClocks(state, now);
-    return { patch: { ...poultryPatch(state), ...inventory }, collected, total: Object.values(collected).reduce((a, b) => a + b, 0) };
+    const state = settlePoultry(farm, now), inventory = {}, collected = {};
+    let available = Math.max(0, Math.floor((farm.warehouseLimit || 10) - getUsedSpace(farm)));
+    // Stable breed order: ordinary eggs, silkie eggs, then Bresse eggs.
+    for (const [key, config] of Object.entries(BREEDS)) {
+        collected[key] = Math.min(available, state.ready[key]);
+        available -= collected[key];
+        state.ready[key] -= collected[key];
+        inventory[`farm.${config.eggKey}`] = count(farm[config.eggKey]) + collected[key];
+        const capacity = state.hens.filter(h => h.breed === key).length * config.daily;
+        if (collected[key] && state.ready[key] < capacity) {
+            for (const h of state.hens.filter(h => h.breed === key && h.pausedFull)) {
+                h.laidAt = now; delete h.pausedFull;
+            }
+        }
+    }
+    const remaining = Object.values(state.ready).reduce((a, b) => a + b, 0);
+    return { patch: { ...poultryPatch(state), ...inventory }, collected,
+        total: Object.values(collected).reduce((a, b) => a + b, 0), remaining };
 }
 export function takePoultryEgg(farm, roll = 0, now = Date.now()) {
     const state = settlePoultry(farm, now), total = Object.values(state.ready).reduce((a, b) => a + b, 0);

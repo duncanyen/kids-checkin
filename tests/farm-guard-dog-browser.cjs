@@ -141,6 +141,27 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_dog');
  assert.equal(docs['groups/A/users/owner'].farm.coins,coins-360);
- assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching');
+ // Dense mixed flock: dog rest, walking/running, returning and nesting stay separated.
+ await page.evaluate(async()=>{
+  const {updateDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+  await updateDoc(doc({},'groups','A','users','owner'),{'farm.hens':10,'farm.coopLevel':3,
+   'farm.hensState':Array.from({length:10},(_,i)=>({id:'flock-'+i,breed:'hen',laidAt:Date.now(),isSick:false}))});
+ });
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').hensGroup.length===10);
+ for(const viewport of [{width:390,height:900},{width:1440,height:900},{width:844,height:390}]){
+  await page.setViewportSize(viewport);await page.waitForTimeout(200);
+  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');s.time.timeScale=30;s.tweens.timeScale=8;Math.random=()=>.99;});
+  for(let sample=0;sample<12;sample++){
+   await page.waitForTimeout(150);
+   await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),dog=s.guardDog.getBounds();
+    for(const hen of s.hensGroup)if(dog.bottom>hen.getBounds().top)throw Error('Dog and hen body lanes overlap');
+   });
+  }
+  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');s.time.timeScale=1;s.tweens.timeScale=1;s.prepareToLayEgg();});
+  await page.waitForTimeout(2200);
+  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),dog=s.guardDog.getBounds();for(const hen of s.hensGroup)if(dog.bottom>hen.getBounds().top)throw Error('Nesting hen overlaps dog');});
+  await page.screenshot({path:'/tmp/farm-dog-spacing-'+viewport.width+'.png',fullPage:true});
+ }
+ assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

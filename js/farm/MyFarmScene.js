@@ -533,11 +533,10 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        const eggsToHarvest = this.farmData.eggsReady;
         const usedSpace = getUsedSpace(this.farmData);
         const limit = this.farmData.warehouseLimit || 10;
         
-        if (usedSpace + eggsToHarvest > limit) {
+        if (usedSpace >= limit) {
             this.showFloatingText('⚠️ 倉庫空間不足，請先擴充！', '#F44336', 14);
             return;
         }
@@ -575,7 +574,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 if (!docSnap.exists() || !docSnap.data().farm) throw new Error('農場資料不存在');
                 const farm = docSnap.data().farm;
                 const result = collectPoultry(farm);
-                if (getUsedSpace(farm) + result.total > (farm.warehouseLimit || 10)) throw new Error('倉庫空間不足，請先擴充！');
+                if (!result.total && result.remaining) throw new Error('倉庫空間不足，請先擴充！');
                 transaction.update(myFarmRef, result.patch);
                 return result;
 
@@ -583,7 +582,8 @@ export default class MyFarmScene extends Phaser.Scene {
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
             this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;
-            this.showFloatingText(Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋', '#FFD54F', 18);
+            const warning = result.remaining ? `\n⚠️ 倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
+            this.showFloatingText((Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning, '#FFD54F', result.remaining ? 14 : 18);
         } catch (e) { this.showFloatingText(e.message || '收蛋失敗，請稍後重試', '#F44336', 16); }
         finally { this.isHarvesting = false; }
     }

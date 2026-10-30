@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BREEDS, HOUR, poultryState, settlePoultry, poultryPatch, productionChanged, collectPoultry, clearPoultryEggs, takePoultryEgg, tradePoultry, feedPoultry } from '../js/farm/poultry.js';
 const apply = (farm, patch) => ({ ...farm, ...Object.fromEntries(Object.entries(patch).map(([key, value]) => [key.slice(5), value])) });
-const seed = () => ({ poultryVersion: 2, hens: 3, hensState: ['hen', 'silkie', 'bresse'].map((breed, i) => ({ id: 'h'+i, breed, isSick: false, laidAt: 0 })), readyEggs: { hen: 0, silkie: 0, bresse: 0 }, eggsReady: 0, coins: 20000, coopLevel: 1, worms: 2, earthworms: 2 });
+const seed = () => ({ poultryVersion: 2, hens: 3, hensState: ['hen', 'silkie', 'bresse'].map((breed, i) => ({ id: 'h'+i, breed, isSick: false, laidAt: 0 })), readyEggs: { hen: 0, silkie: 0, bresse: 0 }, eggsReady: 0, coins: 20000, warehouseLimit: 100, coopLevel: 1, worms: 2, earthworms: 2 });
 test('exact per-bird intervals, 24-hour yields, breed prices and offline cap', () => {
  assert.deepEqual(settlePoultry(seed(), 4*HOUR).ready, { hen:1, silkie:1, bresse:0 });
  assert.deepEqual(settlePoultry(seed(), 6*HOUR).ready, { hen:1, silkie:1, bresse:1 });
@@ -49,4 +49,27 @@ test('collect and steal keep egg type, full clocks cannot bank, boss loss clears
 test('sick birds stop producing and death never replaces a sold/dead bird with a free hen', () => {
  const f=seed();f.hensState.forEach(h=>{h.isSick=true;h.sickTimestamp=1;});
  assert.deepEqual(settlePoultry(f,24*HOUR).ready,{hen:0,silkie:0,bresse:0});assert.equal(settlePoultry(f,49*HOUR).hens.length,0);
+});
+
+test('partial collection fills the five free slots and preserves every uncollected breed', () => {
+ const farm = {...seed(), warehouseLimit:10, worms:3,earthworms:2, readyEggs:{hen:3,silkie:4,bresse:3},eggsReady:10};
+ const original=structuredClone(farm), result=collectPoultry(farm,0), after=apply(farm,result.patch);
+ assert.equal(result.total,5);assert.equal(result.remaining,5);
+ assert.deepEqual(result.collected,{hen:3,silkie:2,bresse:0});
+ assert.deepEqual(after.readyEggs,{hen:0,silkie:2,bresse:3});
+ assert.equal(after.eggsReady,5);assert.equal(after.inventoryEggs,3);assert.equal(after.silkieEggs,2);
+ assert.deepEqual(farm,original);
+ const full=collectPoultry(after,0);assert.equal(full.total,0);assert.equal(full.remaining,5);
+ const rest=collectPoultry({...after,warehouseLimit:15},0);assert.equal(rest.total,5);assert.equal(rest.remaining,0);
+ assert.equal(rest.patch['farm.silkieEggs'],4);assert.equal(rest.patch['farm.bresseEggs'],3);
+});
+test('partial collection restarts only freed production clocks and respects overfilled warehouses', () => {
+ const full=apply(seed(),poultryPatch(settlePoultry(seed(),24*HOUR)));
+ const after=apply(full,collectPoultry({...full,warehouseLimit:9},48*HOUR).patch);
+ assert.equal(after.hensState[0].laidAt,48*HOUR);assert.equal(after.hensState[0].pausedFull,undefined);
+ assert.equal(after.hensState[1].pausedFull,true);assert.equal(after.hensState[2].pausedFull,true);
+ assert.deepEqual(settlePoultry(after,49*HOUR).ready,{hen:1,silkie:6,bresse:4});
+ const overfilled=collectPoultry({...full,warehouseLimit:1},48*HOUR);
+ assert.equal(overfilled.total,0);assert.equal(overfilled.remaining,16);
+ assert.ok(overfilled.patch['farm.hensState'].every(h=>h.pausedFull));
 });

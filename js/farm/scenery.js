@@ -65,7 +65,7 @@ function reflowFarm(scene, oldMap, map) {
         const p = map.point(370,322.5), size = coopGeometry(map);
         scene.coop.setPosition(p.x,p.y).setSize(size.width,size.height);
         scene.coop.input?.hitArea.setSize(size.width,size.height);
-        scene.coop.levelBadge?.setPosition(p.x,p.y+size.height/2+9);
+        positionCoopLevel(scene.coop, map);
     }
     if (scene.coopEgg?.active) positionFarmEgg(scene, scene.coopEgg);
     [scene.farmSign,...(scene.gardenPlants || []),...(scene.rubbishGroup?.getChildren() || [])].forEach(move);
@@ -103,11 +103,19 @@ export function addFarmCoop(scene, onClick) {
     const coop = scene.add.zone(position.x, position.y, size.width, size.height)
         .setInteractive({ cursor: 'pointer' }).setData('mapCoop', true);
     coop.on('pointerdown', onClick);
-    coop.levelBadge = scene.add.text(coop.x, coop.y + coop.height / 2 + 9, '', {
-        fontSize: '11px', color: '#fff7dc', backgroundColor: '#66502acc', padding: { x: 7, y: 4 }
+    coop.levelBadge = scene.add.text(0, 0, '', {
+        fontFamily: 'sans-serif', fontStyle: 'bold', color: '#55351b',
     }).setOrigin(0.5).setDepth(5);
+    positionCoopLevel(coop, map);
     setCoopSize(coop);
     return coop;
+}
+
+function positionCoopLevel(coop, map) {
+    const point = map.texture === 'farm_panorama'
+        ? { x: map.offsetX + 1033 * map.artScale, y: map.offsetY + 224 * map.artScale }
+        : map.point(334, 316);
+    coop.levelBadge?.setPosition(point.x, point.y).setFontSize(16 * map.artScale);
 }
 
 export function farmEggPosition(scene) {
@@ -150,7 +158,7 @@ export function setCoopSize(coop, level = 1) {
     if (coop.getData('mapCoop')) {
         // Capacity upgrades remain unchanged. The baked map building keeps its
         // artwork aligned with its hit zone; its current level is shown here.
-        coop.levelBadge.setText('雞舍 Lv.' + level);
+        coop.levelBadge.setText('Lv.' + level);
         return;
     }
     const scale = level >= 3 ? 1.5 : level === 2 ? 1.2 : 1;

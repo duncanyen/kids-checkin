@@ -87,6 +87,20 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   await s.harvestEgg();const f=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
   if(f.inventoryEggs!==6||f.silkieEggs!==6||f.bresseEggs!==4||f.eggsReady!==0)throw Error('Collection lost breed types');
   const {getUsedSpace}=await import('/js/farm/constants.js');if(getUsedSpace(f)!==17)throw Error('Breed eggs missing from warehouse space');
+  // Partial collection uses only remaining warehouse slots and keeps eggs at the coop.
+  const partial={...f,warehouseLimit:10,inventoryEggs:0,silkieEggs:0,bresseEggs:0,mace:1,worms:4,earthworms:0,
+   readyEggs:{hen:3,silkie:4,bresse:3},eggsReady:10,hensState:f.hensState.map(h=>({...h,laidAt:Date.now(),pausedFull:false}))};
+  window.__farmTest.patch('self',partial);
+  await s.harvestEgg();
+  let saved=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
+  if(saved.inventoryEggs!==3||saved.silkieEggs!==2||saved.eggsReady!==5)throw Error('Partial collection failed');
+  if(!s.children.list.some(o=>o.text?.includes('尚有 5 顆蛋')&&o.text.includes('請擴充倉庫')))throw Error('Partial warning missing');
+  await s.harvestEgg();saved=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
+  if(saved.eggsReady!==5)throw Error('Full warehouse lost remaining eggs');
+  window.__farmTest.patch('self',{warehouseLimit:15});
+  await s.harvestEgg();saved=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
+  if(saved.eggsReady!==0||saved.silkieEggs!==4||saved.bresseEggs!==3)throw Error('Remaining eggs not recoverable');
+  window.__farmTest.patch('self',{warehouseLimit:99,inventoryEggs:6,silkieEggs:6,bresseEggs:4});
   // Prepare a feedable mixed flock, without making any breed due yet.
   window.__farmTest.patch('self',{worms:3,earthworms:3,hensState:f.hensState.map(h=>({...h,laidAt:Date.now()-(h.breed==='bresse'?5:3.5)*3600000,pausedFull:false})),cleanliness:0});
   s.scene.start('WarehouseScene');

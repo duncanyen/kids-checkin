@@ -605,6 +605,7 @@ export default class VisitScene extends Phaser.Scene {
                     const egg = takePoultryEgg(target, eggRoll);
                     const itemKey = BREEDS[egg.breed].eggKey;
                     updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
+                    updates['farm.stolenEggsTotal'] = Math.max(0, Math.floor(Number(own.stolenEggsTotal) || 0)) + 1;
                     eggName = BREEDS[egg.breed].eggName;
                     transaction.update(targetRef, egg.patch);
                     transaction.set(visitMailRef, visitorNotice(visitTime));

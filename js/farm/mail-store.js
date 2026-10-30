@@ -82,6 +82,15 @@ export function createFarmMailStore(db, { groupId, accountId }) {
                 return true;
             });
         },
+        removeBatch(ids) {
+            const unique = [...new Set(ids)];
+            if (unique.length > 100) throw new Error('一次最多刪除 100 則通知');
+            const refs = unique.map(noticeRef);
+            return runTransaction(db, async transaction => {
+                await readOwner(transaction);
+                refs.forEach(ref => transaction.delete(ref));
+            });
+        },
         remove(id) {
             return runTransaction(db, async transaction => {
                 await readOwner(transaction);

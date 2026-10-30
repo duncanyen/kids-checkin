@@ -7,7 +7,9 @@ import { getHenWalkArea } from './scenery.js';
 export function mountGuardDog(scene, getFarm, owner = false) {
     let disposed=false,identity=null,loading=false,sprite=null,move=null,activity=null,cleaning=false,lastCleanup=0;
     const stopMovement=()=>{move?.stop();activity?.remove();move=null;activity=null;};
-    const home=()=>({x:scene.coop.x+scene.coop.displayWidth*.32,y:scene.coop.getBounds().bottom+35});
+    // Patrol the strip in front of the coop, above the hens' clearing.
+    // The full 96px dog body stays at least 12px clear of the 64px hens.
+    const home=()=>({x:scene.coop.x+scene.coop.displayWidth*.32,y:getHenWalkArea(scene).top-58});
     const rest=()=>{
         if(!sprite?.active)return;stopMovement();const point=home();
         sprite.setPosition(point.x,point.y).setFlipX(false).play(`${sprite.texture.key}_rest`);
@@ -17,10 +19,9 @@ export function mountGuardDog(scene, getFarm, owner = false) {
         });
     };
     const wander=()=>{
-        if(!sprite?.active)return;const area=getHenWalkArea(scene),hens=(scene.hensGroup||[]).filter(hen=>hen.active);
-        const hen=hens[Math.floor(Math.random()*hens.length)];
-        const x=Phaser.Math.Clamp((hen?.x||195)+(Math.random()-.5)*100,area.left+10,area.right-10);
-        const y=Phaser.Math.Clamp((hen?.y||area.top+60)+(Math.random()-.5)*70,area.top+25,Math.max(area.top+25,area.bottom-15));
+        if(!sprite?.active)return;const area=getHenWalkArea(scene);
+        const x=Phaser.Math.Clamp(area.left+Math.random()*(area.right-area.left),area.left,area.right);
+        const y=home().y;
         const run=Math.random()<.35,dist=Math.hypot(x-sprite.x,y-sprite.y);
         sprite.setFlipX(x<sprite.x).play(`${sprite.texture.key}_${run?'run':'walk'}`).setData('guardActivity',run?'run':'walk');
         move=scene.tweens.add({targets:sprite,x,y,duration:Math.max(600,dist/(run?80:35)*1000),ease:'Linear',onComplete:goHome});

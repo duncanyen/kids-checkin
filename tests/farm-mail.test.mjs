@@ -112,3 +112,20 @@ test('read receipts persist, tolerate deleted mail and never change rewards', as
     f.docs['groups/A'].members = [];
     await assert.rejects(f.store.markRead([f.WELCOME_ID]), /不在此群組/);
 });
+
+test('batch deletion is scoped, deduplicated, atomic and cannot recreate deleted rewards', async () => {
+ const f=await fixture();await f.store.ensureWelcome();
+ for(let i=0;i<100;i++)f.docs[owner+'/farm_notifications/batch-'+i]={type:'visitor'};
+ const ids=Array.from({length:99},(_,i)=>'batch-'+i).concat(f.WELCOME_ID);
+ f.state.fail=true;
+ await assert.rejects(f.store.removeBatch(ids),/offline/);assert.ok(f.docs[notice]);
+ assert.ok(f.docs[owner+'/farm_notifications/batch-0']);
+ f.state.fail=false;await f.store.removeBatch(ids);await f.store.ensureWelcome();
+ assert.equal(f.docs[notice],undefined);assert.ok(f.docs[owner+'/farm_notifications/batch-99']);
+ assert.equal(f.docs[owner].farm.coins,12);
+ await assert.rejects(async()=>f.store.removeBatch(Array.from({length:101},(_,i)=>'x'+i)),/最多/);
+ await assert.rejects(async()=>f.store.removeBatch(['bad/path']),/無效/);
+ f.docs['groups/A'].members=[];
+ await assert.rejects(f.store.removeBatch(['batch-99']),/不在此群組/);
+ assert.ok(f.docs[owner+'/farm_notifications/batch-99']);
+});

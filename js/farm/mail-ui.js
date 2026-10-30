@@ -19,7 +19,7 @@ export function mountFarmMail(game, context) {
     let ensured = false, initializing, unsubscribe, notices = [], category = 'visitor', detailId = null, busy = false;
     let inputEnabled, disposed = false, openVersion = 0;
     let starting, loaded = false;
-    const reading = new Set();
+    const reading = new Set(), selected = new Set();
     const launcher = button('', open, 'farm-mail-launcher');
     launcher.setAttribute('aria-label', '開啟通知');
     launcher.setAttribute('aria-haspopup', 'dialog');
@@ -41,7 +41,7 @@ export function mountFarmMail(game, context) {
     const tabs = el('div', 'farm-mail-tabs');
     tabs.setAttribute('role', 'tablist');
     const tabButtons = ['visitor', 'system'].map((type, i) => {
-        const tab = button(i ? '系統' : '訪客', () => { category = type; detailId = null; render(); }, 'farm-mail-tab');
+        const tab = button(i ? '系統' : '訪客', () => { category = type; detailId = null; selected.clear(); render(); }, 'farm-mail-tab');
         tab.setAttribute('role', 'tab');
         tab.setAttribute('aria-controls', 'farm-mail-content');
         tab.id = `farm-mail-tab-${type}`;
@@ -149,6 +149,30 @@ export function mountFarmMail(game, context) {
             message.textContent = '通知已刪除';
         });
     }
+    async function removeSelected() {
+        if (busy || !selected.size) return;
+        const rows = notices.filter(row => selected.has(row.id) && row.type === category);
+        const gift = rows.some(row => row.reward && !row.claimedAt);
+        const warning = `確定刪除已選取的 ${rows.length} 則通知？` +
+            (gift ? '\n包含未領取獎勵，刪除後無法領取，也不會重新寄送。' : '');
+        if (!rows.length || !window.confirm(warning)) return;
+        let deleted = 0;
+        await action(async () => {
+            try {
+                for (let offset = 0; offset < rows.length; offset += 100) {
+                    const ids = rows.slice(offset, offset + 100).map(row => row.id);
+                    await store.removeBatch(ids);
+                    deleted += ids.length;
+                    ids.forEach(id => selected.delete(id));
+                    notices = notices.filter(row => !ids.includes(row.id));
+                    updateBadge();
+                }
+                message.textContent = `已刪除 ${deleted} 則通知`;
+            } catch {
+                throw new Error(`已刪除 ${deleted} 則通知，其餘刪除失敗，請稍後重試。`);
+            }
+        });
+    }
     async function action(callback) {
         if (busy) return;
         busy = true; render();
@@ -190,6 +214,18 @@ export function mountFarmMail(game, context) {
         }
         detailId = null;
         const rows = notices.filter(row => row.type === category);
+        for (const id of selected) if (!rows.some(row => row.id === id)) selected.delete(id);
+        if (rows.length) {
+            const toolbar = el('div', 'farm-mail-batch');
+            const allSelected = rows.every(row => selected.has(row.id));
+            const all = button(allSelected ? '取消全選' : '全選', () => {
+                rows.forEach(row => allSelected ? selected.delete(row.id) : selected.add(row.id));
+                render(); content.querySelector('.farm-mail-select-all')?.focus();
+            }, 'farm-mail-button farm-mail-select-all');
+            const del = button(`刪除已選 (${selected.size})`, removeSelected, 'farm-mail-button farm-mail-delete farm-mail-delete-selected');
+            all.disabled = busy; del.disabled = busy || !selected.size;
+            toolbar.append(all, del); content.append(toolbar);
+        }
         if (!overlay.hidden && category === 'visitor') markRead(rows);
         if (!rows.length) content.append(el('p', 'farm-mail-empty', category === 'visitor' ? '目前沒有訪客來偷蛋的紀錄' : '目前沒有系統通知'));
         for (const notice of rows) {
@@ -206,14 +242,22 @@ export function mountFarmMail(game, context) {
                 summary.append(gift);
             }
             const del = button('刪除', () => remove(notice), 'farm-mail-button farm-mail-delete'); del.disabled = busy;
-            row.append(summary, del); content.append(row);
+            const check = el('input', 'farm-mail-check');
+            check.type = 'checkbox'; check.checked = selected.has(notice.id); check.disabled = busy;
+            check.dataset.mailId = notice.id;
+            check.setAttribute('aria-label', `選取${notice.title} ${formatMailTime(notice.createdAt)}`);
+            check.addEventListener('change', () => {
+                check.checked ? selected.add(notice.id) : selected.delete(notice.id);
+                render(); content.querySelector(`[data-mail-id="${CSS.escape(notice.id)}"]`)?.focus();
+            });
+            row.append(check, summary, del); content.append(row);
         }
     }
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });
     overlay.addEventListener('keydown', event => {
         if (event.key === 'Escape') { event.preventDefault(); close(); }
         if (event.key !== 'Tab') return;
-        const focusable = [...panel.querySelectorAll('button:not(:disabled)')].filter(node => node.tabIndex >= 0);
+        const focusable = [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled)')].filter(node => node.tabIndex >= 0);
         const first = focusable[0], last = focusable.at(-1);
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }

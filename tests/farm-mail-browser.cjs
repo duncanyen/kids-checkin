@@ -11,7 +11,7 @@ const docs = {
     'groups/A/users/neighbor': { farm: structuredClone(farm) },
     'groups/B/users/self': { farm: structuredClone(farm) }
 };
-let fail = false;
+let fail = false, failSecondBatch = false;
 const mock = `
 export const doc=(_, ...parts)=>({path:parts.join('/'),kind:'doc'}),collection=(_, ...parts)=>({path:parts.join('/'),kind:'query'});
 export const where=(field,op,value)=>({field,op,value}),query=(ref,...filters)=>({...ref,filters}),serverTimestamp=()=>Date.now();
@@ -38,7 +38,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
     try {
         const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
         const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error('PAGE', error.message); });
-        page.on('dialog', dialog => dialog.accept());
+        const confirmations=[]; page.on('dialog', dialog => { confirmations.push(dialog.message()); dialog.accept(); });
         page.setDefaultTimeout(12000);
         await page.exposeFunction('__mailDb', operation => {
             if (operation.kind === 'get') return structuredClone(docs[operation.path]);
@@ -49,6 +49,9 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
             }
             if (operation.kind === 'commit') {
                 if (fail && operation.pending.length) throw Error('Simulated offline');
+                if (failSecondBatch && operation.pending.some(write=>write.remove) && Object.keys(docs).filter(path=>path.startsWith(owner+'/farm_notifications/bulk-')).length===3) {
+                    failSecondBatch=false;throw Error('Simulated second batch offline');
+                }
                 for (const write of operation.pending) {
                     if (write.remove) { delete docs[write.path]; continue; }
                     const next = write.merge ? structuredClone(docs[write.path] || {}) : {};
@@ -186,6 +189,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(visits.length, 2);
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore - 1);
         assert.deepEqual(Object.keys(visits[0][1]).sort(), ['createdAt', 'note', 'readAt', 'title', 'type']);
+        assert.equal(docs[owner].farm.stolenEggsTotal,2);
         // Visit records show no detail button, include Taiwan timestamps and can be deleted.
         await page.evaluate(async notice => {
             const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
@@ -203,6 +207,68 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.getByRole('button', { name: '刪除', exact: true }).click();
         await page.waitForSelector('.farm-mail-empty');
         await page.getByRole('button', { name: '關閉', exact: true }).click();
+        // Batch select is scoped to the active category, supports >100 rows and retry.
+        await page.evaluate(async () => {
+            const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+            await setDoc(doc({},'groups','A','users','self','farm_notifications','reward-batch'),{type:'system',title:'測試獎勵',reward:{coins:99},createdAt:Date.now()});
+        });
+        // Seed the large list without issuing one hundred artificial listener updates.
+        for(let i=0;i<103;i++)docs[owner+'/farm_notifications/bulk-'+i]={type:'visitor',title:'批次訪客'+i,createdAt:Date.now(),readAt:Date.now()};
+        await page.locator('.farm-mail-launcher').click();
+        // Trigger a fresh server snapshot.
+        await page.evaluate(async()=>{const {updateDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await updateDoc(doc({},'groups','A','users','self'),{'farm.moral':80});});
+        await page.waitForFunction(()=>document.querySelectorAll('.farm-mail-check').length===103);
+        await page.getByRole('button',{name:'全選',exact:true}).click();
+        assert.equal(await page.locator('.farm-mail-check:checked').count(),103);
+        await page.getByRole('button',{name:'取消全選',exact:true}).click();
+        assert.equal(await page.locator('.farm-mail-check:checked').count(),0);
+        await page.locator('.farm-mail-check').first().check();
+        assert.equal(await page.locator('.farm-mail-check:checked').count(),1);
+        await page.getByRole('button',{name:'全選',exact:true}).click();
+        fail=true;await page.getByRole('button',{name:'刪除已選 (103)',exact:true}).click();
+        await page.waitForFunction(()=>document.querySelector('.farm-mail-status').textContent.includes('刪除失敗'));
+        assert.equal(Object.keys(docs).filter(path=>path.startsWith(owner+'/farm_notifications/bulk-')).length,103);
+        fail=false;failSecondBatch=true;await page.getByRole('button',{name:'刪除已選 (103)',exact:true}).click();
+        await page.waitForFunction(()=>document.querySelector('.farm-mail-status').textContent.includes('已刪除 100 則通知，其餘刪除失敗'));
+        assert.equal(Object.keys(docs).filter(path=>path.startsWith(owner+'/farm_notifications/bulk-')).length,3);
+        await page.getByRole('button',{name:'刪除已選 (3)',exact:true}).click();
+        await page.waitForSelector('.farm-mail-empty');
+        assert.equal(Object.keys(docs).filter(path=>path.startsWith(owner+'/farm_notifications/bulk-')).length,0);
+        assert.ok(docs[owner+'/farm_notifications/reward-batch']);
+        await page.getByRole('tab',{name:'系統',exact:true}).click();
+        await page.getByRole('button',{name:'全選',exact:true}).click();
+        await page.getByRole('button',{name:'刪除已選 (1)',exact:true}).click();
+        await page.waitForSelector('.farm-mail-empty');
+        assert.match(confirmations.at(-1),/未領取獎勵/);assert.equal(docs[owner].farm.coins,1050);
+        await page.getByRole('button',{name:'關閉',exact:true}).click();
+        // Global ranking includes only public villages, merges the same player and caps at ten.
+        docs['users/self']={accountId:'self',name:'測試玩家'};
+        docs['groups/Public']={name:'排行榜村',members:['self',...Array.from({length:12},(_,i)=>'r'+i)],farmVillageVisibility:'public'};
+        docs['groups/Public/users/self']={farm:{stolenEggsTotal:100}};
+        docs['groups/B/users/self'].farm.stolenEggsTotal=9999; // B remains private.
+        for(let i=0;i<12;i++){
+            docs['users/r'+i]={accountId:'r'+i,name:'排行玩家'+i};
+            docs['groups/Public/users/r'+i]={farm:{stolenEggsTotal:i+1}};
+        }
+        await page.getByRole('button',{name:'開啟排行榜',exact:true}).click();
+        await page.waitForSelector('.farm-ranking-row');
+        assert.equal(await page.locator('.farm-ranking-row').count(),10);
+        assert.match(await page.locator('.farm-ranking-row').first().textContent(),/測試玩家.*102 顆/);
+        assert.match(await page.locator('.farm-ranking-row').nth(1).textContent(),/排行玩家11.*12 顆/);
+        assert.equal(await page.evaluate(()=>__farmGame.input.enabled),false);
+        for(const viewport of [{width:390,height:844},{width:1440,height:900},{width:844,height:390}]){
+            await page.setViewportSize(viewport);await page.waitForTimeout(100);
+            const layout=await page.evaluate(()=>{
+                const panel=document.querySelector('.farm-ranking-panel').getBoundingClientRect(),content=document.querySelector('.farm-ranking-content');
+                return {top:panel.top,bottom:panel.bottom,height:innerHeight,listHeight:content.clientHeight,scrollHeight:content.scrollHeight};
+            });
+            assert.ok(layout.top>=0&&layout.bottom<=layout.height);assert.ok(layout.listHeight>20);
+            await page.locator('.farm-ranking-row').last().scrollIntoViewIfNeeded();
+            await page.screenshot({path:'/tmp/farm-ranking-'+viewport.width+'.png',fullPage:true});
+        }
+        await page.setViewportSize({width:390,height:844});
+        await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(()=>__farmGame.input.enabled),true);
         await page.evaluate(() => localStorage.setItem('lastGroupId', 'B'));
         await page.reload(); await page.locator('.farm-mail-launcher').click();
         await page.getByRole('tab', { name: '系統', exact: true }).click();
@@ -210,6 +276,6 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.ok(docs['groups/B/users/self/farm_notifications/welcome-v1']);
         assert.equal(docs[owner].farm.coins, 1050);
         assert.deepEqual(errors, []);
-        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launcher, full-viewport layout and input blocking.');
+        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launchers, full-viewport layout and input blocking; 103-message batch deletion, partial retry and reward warning; successful-only theft totals, public-only merged Top 10 and responsive ranking dialog.');
     } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
