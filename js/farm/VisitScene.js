@@ -1,3 +1,4 @@
+import { mountHalloween } from './halloween.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
@@ -75,6 +76,7 @@ export default class VisitScene extends Phaser.Scene {
         this.add.text(55, 50, '🏃 溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId }));
 
+        mountHalloween(this);
         this.createConfirmDialog();
         this.initFirebase();
         mountGuardDog(this,()=>this.targetFarmData);

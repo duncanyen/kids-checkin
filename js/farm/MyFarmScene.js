@@ -1,3 +1,4 @@
+import { mountHalloween } from './halloween.js';
 import { ensureAssets, bossAssets } from './assets.js';
 import { farmLoading } from './loading-ui.js';
 import { onSceneExit } from './scene-cleanup.js';
@@ -73,6 +74,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.timerText = this.add.text(cx, 90, '讀取存檔中…', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
         this.timerText.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.game.retryFarmSave?.());
+        mountHalloween(this);
         this.createConfirmDialog();
         this.initFirebase();
         mountGuardDog(this,()=>this.farmData,true);

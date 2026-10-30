@@ -1,3 +1,4 @@
+import { mountHalloween } from './halloween.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
@@ -26,6 +27,7 @@ export default class LobbyScene extends Phaser.Scene {
         this.page = 1;
         this.groups = [];
         addFarmBackground(this);
+        mountHalloween(this, { lobby: true });
         this.add.image(224, 50, 'ui_wood').setDisplaySize(300, 65);
         this.titleText = this.add.text(224, 50, '村落', { ...villageText, fontSize: '20px', fontStyle: 'bold', wordWrap: { width: 230 }, align: 'center' }).setOrigin(0.5);
         this.button(42, 50, '‹ 返回', () => this.scene.start('MyFarmScene'), 58);

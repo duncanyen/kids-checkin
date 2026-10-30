@@ -1,5 +1,6 @@
 // Public file descriptions; safe to inspect without Phaser or Firebase.
 export const ASSET_MANIFEST = {
+    halloween_2026: {type:'atlas',image:'halloween-2026.png',json:'halloween-2026.json'},
     guard_dog: {type:'atlas',image:'guard-dog-sheet.png',json:'guard-dog-sheet.json'},
     guard_beagle: {type:'atlas',image:'guard-beagle-sheet.png',json:'guard-beagle-sheet.json'},
     ...Object.fromEntries(['hen','silkie','bresse','eagle','gorilla','tiger','wolf'].map(key => [key,{type:'atlas',image:`${key}-sheet.png`,json:`${key}-sheet.json`}])),
@@ -9,4 +10,5 @@ export const ASSET_MANIFEST = {
 };
 // Both map orientations remain ready for immediate mobile/tablet resizing.
 export const CORE_ASSETS = ['hen','farm_map','farm_panorama','ui_parchment','signboard','egg','coin','worm','earthworm'];
-export const ALL_ASSETS = Object.keys(ASSET_MANIFEST);
+// Seasonal art is demand-loaded only while its explicitly dated event is active.
+export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026');

@@ -32,6 +32,8 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:sdk}));
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill(failEngine?{status:503,body:'fixture engine failure'}:{contentType:'text/javascript',body:fs.readFileSync('/tmp/kids-phaser.js','utf8')}));
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
+ // Seasonal demand loading/expiry are covered in farm-halloween-browser.cjs.
+ await page.route('**/js/farm/halloween.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountHalloween(){}'}));
  // DOM launchers and their shared wood texture are covered in farm-mail-browser.cjs.
  await page.route('**/js/farm/mail-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmMail(){}'}));
  await page.route('**/js/farm/ranking-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmRankings(){}'}));

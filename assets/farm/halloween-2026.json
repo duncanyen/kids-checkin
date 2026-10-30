@@ -1,0 +1,133 @@
+{
+  "frames": {
+    "coop_pumpkins": {
+      "frame": {
+        "x": 4,
+        "y": 4,
+        "w": 256,
+        "h": 187
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 187
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 187
+      }
+    },
+    "garland": {
+      "frame": {
+        "x": 268,
+        "y": 4,
+        "w": 256,
+        "h": 87
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 87
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 87
+      }
+    },
+    "ghost": {
+      "frame": {
+        "x": 532,
+        "y": 4,
+        "w": 228,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 228,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 228,
+        "h": 256
+      }
+    },
+    "garden_pumpkins": {
+      "frame": {
+        "x": 4,
+        "y": 268,
+        "w": 256,
+        "h": 188
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 188
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 188
+      }
+    },
+    "pumpkin": {
+      "frame": {
+        "x": 268,
+        "y": 268,
+        "w": 254,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 254,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 254,
+        "h": 256
+      }
+    },
+    "leaves": {
+      "frame": {
+        "x": 532,
+        "y": 268,
+        "w": 256,
+        "h": 178
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 178
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 178
+      }
+    }
+  },
+  "meta": {
+    "app": "kids-checkin",
+    "image": "halloween-2026.png",
+    "size": {
+      "w": 792,
+      "h": 528
+    },
+    "scale": "1"
+  }
+}
