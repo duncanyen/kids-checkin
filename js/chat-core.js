@@ -415,6 +415,7 @@ document.getElementById('btnTriggerPhoto').addEventListener('click', () => chatP
 
 chatPhotoInput.addEventListener('change', async (e) => {
     const file = e.target.files[0]; if (!file || !chatState.activeRoomId) return;
+    const roomId = chatState.activeRoomId;
     document.getElementById('btnSend').disabled = true; document.getElementById('btnTriggerPhoto').disabled = true;
     const reader = new FileReader();
     reader.onload = function(evt) {

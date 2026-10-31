@@ -71,7 +71,17 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
  await page.check('#createMemberList input[value="bob"]');await page.fill('#createGroupName','測試聊天');await page.click('#btnConfirmCreate');await page.waitForFunction(()=>document.getElementById('createGroupModal').style.display==='none');
  const [path,room]=rooms()[0];assert.equal(room.groupId,'A');assert.deepEqual(room.participantIds,['alice','bob']);assert.equal(room.creatorAccountId,'alice');
  // Existing rooms and the invitation menu retain their original participant format.
- await page.locator('#roomListContainer .room-item').first().click();await page.click('#btnOpenSettingsMenu');
+ await page.locator('#roomListContainer .room-item').first().click();
+ // Exercise the real FileReader -> Image -> canvas upload callbacks.
+ await page.setInputFiles('#chatPhotoInput',{name:'chat-photo.png',mimeType:'image/png',buffer:require('node:fs').readFileSync(require('node:path').join(__dirname,'../Nexus.png'))});
+ await page.waitForFunction(()=>!document.getElementById('btnSend').disabled&&!document.getElementById('btnTriggerPhoto').disabled&&document.getElementById('chatPhotoInput').value==='');
+ const photo=Object.values(docs).find(value=>value.imageUrl);
+ assert.ok(photo,'selecting a valid image must create a message');
+ assert.equal(photo.roomId,path.split('/')[1]);assert.equal(photo.groupId,'A');assert.equal(photo.senderAccountId,'alice');
+ assert.ok(photo.imageUrl.startsWith('data:image/jpeg;base64,'));
+ const dimensions=await page.evaluate(url=>new Promise(resolve=>{const image=new Image();image.onload=()=>resolve({width:image.width,height:image.height});image.src=url;}),photo.imageUrl);
+ assert.equal(Math.max(dimensions.width,dimensions.height),800);
+ await page.click('#btnOpenSettingsMenu');
  await page.evaluate(()=>chatRooms.openInviteMembers());await page.waitForFunction(()=>!document.getElementById('btnSaveInvite').disabled);
  assert.deepEqual(await page.locator('#inviteMemberList input').evaluateAll(inputs=>inputs.map(i=>i.value)),['charlie','same']);
  await page.check('#inviteMemberList input[value="charlie"]');await page.click('#btnSaveInvite');await page.waitForFunction(()=>document.getElementById('inviteMembersModal').style.display==='none');
