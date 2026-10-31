@@ -29,7 +29,7 @@ export async function requireGameMembership(context) {
     try {
         await getGameGroupMemberIds(context.groupId, context.accountId);
     } catch (error) {
-        alert(error.message || '無法確認群組成員，請稍後重新進入遊戲區。');
+        alert(error.message || '無法確認群組成員，請稍後重新進入遊戲大廳。');
         window.location.replace('index.html');
         throw error;
     }

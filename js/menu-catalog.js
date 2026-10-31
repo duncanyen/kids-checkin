@@ -5,7 +5,7 @@ export const DEFAULT_MENUS = [
     { id: 'finance', label: '💰 記帳本', isDefault: true, group: 'all', order: 3 },
     { id: 'todo', label: '📝 待辦事項', isDefault: true, group: 'all', order: 4 },
     { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all', order: 5 },
-    { id: 'gamezone', label: '🎮 遊戲區', isDefault: true, group: 'all', order: 6 },
+    { id: 'gamezone', label: '🎮 遊戲大廳', isDefault: true, group: 'all', order: 6 },
     { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family', order: 7 },
     { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family', order: 8 },
     FOOD_MENU,

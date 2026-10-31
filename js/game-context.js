@@ -11,7 +11,7 @@ export function readGameContext() {
     } catch { user = null; }
     const groupId = getSelectedGameGroupId(user);
     if (!user?.accountId || !groupId) {
-        alert(!user?.accountId ? '請先登入帳號，再進入遊戲區！' : '請先選擇群組，再進入遊戲區！');
+        alert(!user?.accountId ? '請先登入帳號，再進入遊戲大廳！' : '請先選擇群組，再進入遊戲大廳！');
         window.location.replace('index.html');
         throw new Error('缺少遊戲帳號或目前群組，停止載入');
     }

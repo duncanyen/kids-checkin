@@ -5,7 +5,7 @@ export const NAV_FEATURES = Object.freeze([
     {id:'finance',label:'記帳本',url:'expense.html'},
     {id:'todo',label:'待辦',url:'todo.html'},
     {id:'photodump',label:'Photo Dump',url:'gallery.html'},
-    {id:'gamezone',label:'遊戲區',url:'games.html'},
+    {id:'gamezone',label:'遊戲大廳',url:'games.html'},
     {id:'checkin',label:'到家打卡',url:'checkin.html'},
     {id:'wishlist',label:'許願牆',url:'wishwall.html'},
     {id:'food',label:'吃什麼',url:'food-decision.html'}

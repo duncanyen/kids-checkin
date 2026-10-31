@@ -39,7 +39,7 @@ function listenMyPermissions() {
 
 function setupView() {
     const gameZoneTitle = document.getElementById('gameZoneTitle');
-    if (gameZoneTitle) gameZoneTitle.innerText = "遊戲區";
+    if (gameZoneTitle) gameZoneTitle.innerText = "遊戲大廳";
     
     // 所有成員（包含管理者）統一進入遊戲大廳
     returnToLobby();
@@ -93,7 +93,7 @@ function returnToLobby() {
     if (kidGameContainer) kidGameContainer.style.display = 'none';
     if (g2048Container) g2048Container.style.display = 'none';
     if (gameLobby) gameLobby.style.display = 'flex';
-    if (gameZoneTitle) gameZoneTitle.innerText = "遊戲區";
+    if (gameZoneTitle) gameZoneTitle.innerText = "遊戲大廳";
 }
 
 // ---------------------------
