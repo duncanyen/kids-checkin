@@ -14,18 +14,21 @@
 | --- | ---: | ---: | ---: | ---: |
 | 短弓 | 1000 | 500 | 10 | 20 |
 | 獵弓 | 5000 | 2500 | 5 | 10 |
+| 聖騎士弓 | 10000 | 5000 | 3 | 5 |
 
 弓箭只傷害飛行系；木棒、狼牙棒、雙手斧對兩種飛行怪物無效。近戰仍使用 `farm.equippedWeapon`；弓使用獨立的 `farm.equippedBow`，可各配備一把。擁有但未配備不可用，裝備中不可出售，卸下或最後一把丟棄後解除弓裝備。
 
 飛行首領出現後，有持有且配備的弓會在左下角顯示切換按鈕，與中央下方的拉弓區分開。切至弓後，按住畫面下方的弓，向後拖曳，虛線顯示預估拋物線，放開射出。拖曳不足 12 遊戲座標不發射，最大速度有上限，發射間隔 250 毫秒；箭矢無消耗品費用。瞄準可向任意方向拉，射中才扣血，直接點擊怪物無傷害。離開畫布取消瞄準。箭矢 2.5 秒後消失，場景退出與戰鬥結束會清除箭、虛線與輸入監聽器。
 
-傷害：巨飛鷹 200 血、短弓 20／獵弓 40；烈火龍 600 血、短弓 30／獵弓 60。`combat-rules.js` 為數值來源，商店圖鑑列出有效武器與命中次數。彈道與碰撞為本機 Phaser 計算，不逐箭讀寫資料庫。結算才以 Firestore 交易重新驗證群組權限並更新資產；以 `farm.eagleResults` 保存最近 32 次結算避免同一場重複發獎或扣款。沿用目前客戶端戰鬥架構，並非伺服器防作弊驗證。
+傷害：巨飛鷹 200 血、短弓 20／獵弓 40／聖騎士弓 70；烈火龍 600 血、短弓 30／獵弓 60／聖騎士弓 120。`combat-rules.js` 為數值來源，商店圖鑑列出有效武器與命中次數。彈道與碰撞為本機 Phaser 計算，不逐箭讀寫資料庫。結算才以 Firestore 交易重新驗證群組權限並更新資產；以 `farm.eagleResults` 保存最近 32 次結算避免同一場重複發獎或扣款。沿用目前客戶端戰鬥架構，並非伺服器防作弊驗證。
 
-新增欄位：`shortbow`、`huntingbow`、`equippedBow`、`eagleFeathers`、`eagleResults`。美術為透明背景，`eagle-sheet` 使用八個隔離影格（飛行四格、俯衝兩格、受擊一格、倒下一格）。
+新增欄位：`shortbow`、`huntingbow`、`paladinbow`、`equippedBow`、`eagleFeathers`、`eagleResults`。美術為透明背景，`eagle-sheet` 使用八個隔離影格（飛行四格、俯衝兩格、受擊一格、倒下一格）。
+
+聖騎士弓使用專用透明手繪風格圖 `paladinbow.png`：象牙白弓臂、古金羽翼飾件、藍寶石徽記及深藍握把，箭頭朝右以配合現有瞄準旋轉。商店／倉庫與飛行首領素材包均包含此圖，舊存檔不需初始化新欄位；持有一把占一格倉庫。
 
 ## 驗證
 
-- `node --test tests/farm-archery.test.mjs tests/farm-gorilla.test.mjs tests/farm-save.test.mjs`
+- `node --test tests/farm-archery.test.mjs tests/farm-paladin-art.test.cjs tests/farm-gorilla.test.mjs tests/farm-save.test.mjs`
 - 靜態伺服器啟動後：`FARM_BASE_URL=http://127.0.0.1:8012 node tests/farm-archery-browser.cjs`
 - 既有近戰與資料保護：`farm-weapons.cjs`、`farm-gorilla.cjs`、`farm-dragon.cjs`、`farm-save-browser.cjs`。
 

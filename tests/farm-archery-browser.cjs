@@ -118,6 +118,66 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
  await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('ShopScene');await s.executeSellItem('shortbow',500,'短弓',1);await s.executeSellItem('huntingbow',2500,'獵弓',1);await s.executeSellItem('eagleFeathers',300,'巨鷹羽毛',1);if(s.farmData.coins!==4200||s.farmData.shortbow||s.farmData.huntingbow||s.farmData.eagleFeathers)throw Error('Bow/feather resale amounts');});
  checks.push('visit encounter, own coins only penalty, unequipped bow resale 500/2500 and feather 300');
+ await patch({coins:20000,paladinbow:0,equippedBow:null});
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('ShopScene');
+  if(!s.catalog.buy.some(row=>row[0]==='paladinbow'&&row[2].includes('10000'))||!s.catalog.sell.some(row=>row[0]==='paladinbow'&&row[2].includes('5000')))throw Error('Paladin catalog prices');
+  await s.executeBuyWeapon('paladinbow',1,1);
+  if(s.farmData.coins!==10000||s.farmData.paladinbow!==1)throw Error('Paladin purchase must use configured 10000 price');
+  s.selectShopCategory('weapons');s.weaponGuide.setVisible(true);
+ });
+ await page.screenshot({path:'/tmp/paladin-bow-guide.png'});
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene');s.weaponGuide.setVisible(false);s.scene.start('WarehouseScene');});
+ await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('WarehouseScene');await s.toggleEquipWeapon('paladinbow',false);
+  if(s.farmData.equippedBow!=='paladinbow'||s.farmData.equippedWeapon!=='club')throw Error('Paladin independent equip slot');
+  s.scene.start('ShopScene');
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('ShopScene');await s.executeSellItem('paladinbow',99999,'聖騎士弓',1);
+  if(s.farmData.paladinbow!==1||s.farmData.coins!==10000)throw Error('Equipped paladin bow must not sell');
+  s.scene.start('WarehouseScene');
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+ await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('WarehouseScene');await s.toggleEquipWeapon('paladinbow',true);s.scene.start('ShopScene');});
+ await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('ShopScene');await s.executeSellItem('paladinbow',99999,'聖騎士弓',1);
+  if(s.farmData.coins!==15000||s.farmData.paladinbow!==0)throw Error('Paladin resale must use configured 5000 price');
+  await s.executeBuyWeapon('paladinbow',1,10000);s.scene.start('WarehouseScene');
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+ await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('WarehouseScene');await s.toggleEquipWeapon('paladinbow',false);s.scene.start('MyFarmScene');});
+ await page.waitForFunction(()=>window.__farmGame.scene.isActive('MyFarmScene'));
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('MyFarmScene');
+  const {bossAssets,ensureAssets}=await import('/js/farm/assets.js');
+  s.textures.remove('paladinbow');await ensureAssets(s,bossAssets('eagle'));
+  if(!s.textures.exists('paladinbow'))throw Error('Cold boss bundle omitted paladin artwork');
+  const {EagleEncounter}=await import('/js/farm/eagle.js');s.eagleEncounter=new EagleEncounter(s);
+  const b=s.eagleEncounter;b.archery.button.emit('pointerdown');
+  if(b.archery.bow.texture.key!=='paladinbow')throw Error('Equipped bow artwork not used while aiming');
+  const {WEAPONS_CONFIG:W}=await import('/js/farm/combat-rules.js');
+  b.arrowHit(W.paladinbow);b.arrowHit(W.paladinbow);
+  if(b.health!==60||b.result)throw Error('Eagle must survive two paladin hits');
+ });
+ await page.screenshot({path:'/tmp/paladin-bow-equipped.png'});
+ await page.evaluate(async()=>{const {WEAPONS_CONFIG:W}=await import('/js/farm/combat-rules.js');window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.arrowHit(W.paladinbow);});
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.settled);
+ await page.evaluate(async()=>{
+  const s=window.__farmGame.scene.getScene('MyFarmScene');if(s.eagleEncounter.result!=='win'||s.farmData.eagleFeathers!==1)throw Error('Three paladin hits must win and award one feather');
+  s.eagleEncounter.destroy();s.eagleEncounter=null;
+  const {DragonEncounter}=await import('/js/farm/dragon.js');s.dragonEncounter=new DragonEncounter(s);
+  const {WEAPONS_CONFIG:W}=await import('/js/farm/combat-rules.js');
+  for(let i=0;i<4;i++)s.dragonEncounter.arrowHit(W.paladinbow);
+  if(s.dragonEncounter.health!==120||s.dragonEncounter.result)throw Error('Dragon must survive four paladin hits');
+  s.dragonEncounter.arrowHit(W.paladinbow);
+ });
+ await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter.settled);
+ await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');if(s.dragonEncounter.result!=='win'||s.farmData.dragonScales!==2)throw Error('Five paladin hits must win and award one scale');});
+ checks.push('paladin buy 10000/sell 5000, equipped sale blocked, cold-loaded aiming artwork, eagle exactly 3 hits and dragon exactly 5 hits with rewards');
  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,checks,errors}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

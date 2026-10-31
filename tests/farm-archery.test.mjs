@@ -3,13 +3,22 @@ import assert from 'node:assert/strict';
 import {WEAPONS_CONFIG as W,hitsToDefeat,equippedBow,weaponDamage} from '../js/farm/combat-rules.js';
 import {rollHomeBossEncounter,rollVisitBossEncounter} from '../js/farm/gorilla-rules.js';
 import {launchVelocity,arrowPoint,arrowHits} from '../js/farm/archery-core.js';
+import {getUsedSpace} from '../js/farm/inventory-core.js';
 test('flying enemies require owned equipped bows with exact hit counts',()=>{
  for(const key of ['club','mace','battleaxe'])for(const enemy of ['eagle','dragon'])assert.equal(weaponDamage(W[key],enemy),0);
  assert.equal(hitsToDefeat(W.shortbow,'dragon'),20);assert.equal(hitsToDefeat(W.huntingbow,'dragon'),10);
  assert.equal(hitsToDefeat(W.shortbow,'eagle'),10);assert.equal(hitsToDefeat(W.huntingbow,'eagle'),5);
  assert.equal(equippedBow({shortbow:1}),null);assert.equal(equippedBow({equippedBow:'shortbow',shortbow:0}),null);
  assert.equal(equippedBow({equippedBow:'shortbow',shortbow:1}),W.shortbow);
- for(const key of ['shortbow','huntingbow'])for(const enemy of ['wolf','tiger','gorilla'])assert.equal(weaponDamage(W[key],enemy),0);
+ for(const key of ['shortbow','huntingbow','paladinbow'])for(const enemy of ['wolf','tiger','gorilla'])assert.equal(weaponDamage(W[key],enemy),0);
+});
+test('paladin bow takes exactly three eagle hits or five dragon hits and occupies inventory space',()=>{
+ assert.equal(W.paladinbow.buyPrice,10000);assert.equal(W.paladinbow.sellPrice,5000);
+ assert.equal(hitsToDefeat(W.paladinbow,'eagle'),3);assert.equal(hitsToDefeat(W.paladinbow,'dragon'),5);
+ assert.equal(equippedBow({equippedBow:'paladinbow',paladinbow:0}),null);
+ assert.equal(equippedBow({paladinbow:1}),null);
+ assert.equal(equippedBow({equippedBow:'paladinbow',paladinbow:1}),W.paladinbow);
+ assert.equal(getUsedSpace({inventoryEggs:2,paladinbow:3}),5);
 });
 test('exclusive exact odds on home and visited coops, eagle never below lv3',()=>{
  for(const roll of [rollHomeBossEncounter,rollVisitBossEncounter]){

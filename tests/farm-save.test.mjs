@@ -41,6 +41,8 @@ test('cache miss verifies the server without changing any existing asset or unre
     assert.equal(f.state.commits.length, 0);
     assert.deepEqual(f.docs[path], { farm, otherSetting: 'keep' });
     assert.equal(f.isFarmSave(farm), true); // Selling the last chicken is valid.
+    assert.equal(f.isFarmSave({ ...farm, paladinbow: 1 }), true);
+    for (const paladinbow of [-1, NaN, Infinity]) assert.equal(f.isFarmSave({ ...farm, paladinbow }), false);
     assert.equal(f.isFarmSave({ ...farm, eggsReady: 4, readyEggs: { hen: 0, silkie: 0, bresse: 4 } }), true);
 });
 

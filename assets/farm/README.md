@@ -218,3 +218,10 @@ See docs/farm-poultry.md for economy, migration, production and feeding rules.
 connected body regions (requires sharp), without editing source PNG pixels.
 `node --test tests/farm-poultry-atlas.test.cjs` checks all 48 animation frames
 for complete bodies, stable baselines, and no neighboring fragments/decorations.
+
+## Paladin bow
+
+`paladinbow.png` is a 320 × 320 transparent game sprite, with 20px outer padding.
+The ivory/gold winged recurve, sapphire inlays and navy grip distinguish it from
+the short and hunting bows. The arrow points right, matching their aim rotation.
+Generated for this weapon; used in shop, warehouse and ranged combat.

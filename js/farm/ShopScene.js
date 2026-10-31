@@ -153,8 +153,8 @@ export default class ShopScene extends Phaser.Scene {
         const guide = [
             '近戰：木棒／狼牙棒／雙手斧',
             ...[['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe'], ' 下')}`),
-            '', '飛行系：短弓／獵弓',
-            ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow'], ' 箭')}`),
+            '', '飛行系：短弓／獵弓／聖騎士弓',
+            ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
             '飛行系近戰無效，弓箭僅攻擊飛行系。',
             '近戰與弓可各配備一把，拖曳弓瞄準射箭。'
         ].join('\n');
