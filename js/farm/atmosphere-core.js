@@ -2,8 +2,8 @@
 export const WEATHER_SLOT_MS = 45 * 60 * 1000;
 export const WEATHER_FADE_MS = 20 * 1000;
 export const WEATHER = {
-    clear: { label: '晴朗', icon: '☀️' }, cloudy: { label: '多雲', icon: '☁️' },
-    rain: { label: '小雨', icon: '🌧️' }, mist: { label: '薄霧', icon: '🌫️' },
+    clear: { label: '晴朗' }, cloudy: { label: '多雲' },
+    rain: { label: '小雨' }, mist: { label: '薄霧' },
 };
 const clamp = value => Math.min(1, Math.max(0, value));
 const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };

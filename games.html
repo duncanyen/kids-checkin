@@ -36,7 +36,7 @@
     <div class="game-lobby" id="gameLobby">
         <!-- 咕咕村落 -->
         <div class="game-card-item" onclick="selectGame('farm')">
-            <div class="game-card-icon">🐔</div>
+            <div class="game-card-icon"><span data-ui-icon="hen"></span></div>
             <div class="game-card-info">
                 <div class="game-card-title">咕咕村落</div>
                 <div class="game-card-desc">經營你的專屬農莊。</div>
@@ -44,7 +44,7 @@
         </div>
         <!-- 剪刀石頭布 -->
         <div class="game-card-item" onclick="selectGame('rps')">
-            <div class="game-card-icon">✊</div>
+            <div class="game-card-icon"><span data-ui-icon="rock"></span></div>
             <div class="game-card-info">
                 <div class="game-card-title">剪刀石頭布對決</div>
                 <div class="game-card-desc">經典 PK 挑戰，無限制暢玩！比拼最高積分與連勝紀錄。</div>
@@ -52,7 +52,7 @@
         </div>
         <!-- 2048 -->
         <div class="game-card-item" onclick="selectGame('g2048')">
-            <div class="game-card-icon">🔢</div>
+            <div class="game-card-icon"><span data-ui-icon="numbers"></span></div>
             <div class="game-card-info">
                 <div class="game-card-title">2048 數字方塊</div>
                 <div class="game-card-desc">動腦益智滑動合併，挑戰群組及全體最高排行榜！</div>
@@ -63,7 +63,7 @@
     <!-- 剪刀石頭布遊戲容器 -->
     <div class="sub-game-container" id="kidGameContainer" style="display: none;">
         <div class="game-header-actions">
-            <button class="btn-leaderboard" onclick="openLeaderboard('rps')">🏆 排行榜</button>
+            <button class="btn-leaderboard" onclick="openLeaderboard('rps')"><span data-ui-icon="trophy"></span> 排行榜</button>
         </div>
         <div class="score-board">
             <div class="score-item">
@@ -82,13 +82,13 @@
 
         <div class="game-arena">
             <h3>電腦出牌</h3>
-            <div class="card-slot" id="compCard">❓</div>
+            <div class="card-slot" id="compCard"><span data-ui-icon="question"></span></div>
             <div class="vs-text">VS</div>
             <h3>請選擇你的牌</h3>
             <div class="player-cards">
-                <div class="p-card" data-choice="0">✊</div>
-                <div class="p-card" data-choice="1">✋</div>
-                <div class="p-card" data-choice="2">✌</div>
+                <button type="button" class="p-card" data-choice="0" aria-label="石頭"><span data-ui-icon="rock"></span><span class="p-card-label">石頭</span></button>
+                <button type="button" class="p-card" data-choice="1" aria-label="布"><span data-ui-icon="paper"></span><span class="p-card-label">布</span></button>
+                <button type="button" class="p-card" data-choice="2" aria-label="剪刀"><span data-ui-icon="scissors"></span><span class="p-card-label">剪刀</span></button>
             </div>
             <div class="game-result" id="gameResultText">準備好了嗎？</div>
         </div>
@@ -98,7 +98,7 @@
     <div class="sub-game-container" id="g2048Container" style="display: none;">
         <div class="game-header-actions" style="max-width: 340px; margin: 0 auto 15px auto;">
             <div style="display:flex; gap:8px;">
-                <button class="btn-leaderboard" onclick="openLeaderboard('g2048')">🏆 排行</button>
+                <button class="btn-leaderboard" onclick="openLeaderboard('g2048')"><span data-ui-icon="trophy"></span> 排行</button>
                 <button class="btn-restart-2048" onclick="init2048Game()">重來</button>
             </div>
         </div>
@@ -117,7 +117,7 @@
     <div class="modal-overlay" id="leaderboardModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title" id="lbTitle">🏆 排行榜</h3>
+                <h3 class="modal-title" id="lbTitle"><span data-ui-icon="trophy"></span> 排行榜</h3>
                 <button class="btn-close" onclick="closeLeaderboard()">×</button>
             </div>
             <div class="lb-tabs">

@@ -303,3 +303,8 @@ body {
 .lb-group { font-size: calc(12px * var(--n-font-scale, 1)); color: var(--text-sub); }
 .lb-score { font-weight: 700; color: var(--primary-color); font-size: calc(15px * var(--n-font-scale, 1)); text-align: right; }
 .lb-loading { text-align: center; padding: 30px; color: var(--text-sub); font-weight: 600; }
+/* Local outline artwork replaces emoji in game controls. */
+.game-card-icon .nexus-icon {width:36px;height:36px;}
+.p-card {flex-direction:column;gap:8px;color:var(--text-main);font-family:inherit;}
+.p-card .nexus-icon,.card-slot .nexus-icon {width:40px;height:40px;}
+.p-card-label {font-size:calc(13px * var(--n-font-scale, 1));font-weight:600;}

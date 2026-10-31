@@ -26,10 +26,10 @@ export default class WarehouseScene extends Phaser.Scene {
         this.isFeeding = false;
 
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
-        this.add.text(195, 60, '🎒 我的倉庫', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(195, 60, '我的倉庫', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         const btnBack = this.add.rectangle(55, 60, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(55, 60, '返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnBack.on('pointerdown', () => this.scene.start('MyFarmScene'));
 
         this.capacityText = this.add.text(195, 110, '容量: 0/10', { fontSize: '16px', color: '#fff', backgroundColor: '#000', padding: 5 }).setOrigin(0.5);
@@ -80,7 +80,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.textCancel = this.add.text(0, 20, '否(離開)', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
         this.btnDiscard = this.add.rectangle(105, 20, 95, 38, 0xE53935, 1).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.textDiscard = this.add.text(105, 20, '🗑️ 丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.textDiscard = this.add.text(105, 20, '丟棄', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         this.btnCancel.on('pointerdown', () => this.actionPanel.setVisible(false));
 
@@ -265,8 +265,8 @@ export default class WarehouseScene extends Phaser.Scene {
     createWarehousePages() {
         this.previousPage = this.add.rectangle(70, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
         this.nextPage = this.add.rectangle(320, 630, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
-        this.previousLabel = this.add.text(70, 630, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
-        this.nextLabel = this.add.text(320, 630, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.previousLabel = this.add.text(70, 630, '上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.nextLabel = this.add.text(320, 630, '下一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
         this.warehousePageText = this.add.text(195, 630, '', { fontSize: '15px', color: '#fff2cc', backgroundColor: '#593b27', padding: 5 }).setOrigin(0.5);
         this.previousPage.on('pointerdown', () => this.changeWarehousePage(-1));
         this.nextPage.on('pointerdown', () => this.changeWarehousePage(1));
@@ -346,10 +346,13 @@ export default class WarehouseScene extends Phaser.Scene {
     showHeartEffect(isBig) {
         this.tweens.add({ targets: this.hen, y: this.hen.y - 15, duration: 150, yoyo: true });
 
-        const heartIcon = isBig ? '💖' : '❤️';
-        const fontSize = isBig ? 32 : 22;
-
-        const heart = this.add.text(this.hen.x, this.hen.y - 30, heartIcon, { fontSize: `${fontSize}px` }).setOrigin(0.5).setDepth(30);
+        const size = isBig ? 1 : .7;
+        const heart = this.add.graphics({ x: this.hen.x, y: this.hen.y - 30 }).setDepth(30);
+        const points = Array.from({ length: 48 }, (_, index) => {
+            const angle = index / 48 * Math.PI * 2;
+            return { x: 16 * Math.sin(angle) ** 3 * size, y: -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle)) * size };
+        });
+        heart.fillStyle(0xe56a88, 1).fillPoints(points, true);
         this.tweens.add({
             targets: heart, y: heart.y - 60, scaleX: 1.3, scaleY: 1.3, alpha: 0, duration: 1500, ease: 'Power1',
             onComplete: () => heart.destroy()

@@ -197,7 +197,7 @@ export function mountFarmMail(game, context) {
             content.append(back, el('h3', '', current.title), el('time', 'farm-mail-time', formatMailTime(current.createdAt)), el('p', 'farm-mail-body', current.body || ''));
             if (current.reward) {
                 const rewards = el('section', 'farm-mail-rewards');
-                rewards.append(el('h4', '', '🎁 獎勵'), el('p', '', `🪙 金幣 × ${current.reward.coins || 0}`), el('p', '', `🐛 菜蟲 × ${current.reward.worms || 0}`), el('p', '', `🪱 蚯蚓 × ${current.reward.earthworms || 0}`));
+                rewards.append(el('h4', '', '獎勵'), el('p', '', `金幣 × ${current.reward.coins || 0}`), el('p', '', `菜蟲 × ${current.reward.worms || 0}`), el('p', '', `蚯蚓 × ${current.reward.earthworms || 0}`));
                 rewards.append(el('small', '', '獎勵不受倉庫容量限制；超出容量時，請先餵食或整理倉庫。'));
                 const claim = button(current.claimedAt ? '已領取' : '領取', () => action(async () => {
                     const received = await store.claim(current.id);
@@ -238,7 +238,7 @@ export function mountFarmMail(game, context) {
             summary.append(el('strong', '', notice.title), el('time', 'farm-mail-time', formatMailTime(notice.createdAt)));
             if (category === 'visitor') summary.append(el('small', '', '訪客來偷蛋'));
             if (notice.reward && !notice.claimedAt) {
-                const gift = el('span', 'farm-mail-gift', '🎁'); gift.setAttribute('aria-label', '有獎勵可領取');
+                const gift = el('span', 'farm-mail-gift', '可領獎勵'); gift.setAttribute('aria-label', '有獎勵可領取');
                 summary.append(gift);
             }
             const del = button('刪除', () => remove(notice), 'farm-mail-button farm-mail-delete'); del.disabled = busy;

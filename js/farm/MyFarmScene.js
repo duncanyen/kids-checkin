@@ -61,14 +61,14 @@ export default class MyFarmScene extends Phaser.Scene {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
 
-        this.createMinBtn(55, 40, '🏠 村落', 0x1976D2, () => this.scene.start('LobbyScene'));
-        this.createMinBtn(145, 40, '🛒 商店', 0x8E24AA, () => this.scene.start('ShopScene'));
-        this.createMinBtn(235, 40, '🎒 倉庫', 0xE65100, () => this.scene.start('WarehouseScene'));
+        this.createMinBtn(55, 40, '村落', 0x1976D2, () => this.scene.start('LobbyScene'));
+        this.createMinBtn(145, 40, '商店', 0x8E24AA, () => this.scene.start('ShopScene'));
+        this.createMinBtn(235, 40, '倉庫', 0xE65100, () => this.scene.start('WarehouseScene'));
 
         this.add.rectangle(335, 40, 95, 48, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
         this.coinIcon = this.add.image(302, 31, 'coin').setDisplaySize(18, 18).setDepth(31);
         this.coinsText = this.add.text(314, 24, '—', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
-        this.cleanText = this.add.text(295, 42, '🗑️ —', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
+        this.cleanText = this.add.text(295, 42, '清潔 —', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
 
         this.timerBg = this.add.rectangle(cx, 90, 200, 26, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 90, '讀取存檔中…', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
@@ -204,7 +204,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
 
         const cleanVal = this.farmData.cleanliness || 0;
-        this.cleanText.setText(`🗑️ ${cleanVal}/100`);
+        this.cleanText.setText(`清潔 ${cleanVal}/100`);
 
         if (this.cleanFlashTween) this.cleanFlashTween.stop();
         if (cleanVal <= 50) {
@@ -249,7 +249,7 @@ export default class MyFarmScene extends Phaser.Scene {
             await runTransaction(db, async (t) => {
                 t.update(myFarmRef, { "farm.cleanliness": 0 });
             });
-            this.showFloatingText('✨ 打掃完成！雞舍煥然一新！', '#4CAF50', 18);
+            this.showFloatingText('打掃完成！雞舍煥然一新！', '#4CAF50', 18);
         } catch (e) { console.error(e); }
     }
 
@@ -307,7 +307,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 newHen.play(poultryAnim(newHen, 'idle'), true);
                 newHen.on('pointerdown', () => {
                     if (!this.isHenSitting && this.emptyClickCount < 4) {
-                        // 🌟 同步放大點擊時的動畫比例 (原本是 1.1 / 0.9，改成基準值 2 乘上去，也就是 2.2 / 1.8)
+                        // 同步放大點擊時的動畫比例 (原本是 1.1 / 0.9，改成基準值 2 乘上去，也就是 2.2 / 1.8)
                         this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
                     }
                     this.harvestEgg();
@@ -327,7 +327,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 if (!isFarmSave(snap.data()?.farm)) throw new Error('存檔未確認，停止更新雞隻');
                 t.update(myFarmRef, poultryPatch(settlePoultry(snap.data().farm)));
             });
-            this.showFloatingText('💔 有雞隻生病太久不幸離世了...', '#F44336', 16);
+            this.showFloatingText('有雞隻生病太久不幸離世了...', '#F44336', 16);
         } catch (e) { console.error(e); }
     }
 
@@ -366,7 +366,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
                 t.update(myFarmRef, { ...poultryPatch(state), "farm.medicines": farm.medicines - 1 });
             });
-            this.showFloatingText('✨ 治療成功！雞隻恢復健康了！', '#4CAF50', 18);
+            this.showFloatingText('治療成功！雞隻恢復健康了！', '#4CAF50', 18);
         } catch (e) { this.showFloatingText(typeof e === 'string' ? e : "治療失敗", '#F44336', 16); }
     }
 
@@ -420,13 +420,13 @@ export default class MyFarmScene extends Phaser.Scene {
                 onComplete: () => {
                     if (!hen.active) return;
                     hen.play(poultryAnim(hen, 'idle'), true);
-                    // 🌟 同步放大生蛋時的壓扁特效 (原本是 0.7 / 1.15，改成 1.4 / 2.3)
+                    // 同步放大生蛋時的壓扁特效 (原本是 0.7 / 1.15，改成 1.4 / 2.3)
                     this.tweens.add({
                         targets: hen, scaleY: hen.baseScale * 0.7, scaleX: hen.baseScale * 1.15, y: hen.y + 10, duration: 300, ease: 'Power2',
                         onComplete: () => {
                             this.time.delayedCall(3000, () => {
                                 if (!hen.active) return;
-                                // 🌟 恢復時必須恢復成 2 倍大小
+                                // 恢復時必須恢復成 2 倍大小
                                 this.tweens.add({ targets: hen, scaleY: hen.baseScale, scaleX: hen.baseScale, y: hen.y - 10, duration: 300, onComplete: () => {
                                     this.isHenSitting = false; this.wanderSingleHen(hen); 
                                 } });
@@ -446,7 +446,7 @@ export default class MyFarmScene extends Phaser.Scene {
             if (connection && connection.phase !== 'ready') { this.timerText.setText(connection.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…'); return; }
             const now = Date.now(), status = nextEggStatus(this.farmData, now);
             if (!status.hens) this.timerText.setText('雞舍空著，去商店選購雞隻吧！');
-            else if (status.full) this.timerText.setText(`📦 產能已滿 (${status.eggs} 顆)`);
+            else if (status.full) this.timerText.setText(`產能已滿 (${status.eggs} 顆)`);
             else if (!status.next) this.timerText.setText('雞隻生病了，請先治療');
             else {
                 const ms = status.next.ms;
@@ -522,7 +522,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.emptyClickTimer = this.time.delayedCall(2000, () => this.emptyClickCount = 0);
 
             if (this.emptyClickCount >= 5) {
-                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16); 
+                this.showFloatingText('沒蛋啦還一直點~咕咕', '#F44336', 16);
                 this.hensGroup.forEach(hen => {
                     hen.setTint(0xff0000); 
                     this.time.delayedCall(500, () => hen.clearTint());
@@ -539,7 +539,7 @@ export default class MyFarmScene extends Phaser.Scene {
         const limit = this.farmData.warehouseLimit || 10;
         
         if (usedSpace >= limit) {
-            this.showFloatingText('⚠️ 倉庫空間不足，請先擴充！', '#F44336', 14);
+            this.showFloatingText('倉庫空間不足，請先擴充！', '#F44336', 14);
             return;
         }
 
@@ -584,7 +584,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
             this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;
-            const warning = result.remaining ? `\n⚠️ 倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
+            const warning = result.remaining ? `\n倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
             this.showFloatingText((Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning, '#FFD54F', result.remaining ? 14 : 18);
         } catch (e) { this.showFloatingText(e.message || '收蛋失敗，請稍後重試', '#F44336', 16); }
         finally { this.isHarvesting = false; }

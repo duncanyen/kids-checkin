@@ -73,7 +73,7 @@ export default class VisitScene extends Phaser.Scene {
         this.add.text(195, 50, `潛入 [${this.targetName}] 的家`, { fontSize: '16px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
 
         const btnBack = this.add.rectangle(55, 50, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(30);
-        this.add.text(55, 50, '🏃 溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
+        this.add.text(55, 50, '溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId }));
 
         mountHalloween(this);
@@ -269,7 +269,7 @@ export default class VisitScene extends Phaser.Scene {
 
         for (let i = 0; i < henCount; i++) {
             const { x: cx, y: cy } = randomHenPosition(this);
-            // 🐔 加入 setScale(2)
+            // 加入 setScale(2)
             let newHen = addPoultrySprite(this, hensState[i], cx, cy);
 
             const hState = hensState[i] || {};
@@ -285,7 +285,7 @@ export default class VisitScene extends Phaser.Scene {
             }
 
             newHen.on('pointerdown', () => {
-                // 🌟 同步放大偷蛋點擊時的比例
+                // 同步放大偷蛋點擊時的比例
                 this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
                 this.attemptSteal(); 
             });
@@ -336,7 +336,7 @@ export default class VisitScene extends Phaser.Scene {
                 if (!room.exists() || room.data().groupId !== CURRENT_GROUP_ID) return;
                 const now = new Date();
                 const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                const finalText = `${messageContent}\n🕒 ${timeStr}`;
+                const finalText = `${messageContent}\n${timeStr}`;
                 await addDoc(collection(db, "messages"), { groupId: CURRENT_GROUP_ID, roomId: targetRoomId, sender: "村落廣播", text: finalText, time: timeStr, timestamp: serverTimestamp(), isSystem: true });
                 await updateDoc(doc(db, "rooms", targetRoomId), { lastMessage: `村落廣播: ${messageContent}`, lastMessageTime: serverTimestamp() });
             }
@@ -366,7 +366,7 @@ export default class VisitScene extends Phaser.Scene {
         const spawn = predatorSpawnPoint(this, 'tiger');
         this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
-        const warnText = this.add.text(195, 120, `🚨 危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
+        const warnText = this.add.text(195, 120, `危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         // Keep the warning above the clearing, clear of the patrol and hens.
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
         this.tiger.warning = warnText;
@@ -404,7 +404,7 @@ export default class VisitScene extends Phaser.Scene {
         this.isTigerDefeated = true; if (this.tigerTween) this.tigerTween.stop();
         if (!finishPredator(this.tiger, 'dead')) return;
         this.club.setVisible(false);
-        this.showFloatingText('🏆 成功擊退猛虎！', '#FFC107', 22, this.tiger.x, this.tiger.y - 50);
+        this.showFloatingText('成功擊退猛虎！', '#FFC107', 22, this.tiger.x, this.tiger.y - 50);
         this.tweens.add({ targets: this.tiger, alpha: 0, y: this.tiger.y - 50, duration: 1500, delay: 1000, onComplete: () => this.tiger.destroy() });
 
         this.runVisitTransaction(async (t) => {
@@ -416,7 +416,7 @@ export default class VisitScene extends Phaser.Scene {
             } else return false; 
         }).then((success) => {
             if (success) { 
-                this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1 🐅', '#FFF', 20, 195, 422));
+                this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1', '#FFF', 20, 195, 422));
                 this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
             } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, 195, 422)); }
         }).catch(e => console.error(e));
@@ -444,7 +444,7 @@ export default class VisitScene extends Phaser.Scene {
         const spawn = predatorSpawnPoint(this, 'wolf');
         this.wolf = createPredator(this, 'wolf', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
-        const warnText = this.add.text(195, 120, `⚠️ 警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
+        const warnText = this.add.text(195, 120, `警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
         this.wolf.warning = warnText;
 
@@ -482,7 +482,7 @@ export default class VisitScene extends Phaser.Scene {
         this.isWolfDefeated = true; if (this.wolfTween) this.wolfTween.stop();
         if (!finishPredator(this.wolf, 'dead')) return;
         this.club.setVisible(false);
-        this.showFloatingText('🎉 成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
+        this.showFloatingText('成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
         this.tweens.add({ targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000, onComplete: () => this.wolf.destroy() });
 
         this.runVisitTransaction(async (t) => {
@@ -494,7 +494,7 @@ export default class VisitScene extends Phaser.Scene {
             } else return false; 
         }).then((success) => {
             if (success) { 
-                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1 🦷', '#FFF', 20, 195, 422));
+                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1', '#FFF', 20, 195, 422));
                 this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
             } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, 195, 422)); }
         }).catch(e => console.error(e));
@@ -561,7 +561,7 @@ export default class VisitScene extends Phaser.Scene {
         if (!this.targetFarmData || (this.targetFarmData.eggsReady || 0) <= 0) {
             this.emptyClickCount++;
             if (this.emptyClickCount >= 5) {
-                this.showFloatingText('沒蛋啦還一直點~咕咕💢', '#F44336', 16, safeX, safeY);
+                this.showFloatingText('沒蛋啦還一直點~咕咕', '#F44336', 16, safeX, safeY);
                 this.hensGroup.forEach(hen => {
                     hen.setTint(0xff0000);
                     this.time.delayedCall(500, () => { if (hen.active) hen.clearTint(); });
@@ -616,11 +616,11 @@ export default class VisitScene extends Phaser.Scene {
                 transaction.update(myFarmRef, updates);
                 return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0 };
             });
-            this.showFloatingText(result.success ? `🕵️ 偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
+            this.showFloatingText(result.success ? `偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
             if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {
-            this.showFloatingText(`❌ ${error.message || error}`, '#F44336', 16, safeX, safeY);
+            this.showFloatingText(`${error.message || error}`, '#F44336', 16, safeX, safeY);
             this.cameras.main.shake(300, 0.01);
         } finally { this.isStealing = false; }
     }

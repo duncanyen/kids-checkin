@@ -39,9 +39,8 @@ export function attachFarmAtmosphere(scene, { groupId }) {
         if (now - lastClock >= 1000 || now < lastClock) {
             lastClock = now;
             state = atmosphereAt(now, groupId);
-            const icon = state.weather === 'clear' && state.night > .5 ? '🌙' : WEATHER[state.weather].icon;
             const announcement = `${state.phase}・${WEATHER[state.weather].label}`;
-            if (announcement !== lastAnnouncement) { label.textContent = `${icon} ${announcement}`; lastAnnouncement = announcement; }
+            if (announcement !== lastAnnouncement) { label.textContent = announcement; lastAnnouncement = announcement; }
             root.dataset.weather = state.weather; root.dataset.phase = state.phase;
             const next = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(state.nextWeatherAt);
             root.querySelector('[data-climate-clock]').textContent = `台灣時間 ${state.time} · 下次天氣判定 ${next}`;
@@ -110,7 +109,7 @@ export function attachFarmAtmosphere(scene, { groupId }) {
         document.removeEventListener('visibilitychange', refresh); window.removeEventListener('pageshow', refresh);
         [grade, ground, weather, lights, firelight].forEach(layer => layer.destroy());
         root.dataset.active = 'false'; delete root.dataset.groupId;
-        label.textContent = '🌿 村落氣候'; root.querySelector('[data-climate-clock]').textContent = '進入農莊後顯示當地氣候';
+        label.textContent = '村落氣候'; root.querySelector('[data-climate-clock]').textContent = '進入農莊後顯示當地氣候';
         scene.farmAtmosphere = null;
     });
 }

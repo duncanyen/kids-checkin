@@ -99,7 +99,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
                 const scene=window.__farmGame.scene.getScene('MyFarmScene'),camera=scene.cameras.main;
                 const image=scene.children.list.find(o=>['farm_map','farm_panorama'].includes(o.texture?.key)),bounds=image.getBounds();
                 const halfWidth=camera.width/camera.zoom/2,halfHeight=camera.height/camera.zoom/2;
-                return{expectedRatio:image.texture.key==='farm_map'?720/1280:2172/724,ratio:image.displayWidth/image.displayHeight,covers:bounds.left<=195-halfWidth+.1&&bounds.right>=195+halfWidth-.1&&bounds.top<=422-halfHeight+.1&&bounds.bottom>=422+halfHeight-.1,plantsVisible:scene.gardenPlants.length===42&&scene.gardenPlants.every(plant=>{const b=plant.getBounds();return b.left>=195-halfWidth&&b.right<=195+halfWidth&&b.top>=422-halfHeight&&b.bottom<=422+halfHeight}),hudWidth:scene.children.list.find(o=>o.type==='Text'&&o.text==='🏠 村落').scaleX};
+                return{expectedRatio:image.texture.key==='farm_map'?720/1280:2172/724,ratio:image.displayWidth/image.displayHeight,covers:bounds.left<=195-halfWidth+.1&&bounds.right>=195+halfWidth-.1&&bounds.top<=422-halfHeight+.1&&bounds.bottom>=422+halfHeight-.1,plantsVisible:scene.gardenPlants.length===42&&scene.gardenPlants.every(plant=>{const b=plant.getBounds();return b.left>=195-halfWidth&&b.right<=195+halfWidth&&b.top>=422-halfHeight&&b.bottom<=422+halfHeight}),hudWidth:scene.children.list.find(o=>o.type==='Text'&&o.text==='村落').scaleX};
             });
             assert.ok(Math.abs(scenery.ratio-scenery.expectedRatio)<.001);
             assert.equal(scenery.covers,true);

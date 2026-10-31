@@ -1,5 +1,12 @@
 // Local, consistent 24px outline icons. No font/CDN dependency; never alter user content.
 const paths = {
+    rock:'<path d="M7 10V7a2 2 0 0 1 4 0v3M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v5M7 10 5 9a2 2 0 0 0-2 3l4 7h10l4-7V9a2 2 0 0 0-2-2"/><path d="M7 19v3h10v-3M7 13h8"/>',
+    paper:'<path d="M7 12V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v9c0 5-3 7-7 7-3 0-5-2-7-5l-2-4a1.5 1.5 0 0 1 2-2l2 1Z"/>',
+    scissors:'<path d="m10 12-4-8a1.5 1.5 0 0 1 3-1l4 8 3-8a1.5 1.5 0 0 1 3 1l-3 9M8 12l-3-1a2 2 0 0 0-2 3l4 6h10l3-5v-3a2 2 0 0 0-4 0v3M7 20v2h10v-2M8 12h5v4H8"/>',
+    hen:'<path d="M5 12 2 9v7c0 4 4 6 8 6s8-3 8-7V9c0-4-6-4-6 0v3c-3-2-5-2-7 0ZM14 5V2l2 2 2-2v4m0 3 4 2-4 1M8 22v-3m4 3v-3"/><circle cx="15" cy="8" r=".5"/>',
+    numbers:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12h18M12 3v18M6 6h3v3H6m9-3v3m0 6h3v3h-3m-9-3v3h3v-3"/>',
+    trophy:'<path d="M7 3h10v6a5 5 0 0 1-10 0V3ZM7 5H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4M12 14v5m-5 3v-3h10v3H7Z"/>',
+    question:'<circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3m0 3h.01"/>',
     chat:'<path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9 9 0 0 1-4-.9L3 21l1.8-5A8.5 8.5 0 1 1 21 11.5Z"/>',
     calendar:'<rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/>',
     todo:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="m8 12 3 3 5-6"/>',

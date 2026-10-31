@@ -23,10 +23,10 @@ export default class ShopScene extends Phaser.Scene {
         configureFarmViewport(this);
         addFarmBackground(this);
         this.add.rectangle(195, 60, 240, 50, 0x000000, 0.7).setOrigin(0.5);
-        this.add.text(195, 60, '🛒 商店', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(195, 60, '商店', { fontSize: '22px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         const btnBack = this.add.rectangle(55, 60, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(55, 60, '🔙 返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(55, 60, '返回', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btnBack.on('pointerdown', () => this.scene.start('MyFarmScene'));
 
         this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'left', backgroundColor: '#000', padding: { left: 34, right: 10, top: 6, bottom: 6 } }).setOrigin(0.5);
@@ -48,10 +48,10 @@ export default class ShopScene extends Phaser.Scene {
 
     createTabs() {
         const btnBuy = this.add.rectangle(100, 180, 120, 40, 0xE53935, 1).setInteractive({ cursor: 'pointer' });
-        this.add.text(100, 180, '📥 買進', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(100, 180, '買進', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         
         const btnSell = this.add.rectangle(290, 180, 120, 40, 0x4CAF50, 0.5).setInteractive({ cursor: 'pointer' });
-        this.add.text(290, 180, '📤 賣出', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(290, 180, '賣出', { fontSize: '16px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
         this.buyContainer = this.add.container(0, 290);
         this.sellContainer = this.add.container(0, 290).setVisible(false);
@@ -107,8 +107,8 @@ export default class ShopScene extends Phaser.Scene {
         }
         this.previousPage = this.add.rectangle(70, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
         this.nextPage = this.add.rectangle(320, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
-        this.previousLabel = this.add.text(70, 640, '◀ 上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
-        this.nextLabel = this.add.text(320, 640, '下一頁 ▶', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.previousLabel = this.add.text(70, 640, '上一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
+        this.nextLabel = this.add.text(320, 640, '下一頁', { fontSize: '14px', color: '#fff2cc' }).setOrigin(0.5);
         this.pageText = this.add.text(195, 640, '', { fontSize: '15px', color: '#fff2cc', backgroundColor: '#593b27', padding: 5 }).setOrigin(0.5);
         this.previousPage.on('pointerdown', () => this.changeShopPage(-1));
         this.nextPage.on('pointerdown', () => this.changeShopPage(1));
@@ -186,12 +186,12 @@ export default class ShopScene extends Phaser.Scene {
         this.dialogSubText = this.add.text(195, 365, '單價: 0 金幣', { fontSize: '14px', color: '#666666', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         const btnMinus = this.add.rectangle(110, 410, 40, 36, 0xFFFFFF, 1).setStrokeStyle(1, 0xCCCCCC).setInteractive({ cursor: 'pointer' });
-        const txtMinus = this.add.text(110, 410, '➖', { fontSize: '18px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
+        const txtMinus = this.add.text(110, 410, '−', { fontSize: '18px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         this.textQty = this.add.text(170, 410, '1', { fontSize: '20px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         const btnPlus = this.add.rectangle(230, 410, 40, 36, 0xFFFFFF, 1).setStrokeStyle(1, 0xCCCCCC).setInteractive({ cursor: 'pointer' });
-        const txtPlus = this.add.text(230, 410, '➕', { fontSize: '18px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
+        const txtPlus = this.add.text(230, 410, '+', { fontSize: '18px', color: '#000000', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
 
         const btnMax = this.add.rectangle(280, 410, 45, 36, 0xFF9800, 1).setInteractive({ cursor: 'pointer' });
         const txtMax = this.add.text(280, 410, 'MAX', { fontSize: '13px', color: '#FFFFFF', fontStyle: 'bold' }).setOrigin(0.5).setDepth(105);
@@ -363,7 +363,7 @@ export default class ShopScene extends Phaser.Scene {
                     "farm.medicines": (farm.medicines || 0) + qty 
                 });
             });
-            this.showMsg(`購買成功！獲得 咕咕活力散 +${qty} 💊`, '#4CAF50');
+            this.showMsg(`購買成功！獲得 咕咕活力散 +${qty}`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "購買失敗", '#F44336'); }
         finally { this.isProcessing = false; }
     }

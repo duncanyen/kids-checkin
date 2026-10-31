@@ -1,3 +1,4 @@
+import { icon } from './ui-icons.js';
 import { requireGameMembership } from './game-members.js';
 import { readGameContext, watchGameContext } from './game-context.js';
 // 1. 從 firebase-config.js 引入共用 db
@@ -7,7 +8,8 @@ import {
     getDocs, query, where, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-const RPS_ICONS = ["✊", "✋", "✌️"];
+const RPS_ICONS = ["rock", "paper", "scissors"];
+const RPS_LABELS = ["石頭", "布", "剪刀"];
 let isGameLocked = false;
 let activeGame = null;
 
@@ -37,7 +39,7 @@ function listenMyPermissions() {
 
 function setupView() {
     const gameZoneTitle = document.getElementById('gameZoneTitle');
-    if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
+    if (gameZoneTitle) gameZoneTitle.innerText = "遊戲區";
     
     // 所有成員（包含管理者）統一進入遊戲大廳
     returnToLobby();
@@ -47,15 +49,15 @@ function setupView() {
 
 function selectGame(gameType) {
     if (gameType === 'rps' && myPermissions.rps === false) {
-        alert('🚫 您已被管理員禁止進入【剪刀石頭布對決】！');
+        alert('您已被管理員禁止進入【剪刀石頭布對決】！');
         return;
     }
     if (gameType === 'g2048' && myPermissions.g2048 === false) {
-        alert('🚫 您已被管理員禁止進入【2048】！');
+        alert('您已被管理員禁止進入【2048】！');
         return;
     }
     if (gameType === 'farm' && myPermissions.farm === false) {
-        alert('🚫 您已被管理員禁止進入【咕咕村落】!');
+        alert('您已被管理員禁止進入【咕咕村落】!');
         return;
     }
 
@@ -70,10 +72,10 @@ function selectGame(gameType) {
     const gameZoneTitle = document.getElementById('gameZoneTitle');
 
     if (gameType === 'rps') {
-        if (gameZoneTitle) gameZoneTitle.innerText = "🎮 剪刀石頭布對決";
+        if (gameZoneTitle) gameZoneTitle.innerText = "剪刀石頭布對決";
         document.getElementById('kidGameContainer').style.display = 'block';
     } else if (gameType === 'g2048') {
-        if (gameZoneTitle) gameZoneTitle.innerText = "🔢 2048 數字方塊";
+        if (gameZoneTitle) gameZoneTitle.innerText = "2048 數字方塊";
         document.getElementById('g2048Container').style.display = 'block';
         init2048Game();
     }
@@ -91,7 +93,7 @@ function returnToLobby() {
     if (kidGameContainer) kidGameContainer.style.display = 'none';
     if (g2048Container) g2048Container.style.display = 'none';
     if (gameLobby) gameLobby.style.display = 'flex';
-    if (gameZoneTitle) gameZoneTitle.innerText = "🎮 遊戲區";
+    if (gameZoneTitle) gameZoneTitle.innerText = "遊戲區";
 }
 
 // ---------------------------
@@ -146,7 +148,8 @@ function resetGameArena() {
     const resultTextEl = document.getElementById('gameResultText');
     
     if (compCardEl) {
-        compCardEl.innerText = "❓";
+        compCardEl.innerHTML = icon('question');
+        compCardEl.setAttribute('aria-label', '等待出牌');
         compCardEl.classList.remove('card-solid');
     }
     if (resultTextEl) {
@@ -163,7 +166,8 @@ async function playGame(playerChoice) {
     const compChoice = Math.floor(Math.random() * 3);
     const compCardEl = document.getElementById('compCard');
     if (compCardEl) {
-        compCardEl.innerText = RPS_ICONS[compChoice];
+        compCardEl.innerHTML = icon(RPS_ICONS[compChoice]);
+        compCardEl.setAttribute('aria-label', RPS_LABELS[compChoice]);
         compCardEl.classList.add('card-solid');
     }
 
@@ -189,13 +193,13 @@ async function playGame(playerChoice) {
         
         addedPoints = 1; 
         reason = "剪刀石頭布 獲勝";
-        let msg = "🎉 贏了！獲得 1 分！";
+        let msg = "贏了！獲得 1 分！";
 
         if (currentKidStats.currentStreak % 3 === 0) {
             currentKidStats.totalScore += 2; 
             addedPoints += 2;
             reason = `剪刀石頭布 連勝${currentKidStats.currentStreak}場額外加分`;
-            msg = `🔥 連贏 ${currentKidStats.currentStreak} 場！總共獲得 3 分！`;
+            msg = `連贏 ${currentKidStats.currentStreak} 場！總共獲得 3 分！`;
         }
         if (resultTextEl) {
             resultTextEl.innerText = msg; 
@@ -204,7 +208,7 @@ async function playGame(playerChoice) {
     } else {
         currentKidStats.currentStreak = 0;
         if (resultTextEl) {
-            resultTextEl.innerText = "😢 輸了！連勝中斷！";
+            resultTextEl.innerText = "輸了！連勝中斷！";
             resultTextEl.style.color = "var(--cancel-color)";
         }
     }
@@ -391,7 +395,7 @@ function checkGameOver() {
             if(g2048Board[r][c] === 2048 && !window._hasWon2048) {
                 window._hasWon2048 = true;
                 if (stEl) {
-                    stEl.innerText = "🏆 太神啦！成功拼出 2048！";
+                    stEl.innerText = "太神啦！成功拼出 2048！";
                     stEl.style.color = "var(--primary-color)";
                 }
             }
@@ -403,7 +407,7 @@ function checkGameOver() {
     if(!hasZero && !canMerge) {
         g2048GameOver = true;
         if (stEl) {
-            stEl.innerText = "😢 遊戲結束！";
+            stEl.innerText = "遊戲結束！";
             stEl.style.color = "var(--cancel-color)";
         }
     }
@@ -418,7 +422,7 @@ function openLeaderboard(gameType) {
     const lbTitle = document.getElementById('lbTitle');
     const lbModal = document.getElementById('leaderboardModal');
     
-    if (lbTitle) lbTitle.innerText = gameType === 'rps' ? '🏆 猜拳 排行榜' : '🏆 2048 排行榜';
+    if (lbTitle) lbTitle.innerText = gameType === 'rps' ? '猜拳 排行榜' : '2048 排行榜';
     if (lbModal) lbModal.style.display = 'flex';
     
     loadLeaderboard('group');
