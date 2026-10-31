@@ -33,7 +33,7 @@ RTDB 規則限制：
 - 離開群組、房間移除成員、帳號停用會同步權限撤銷。
 - 客戶端不能寫 RTDB；經濟與跨玩家操作仍在 Firestore 重新驗證並交易。
 
-既有聊天室 participants 目前仍以名稱存放。同步函式會以當前群組 members 和 profiles 對應成 accountId 收件者索引；未變動成員的未讀數更新會重用對應，避免每次訊息都重查全群組個人資料。修改姓名／角色／群組成員時會重新建立索引。本次不遷移既有聊天室的 participants 格式。
+聊天室新資料以 `participantIds` 與 `creatorAccountId` 記錄固定帳號，訊息使用 `senderAccountId`。舊 `participants` 名稱只作相容讀取，能唯一對應目前成員或 `users.nameHistory` 時可轉為固定帳號；無法辨識或同名時，由管理者在聊天室「確認舊聊天室成員」指定對應。同步函式優先使用固定帳號並核對目前群組成員；名稱變更不再改變新聊天室的收件者資格。部署鏡像時須使用更新後的 `functions/mirror.cjs`，維持讀取開關預設關閉，直到既有部署與回填步驟完成。
 
 ## 部署順序
 

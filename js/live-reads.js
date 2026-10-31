@@ -19,7 +19,7 @@ const report = error => {
 };
 function watch(source, options, next, error = report) {
     return subscribeLive({ enabled: REALTIME_READS_ENABLED, connect, context: context(), ...options,
-        fallback: (next, error) => onSnapshot(source, next, error), next, error: reason => { report(reason); if (error !== report) error(reason); } });
+        fallback: options.fallback || ((next, error) => onSnapshot(source, next, error)), next, error: reason => { report(reason); if (error !== report) error(reason); } });
 }
 const farmPath = ref => {
     const parts = ref.path.split('/');
@@ -37,6 +37,6 @@ export async function readFarm(ref) {
     } catch (error) { if (accessDenied(error)) throw error; }
     return getDoc(ref);
 }
-export const watchRooms = (source, groupId, accountId, next, error) => watch(source, { channel: 'chat', list: true, path: `inboxes/${liveKey(groupId)}/${liveKey(accountId)}` }, next, error);
+export const watchRooms = (source, groupId, accountId, next, error, fallback) => watch(source, { fallback, channel: 'chat', list: true, path: `inboxes/${liveKey(groupId)}/${liveKey(accountId)}` }, next, error);
 export const watchRoom = (source, groupId, roomId, next, error) => watch(source, { channel: 'chat', path: `rooms/${liveKey(groupId)}/${liveKey(roomId)}` }, next, error);
 export const watchMessages = (source, groupId, roomId, limit, next, error) => watch(source, { channel: 'chat', list: true, limit, path: `messages/${liveKey(groupId)}/${liveKey(roomId)}` }, next, error);

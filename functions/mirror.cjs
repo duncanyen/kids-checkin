@@ -20,10 +20,16 @@ module.exports = function makeMirror(firestore, database) {
     async function participantIds(roomData) {
         if (!roomData?.groupId) return [];
         const snapshot = await firestore.doc(`groups/${roomData.groupId}`).get();
-        const members = snapshot.data()?.members || [], result = [];
+        const members = snapshot.data()?.members || [], users = [];
         for (let start = 0; start < members.length; start += 10) {
             const profiles = await firestore.collection('users').where('accountId', 'in', members.slice(start, start + 10)).get();
-            profiles.forEach(doc => { const user = doc.data(); if (user.role !== 'removed' && roomData.participants?.includes(user.name)) result.push(user.accountId); });
+            profiles.forEach(doc => { const user = doc.data(); if (user.role !== 'removed') users.push(user); });
+        }
+        if (Array.isArray(roomData.participantIds)) return [...new Set(roomData.participantIds)].filter(id => users.some(user => user.accountId === id));
+        const result = [];
+        for (const name of roomData.participants || []) {
+            const matches = users.filter(user => [user.name, ...(Array.isArray(user.nameHistory) ? user.nameHistory : [])].includes(name));
+            if (matches.length === 1) result.push(matches[0].accountId);
         }
         return [...new Set(result)];
     }
@@ -32,7 +38,7 @@ module.exports = function makeMirror(firestore, database) {
         const version = epochMicros(snapshot?.updateTime || time);
         // Union old recipients and current group members so removals get tombstones.
         const oldAccess = (await root.child(`access/rooms/${key(roomId)}`).get()).val();
-        const reuse = !forceRecipients && oldAccess?.groupKey === key(data?.groupId) && old?.groupId === data?.groupId && JSON.stringify(old?.participants) === JSON.stringify(data?.participants);
+        const reuse = !forceRecipients && oldAccess?.groupKey === key(data?.groupId) && old?.groupId === data?.groupId && JSON.stringify(old?.participants) === JSON.stringify(data?.participants) && JSON.stringify(old?.participantIds) === JSON.stringify(data?.participantIds);
         const recipients = reuse ? Object.keys(oldAccess.participants || {}).map(decodeURIComponent) : await participantIds(data);
         const access = { version, groupKey: data?.groupId ? key(data.groupId) : '', participants: Object.fromEntries(recipients.map(id => [key(id), true])) };
         const paths = new Set();

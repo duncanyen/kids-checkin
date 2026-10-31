@@ -27,7 +27,7 @@ exports.liveGroupMirror = onDocumentWritten(trigger('groups/{groupId}'), async e
 });
 exports.liveProfileMirror = onDocumentWritten(trigger('users/{profileId}'), async event => {
     const old = event.data.before.data(), current = event.data.after.data();
-    if (old && current && ['accountId', 'name', 'role'].every(key => old[key] === current[key])) return;
+    if (old && current && ['accountId', 'name', 'role'].every(key => old[key] === current[key]) && JSON.stringify(old.nameHistory) === JSON.stringify(current.nameHistory)) return;
     const ids = [...new Set([event.data.before.data()?.accountId, event.data.after.data()?.accountId].filter(Boolean))];
     for (const accountId of ids) {
         await getMirror().account(accountId, event.data.after, event.time);

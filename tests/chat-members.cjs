@@ -28,6 +28,8 @@ export const onSnapshot=(ref,cb,error)=>{const l={ref,cb};listeners.add(l);emit(
 async function notify(){for(const l of [...listeners])await emit(l);}
 export const addDoc=async(ref,data)=>{const id=await window.__chatDb({...ref,kind:'add',data});await notify();return{id};};
 export const updateDoc=async(ref,data)=>{await window.__chatDb({...ref,kind:'update',data});await notify();};
+let queue=Promise.resolve();
+export function runTransaction(_,callback){const run=queue.then(async()=>{const writes=[];const result=await callback({get:getDoc,update:(ref,data)=>writes.push({ref,data})});for(const {ref,data} of writes)await window.__chatDb({...ref,kind:'update',data});await notify();return result;});queue=run.catch(()=>{});return run;}
 `;
 (async()=>{
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -67,13 +69,13 @@ export const updateDoc=async(ref,data)=>{await window.__chatDb({...ref,kind:'upd
  assert.ok((await page.locator('#createMemberList').innerText()).includes("小華's"));
  assert.equal(await page.locator('#createMemberList input[value="alice"]').count(),0);
  await page.check('#createMemberList input[value="bob"]');await page.fill('#createGroupName','測試聊天');await page.click('#btnConfirmCreate');await page.waitForFunction(()=>document.getElementById('createGroupModal').style.display==='none');
- const [path,room]=rooms()[0];assert.equal(room.groupId,'A');assert.deepEqual(room.participants,['小明',"小華's"]);
+ const [path,room]=rooms()[0];assert.equal(room.groupId,'A');assert.deepEqual(room.participantIds,['alice','bob']);assert.equal(room.creatorAccountId,'alice');
  // Existing rooms and the invitation menu retain their original participant format.
  await page.locator('#roomListContainer .room-item').first().click();await page.click('#btnOpenSettingsMenu');
  await page.evaluate(()=>chatRooms.openInviteMembers());await page.waitForFunction(()=>!document.getElementById('btnSaveInvite').disabled);
- assert.deepEqual(await page.locator('#inviteMemberList input').evaluateAll(inputs=>inputs.map(i=>i.value)),['charlie']);
+ assert.deepEqual(await page.locator('#inviteMemberList input').evaluateAll(inputs=>inputs.map(i=>i.value)),['charlie','same']);
  await page.check('#inviteMemberList input[value="charlie"]');await page.click('#btnSaveInvite');await page.waitForFunction(()=>document.getElementById('inviteMembersModal').style.display==='none');
- assert.deepEqual(docs[path].participants,['小明',"小華's",'群組成員']);
+ assert.deepEqual(docs[path].participantIds,['alice','bob','charlie']);
  assert.ok(Object.entries(docs).some(([p,d])=>p.startsWith('messages/')&&d.groupId==='A'&&d.text==='群組成員 加入聊天室'));
  await page.evaluate(()=>chatRooms.closeModal('roomSettingsMenu'));await page.click('#btnBackToList');
  // Membership is checked again at submission; removals and forged selections cannot save.
@@ -93,8 +95,58 @@ export const updateDoc=async(ref,data)=>{await window.__chatDb({...ref,kind:'upd
  docs['groups/B'].members=['alice'];await page.evaluate(()=>chatRooms.closeModal('createGroupModal'));await openCreate();assert.match(await page.locator('#createMemberList').innerText(),/無其他成員/);
  docs['groups/B'].members=[];await page.evaluate(()=>chatRooms.closeModal('createGroupModal'));await page.click('#btnOpenCreateModal');await page.waitForFunction(()=>document.getElementById('createMemberList').textContent.includes('已不在此群組'));
  assert.equal(await page.locator('#btnConfirmCreate').isDisabled(),true);
+ // Fixed room/message IDs survive changing both the owner and another member's names.
+ await page.evaluate(()=>localStorage.setItem('lastGroupId','A'));await page.reload();
+ await page.locator('[data-room-id="'+path.split('/')[1]+'"]').click();
+ await page.fill('#chatInput','改名前的訊息');await page.click('#btnSend');
+ await page.waitForFunction(()=>!document.getElementById('btnSend').disabled);
+ const ownMessage=Object.entries(docs).find(([key,value])=>key.startsWith('messages/')&&value.text==='改名前的訊息');
+ assert.equal(ownMessage[1].senderAccountId,'alice');
+ docs['users/a'].name='改名小明';docs['users/b'].name='改名小華';
+ docs['messages/bob-name-collision']={groupId:'A',roomId:path.split('/')[1],sender:'小明',senderAccountId:'bob',text:'另一個帳號的訊息',timestamp:Date.now()};
+ await page.reload();await page.locator('[data-room-id="'+path.split('/')[1]+'"]').click();
+ await page.waitForSelector('.msg-mine');assert.ok((await page.locator('.msg-mine').allTextContents()).some(text=>text.includes('改名前的訊息')));
+ const otherMessage=page.locator('.msg-other').filter({hasText:'另一個帳號的訊息'});assert.equal(await otherMessage.count(),1);
+ await otherMessage.click();assert.equal(await page.locator('#btnActionRetract').isVisible(),false);await page.click('#btnActionReply');
+ await page.fill('#chatInput','改名後的回覆');await page.click('#btnSend');await page.waitForFunction(()=>!document.getElementById('btnSend').disabled);
+ const reply=Object.values(docs).find(value=>value.text==='改名後的回覆');
+ assert.equal(reply.senderAccountId,'alice');assert.equal(reply.sender,'改名小明');assert.equal(reply.replyTo.senderAccountId,'bob');
+ assert.ok(docs[path].readByAccount.alice>0);assert.ok(docs[path].unreadByAccount.bob>0);assert.equal(docs[path].creatorAccountId,'alice');
+ await page.evaluate(()=>chatRooms.openViewMembers());assert.ok((await page.locator('#viewMemberList').innerText()).includes('改名小華'));
+ assert.ok(await page.locator('#viewMemberList .btn-kick-member').count()>0,'renamed creator keeps management rights');
+ await page.evaluate(()=>chatRooms.kickMember('bob'));assert.equal(docs[path].participantIds.includes('bob'),false);
+ await page.evaluate(()=>chatRooms.closeModal('viewMembersModal'));await page.click('#btnBackToList');
+ // Already-renamed legacy members cannot be guessed; an actual admin confirms IDs.
+ docs['users/a'].role='parent';
+ docs['rooms/legacy']={groupId:'A',name:'改名前的舊聊天室',participants:['舊小明','離開的成員'],creator:'舊小明',unreadCount:{舊小明:7},readTimestamps:{舊小明:123}};
+ docs['messages/legacy-own']={groupId:'A',roomId:'legacy',sender:'舊小明',text:'舊資料訊息',timestamp:Date.now()};
+ await page.reload();await page.locator('#btnRepairChatMembers').click();
+ await page.getByLabel('舊名稱「舊小明」對應帳號').selectOption('alice');
+ await page.getByLabel('舊名稱「離開的成員」對應帳號').selectOption('__removed__');
+ await page.locator('.chat-repair-room[data-room-id="legacy"]').getByRole('button',{name:'確認成員帳號'}).click();
+ await page.waitForFunction(()=>document.querySelector('.chat-repair-room[data-room-id=legacy] [role=status]')?.textContent.includes('已改用'));
+ assert.deepEqual(docs['rooms/legacy'].participantIds,['alice']);assert.equal(docs['rooms/legacy'].creatorAccountId,'alice');assert.equal(docs['rooms/legacy'].unreadByAccount.alice,7);
+ await page.click('#btnCloseChatRepair');await page.locator('.room-item[data-room-id="legacy"]').click();
+ await page.waitForSelector('.msg-mine');assert.ok((await page.locator('.msg-mine').innerText()).includes('舊資料訊息'));
+ const outsiderPage=await context.newPage();outsiderPage.on('pageerror',e=>errors.push(e.message));
+ await outsiderPage.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'same',name:'舊小明'}));localStorage.setItem('lastGroupId','A');});
+ await outsiderPage.goto(base+'/chat.html');await outsiderPage.waitForFunction(()=>document.querySelector('#roomListContainer .nexus-skeleton')===null);
+ assert.equal(await outsiderPage.locator('.room-item[data-room-id="legacy"]').count(),0);
+ const denied=await outsiderPage.evaluate(async()=>{const {mutateRoomIdentity}=await import('/js/chat-membership.js');try{await mutateRoomIdentity({groupId:'A',accountId:'same'},'legacy',{bindings:{'舊小明':'same'}});return false;}catch{return true;}});
+ assert.equal(denied,true);assert.deepEqual(docs['rooms/legacy'].participantIds,['alice']);await outsiderPage.close();
+ await page.evaluate(()=>chatRooms.leaveGroup());assert.deepEqual(docs['rooms/legacy'].participantIds,[]);
+ assert.ok(Object.values(docs).some(value=>value.isSystem&&value.text==='改名小明 已退出聊天室'&&value.roomId==='legacy'));
+ docs['rooms/known-legacy']={groupId:'A',name:'可辨識的舊聊天室',participants:['改名小明','改名小華'],creator:'改名小明',unreadCount:{改名小明:5,改名小華:2},readTimestamps:{改名小華:50}};
+ docs['messages/known-own']={groupId:'A',roomId:'known-legacy',sender:'改名小明',text:'轉換前的訊息',timestamp:Date.now()};
+ await page.reload();await page.locator('.room-item[data-room-id="known-legacy"]').click();
+ await page.fill('#chatInput','觸發舊資料轉換');await page.click('#btnSend');await page.waitForFunction(()=>!document.getElementById('btnSend').disabled);
+ assert.deepEqual(docs['rooms/known-legacy'].participantIds,['alice','bob']);assert.equal(docs['rooms/known-legacy'].readByAccount.bob,50);
+ assert.equal(docs['rooms/known-legacy'].unreadByAccount.bob,3);
+ docs['users/a'].name='再次改名';await page.reload();await page.locator('.room-item[data-room-id="known-legacy"]').click();
+ await page.waitForSelector('.msg-mine');assert.ok((await page.locator('.msg-mine').allTextContents()).some(text=>text.includes('轉換前的訊息')));
+
  assert.ok(queries.filter(q=>q.path==='users').every(q=>q.filters?.some(f=>f.field==='accountId'&&f.op==='in')));
  assert.deepEqual(errors,[]);
- console.log('PASS: authoritative group members, cross-group cache ignored, account-based picker/self exclusion, removed members hidden, create/invite compatibility, stale/forged selections rejected, group switching, failed queries, empty group');
+ console.log('PASS: fixed room/creator/sender/reply/read/unread account IDs survive rename; homonyms do not inherit messages or access; explicit legacy admin repair preserves old messages/balances; group checks, invite, removed members and forged repair rejected');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

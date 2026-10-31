@@ -54,7 +54,7 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
  });
  await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:mock}));
  // Use real Firebase app initialization to catch conflicting default configs.
- const sdkFile='/tmp/nexus-firebase-app.js';
+ const sdkFile=process.env.FIREBASE_APP_FIXTURE||'/tmp/nexus-firebase-app.js';
  const appSdk=require('node:fs').existsSync(sdkFile)?require('node:fs').readFileSync(sdkFile,'utf8'):require('node:child_process').execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js'],{encoding:'utf8',maxBuffer:2*1024*1024});
  await context.route('https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js',r=>r.fulfill({contentType:'text/javascript',body:appSdk}));
  await context.route('https://ui-avatars.com/**',r=>r.abort());
@@ -75,8 +75,8 @@ export const getCountFromServer=async()=>({data:()=>({count:0})});
  assert.deepEqual(await page.locator('#userListContainer [data-account-id]').evaluateAll(rows=>rows.map(r=>r.dataset.accountId)),['admin','bob','charlie']);
  // Save permission changes on a joined profile with a different primary group and a six-character existing PIN.
  await page.locator('[data-account-id="bob"] .btn-edit').click();assert.equal(await page.inputValue('#editDocId'),'bob-doc');
- await page.check('#editMenusContainer input[value="food"]');await page.click('#btnSaveEditUser');await page.waitForFunction(()=>document.getElementById('editModal').style.display==='none');
- assert.ok(docs['users/bob-doc'].menus.includes('food'));assert.equal(docs['users/bob-doc'].groupId,'B');assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('familyCheckInUser')).accountId),'admin');
+ await page.fill('#editName','改名後的成員');await page.check('#editMenusContainer input[value="food"]');await page.click('#btnSaveEditUser');await page.waitForFunction(()=>document.getElementById('editModal').style.display==='none');
+ assert.ok(docs['users/bob-doc'].menus.includes('food'));assert.equal(docs['users/bob-doc'].name,'改名後的成員');assert.ok(docs['users/bob-doc'].nameHistory.includes('同名成員'));assert.equal(docs['users/bob-doc'].groupId,'B');assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('familyCheckInUser')).accountId),'admin');
  // Membership changes appear while the page is open.
  await page.evaluate(async()=>{const {doc,updateDoc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await updateDoc(doc({},'groups','A'),{members:['admin','bob','charlie','removed','joined']});});
  await page.waitForSelector('[data-account-id="joined"]');

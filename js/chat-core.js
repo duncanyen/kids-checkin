@@ -1,10 +1,11 @@
-import { watchRooms, watchRoom, watchMessages } from './live-reads.js';
-import { loadGameGroupMembers } from './game-members.js';
+import { loadChatProfiles, watchMemberRooms, mutateRoomIdentity } from './chat-membership.js';
+import { roomIdentity, roomHasMember, displayName, senderId, unreadFor, readFor } from './chat-identity-core.js';
+import { watchRoom, watchMessages } from './live-reads.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
 import { db } from './firebase-config.js'; 
 import { 
-    collection, addDoc, getDocs, query, where, orderBy, limit, 
-    serverTimestamp, doc, updateDoc, increment
+    collection, addDoc, query, where, orderBy, limit,
+    serverTimestamp, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // --- 共用全域變數 ---
@@ -20,6 +21,10 @@ if (!currentUser?.accountId || !currentGroupId) {
 }
 watchGameContext({ accountId: currentUser.accountId, groupId: currentGroupId });
 export let allUsers = [];
+export let allProfiles = [];
+export const chatContext = { groupId: currentGroupId, accountId: currentUser.accountId, get profiles(){return allProfiles;} };
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const isMyMessage = message => senderId(message, chatState.activeRoomData, allProfiles) === currentUser.accountId;
 
 export const chatState = {
     activeRoomId: null,
@@ -39,28 +44,24 @@ window._isChatJustLoaded = false;
 
 // groups.members is authoritative. Do not reuse the former global user cache.
 export async function refreshChatGroupMembers() {
-    const members = await loadGameGroupMembers(currentGroupId, currentUser.accountId);
+    const members = await loadChatProfiles(currentGroupId, currentUser.accountId);
     let latestUser;
     try { latestUser = JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null'); } catch {}
     if (getSelectedGameGroupId(latestUser) !== currentGroupId || latestUser?.accountId !== currentUser.accountId) {
         throw new Error('帳號或群組已切換，請重新進入聊天室。');
     }
     if (!members.some(member => member.accountId === currentUser.accountId)) throw new Error('找不到有效的群組成員資料，請重新登入。');
+    allProfiles = members;
+    const own = members.find(member => member.accountId === currentUser.accountId);
+    Object.assign(currentUser, { name: own.name, role: own.role, nameHistory: own.nameHistory || [] });
+    document.getElementById('btnRepairChatMembers').hidden=!['admin','parent'].includes(currentUser.role);
     allUsers = members.filter(member => member.accountId !== currentUser.accountId);
     if (!roomsUnsubscribe) listenToRooms();
     return allUsers;
 }
 
 function listenToRooms() {
-    const roomsRef = collection(db, "rooms");
-    const q = query(
-        roomsRef, 
-        where("groupId", "==", currentGroupId), 
-        where("participants", "array-contains", currentUser.name), 
-        orderBy("lastMessageTime", "desc")
-    );
-
-    roomsUnsubscribe = watchRooms(q, currentGroupId, currentUser.accountId, (snapshot) => {
+    roomsUnsubscribe = watchMemberRooms(currentGroupId, currentUser.accountId, allProfiles, (snapshot) => {
         const container = document.getElementById('roomListContainer');
         container.innerHTML = '';
         if (snapshot.empty) {
@@ -71,7 +72,7 @@ function listenToRooms() {
             const room = docSnap.data();
             const roomId = docSnap.id;
             
-            if (!room.participants) room.participants = [currentUser.name];
+
 
             let timeStr = "";
             if (room.lastMessageTime && room.lastMessageTime.toDate) {
@@ -79,24 +80,25 @@ function listenToRooms() {
                 timeStr = `${String(dateObj.getMonth()+1).padStart(2,'0')}/${String(dateObj.getDate()).padStart(2,'0')} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
             }
 
-            const displayAvatar = room.avatar || `https://ui-avatars.com/api/?name=${room.name}&background=ecfdf5&color=059669`;
+            const displayAvatar = room.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(room.name || '')}&background=ecfdf5&color=059669`;
             const displayLastMsg = room.lastMessage || "尚未有訊息";
             
-            let myUnreadCount = (room.unreadCount && room.unreadCount[currentUser.name]) || 0;
+            let myUnreadCount = unreadFor(room, currentUser.accountId, allProfiles);
             let unreadBadgeHtml = myUnreadCount > 0 ? `<span class="unread-badge">${myUnreadCount > 99 ? '99+' : myUnreadCount}</span>` : '';
 
             const div = document.createElement('div');
             div.className = 'room-item';
+            div.dataset.roomId=roomId;
             div.onclick = () => enterRoom(roomId, room);
             div.innerHTML = `
-                <img src="${displayAvatar}" class="room-avatar">
+                <img src="${escapeHtml(displayAvatar)}" class="room-avatar">
                 <div class="room-info">
                     <div class="room-title-row">
-                        <span class="room-name">${room.name}</span>
+                        <span class="room-name">${escapeHtml(room.name)}</span>
                         <span class="room-time">${timeStr}</span>
                     </div>
                     <div class="room-last-msg">
-                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 8px;">${displayLastMsg}</span>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 8px;">${escapeHtml(displayLastMsg)}</span>
                         ${unreadBadgeHtml}
                     </div>
                 </div>
@@ -110,21 +112,23 @@ function listenToRooms() {
 }
 
 async function enterRoom(roomId, roomData) {
+    if (roomData.groupId !== currentGroupId || !roomHasMember(roomData,currentUser.accountId,allProfiles)) return;
+
     chatState.activeRoomId = roomId;
     chatState.activeRoomData = roomData;
-    if (!chatState.activeRoomData.participants) chatState.activeRoomData.participants = [currentUser.name];
+
 
     chatState.currentMessagesList = [];
     isFirstLoad = true; 
     
-    chatState.entryReadTimestamp = (roomData.readTimestamps && roomData.readTimestamps[currentUser.name]) ? roomData.readTimestamps[currentUser.name] : 0;
+    chatState.entryReadTimestamp = readFor(roomData,currentUser.accountId,allProfiles);
     
     document.getElementById('mainTopNav').style.display = 'none';
     document.getElementById('viewRoomList').style.display = 'none';
     document.getElementById('viewChatRoom').style.display = 'flex';
     
     document.getElementById('activeRoomName').innerText = roomData.name;
-    document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${roomData.name}&background=ecfdf5&color=059669`;
+    document.getElementById('activeRoomAvatar').src = roomData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(roomData.name || '')}&background=ecfdf5&color=059669`;
     
     markRoomRead(roomId, true);
     listenToMessages(roomId);
@@ -135,8 +139,12 @@ function listenToActiveRoom(roomId) {
     if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
     singleRoomUnsubscribe = watchRoom(doc(db, "rooms", roomId), currentGroupId, roomId, (docSnap) => {
         if (docSnap.exists()) {
-            chatState.activeRoomData = docSnap.data(); 
-            if (!chatState.activeRoomData.participants) chatState.activeRoomData.participants = [currentUser.name];
+            const room=docSnap.data();
+            if(room.groupId!==currentGroupId||!roomHasMember(room,currentUser.accountId,allProfiles)) {
+                document.getElementById('btnBackToList').click();
+                alert('你已不在此聊天室內。');return;
+            }
+            chatState.activeRoomData = room;
             renderAllMessages();             
         }
     });
@@ -149,25 +157,21 @@ let lastReadMarkAt = 0;
 async function markRoomRead(roomId, force = false) {
     if (!roomId || document.visibilityState !== 'visible') return;
 
-    const me = currentUser.name;
+    const me = currentUser.accountId;
     const room = chatState.activeRoomData || {};
-    const unread = (room.unreadCount && room.unreadCount[me]) || 0;
-    const lastRead = (room.readTimestamps && room.readTimestamps[me]) || 0;
+    const unread = unreadFor(room,me,allProfiles);
+    const lastRead = readFor(room,me,allProfiles);
     const now = Date.now();
 
     if (unread === 0 && lastRead > 0 && (now - lastRead) < READ_MARK_FRESH_MS) return;
     if (!force && (now - lastReadMarkAt) < READ_MARK_THROTTLE_MS) return;
 
     lastReadMarkAt = now;
-    room.unreadCount = { ...(room.unreadCount || {}), [me]: 0 };
-    room.readTimestamps = { ...(room.readTimestamps || {}), [me]: now };
-
+    if(!roomHasMember(room,me,allProfiles))return;
     try {
-        await updateDoc(doc(db, "rooms", roomId), {
-            [`readTimestamps.${me}`]: now,
-            [`unreadCount.${me}`]: 0
-        });
-    } catch (e) {}
+        await mutateRoomIdentity(chatContext,roomId,{readAt:now});
+    } catch (error) { console.warn('聊天室已讀狀態未儲存',error.message); }
+
 }
 
 document.getElementById('btnBackToList').addEventListener('click', () => {
@@ -243,7 +247,7 @@ function renderAllMessages() {
         }
 
         // --- 未讀新訊息分隔線 ---
-        if (!unreadDividerAdded && chatState.entryReadTimestamp > 0 && msgTimestampMs > chatState.entryReadTimestamp && msg.sender !== currentUser.name && !msg.isSystem) {
+        if (!unreadDividerAdded && chatState.entryReadTimestamp > 0 && msgTimestampMs > chatState.entryReadTimestamp && !isMyMessage(msg) && !msg.isSystem) {
             const divider = document.createElement('div');
             divider.id = "unread-divider-line";
             divider.className = "unread-divider";
@@ -272,12 +276,13 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
     // 如果是系統退出訊息，特殊渲染置中顯示
     if (msg.isSystem) {
         wrapper.className = 'system-msg-wrapper';
-        wrapper.innerHTML = `<span class="system-msg">${msg.text}</span>`;
+        wrapper.innerHTML = `<span class="system-msg">${escapeHtml(msg.text)}</span>`;
         document.getElementById('chatMessages').appendChild(wrapper);
         return;
     }
 
-    const isMine = (msg.sender === currentUser.name);
+    const isMine = isMyMessage(msg);
+    const senderName = displayName(senderId(msg,chatState.activeRoomData,allProfiles),allProfiles,msg.sender);
     wrapper.className = `chat-msg-wrapper ${isMine ? 'msg-mine-wrapper' : 'msg-other-wrapper'}`;
     
     let timeStr = "剛才";
@@ -287,9 +292,9 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
     }
 
     let readCount = 0;
-    if (isMine && chatState.activeRoomData && chatState.activeRoomData.readTimestamps) {
-        Object.keys(chatState.activeRoomData.readTimestamps).forEach(pName => {
-            if (pName !== currentUser.name && chatState.activeRoomData.readTimestamps[pName] >= msgTimestampMs) readCount++;
+    if (isMine && chatState.activeRoomData) {
+        roomIdentity(chatState.activeRoomData,allProfiles).ids.forEach(id=>{
+            if(id!==currentUser.accountId&&readFor(chatState.activeRoomData,id,allProfiles)>=msgTimestampMs)readCount++;
         });
     }
     let readHtml = readCount > 0 ? `<span class="msg-read">已讀${readCount > 1 ? ' '+readCount : ''}</span>` : '';
@@ -303,7 +308,7 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
     let displayText = msg.text || '';
     displayText = displayText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     
-    const allNames = [currentUser.name, ...allUsers.map(u => u.name)];
+    const allNames = [currentUser.name, ...allUsers.map(u => u.name)].map(escapeHtml);
     allNames.forEach(pName => {
         displayText = displayText.split(`@${pName}`).join(`<span class="mention-highlight">@${pName}</span>`);
     });
@@ -317,17 +322,17 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
     let replyHtml = '';
     if (msg.replyTo) {
         const replyText = msg.replyTo.text ? msg.replyTo.text : '傳送了圖片';
-        replyHtml = `<div class="reply-quote"><strong>${msg.replyTo.sender}</strong>: ${replyText}</div>`;
+        replyHtml = `<div class="reply-quote"><strong>${escapeHtml(displayName(msg.replyTo.senderAccountId,allProfiles,msg.replyTo.sender))}</strong>: ${escapeHtml(replyText)}</div>`;
     }
-    const safeText = (msg.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
     wrapper.innerHTML = `
-        ${!isMine ? `<div class="msg-sender">${msg.sender}</div>` : ''}
-        <div class="chat-msg ${isMine ? 'msg-mine' : 'msg-other'}" onclick="window.chatCore.openMsgAction('${msgId}', ${isMine}, ${msgTimestampMs}, '${msg.sender}', '${msg.imageUrl ? '[圖片]' : safeText}')">
+        ${!isMine ? `<div class="msg-sender">${escapeHtml(senderName)}</div>` : ''}
+        <div class="chat-msg ${isMine ? 'msg-mine' : 'msg-other'}">
             ${replyHtml} ${contentHtml}
         </div>
         <div class="msg-status-row">${isMine ? readHtml : ''}<span class="msg-time">${timeStr}</span></div>
     `;
+    wrapper.querySelector('.chat-msg')?.addEventListener('click',()=>openMsgAction(msgId,isMine,msgTimestampMs,senderName,msg.imageUrl?'[圖片]':msg.text||''));
     document.getElementById('chatMessages').appendChild(wrapper);
 }
 
@@ -347,15 +352,16 @@ chatInput.addEventListener('input', function() {
 
     if (atIndex !== -1 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === ' ' || textBeforeCursor[atIndex - 1] === '\n')) {
         const queryStr = textBeforeCursor.substring(atIndex + 1);
-        const members = chatState.activeRoomData && chatState.activeRoomData.participants ? chatState.activeRoomData.participants : [];
+        const members = roomIdentity(chatState.activeRoomData,allProfiles).ids.filter(id=>id!==currentUser.accountId).map(id=>displayName(id,allProfiles));
         const matched = members.filter(m => m !== currentUser.name && m.toLowerCase().includes(queryStr.toLowerCase()));
 
         if (matched.length > 0) {
             let html = '';
             matched.forEach(m => {
-                html += `<div class="mention-item" onclick="window.chatCore.insertMention('${m}')">👤 @${m}</div>`;
+                html += `<div class="mention-item" data-mention="${escapeHtml(m)}">@${escapeHtml(m)}</div>`;
             });
             mentionDropdown.innerHTML = html;
+            mentionDropdown.querySelectorAll('[data-mention]').forEach(item=>item.addEventListener('click',()=>insertMention(item.dataset.mention)));
             mentionDropdown.style.display = 'block';
             return;
         }
@@ -373,7 +379,8 @@ chatInput.addEventListener('keydown', (e) => {
 
 document.getElementById('btnSend').addEventListener('click', async () => {
     const text = chatInput.value.trim();
-    if (!text) return;
+    if (!text || !chatState.activeRoomId) return;
+    const roomId=chatState.activeRoomId;
     
     // 送出後重置狀態與高度
     chatInput.value = ''; 
@@ -382,9 +389,11 @@ document.getElementById('btnSend').addEventListener('click', async () => {
     mentionDropdown.style.display = 'none';
 
     try {
+        await mutateRoomIdentity(chatContext,roomId);
         const msgData = { 
             groupId: currentGroupId, 
-            roomId: chatState.activeRoomId, 
+            roomId,
+            senderAccountId: currentUser.accountId,
             sender: currentUser.name, 
             text: text, 
             timestamp: serverTimestamp() 
@@ -392,15 +401,12 @@ document.getElementById('btnSend').addEventListener('click', async () => {
         if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
         await addDoc(collection(db, "messages"), msgData);
 
-        let updatePayload = { lastMessage: `${currentUser.name}: ${text}`, lastMessageTime: serverTimestamp() };
-        if(chatState.activeRoomData && chatState.activeRoomData.participants) {
-            chatState.activeRoomData.participants.forEach(p => {
-                if (p !== currentUser.name) updatePayload[`unreadCount.${p}`] = increment(1);
-            });
-        }
-        await updateDoc(doc(db, "rooms", chatState.activeRoomId), updatePayload);
+        await mutateRoomIdentity(chatContext,roomId,{activity:{lastMessage:`${currentUser.name}: ${text}`,lastMessageTime:serverTimestamp()}});
         setTimeout(() => document.getElementById('chatMessages').scrollTo({ top: 99999, behavior: 'smooth' }), 50);
-    } catch (e) {} 
+    } catch (error) {
+        if(chatState.activeRoomId===roomId&&!chatInput.value)chatInput.value=text;
+        alert(error.message || '傳送失敗，請稍後重試。');
+    }
     finally { document.getElementById('btnSend').disabled = false; chatInput.focus(); }
 });
 
@@ -421,9 +427,11 @@ chatPhotoInput.addEventListener('change', async (e) => {
             const base64Img = canvas.toDataURL('image/jpeg', 0.8); 
 
             try {
+                await mutateRoomIdentity(chatContext,roomId);
                 const msgData = { 
                     groupId: currentGroupId, 
-                    roomId: chatState.activeRoomId, 
+                    roomId,
+                    senderAccountId: currentUser.accountId,
                     sender: currentUser.name, 
                     text: "傳送了圖片", 
                     imageUrl: base64Img, 
@@ -432,15 +440,9 @@ chatPhotoInput.addEventListener('change', async (e) => {
                 if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
                 await addDoc(collection(db, "messages"), msgData);
 
-                let updatePayload = { lastMessage: `${currentUser.name}: 傳送了圖片 📷`, lastMessageTime: serverTimestamp() };
-                if(chatState.activeRoomData && chatState.activeRoomData.participants) {
-                    chatState.activeRoomData.participants.forEach(p => {
-                        if (p !== currentUser.name) updatePayload[`unreadCount.${p}`] = increment(1);
-                    });
-                }
-                await updateDoc(doc(db, "rooms", chatState.activeRoomId), updatePayload);
+                await mutateRoomIdentity(chatContext,roomId,{activity:{lastMessage:`${currentUser.name}: 傳送了圖片`,lastMessageTime:serverTimestamp()}});
                 setTimeout(() => document.getElementById('chatMessages').scrollTo({ top: 99999, behavior: 'smooth' }), 100);
-            } catch (error) {} 
+            } catch (error) { alert(error.message || '圖片傳送失敗，請稍後重試。'); }
             finally { document.getElementById('btnSend').disabled = false; document.getElementById('btnTriggerPhoto').disabled = false; chatPhotoInput.value = ''; }
         }; img.src = evt.target.result;
     }; reader.readAsDataURL(file);
@@ -473,7 +475,7 @@ function openMsgAction(msgId, isMine, timestampMs, sender, text) {
 function closeMsgActionModal(e) { if (e.target.id === 'msgActionModal' || e.target.tagName === 'BUTTON') document.getElementById('msgActionModal').style.display = 'none'; }
 
 function triggerReply() {
-    pendingReplyMsgId = selectedMsgForAction.id; pendingReplyData = { sender: selectedMsgForAction.sender, text: selectedMsgForAction.text };
+    pendingReplyMsgId = selectedMsgForAction.id; pendingReplyData = { sender: selectedMsgForAction.sender, senderAccountId: senderId(chatState.currentMessagesList.find(message=>message.id===selectedMsgForAction.id)||{},chatState.activeRoomData,allProfiles), text: selectedMsgForAction.text };
     document.getElementById('replyPreviewSender').innerText = selectedMsgForAction.sender;
     document.getElementById('replyPreviewText').innerText = selectedMsgForAction.text;
     document.getElementById('replyPreviewArea').style.display = 'flex';
@@ -482,6 +484,9 @@ function triggerReply() {
 function cancelReply() { pendingReplyMsgId = null; pendingReplyData = null; document.getElementById('replyPreviewArea').style.display = 'none'; }
 
 async function triggerRetract() {
+    const message=chatState.currentMessagesList.find(message=>message.id===selectedMsgForAction?.id);
+    if(!message||!isMyMessage(message))return;
+
     if (!confirm("確定要收回此訊息嗎？")) return;
     try {
         await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null });

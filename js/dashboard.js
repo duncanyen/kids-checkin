@@ -1,6 +1,7 @@
+import { loadChatProfiles, watchMemberRooms } from './chat-membership.js';
+import { unreadFor, readFor } from './chat-identity-core.js';
 import { mountAppNavigation } from './app-navigation.js';
 import { icon, enhanceNavigation } from './ui-icons.js';
-import { watchRooms } from './live-reads.js';
 import { readPersonalLayout } from './personal-layout.js';
 import { db } from "./firebase-config.js";
 import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -399,23 +400,29 @@ window.checkUnreadMessages = function(user) {
     unreadUnsubscribe?.(); unreadUnsubscribe = null;
     try {
         if (!window.currentGroup) return;
-        const q = query(collection(db, "rooms"), where("groupId", "==", window.currentGroup.id), where("participants", "array-contains", user.name));
-        unreadUnsubscribe = watchRooms(q, window.currentGroup.id, user.accountId, (querySnapshot) => {
+        const groupId=window.currentGroup.id;
+        let active=true,stop;
+        unreadUnsubscribe=()=>{active=false;stop?.();};
+        loadChatProfiles(groupId,user.accountId).then(profiles=>{
+        if(!active)return;
+        stop=watchMemberRooms(groupId,user.accountId,profiles,(querySnapshot)=>{
+            if(!active)return;
             let totalUnreadMessages = 0;
             querySnapshot.forEach(docSnap => {
                 const room = docSnap.data();
-                if (room.unreadCount && room.unreadCount[user.name]) totalUnreadMessages += room.unreadCount[user.name];
+                if (unreadFor(room,user.accountId,profiles)) totalUnreadMessages += unreadFor(room,user.accountId,profiles);
                 else {
                     let lastMsgTime = room.lastMessageTime?.toDate?.()?.getTime() || 0;
-                    let myReadTime = room.readTimestamps?.[user.name] || 0;
+                    let myReadTime = readFor(room,user.accountId,profiles);
                     const hasLastMessage = room.lastMessage && room.lastMessage.trim() !== '';
-                    const isLastMsgMine = hasLastMessage && room.lastMessage.startsWith(`${user.name}:`);
+                    const isLastMsgMine = room.lastSenderAccountId === user.accountId;
                     if (hasLastMessage && lastMsgTime > myReadTime && !isLastMsgMine) totalUnreadMessages++;
                 }
             });
             const badge = document.getElementById('chatBadge');
             if (badge) { if (totalUnreadMessages > 0) { badge.style.display = 'block'; badge.innerText = totalUnreadMessages > 99 ? '99+' : totalUnreadMessages; } else badge.style.display = 'none'; }
         });
+        }).catch(error=>console.warn('聊天室未讀數載入失敗',error.message));
     } catch (e) {}
 };
 

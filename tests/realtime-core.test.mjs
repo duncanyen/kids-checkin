@@ -64,6 +64,23 @@ test('message mirroring resolves legacy room group, handles retraction/deletion 
  await f.mirror.message('bad',f.snapshot({groupId:'B',roomId:'r',text:'wrong'},3),null);assert.equal(f.records['nexus/messages/A/r/bad'],undefined);
  await f.mirror.message('m',f.snapshot(null),f.snapshot({roomId:'r'}),'2026-10-26T00:00:00Z');assert.equal(f.records['nexus/messages/A/r/m'].deleted,true);
 });
+test('canonical room recipients survive rename and cannot be resurrected by legacy names',async()=>{
+ const f=fixture(),room={...f.fs['rooms/r'],participantIds:['alice','bob']};
+ f.fs['users/a'].name='Renamed Alice';f.fs['users/b'].name='Renamed Bob';
+ await f.mirror.room('r',f.snapshot(room,2),null);
+ assert.deepEqual(f.records['nexus/access/rooms/r'].participants,{alice:true,bob:true});
+ await f.mirror.room('r',f.snapshot({...room,participantIds:['alice']},3),f.snapshot(room,2));
+ assert.deepEqual(f.records['nexus/access/rooms/r'].participants,{alice:true});
+ assert.equal(f.records['nexus/inboxes/A/bob/r'].deleted,true);
+});
+test('legacy mirrors resolve historical names only when the account is unambiguous',async()=>{
+ const f=fixture();f.fs['users/a']={accountId:'alice',name:'New Alice',nameHistory:['Alice']};
+ await f.mirror.room('r',f.snapshot(f.fs['rooms/r'],2),null);
+ assert.deepEqual(f.records['nexus/access/rooms/r'].participants,{alice:true,bob:true});
+ f.fs['users/b'].nameHistory=['Alice'];
+ await f.mirror.room('r',f.snapshot(f.fs['rooms/r'],3),null,null,true);
+ assert.deepEqual(f.records['nexus/access/rooms/r'].participants,{bob:true});
+});
 
 test('revoked permissions stop an existing fallback; missing rooms never use a Firestore bypass', async()=>{
  let send,deny,stopped=0,errors=0;

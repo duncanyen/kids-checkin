@@ -677,7 +677,11 @@ async function saveEditUser() {
         await runTransaction(db, async transaction => {
             const group = await readManagedGroup(transaction);
             if (!group.members.includes(targetUser.accountId)) throw new Error('此成員已離開目前群組。');
-            transaction.update(doc(db, 'users', docId), {
+            const profileRef=doc(db,'users',docId), profileSnap=await transaction.get(profileRef);
+            if(!profileSnap.exists())throw new Error('成員資料已不存在。');
+            const profile=profileSnap.data();
+            transaction.update(profileRef, {
+                ...(nameInput!==profile.name?{nameHistory:[...new Set([...(profile.nameHistory||[]),profile.name].filter(Boolean))]}:{}),
                 accountId: idInput, name: nameInput, pin: pinInput,
                 email: emailInput || null, role: roleInput, menus: selectedMenus
             });

@@ -1,6 +1,8 @@
-import { collection, addDoc, serverTimestamp, doc, updateDoc, arrayRemove, arrayUnion } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { mutateRoomIdentity, legacyRoomsForAdmin } from './chat-membership.js';
+import { roomIdentity, creatorId, displayName, senderId } from './chat-identity-core.js';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { db } from "./firebase-config.js";
-import { currentUser, currentGroupId, refreshChatGroupMembers, chatState } from "./chat-core.js";
+import { currentUser, currentGroupId, refreshChatGroupMembers, chatState, allProfiles, chatContext } from "./chat-core.js";
 
 let uploadedAvatarBase64_Create = null; 
 let uploadedAvatarBase64_Edit = null;
@@ -22,11 +24,10 @@ function renderMemberChoices(containerId, users, emptyMessage) {
     if (!users.length) container.textContent = emptyMessage;
 }
 
-function resolveSelectedNames(ids, users) {
-    const profiles = new Map(users.map(user => [user.accountId, user]));
-    if (ids.some(id => !profiles.has(id))) throw new Error('部分成員已離開目前群組，請重新選擇。');
-    // Keep the existing room participant name format for chat/read/unread compatibility.
-    return [...new Set(ids)].map(id => profiles.get(id).name);
+function resolveSelectedIds(ids, users) {
+    const profiles = new Map(users.map(user => [user.accountId,user]));
+    if(ids.some(id=>!profiles.has(id)))throw new Error('部分成員已離開目前群組，請重新選擇。');
+    return [...new Set(ids)];
 }
 
 document.getElementById('btnOpenCreateModal').addEventListener('click', async () => {
@@ -50,13 +51,15 @@ document.getElementById('btnConfirmCreate').addEventListener('click', async () =
     savingMembers = true; button.disabled = true;
     try {
         const users = await refreshChatGroupMembers();
-        const participants = [currentUser.name, ...resolveSelectedNames(ids, users)];
+        const participantIds = [currentUser.accountId, ...resolveSelectedIds(ids, users)];
         await addDoc(collection(db, "rooms"), {
             groupId: currentGroupId,
             name,
             avatar: uploadedAvatarBase64_Create || '',
-            participants,
+            participantIds,
+            creatorAccountId: currentUser.accountId,
             creator: currentUser.name,
+            lastSenderAccountId: currentUser.accountId,
             lastMessage: `${currentUser.name} 建立了群組`,
             lastMessageTime: serverTimestamp()
         });
@@ -76,34 +79,29 @@ document.getElementById('btnOpenSettingsMenu').addEventListener('click', () => {
 // =================【新增踢人功能】=================
 // 管理員 (admin/parent) 或是該群組的創立者 (creator) 才有權限踢人
 function openViewMembers() {
-    let html = '';
-    const members = chatState.activeRoomData.participants || [];
-    const isRoomAdmin = (currentUser.role === 'admin' || currentUser.role === 'parent' || chatState.activeRoomData.creator === currentUser.name);
-
-    members.forEach(p => {
-        let kickBtn = '';
-        // 不要讓自己踢自己
-        if (isRoomAdmin && p !== currentUser.name) {
-            kickBtn = `<button class="btn-kick-member" onclick="window.chatRooms.kickMember('${p}')">移除</button>`;
+    const container=document.getElementById('viewMemberList');container.replaceChildren();
+    const members=roomIdentity(chatState.activeRoomData,allProfiles).ids;
+    const admin=['admin','parent'].includes(currentUser.role)||creatorId(chatState.activeRoomData,allProfiles)===currentUser.accountId;
+    for(const id of members){
+        const row=document.createElement('div');row.className='member-item';
+        const label=document.createElement('span');label.textContent=displayName(id,allProfiles)+'（'+id+'）';row.append(label);
+        if(admin&&id!==currentUser.accountId){
+            const button=document.createElement('button');button.className='btn-kick-member';button.textContent='移除';button.addEventListener('click',()=>kickMember(id));row.append(button);
         }
-        
-        html += `<div class="member-item" style="cursor:default; padding: 6px 0; display:flex; align-items:center;">
-                    <span>👤 ${p}</span>
-                    ${kickBtn}
-                 </div>`;
-    });
-    document.getElementById('viewMemberList').innerHTML = html;
+        container.append(row);
+    }
     openSubModal('viewMembersModal');
 }
 
 // 實際剔除成員的函式
 async function kickMember(targetMember) {
-    if (!confirm(`確定要將 ${targetMember} 移出聊天室嗎？`)) return;
+    const name=displayName(targetMember,allProfiles);
+    if (!confirm(`確定要將 ${name} 移出聊天室嗎？`)) return;
     
     try {
-        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants: arrayRemove(targetMember) });
+        chatState.activeRoomData=await mutateRoomIdentity(chatContext,chatState.activeRoomId,{remove:[targetMember]});
 
-        const systemMsgText = `${targetMember} 已退出聊天室`;
+        const systemMsgText = `${name} 已退出聊天室`;
         await addDoc(collection(db, "messages"), { 
             groupId: currentGroupId, 
             roomId: chatState.activeRoomId, 
@@ -120,7 +118,7 @@ async function kickMember(targetMember) {
 
         // 刷新列表顯示
         openViewMembers(); 
-        alert(`已將 ${targetMember} 移出聊天室`);
+        alert(`已將 ${name} 移出聊天室`);
     } catch (e) { alert("移除成員失敗"); }
 }
 
@@ -133,8 +131,8 @@ async function openInviteMembers() {
     try {
         const users = await refreshChatGroupMembers();
         if (roomId !== chatState.activeRoomId) return;
-        const currentMembers = chatState.activeRoomData.participants || [];
-        const candidates = users.filter(user => !currentMembers.includes(user.name));
+        const currentMembers = roomIdentity(chatState.activeRoomData,allProfiles).ids;
+        const candidates = users.filter(user => !currentMembers.includes(user.accountId));
         renderMemberChoices('inviteMemberList', candidates, '所有群組成員都已經在聊天室內囉！');
         button.style.display = candidates.length ? 'block' : 'none'; button.disabled = false;
     } catch (error) { container.textContent = '無法載入成員：' + error.message; }
@@ -161,17 +159,17 @@ document.getElementById('btnSaveInvite').addEventListener('click', async () => {
     try {
         const users = await refreshChatGroupMembers();
         if (!roomId || roomId !== chatState.activeRoomId || chatState.activeRoomData?.groupId !== currentGroupId) throw new Error('聊天室已變更，請重新開啟邀請。');
-        const newMembers = resolveSelectedNames(ids, users).filter(name => !(chatState.activeRoomData.participants || []).includes(name));
+        const newMembers = resolveSelectedIds(ids, users).filter(id => !roomIdentity(chatState.activeRoomData,allProfiles).ids.includes(id));
         if (!newMembers.length) return backToSettings('inviteMembersModal');
-        await updateDoc(doc(db, "rooms", roomId), { participants: arrayUnion(...newMembers) });
+        chatState.activeRoomData=await mutateRoomIdentity(chatContext,roomId,{add:newMembers});
         for (const member of newMembers) {
             await addDoc(collection(db, "messages"), {
                 groupId: currentGroupId, roomId, sender: '系統', isSystem: true,
-                text: `${member} 加入聊天室`, timestamp: serverTimestamp()
+                text: `${displayName(member,allProfiles)} 加入聊天室`, timestamp: serverTimestamp()
             });
         }
         await updateDoc(doc(db, "rooms", roomId), {
-            lastMessage: `${newMembers.join(', ')} 加入聊天室`, lastMessageTime: serverTimestamp()
+            lastMessage: `${newMembers.map(id=>displayName(id,allProfiles)).join(', ')} 加入聊天室`, lastMessageTime: serverTimestamp()
         });
         backToSettings('inviteMembersModal');
     } catch (error) { alert('邀請成員失敗：' + error.message); }
@@ -180,20 +178,21 @@ document.getElementById('btnSaveInvite').addEventListener('click', async () => {
 
 async function leaveGroup() {
     if (!confirm(`確定要退出「${chatState.activeRoomData.name}」群組嗎？`)) return;
+    const roomId=chatState.activeRoomId;
     try {
-        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { participants: arrayRemove(currentUser.name) });
+        await mutateRoomIdentity(chatContext,roomId,{remove:[currentUser.accountId]});
 
         const systemMsgText = `${currentUser.name} 已退出聊天室`;
         await addDoc(collection(db, "messages"), { 
             groupId: currentGroupId, 
-            roomId: chatState.activeRoomId, 
+            roomId,
             sender: "系統", 
             isSystem: true,
             text: systemMsgText, 
             timestamp: serverTimestamp() 
         });
 
-        await updateDoc(doc(db, "rooms", chatState.activeRoomId), { 
+        await updateDoc(doc(db, "rooms", roomId), {
             lastMessage: systemMsgText, 
             lastMessageTime: serverTimestamp() 
         });
@@ -217,7 +216,7 @@ function exportChatHistory() {
             textOutput += `[${timeStr}] 系統: ${msg.text}\n`;
         } else {
             const content = msg.isRetracted ? "(收回了訊息)" : (msg.imageUrl ? "[傳送了圖片]" : msg.text);
-            textOutput += `[${timeStr}] ${msg.sender}: ${content}\n`;
+            textOutput += `[${timeStr}] ${displayName(senderId(msg,chatState.activeRoomData,allProfiles),allProfiles,msg.sender)}: ${content}\n`;
         }
     });
 
@@ -276,3 +275,40 @@ window.chatRooms = {
     closeModal, openSubModal, backToSettings, openViewMembers, openInviteMembers,
     leaveGroup, exportChatHistory, openPhotoGallery, kickMember
 };
+
+// Older name-only rooms with missing/ambiguous names need explicit administrator
+// confirmation. Never guess a renamed account or grant every group member access.
+const repairDialog=document.getElementById('chatIdentityRepair');
+document.getElementById('btnCloseChatRepair').addEventListener('click',()=>repairDialog.close());
+document.getElementById('btnRepairChatMembers').addEventListener('click',async()=>{
+    const list=document.getElementById('chatRepairRooms');list.textContent='載入舊聊天室中…';repairDialog.showModal();
+    try {
+        const {rooms,profiles}=await legacyRoomsForAdmin(chatContext);list.replaceChildren();
+        if(!rooms.length){list.textContent='所有聊天室都已使用固定帳號。';return;}
+        for(const room of rooms){
+            const section=document.createElement('section');section.className='chat-repair-room';section.dataset.roomId=room.id;
+            const title=document.createElement('h4');title.textContent=room.name||'未命名聊天室';section.append(title);
+            const fields=[];
+            for(const name of [...new Set(room.participants||[])]){
+                const label=document.createElement('label');label.textContent='舊名稱：'+name;
+                const select=document.createElement('select');select.setAttribute('aria-label','舊名稱「'+name+'」對應帳號');
+                const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='請確認對應帳號';select.append(placeholder);
+                for(const profile of profiles){const option=document.createElement('option');option.value=profile.accountId;option.textContent=profile.name+'（'+profile.accountId+'）';select.append(option);}
+                const removed=document.createElement('option');removed.value='__removed__';removed.textContent='已離開群組，不加入聊天室';select.append(removed);
+                select.value=room.identity.bindings[name]||'';label.append(select);section.append(label);fields.push({name,select});
+            }
+            const status=document.createElement('p');status.setAttribute('role','status');
+            const save=document.createElement('button');save.textContent='確認成員帳號';save.type='button';
+            save.addEventListener('click',async()=>{
+                if(!fields.length||fields.some(field=>!field.select.value)){status.textContent='請確認每個舊名稱的對應帳號。';return;}
+                if(!confirm('請確認成員帳號正確；此操作會設定聊天室的進入資格。'))return;
+                save.disabled=true;
+                try{
+                    await mutateRoomIdentity({...chatContext,profiles},room.id,{bindings:Object.fromEntries(fields.map(({name,select})=>[name,select.value==='__removed__'?null:select.value]))});
+                    status.textContent='已改用固定帳號，成員可重新整理聊天室。';fields.forEach(({select})=>select.disabled=true);
+                }catch(error){status.textContent=error.message;save.disabled=false;}
+            });
+            section.append(save,status);list.append(section);
+        }
+    }catch(error){list.textContent=error.message;}
+});

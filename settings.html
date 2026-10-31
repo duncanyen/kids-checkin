@@ -308,7 +308,7 @@
                     const updateData = {};
                     let nameChanged = false;
 
-                    if (newName !== currentUser.name) { updateData.name = newName; nameChanged = true; }
+                    if (newName !== currentUser.name) { updateData.name = newName; updateData.nameHistory = [...new Set([...(userDoc.data().nameHistory || []), userDoc.data().name].filter(Boolean))]; nameChanged = true; }
                     if (newPin) { updateData.pin = newPin; }
 
                     if (Object.keys(updateData).length > 0) {

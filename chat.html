@@ -62,6 +62,7 @@
             <span class="list-title"><span data-ui-icon="chat"></span>聊天群組</span>
             <button class="btn-new-chat" id="btnOpenCreateModal">➕ 建立群組</button>
         </div>
+        <button type="button" id="btnRepairChatMembers" class="chat-repair-open" hidden>確認舊聊天室成員</button>
         <div class="room-list-content" id="roomListContainer">
             <div class="nexus-skeleton" role="status" aria-label="載入聊天室">
                 <div class="nexus-skeleton-row" aria-hidden="true"><i></i><span><b></b><b></b></span></div>
@@ -70,6 +71,13 @@
             </div>
         </div>
     </div>
+
+    <dialog id="chatIdentityRepair" class="chat-repair-dialog" aria-labelledby="chatRepairTitle">
+        <h3 id="chatRepairTitle">確認舊聊天室成員</h3>
+        <p>舊聊天室以名稱記錄成員。請確認對應帳號，之後改名也能正常進入；不確定時請先向成員確認。</p>
+        <div id="chatRepairRooms"></div>
+        <button type="button" id="btnCloseChatRepair">關閉</button>
+    </dialog>
 
     <!-- 視圖 2：聊天室內部 -->
     <div class="view-container" id="viewChatRoom" style="display: none;">
