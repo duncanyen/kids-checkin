@@ -482,28 +482,22 @@ window.checkCalendarAlerts = function(user) {
 };
 
 window.renderAgendaUI = function() {
-    const categoryIcons = { school: '🏫', company: '💼', restaurant: '🍽', birthday: '🎂', personal: '👤', other: '📌' };
     const now = new Date();
     const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const dateTitle = `${now.getMonth()+1}月${now.getDate()}日 (${weekDays[now.getDay()]})`;
     
     
-    let activeIcons = [], validEvents = [];
+    const validEvents = [];
     
     cachedCalendarEvents.forEach(evt => {
-        let start = new Date(now), end = new Date(now), isExpired = false;
-        if (evt.isAllDay !== false) { start.setHours(0,0,0,0); end.setHours(23,59,59,999); } 
+        let end = new Date(now), isExpired = false;
+        if (evt.isAllDay !== false) { end.setHours(23,59,59,999); }
         else {
-            if(evt.startTime) { const [sh, sm] = evt.startTime.split(':'); start.setHours(sh, sm, 0, 0); }
             if(evt.endTime) { const [eh, em] = evt.endTime.split(':'); end.setHours(eh, em, 0, 0); if (now > end) isExpired = true; }
         }
         if (!isExpired) {
             validEvents.push(evt);
-            let triggerTime = new Date(start);
-            if (evt.reminderUnit === 'minutes') triggerTime.setMinutes(triggerTime.getMinutes() - (evt.reminderValue || 0));
-            else if (evt.reminderUnit === 'hours') triggerTime.setHours(triggerTime.getHours() - (evt.reminderValue || 0));
-            if (now >= triggerTime && now <= end) activeIcons.push(categoryIcons[evt.category] || '📌');
         }
     });
 
@@ -526,10 +520,7 @@ window.renderAgendaUI = function() {
             <div class="agenda-card" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
                 <div class="agenda-header">
                     <div class="agenda-date">${dateTitle}</div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <div style="font-size:calc(16px * var(--n-font-scale, 1));">${activeIcons.map(icon => `<span>${icon}</span>`).join('')}</div>
-                        <div class="agenda-count">今天有 ${validEvents.length} 個行程</div>
-                    </div>
+                    <div class="agenda-count">今天有 ${validEvents.length} 個行程</div>
                 </div>
                 <div class="agenda-list">${listHtml}</div>
             </div>`;
