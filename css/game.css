@@ -122,7 +122,7 @@ body {
 .btn-return-lobby { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 12px; font-weight: 600; color: var(--text-main); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: calc(14px * var(--n-font-scale, 1)); box-shadow: var(--shadow-sm); }
 .btn-leaderboard { background: #fff8e1; color: #f57f17; border: 1px solid #ffe0b2; padding: 8px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: calc(14px * var(--n-font-scale, 1)); display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow-sm); transition: background 0.2s; }
 .btn-leaderboard:hover { background: #ffecb3; }
-.game-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.game-header-actions { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px; }
 
 .score-board { background: white; border-radius: 16px; padding: 18px; margin-bottom: 20px; display: flex; justify-content: space-around; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
 .score-item { text-align: center; }

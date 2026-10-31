@@ -23,7 +23,7 @@
 </head>
 <body data-app-page="gamezone">
     <div class="top-nav">
-        <button class="btn-back" id="btnBack">❮ 返回主選單</button>
+        <button class="btn-back" id="btnBack">返回主選單</button>
         <div class="current-user-badge" id="btnLogout">
             <img id="gameUserAvatar" class="mini-avatar" src="" alt="">
             <span id="gameUserName">載入中...</span>
@@ -63,7 +63,6 @@
     <!-- 剪刀石頭布遊戲容器 -->
     <div class="sub-game-container" id="kidGameContainer" style="display: none;">
         <div class="game-header-actions">
-            <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
             <button class="btn-leaderboard" onclick="openLeaderboard('rps')">🏆 排行榜</button>
         </div>
         <div class="score-board">
@@ -98,7 +97,6 @@
     <!-- 2048 遊戲容器 -->
     <div class="sub-game-container" id="g2048Container" style="display: none;">
         <div class="game-header-actions" style="max-width: 340px; margin: 0 auto 15px auto;">
-            <button class="btn-return-lobby" onclick="returnToLobby()">❮ 遊戲選擇</button>
             <div style="display:flex; gap:8px;">
                 <button class="btn-leaderboard" onclick="openLeaderboard('g2048')">🏆 排行</button>
                 <button class="btn-restart-2048" onclick="init2048Game()">重來</button>

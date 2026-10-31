@@ -9,6 +9,7 @@ import {
 
 const RPS_ICONS = ["✊", "✋", "✌️"];
 let isGameLocked = false;
+let activeGame = null;
 
 const context = readGameContext();
 watchGameContext(context);
@@ -64,6 +65,8 @@ function selectGame(gameType) {
     }
 
     document.getElementById('gameLobby').style.display = 'none';
+    activeGame = gameType;
+    document.getElementById('btnBack').textContent = '返回遊戲大廳';
     const gameZoneTitle = document.getElementById('gameZoneTitle');
 
     if (gameType === 'rps') {
@@ -77,6 +80,8 @@ function selectGame(gameType) {
 }
 
 function returnToLobby() {
+    activeGame = null;
+    document.getElementById('btnBack').textContent = '返回主選單';
     reset2048Gesture();
     const kidGameContainer = document.getElementById('kidGameContainer');
     const g2048Container = document.getElementById('g2048Container');
@@ -552,7 +557,10 @@ const btnBack = document.getElementById('btnBack');
 const btnLogout = document.getElementById('btnLogout');
 
 if (btnBack) {
-    btnBack.addEventListener('click', () => window.location.href = 'index.html');
+    btnBack.addEventListener('click', () => {
+        if (activeGame) returnToLobby();
+        else window.location.href = 'index.html';
+    });
 }
 if (btnLogout) {
     btnLogout.addEventListener('click', () => {
