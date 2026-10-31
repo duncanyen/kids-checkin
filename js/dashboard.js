@@ -529,9 +529,8 @@ window.renderAgendaUI = function() {
             <div class="agenda-card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;" onclick="localStorage.setItem('calendar_target_date', '${todayStr}'); window.navTo('calendar.html', '行事曆');">
                 <div>
                     <div class="agenda-date" style="font-size: calc(15px * var(--n-font-scale, 1));">${dateTitle}</div>
-                    <div style="font-size: calc(13px * var(--n-font-scale, 1)); color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排 ☕</div>
+                    <div style="font-size: calc(13px * var(--n-font-scale, 1)); color: var(--text-sub); margin-top: 4px; font-weight:600;">今日無行程安排</div>
                 </div>
-                <!-- 這裡使用動態生成的 HTML 替換原本的 📅 Emoji -->
                 <div class="dash-icon" style="background: var(--bg-body); border:1px solid var(--border-color); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: calc(24px * var(--n-font-scale, 1)); color:var(--text-main);">${icon('calendar')}</div>
             </div>`;
     }
