@@ -1,15 +1,22 @@
 import { equippedBow, equippedWeapon } from './combat-rules.js';
-import { launchVelocity, arrowPoint, arrowHits } from './archery-core.js';
+import { launchVelocity, arrowPoint, arrowHits, archeryControlLayout } from './archery-core.js';
+import { farmView } from './viewport.js';
 
 export class ArcheryControls {
     constructor(encounter) {
         this.encounter=encounter;this.scene=encounter.scene;this.arrows=[];this.selected=false;this.drag=null;this.nextShot=0;
         const s=this.scene;
         this.path=s.add.graphics().setDepth(37);
-        this.bow=s.add.image(195,730,'shortbow').setDisplaySize(88,88).setDepth(38).setVisible(false).setInteractive({cursor:'grab'});
-        this.button=s.add.image(70,740,'ui_wood').setDisplaySize(116,52).setDepth(38).setInteractive({cursor:'pointer'});
-        this.label=s.add.text(70,740,'',{fontSize:'13px',align:'center',color:'#fff2cc',fontStyle:'bold'}).setOrigin(.5).setDepth(39);
-        this.help=s.add.text(195,786,'',{fontSize:'13px',color:'#fff2cc',backgroundColor:'#593b27',padding:5,align:'center'}).setOrigin(.5).setDepth(39);
+        this.bow=s.add.image(0,0,'shortbow').setDisplaySize(88,88).setDepth(38).setVisible(false).setInteractive({cursor:'grab'});
+        this.button=s.add.image(0,0,'ui_wood').setDisplaySize(116,52).setDepth(38).setInteractive({cursor:'pointer'});
+        this.label=s.add.text(0,0,'',{fontSize:'13px',align:'center',color:'#fff2cc',fontStyle:'bold'}).setOrigin(.5).setDepth(39);
+        this.help=s.add.text(0,0,'',{fontSize:'13px',color:'#fff2cc',backgroundColor:'#593b27',padding:5,align:'center'}).setOrigin(.5).setDepth(39);
+        this.layout=()=>{
+            this.cancel();
+            const {bow,button,help}=archeryControlLayout(farmView(s));
+            this.bow.setPosition(bow.x,bow.y);this.button.setPosition(button.x,button.y);this.label.setPosition(button.x,button.y);this.help.setPosition(help.x,help.y);
+        };
+        s.events.on('farm-viewport-resize',this.layout);this.layout();
         this.button.on('pointerdown',()=>{this.selected=!this.selected;this.cancel();this.refresh();});
         this.bow.on('pointerdown',pointer=>{
             if(!this.selected||!this.getBow()||this.encounter.result||s.time.now<this.nextShot||!this.ready())return;
@@ -63,7 +70,7 @@ export class ArcheryControls {
     }
     destroy(){
         if(this.destroyed)return;this.destroyed=true;
-        const s=this.scene;s.input.off('pointermove',this.move);s.input.off('pointerup',this.up);s.input.off('pointerupoutside',this.out);s.input.off('gameout',this.out);s.events.off('update',this.update);
+        const s=this.scene;s.input.off('pointermove',this.move);s.input.off('pointerup',this.up);s.input.off('pointerupoutside',this.out);s.input.off('gameout',this.out);s.events.off('update',this.update);s.events.off('farm-viewport-resize',this.layout);
         this.arrows.forEach(a=>a.image.destroy());this.arrows=[];
         [this.path,this.bow,this.button,this.label,this.help].forEach(o=>o.destroy());
     }

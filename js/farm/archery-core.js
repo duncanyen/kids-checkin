@@ -1,4 +1,13 @@
 export const GRAVITY = 360;
+// Leave the lower quarter of the visible farm available for pulling the string,
+// away from browser controls and Android navigation gestures.
+export function archeryControlLayout(view) {
+    const x = view.left + view.width / 2;
+    const bottom = view.top + view.height;
+    const fullPull = 1050 / 9;
+    const y = Math.min(view.top + view.height * .76, bottom - fullPull - 80 / (view.zoom || 1));
+    return { bow: { x, y }, button: { x: x - 125, y: y + 10 }, help: { x, y: y + 66 } };
+}
 export function launchVelocity(origin, pull) {
     const dx=origin.x-pull.x, dy=origin.y-pull.y, length=Math.hypot(dx,dy);
     if (length<12) return null;

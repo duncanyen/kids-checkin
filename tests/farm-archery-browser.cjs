@@ -78,17 +78,38 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{const farm=docs[prefix+wh
   b.flight.stop();b.sprite.setPosition(195,350);b.phase='test';
  });
  async function point(x,y){const box=await page.locator('#game-container canvas').boundingBox();return page.evaluate(({x,y,box})=>{const c=window.__farmGame.scene.getScene('MyFarmScene').cameras.main;return{x:box.x+c.width/2+(x-195)*c.zoom,y:box.y+c.height/2+(y-422)*c.zoom};},{x,y,box});}
- async function shoot(x,y){const a=await point(195,730),b=await point(x,y);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});const dots=await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.path.commandBuffer.length);if(!dots)throw Error('No aiming trajectory');await page.mouse.up();}
+ for(const viewport of [{width:390,height:844},{width:360,height:740},{width:320,height:568},{width:412,height:915},{width:844,height:390}]){
+  await page.setViewportSize(viewport);await page.waitForTimeout(150);
+  const layout=await page.evaluate(()=>{
+   const s=window.__farmGame.scene.getScene('MyFarmScene'),c=s.cameras.main,a=s.eagleEncounter.archery;
+   const bottom=422+c.height/c.zoom/2;
+   return {pullGap:(bottom-a.bow.y-1050/9)*c.zoom,buttonRight:a.button.getBounds().right,bowLeft:a.bow.getBounds().left};
+  });
+  assert.ok(layout.pullGap>=79,'full-power pull overlaps Android bottom controls');
+  assert.ok(layout.buttonRight<layout.bowLeft,'switch button overlaps aiming');
+ }
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(150);
+ const dragOrigin=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.bow;return{x:b.x,y:b.y};});
+ const dragStart=await point(dragOrigin.x,dragOrigin.y);await page.mouse.move(dragStart.x,dragStart.y);await page.mouse.down();
+ await page.setViewportSize({width:390,height:760});await page.waitForTimeout(150);
+ assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.drag),null,'viewport resize must cancel the old aiming origin');
+ await page.mouse.up();
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(150);
+ checks.push('five mobile portrait/landscape sizes reserve 80 screen pixels after full pull; browser resize cancels stale aim');
+ // Resizing also reanchors farm actors; restore the stationary collision target.
+ await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.sprite.setPosition(195,350));
+ async function shoot(dx,dy){const origin=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.bow;return{x:b.x,y:b.y};});const a=await point(origin.x,origin.y),b=await point(origin.x+dx,origin.y+dy);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});const dots=await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.path.commandBuffer.length);if(!dots)throw Error('No aiming trajectory');await page.mouse.up();}
  await page.screenshot({path:'/tmp/eagle-archery.png'});
- await shoot(195,830);
+ await shoot(0,100);
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health===180);
  const client=await page.context().newCDPSession(page);
- const touchStart=await point(195,730),touchEnd=await point(195,830);
+ const origin=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.bow;return{x:b.x,y:b.y};});
+ const touchStart=await point(origin.x,origin.y),touchEnd=await point(origin.x,origin.y+100);
  await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touchStart]});
  await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touchEnd]});
  await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health===160);
- await shoot(275,755);await page.waitForTimeout(750);
+ await shoot(80,25);await page.waitForTimeout(750);
  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.health),160);
  checks.push('real mouse and touchscreen drag draw trajectory, release launches arrow, swept hit deals damage; off-target arrow misses');
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.eagleEncounter;const before=b.health;b.hit();if(b.health!==before)throw Error('Click bypassed archery');for(let i=0;i<8;i++)b.arrowHit(b.archery.getBow());});
