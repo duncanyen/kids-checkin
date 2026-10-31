@@ -33,14 +33,13 @@
 
         /* 輸入框多行支援 */
         #chatInput {
-            flex: 1; border: none; outline: none; background: #f1f5f9; border-radius: 20px;
+            flex: 1; min-width: 0; border: none; outline: none; background: #f1f5f9; border-radius: 20px;
             padding: 10px 16px; font-size: calc(14px * var(--n-font-scale, 1)); resize: none; overflow-y: auto; max-height: 100px;
             font-family: inherit; line-height: 1.4; box-sizing: border-box;
         }
         
         /* 傳送與圖片按鈕對齊 */
-        .btn-upload-photo, .btn-send { display: flex; align-items: center; justify-content: center; padding: 8px; border: none; background: transparent; cursor: pointer; }
-        .btn-send { color: white; background: var(--primary); border-radius: 50%; width: 36px; height: 36px; margin-left: 6px; box-shadow: 0 2px 4px rgba(16,185,129,0.2); }
+        .btn-upload-photo { display: flex; align-items: center; justify-content: center; padding: 8px; border: none; background: transparent; cursor: pointer; }
         .btn-upload-photo { color: #64748b; }
         
         /* 移除成員的按鈕 */
@@ -107,9 +106,9 @@
                 
                 <textarea id="chatInput" placeholder="輸入訊息... (@標註)" rows="1"></textarea>
                 
-                <!-- 🛠️ 修正 SVG 紙飛機顏色 -->
-                <button class="btn-send" id="btnSend" title="傳送">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="transform: translateX(1px);"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                <!-- 紙飛機的尺寸與主題顏色由 chat.css 控制 -->
+                <button class="btn-send" id="btnSend" aria-label="傳送訊息" title="傳送">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
                 </button>
             </div>
         </div>
