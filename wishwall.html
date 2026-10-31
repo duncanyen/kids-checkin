@@ -99,13 +99,14 @@
         }
     </style>
     <link rel="stylesheet" href="css/nexus-theme.css">
+    <link rel="stylesheet" href="css/wishwall.css">
     <script type="module" src="js/ui-icons.js"></script>
     <link rel="stylesheet" href="css/app-navigation.css">
     <script type="module" src="js/app-navigation.js"></script>
 </head>
 <body data-app-page="wishlist">
     <div class="top-nav">
-        <button class="btn-back" id="btnBack" data-main-menu-back>❮ 返回主選單</button>
+        <button class="btn-back" id="btnBack" data-main-menu-back>返回主選單</button>
         <span id="userNameDisplay" style="font-weight: bold; color: var(--primary-color);">載入中...</span>
     </div>
 
@@ -120,7 +121,7 @@
                 <div id="userPointsDisplay">目前可用積分：載入中...</div>
             </div>
 
-            <h3 class="section-title">📝 登記考試成績</h3>
+            <h3 class="section-title"><span class="wish-heading-icon" data-ui-icon="notebook"></span> 登記考試成績</h3>
             <div class="form-grid">
                 <div class="form-group full-width">
                     <label>考試日期</label>
@@ -151,7 +152,7 @@
             </div>
             <button class="btn-submit" id="btnSubmitScore">送出成績</button>
 
-            <h3 class="section-title" style="margin-top: 20px;">🧹 登記家事與優良表現</h3>
+            <h3 class="section-title" style="margin-top: 20px;"><span class="wish-heading-icon" data-ui-icon="broom"></span> 登記家事與優良表現</h3>
             <div class="form-grid">
                 <div class="form-group full-width">
                     <label>選擇完成的項目</label>
@@ -165,7 +166,7 @@
 
         <!-- 禮物兌換區 -->
         <div class="panel">
-            <h3 class="section-title">🎁 禮物兌換專區</h3>
+            <h3 class="section-title"><span class="wish-heading-icon" data-ui-icon="gift"></span> 禮物兌換專區</h3>
             <div class="gift-grid" id="giftShopGrid">
                 <div style="grid-column: span 2; text-align:center; color:#888;">禮物載入中...</div>
             </div>
@@ -173,9 +174,9 @@
         
         <!-- 自己的得分紀錄 -->
         <div class="panel">
-            <h3 class="section-title" id="scoreListTitle" style="cursor: pointer; user-select: none;">
-                <span>📊 我的得分紀錄 (填錯可刪除)</span>
-                <span id="scoreToggleIcon" style="color:var(--primary-color);">▼ 點此展開</span>
+            <h3 class="section-title" id="scoreListTitle" role="button" tabindex="0" aria-expanded="false" aria-controls="scoreListWrapper" style="cursor: pointer; user-select: none;">
+                <span><span class="wish-heading-icon" data-ui-icon="chart"></span> 我的得分紀錄 (填錯可刪除)</span>
+                <span id="scoreToggleIcon" style="color:var(--primary-color);"><span data-ui-icon="chevronDown"></span> 點此展開</span>
             </h3>
             <div id="scoreListWrapper" style="display: none;">
                 <div class="list-container" id="scoreListContainer">
@@ -191,16 +192,16 @@
         
         <!-- 家庭積分儀表板 -->
         <div class="panel">
-            <h2 class="system-title admin-title">👑 群組積分資訊</h2>
-            <h3 class="section-title">📊 目前成員可用積分</h3>
+            <h2 class="system-title admin-title"><span class="wish-heading-icon" data-ui-icon="admin"></span> 群組積分資訊</h2>
+            <h3 class="section-title"><span class="wish-heading-icon" data-ui-icon="chart"></span> 目前成員可用積分</h3>
             <div id="memberPointsContainer" style="margin-bottom: 20px;">
                 載入中...
             </div>
 
-            <!-- 📝 加入收合功能的審核區塊 -->
-            <h3 class="section-title" id="adminScoreListTitle" style="cursor: pointer; user-select: none;">
-                <span>📝 得分紀錄審核 <span style="font-size:calc(12px * var(--n-font-scale, 1)); font-weight:normal; color:var(--n-muted, #62676e);">(若查核不實可刪除)</span></span>
-                <span id="adminScoreToggleIcon" style="color:var(--primary-color);">▼ 點此展開</span>
+            <!-- 加入收合功能的審核區塊 -->
+            <h3 class="section-title" id="adminScoreListTitle" role="button" tabindex="0" aria-expanded="false" aria-controls="adminScoreListWrapper" style="cursor: pointer; user-select: none;">
+                <span><span class="wish-heading-icon" data-ui-icon="notebook"></span> 得分紀錄審核 <span style="font-size:calc(12px * var(--n-font-scale, 1)); font-weight:normal; color:var(--n-muted, #62676e);">(若查核不實可刪除)</span></span>
+                <span id="adminScoreToggleIcon" style="color:var(--primary-color);"><span data-ui-icon="chevronDown"></span> 點此展開</span>
             </h3>
             <div id="adminScoreListWrapper" style="display: none;">
                 <div class="list-container" id="adminScoreListContainer">
@@ -211,11 +212,11 @@
 
         <!-- 規則與禮物設定區 -->
         <div class="panel">
-            <h2 class="system-title admin-title">⚙️ 積分與獎品設定中心</h2>
+            <h2 class="system-title admin-title"><span class="wish-heading-icon" data-ui-icon="settings"></span> 積分與獎品設定中心</h2>
             
             <!-- 考試規則設定 -->
             <div class="setting-box">
-                <h3 class="section-title">📚 考試給分規則設定 (含累積次數)</h3>
+                <h3 class="section-title"><span class="wish-heading-icon" data-ui-icon="book"></span> 考試給分規則設定 (含累積次數)</h3>
                 <div class="setting-row">
                     <select id="setExamType"><option value="小考">小考</option><option value="大考">大考</option></select>
                     <input type="number" id="setExamMinScore" placeholder="最低分數(如90)">
@@ -228,7 +229,7 @@
 
             <!-- 家事規則設定 -->
             <div class="setting-box">
-                <h3 class="section-title">🧹 家事與表現規則設定</h3>
+                <h3 class="section-title"><span class="wish-heading-icon" data-ui-icon="broom"></span> 家事與表現規則設定</h3>
                 <div class="setting-row">
                     <input type="text" id="setChoreName" placeholder="項目名稱 (如洗碗)" style="flex:2">
                     <input type="number" id="setChorePoints" placeholder="給予積分 (如1)" style="flex:1">
@@ -239,7 +240,7 @@
 
             <!-- 獎品設定 -->
             <div class="setting-box">
-                <h3 class="section-title">🎁 許願池獎品設定</h3>
+                <h3 class="section-title"><span class="wish-heading-icon" data-ui-icon="gift"></span> 許願池獎品設定</h3>
                 <div class="setting-row">
                     <input type="text" id="setGiftName" placeholder="獎品名稱" style="flex:2">
                     <input type="number" id="setGiftPoints" placeholder="花費積分" style="flex:1">
@@ -254,7 +255,7 @@
     <!-- ==================== 共用介面 (兌換清單) ==================== -->
     <div class="panel" id="redeemListPanel">
         <h3 class="section-title">
-            🛒 禮物兌換清單
+            <span class="wish-heading-label"><span class="wish-heading-icon" data-ui-icon="cart"></span> 禮物兌換清單</span>
             <span style="font-size: calc(13px * var(--n-font-scale, 1)); font-weight: normal; color: #888;" id="adminNotice"></span>
         </h3>
         <div class="list-container" id="redeemListContainer">

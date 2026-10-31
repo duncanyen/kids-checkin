@@ -1,3 +1,4 @@
+import { icon } from './ui-icons.js';
 import { db } from './firebase-config.js';
 import { doc, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { getSelectedGameGroupId, watchGameContext as watchGroupContext } from './game-context.js';
@@ -99,24 +100,24 @@ const app = {
         const own = this.members.get(context.accountId);
         $('userNameDisplay').textContent = own?.name || context.accountId;
         $('childView').style.display = this.admin ? 'none' : 'block'; $('adminView').style.display = this.admin ? 'block' : 'none';
-        $('adminNotice').textContent = '(管理者模式：顯示目前群組紀錄)';
+        $('adminNotice').textContent = this.admin ? '(管理者模式：顯示目前群組紀錄)' : '';
         $('wishSyncStatus').textContent = this.ready ? '已同步 · 以帳號識別，改名不影響積分' : '同步中…';
         const ledger = calculatePoints(this.scores, this.redeems, this.settings, groupId);
         const balance = ledger.balances.get(context.accountId) || 0;
         if (this.admin) {
-            $('memberPointsContainer').innerHTML = [...this.members.values()].map(member => `<div class="member-score-badge" data-account-id="${escape(member.accountId)}">👤 ${escape(member.name || member.accountId)}：${ledger.balances.get(member.accountId) || 0} 點<br><small>${escape(member.accountId)}</small></div>`).join('');
+            $('memberPointsContainer').innerHTML = [...this.members.values()].map(member => `<div class="member-score-badge" data-account-id="${escape(member.accountId)}">${icon('user')} ${escape(member.name || member.accountId)}：${ledger.balances.get(member.accountId) || 0} 點<br><small>${escape(member.accountId)}</small></div>`).join('');
             const currentOrUnbound = record => !ownerId(record) || this.members.has(ownerId(record));
             this.renderScores(this.scores.filter(currentOrUnbound), 'adminScoreListContainer', ledger.earned);
             this.renderSettings();
             this.renderRedeems(this.redeems.filter(currentOrUnbound));
         } else {
-            $('userPointsDisplay').textContent = `✨ ${own?.name || context.accountId} 可用積分：${balance} 點`;
+            $('userPointsDisplay').innerHTML = `${icon('coins')}<span>${escape(own?.name || context.accountId)} 可用積分：<span class="wish-balance-value">${balance} 點</span></span>`;
             this.renderScores(this.scores.filter(record => ownerId(record) === context.accountId), 'scoreListContainer', ledger.earned);
             this.renderRedeems(this.redeems.filter(record => ownerId(record) === context.accountId));
             const chosen = $('choreSelect').value;
             $('choreSelect').innerHTML = '<option value="">-- 請選擇家事/表現項目 --</option>' + this.settings.choreRules.map(rule => `<option value="${escape(rule.id)}">${escape(rule.name)}（${escape(rule.points)} 點）</option>`).join('');
             $('choreSelect').value = chosen;
-            $('giftShopGrid').innerHTML = this.settings.gifts.map(gift => `<div class="gift-card"><div><div class="gift-icon">${escape(gift.icon || '🎁')}</div><div class="gift-title">${escape(gift.name)}</div><div class="gift-cost">需要 ${escape(gift.points)} 積分</div></div><button class="btn-exchange" data-wish-write data-action="redeem" data-id="${escape(gift.id)}" data-unaffordable="${balance < gift.points}">兌換獎品</button></div>`).join('') || '<p>目前群組尚未設定獎品。</p>';
+            $('giftShopGrid').innerHTML = this.settings.gifts.map(gift => `<div class="gift-card"><div><div class="gift-icon">${icon('gift')}</div><div class="gift-title">${escape(gift.name)}</div><div class="gift-cost">需要 ${escape(gift.points)} 積分</div></div><button class="btn-exchange" data-wish-write data-action="redeem" data-id="${escape(gift.id)}" data-unaffordable="${balance < gift.points}">兌換獎品</button></div>`).join('') || '<p>目前群組尚未設定獎品。</p>';
         }
         this.updateButtons();
     },
@@ -126,8 +127,8 @@ const app = {
     },
     renderScores(records, container, earned) {
         $(container).innerHTML = [...records].reverse().map(record => {
-            const title = record.category === 'exam' ? `📝 ${record.examType} - ${record.subject}（${record.score} 分）` : `🧹 ${record.choreName || record.subject || '積分紀錄'}`;
-            return `<div class="list-item" style="flex-wrap:wrap" data-record-id="${escape(record.id)}"><div class="list-item-details"><b>${escape(title)}</b> <span>（+${earned.get(record.id) || 0} 點）</span><div class="list-item-meta">${escape(this.label(record))} · ${escape(record.date)}</div>${this.legacy(record, 'scores')}</div><button class="btn-delete" data-wish-write data-action="delete-score" data-id="${escape(record.id)}">刪除</button></div>`;
+            const title = record.category === 'exam' ? `${record.examType} - ${record.subject}（${record.score} 分）` : `${record.choreName || record.subject || '積分紀錄'}`;
+            return `<div class="list-item" style="flex-wrap:wrap" data-record-id="${escape(record.id)}"><div class="list-item-details"><b class="wish-record-title">${icon(record.category === 'exam' ? 'notebook' : 'broom')}${escape(title)}</b> <span>（+${earned.get(record.id) || 0} 點）</span><div class="list-item-meta">${escape(this.label(record))} · ${escape(record.date)}</div>${this.legacy(record, 'scores')}</div><button class="btn-delete" data-wish-write data-action="delete-score" data-id="${escape(record.id)}">刪除</button></div>`;
         }).join('') || '<p>目前沒有任何紀錄。</p>';
     },
     renderRedeems(records) {
@@ -194,8 +195,18 @@ document.addEventListener('click', async event => {
     }
 });
 $('btnBack').addEventListener('click', () => { window.location.href = 'index.html'; });
-for (const [title, wrapper, icon] of [['scoreListTitle', 'scoreListWrapper', 'scoreToggleIcon'], ['adminScoreListTitle', 'adminScoreListWrapper', 'adminScoreToggleIcon']]) {
-    $(title)?.addEventListener('click', () => { const closed = $(wrapper).style.display === 'none'; $(wrapper).style.display = closed ? 'block' : 'none'; $(icon).textContent = closed ? '▲ 收合' : '▼ 點此展開'; });
+for (const [title, wrapper, toggleIcon] of [['scoreListTitle', 'scoreListWrapper', 'scoreToggleIcon'], ['adminScoreListTitle', 'adminScoreListWrapper', 'adminScoreToggleIcon']]) {
+    const heading = $(title);
+    const toggle = () => {
+        const closed = $(wrapper).style.display === 'none';
+        $(wrapper).style.display = closed ? 'block' : 'none';
+        heading.setAttribute('aria-expanded', String(closed));
+        $(toggleIcon).innerHTML = icon(closed ? 'chevronUp' : 'chevronDown') + (closed ? ' 收合' : ' 點此展開');
+    };
+    heading?.addEventListener('click', toggle);
+    heading?.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+    });
 }
 window.addEventListener('pagehide', () => { app.unsubscribes.splice(0).forEach(unsubscribe => unsubscribe()); app.memberUnsubscribes.splice(0).forEach(unsubscribe => unsubscribe()); });
 window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });

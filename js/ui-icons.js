@@ -1,5 +1,14 @@
 // Local, consistent 24px outline icons. No font/CDN dependency; never alter user content.
 const paths = {
+    gift:'<rect x="3" y="8" width="18" height="4" rx="1.5"/><path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M12 8v13M12 8H8a3 3 0 1 1 3-3l1 3Zm0 0h4a3 3 0 1 0-3-3l-1 3Z"/>',
+    notebook:'<rect x="5" y="3" width="15" height="18" rx="2"/><path d="M3 7h4m-4 5h4m-4 5h4M11 7h5m-5 4h5m-5 4h2"/>',
+    broom:'<path d="m14 11 6-8m-8 7 5 4-5 7-9-5 6-7 3 1ZM7 13l7 4m-7-1-2 3m5-1-2 3"/>',
+    chart:'<path d="M4 3v17a1 1 0 0 0 1 1h16M8 16v-5m5 5V6m5 10V9"/>',
+    book:'<path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15M6 8h3m-3 4h3m6-4h3m-3 4h3"/>',
+    cart:'<path d="M2 3h3l3 12h11l3-9H6m2 9-1 3h13"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/>',
+    coins:'<circle cx="10" cy="10" r="7"/><path d="M10 6v8m-2-6h3a1.5 1.5 0 0 1 0 3H9a1.5 1.5 0 0 0 0 3h3m3-11a7 7 0 1 1-10 14"/>',
+    chevronDown:'<path d="m6 9 6 6 6-6"/>',
+    chevronUp:'<path d="m6 15 6-6 6 6"/>',
     rock:'<path d="M7 10V7a2 2 0 0 1 4 0v3M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v5M7 10 5 9a2 2 0 0 0-2 3l4 7h10l4-7V9a2 2 0 0 0-2-2"/><path d="M7 19v3h10v-3M7 13h8"/>',
     paper:'<path d="M7 12V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v9c0 5-3 7-7 7-3 0-5-2-7-5l-2-4a1.5 1.5 0 0 1 2-2l2 1Z"/>',
     scissors:'<path d="m10 12-4-8a1.5 1.5 0 0 1 3-1l4 8 3-8a1.5 1.5 0 0 1 3 1l-3 9M8 12l-3-1a2 2 0 0 0-2 3l4 6h10l3-5v-3a2 2 0 0 0-4 0v3M7 20v2h10v-2M8 12h5v4H8"/>',

@@ -1,7 +1,7 @@
 export const DEFAULT_SETTINGS = {
     examRules: [{ id: 'ex1', type: '小考', minScore: 100, reqCount: 3, points: 1 }, { id: 'ex2', type: '大考', minScore: 100, reqCount: 1, points: 3 }],
     choreRules: [{ id: 'ch1', name: '幫忙洗碗', points: 1 }],
-    gifts: [{ id: 'gf1', icon: '🎁', name: '課外讀物乙本', points: 3 }],
+    gifts: [{ id: 'gf1', icon: 'gift', name: '課外讀物乙本', points: 3 }],
 };
 export const isAdminRole = profile => ['admin', 'parent'].includes(profile?.role);
 export const belongsToGroup = (record, groupId) => !record.groupId || record.groupId === groupId;
@@ -49,7 +49,7 @@ export function validateSetting(type, input) {
         return { type: String(input.type).trim(), minScore, reqCount, points };
     }
     if (!['choreRules', 'gifts'].includes(type) || !String(input.name || '').trim() || (type === 'gifts' && points <= 0)) throw new Error('請輸入名稱，獎品花費需大於 0。');
-    return { name: String(input.name).trim(), points, ...(type === 'gifts' ? { icon: '🎁' } : {}) };
+    return { name: String(input.name).trim(), points, ...(type === 'gifts' ? { icon: 'gift' } : {}) };
 }
 
 export function canChangeRedeem(record, status, actorId, admin) {
