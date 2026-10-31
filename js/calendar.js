@@ -479,7 +479,7 @@ function showFormView(evtData = null) {
         document.getElementById('evDesc').value = '';
         document.getElementById('evCategory').value = 'other';
         document.getElementById('evVisibility').value = 'public';
-        document.getElementById('evIsAllDay').checked = true;
+        document.getElementById('evIsAllDay').checked = false;
         document.getElementById('evStartTime').value = '09:00';
         document.getElementById('evEndTime').value = '10:00';
         document.getElementById('evReminderUnit').value = 'none';
@@ -510,6 +510,7 @@ function renderDayEvents(dateKey) {
         let reminderStr = '無提醒';
         if (evt.reminderUnit === 'minutes') reminderStr = `提前 ${evt.reminderValue} 分鐘提醒`;
         if (evt.reminderUnit === 'hours') reminderStr = `提前 ${evt.reminderValue} 小時提醒`;
+        if (evt.reminderUnit === 'days') reminderStr = `提前 ${evt.reminderValue} 天提醒`;
         const expired = isEventExpired(evt, dateKey);
         if (expired) reminderStr = '已結束';
 
