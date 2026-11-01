@@ -3,6 +3,7 @@ import { registerPredatorAnimations } from './predators.js';
 import { registerDragonAnimations } from './dragon.js';
 import { registerGorillaAnimations } from './gorilla.js';
 import { registerEagleAnimations } from './eagle.js';
+import { registerCobraAnimations } from './cobra.js';
 import { farmLoading } from './loading-ui.js';
 import { ASSET_MANIFEST as manifest, CORE_ASSETS, ALL_ASSETS } from './asset-manifest.js';
 export { CORE_ASSETS, ALL_ASSETS } from './asset-manifest.js';
@@ -21,10 +22,11 @@ export function queueAssets(scene, keys) {
     return missing;
 }
 export function registerAvailableAnimations(scene) {
-    for (const key of ['hen','silkie','bresse','wolf','tiger','dragon','gorilla'])
+    for (const key of ['hen','silkie','bresse','wolf','tiger','dragon','gorilla','cobra'])
         if (scene.textures.exists(key)) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     registerPoultryAnimations(scene); registerPredatorAnimations(scene);
     registerDragonAnimations(scene); registerGorillaAnimations(scene); registerEagleAnimations(scene);
+    registerCobraAnimations(scene);
 }
 export class FarmAssetScene extends Phaser.Scene {
     constructor() { super({key:'FarmAssetScene'}); this.jobs=[]; this.runningJob=false; this.closed=false; }

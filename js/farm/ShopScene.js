@@ -1,3 +1,4 @@
+import { COBRA_FANG_PRICE } from './cobra-rules.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
@@ -90,7 +91,7 @@ export default class ShopScene extends Phaser.Scene {
             if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.buyPrice}金幣`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
             if (weapon.sellPrice) sell.push([key, weapon.icon, `${weapon.name}\n${weapon.sellPrice}金幣`, () => this.openTradeModal('sell', key, weapon.name, weapon.sellPrice)]);
         }
-        for (const [key, icon, name, price] of [['eagleFeathers', 'eagle-feather', '巨鷹羽毛', 300], ['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
+        for (const [key, icon, name, price] of [['cobraFangs', 'cobra_fang', '眼鏡蛇王毒牙', COBRA_FANG_PRICE], ['eagleFeathers', 'eagle-feather', '巨鷹羽毛', 300], ['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
             sell.push([key, icon, `${name}\n${price}金幣`, () => this.openTradeModal('sell', key, name, price)]);
         }
         for (const [mode, entries] of Object.entries(this.catalog)) {
@@ -152,11 +153,11 @@ export default class ShopScene extends Phaser.Scene {
         const hits = (enemy, keys, suffix) => keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
         const guide = [
             '近戰：木棒／狼牙棒／雙手斧',
-            ...[['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe'], ' 下')}`),
-            '', '飛行系：短弓／獵弓／聖騎士弓',
-            ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
-            '飛行系近戰無效，弓箭僅攻擊飛行系。',
-            '近戰與弓可各配備一把，拖曳弓瞄準射箭。'
+            ...[['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe'], ' 下')}`),
+            '', '弓箭：短弓／獵弓／聖騎士弓',
+            ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
+            '蛇王可用近戰或弓；飛行怪物需用弓。',
+            '蛇王：雞舍 Lv.2，狼／虎／鷹合計每百殺。'
         ].join('\n');
         panel.add(this.add.text(195, 260, guide, { fontSize: '14px', color: '#593b27', align: 'center', lineSpacing: 7 }).setOrigin(.5,0));
         const close = this.add.rectangle(195, 577, 130, 38, 0x735038).setInteractive({ cursor: 'pointer' });

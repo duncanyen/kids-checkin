@@ -1,3 +1,5 @@
+import { maybeStartCobra } from './cobra-trigger.js';
+import { killProgressPatch } from './combat-progress.js';
 import { mountHalloween } from './halloween.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
@@ -42,6 +44,9 @@ export default class VisitScene extends Phaser.Scene {
         this.visitToken = Symbol('visit');
         this.emptyClickCount = 0;
         this.hasRolledEncounter = false;
+        this.preparingCobra = false;
+        this.cobraEncounter = null;
+        this.cobra = null;
         this.eagleEncounter = null;
         this.eagle = null;
         this.dragonEncounter = null;
@@ -84,7 +89,7 @@ export default class VisitScene extends Phaser.Scene {
         onSceneExit(this, () => {
             this.visitToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
-            this.gorillaEncounter?.destroy();
+            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
             this.groupUnsubscribes?.forEach(unsubscribe => unsubscribe());
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
             this.registry.events.off('changedata-myFarmData', this.onMyFarmDataChanged, this);
@@ -151,17 +156,23 @@ export default class VisitScene extends Phaser.Scene {
                 this.coopEgg.setVisible((this.targetFarmData.eggsReady || 0) > 0);
                 this.syncTargetHens(); 
                 this.renderTargetCleanliness();
-                if (!this.hasRolledEncounter) {
-                    this.hasRolledEncounter = true;
-                    const encounter = rollVisitEncounter(this.targetFarmData.coopLevel);
-                    if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
-                    else if (encounter === 'gorilla') this.spawnGorillaEvent();
-                    else if (encounter === 'dragon') this.spawnDragonEvent();
-                    else if (encounter === 'tiger') this.spawnTigerEvent();
-                    else if (encounter === 'wolf') this.spawnWolfEvent();
-                }
+                this.startVisitEncounter();
             }
         });
+    }
+
+    async startVisitEncounter() {
+        if (this.hasRolledEncounter || !this.myFarmData || !this.targetFarmData) return;
+        this.hasRolledEncounter = true;
+        const token = this.visitToken;
+        if (await maybeStartCobra(this)) return;
+        if (!this.sys.isActive() || this.visitToken !== token) return;
+        const encounter = rollVisitEncounter(this.targetFarmData.coopLevel);
+        if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
+        else if (encounter === 'gorilla') this.spawnGorillaEvent();
+        else if (encounter === 'dragon') this.spawnDragonEvent();
+        else if (encounter === 'tiger') this.spawnTigerEvent();
+        else if (encounter === 'wolf') this.spawnWolfEvent();
     }
 
     assertVisitAccess(transaction) {
@@ -183,12 +194,12 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     spawnGorillaEvent() {
-        if ([this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
+        if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.gorillaEncounter = new GorillaEncounter(this);
     }
 
     spawnDragonEvent() {
-        if ([this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
+        if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.dragonEncounter = new DragonEncounter(this);
     }
 
@@ -204,7 +215,7 @@ export default class VisitScene extends Phaser.Scene {
         finally { this.isUpdatingTargetEggs = false; }
     }
 
-    onMyFarmDataChanged(parent, value) { this.myFarmData = value; }
+    onMyFarmDataChanged(parent, value) { this.myFarmData = value; this.startVisitEncounter(); }
 
     askCleanTargetFarm() {
         if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
@@ -407,13 +418,17 @@ export default class VisitScene extends Phaser.Scene {
         this.showFloatingText('成功擊退猛虎！', '#FFC107', 22, this.tiger.x, this.tiger.y - 50);
         this.tweens.add({ targets: this.tiger, alpha: 0, y: this.tiger.y - 50, duration: 1500, delay: 1000, onComplete: () => this.tiger.destroy() });
 
+        const encounterId = this.tiger.getData('encounterId');
         this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
-            if (getUsedSpace(farm) < (farm.warehouseLimit || 10)) {
-                t.update(myFarmRef, { "farm.tigerPelts": (farm.tigerPelts || 0) + 1 }); return true; 
-            } else return false; 
+            const updates = killProgressPatch(farm, 'tiger', encounterId);
+            if (!Object.keys(updates).length) return false;
+            const hasSpace = getUsedSpace(farm) < (farm.warehouseLimit || 10);
+            if (hasSpace) updates['farm.tigerPelts'] = (farm.tigerPelts || 0) + 1;
+            t.update(myFarmRef, updates);
+            return hasSpace;
         }).then((success) => {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1', '#FFF', 20, 195, 422));
@@ -485,13 +500,17 @@ export default class VisitScene extends Phaser.Scene {
         this.showFloatingText('成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
         this.tweens.add({ targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000, onComplete: () => this.wolf.destroy() });
 
+        const encounterId = this.wolf.getData('encounterId');
         this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
-            if (getUsedSpace(farm) < (farm.warehouseLimit || 10)) {
-                t.update(myFarmRef, { "farm.wolfFangs": (farm.wolfFangs || 0) + 1 }); return true; 
-            } else return false; 
+            const updates = killProgressPatch(farm, 'wolf', encounterId);
+            if (!Object.keys(updates).length) return false;
+            const hasSpace = getUsedSpace(farm) < (farm.warehouseLimit || 10);
+            if (hasSpace) updates['farm.wolfFangs'] = (farm.wolfFangs || 0) + 1;
+            t.update(myFarmRef, updates);
+            return hasSpace;
         }).then((success) => {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1', '#FFF', 20, 195, 422));
@@ -545,8 +564,8 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal() {
-        if (this.isStealing || !this.myFarmData) return;
-        const activeBoss = [this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (this.isStealing || this.preparingCobra || !this.myFarmData || !this.hasRolledEncounter) return;
+        const activeBoss = [this.cobraEncounter, this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;

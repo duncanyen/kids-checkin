@@ -1,4 +1,5 @@
 import { BossEncounter } from './dragon.js';
+import { killProgressPatch } from './combat-progress.js';
 import { ENEMY_HEALTH } from './combat-rules.js';
 import { db } from '../firebase-config.js';
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
@@ -21,6 +22,7 @@ export function settleEagleEncounter(id,outcome,targetAccountId,targetGroupId=CU
         const history=farm.eagleResults||[],previous=history.find(r=>r.id===id);if(previous)return previous;
         const result={id,outcome},updates={};
         if(outcome==='win'){
+            Object.assign(updates,killProgressPatch(farm,'eagle',id));
             updates['farm.eagleFeathers']=(farm.eagleFeathers||0)+1;
             result.overflow=getUsedSpace(farm)>=(farm.warehouseLimit||10);
         }else{

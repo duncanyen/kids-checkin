@@ -1,3 +1,4 @@
+import { maybeStartCobra } from './cobra-trigger.js';
 import { mountHalloween } from './halloween.js';
 import { ensureAssets, bossAssets } from './assets.js';
 import { farmLoading } from './loading-ui.js';
@@ -30,6 +31,10 @@ export default class MyFarmScene extends Phaser.Scene {
         this.henAssetsPending = false;
         this.preparingEncounter = false;
         this.pendingEncounter = null;
+        this.preparingCobra = false;
+        this.cobraEntryChecked = false;
+        this.cobraEncounter = null;
+        this.cobra = null;
         this.farmSceneToken = Symbol();
         this.henVisualKey = null;
         this.isHenSitting = false;
@@ -83,7 +88,7 @@ export default class MyFarmScene extends Phaser.Scene {
         onSceneExit(this, () => {
             this.farmSceneToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
-            this.gorillaEncounter?.destroy();
+            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
             this.farmInterval = null;
@@ -165,6 +170,10 @@ export default class MyFarmScene extends Phaser.Scene {
                     ? Math.floor((now - h.sickTimestamp) / 86400000) : 0)]);
             if (key !== this.henVisualKey || this.farmData.hensState.some(h => h.isSick && h.sickTimestamp && now - h.sickTimestamp > 48 * 3600000)) { this.henVisualKey = key; this.syncHens(); }
             this.startEggTimer();
+            if (!this.cobraEntryChecked) {
+                this.cobraEntryChecked = true;
+                this.time.delayedCall(0, () => maybeStartCobra(this));
+            }
             if(!this.game.registry.get('farmInitialReady')){
                 this.game.registry.set('farmInitialReady',true);
                 // Let the first populated farm frame render before hiding the shell.
@@ -404,7 +413,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     prepareToLayEgg() {
         if (!this.isSaveReady()) return;
-        if ([this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
+        if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
         this.isHenSitting = true;
         const nestX = this.coop.x;
         const area = getHenWalkArea(this);
@@ -509,12 +518,16 @@ export default class MyFarmScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (!this.isSaveReady()) return;
-        if (this.isHarvesting) return;
-        const activeBoss = [this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (this.isHarvesting || this.preparingCobra) return;
+        const activeBoss = [this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;
         }
+
+        const cobraToken = this.farmSceneToken;
+        if (await maybeStartCobra(this)) return;
+        if (!this.sys.isActive() || this.farmSceneToken !== cobraToken) return;
 
         if (!this.farmData || (this.farmData.eggsReady || 0) <= 0) {
             this.emptyClickCount++;
@@ -543,7 +556,7 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        const defended = [this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
+        const defended = [this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
         const encounter = this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
         if (encounter) {
             this.pendingEncounter = encounter;
@@ -558,8 +571,8 @@ export default class MyFarmScene extends Phaser.Scene {
             if(!this.isSaveReady()){farmLoading.error('存檔連線尚未確認，請重試。',async()=>{await this.game.retryFarmSave?.();if(this.sys.isActive() && this.farmSceneToken===currentScene)await this.harvestPreparedEncounter?.();});return;}
             this.pendingEncounter = null;
             farmLoading.complete(true);
-            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
-            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
+            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
+            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;
             if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
             else if (encounter === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
@@ -581,8 +594,8 @@ export default class MyFarmScene extends Phaser.Scene {
                 return result;
 
             });
-            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy();
-            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null;
+            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
+            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;
             const warning = result.remaining ? `\n倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
             this.showFloatingText((Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning, '#FFD54F', result.remaining ? 14 : 18);

@@ -51,6 +51,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'wolfFangs', name: '狼牙', icon: 'fang' },
             { key: 'tigerPelts', name: '虎皮', icon: 'tiger_pelt' },
             { key: 'dragonScales', name: '龍麟', icon: 'dragon_scale' },
+            { key: 'cobraFangs', name: '眼鏡蛇王毒牙', icon: 'cobra_fang' },
             { key: 'eagleFeathers', name: '巨鷹羽毛', icon: 'eagle-feather' },
             { key: 'gorillaFangs', name: '猩猩尖牙', icon: 'gorilla_fang' },
             { key: 'medicines', name: '咕咕活力散', icon: 'medicine' },
@@ -197,7 +198,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
-        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
+        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'cobraFangs' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
                 this.showMsg('咕咕活力散請在母雞生病時點擊母雞使用！', '#FFD54F');

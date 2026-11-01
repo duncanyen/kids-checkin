@@ -82,6 +82,7 @@ export function createPredator(scene, kind, x, y) {
             hitArea: new Phaser.Geom.Rectangle(24, 16, 208, 224),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
+    sprite.setData('encounterId', crypto.randomUUID());
     // Both predator atlases face right; mirroring handles leftward movement.
     sprite.setFlipX(scene.coop.x < x);
     sprite.play(`${kind}_walk`);

@@ -90,7 +90,8 @@ export class BossEncounter {
         this.weapon = equippedWeapon(scene.myFarmData || scene.farmData);
         this.damage = bossWeaponDamage(this.weapon, spec.key);
         this.destination = spec.destination ? spec.destination() : { x: Math.max(spec.minX || 80, scene.coop.getBounds().left - (spec.approachInset || 34)), y: scene.coop.getBounds().bottom + 10 };
-        this.sprite = scene.add.sprite(spec.spawnX || 58, 844 - 140, spec.key, 0)
+        const spawn=spec.spawnPoint?.() || {x:spec.spawnX || 58,y:844-140};
+        this.sprite = scene.add.sprite(spawn.x, spawn.y, spec.key, 0)
             .setOrigin(0.5, 0.875).setDisplaySize(spec.size, spec.size).setDepth(25)
             .setInteractive({ cursor: 'pointer', hitArea: new Phaser.Geom.Rectangle(12, 12, spec.frameSize - 24, spec.frameSize - 24), hitAreaCallback: Phaser.Geom.Rectangle.Contains });
         scene[spec.key] = this.sprite;
@@ -107,11 +108,11 @@ export class BossEncounter {
         this.healthBack = scene.add.rectangle(195, 164, 220, 8, 0x522422).setDepth(31);
         this.healthBar = scene.add.rectangle(85, 164, 220, 8, 0xffae45).setOrigin(0, 0.5).setDepth(32);
         this.flame = scene.add.graphics().setDepth(24).setVisible(false);
-        this.flight = scene.tweens.add({ targets: this.sprite, ...this.destination, duration: this.config.flightMs, ease: 'Cubic.Out' });
+        this.flight = scene.tweens.add({ targets: this.sprite, ...this.destination, duration: this.config.flightMs, ease: spec.approachEase || 'Cubic.Out' });
         this.arrivalTimer = scene.time.delayedCall(this.config.flightMs, () => this.startFire());
         this.deadlineTimer = scene.time.delayedCall(this.config.durationMs, () => this.resolve('loss'));
         this.displayTimer = scene.time.addEvent({ delay: 100, loop: true, callback: () => this.refresh() });
-        this.archery = spec.flying ? new ArcheryControls(this) : null;
+        this.archery = (spec.flying || spec.archery) ? new ArcheryControls(this) : null;
         this.refresh();
         scene.avoidPredators();
     }
@@ -127,10 +128,10 @@ export class BossEncounter {
 
     refresh() {
         if (this.destroyed || this.result) return;
-        const remaining = Math.max(0, Math.ceil(this.deadlineTimer.getRemaining() / 1000));
-        const weapon = this.spec.flying ? this.rangedWeapon : this.weapon;
+        const remaining = Math.max(0, Math.ceil((this.deadline ? this.deadline - Date.now() : this.deadlineTimer.getRemaining()) / 1000));
+        const weapon = this.spec.flying || this.archery?.selected ? this.rangedWeapon : this.weapon;
         const damage = weapon ? bossWeaponDamage(weapon, this.spec.key) : 0;
-        this.warning.setText(`${this.spec.name}來襲！${remaining} 秒\n${damage ? `${weapon.name}${this.spec.flying ? '再中' : '再打'} ${Math.ceil(this.health/damage)} ${this.spec.flying ? '箭' : '下'}` : '請切換弓箭（近戰無效）'}・${this.phase === this.spec.attackPhase ? this.spec.attackLabel : this.spec.movingLabel}`);
+        this.warning.setText(`${this.spec.name}來襲！${remaining} 秒\n${damage ? `${weapon.name}${weapon.ranged ? '再中' : '再打'} ${Math.ceil(this.health/damage)} ${weapon.ranged ? '箭' : '下'}` : '請切換弓箭（近戰無效）'}・${this.phase === this.spec.attackPhase ? this.spec.attackLabel : this.spec.movingLabel}`);
         this.healthBar.width = 220 * this.health / this.config.health;
         if (this.phase === 'fire') {
             const mouthX = this.sprite.x + 57, mouthY = this.sprite.y - 70;
@@ -153,8 +154,8 @@ export class BossEncounter {
 
     hit(pointer) {
         if (this.destroyed || this.result) return;
-        if (this.spec.flying) return; // A pointer tap never counts as an arrow.
-        if (this.deadlineTimer.getRemaining() <= 0) { this.resolve('loss'); return; }
+        if (this.spec.flying || this.archery?.selected) return; // A pointer tap never counts as an arrow.
+        if (this.expired()) { this.resolve('loss'); return; }
         this.health = Math.max(0, this.health - this.damage);
         this.sprite.play(`${this.spec.key}_hit`);
         this.scene.tweens.killTweensOf(this.weaponSprite);
@@ -165,14 +166,16 @@ export class BossEncounter {
     }
 
     arrowHit(weapon) {
-        if (!this.spec.flying || !weapon?.ranged || this.destroyed || this.result) return;
-        if (this.deadlineTimer.getRemaining() <= 0) { this.resolve('loss'); return; }
+        if (!(this.spec.flying || this.spec.archery) || !weapon?.ranged || this.destroyed || this.result) return;
+        if (this.expired()) { this.resolve('loss'); return; }
         const damage = bossWeaponDamage(weapon, this.spec.key);
         if (!damage) return;
         this.health = Math.max(0,this.health-damage);
         this.sprite.play(`${this.spec.key}_hit`);
         if (!this.health) this.resolve('win'); else this.refresh();
     }
+
+    expired() { return this.deadline ? Date.now() >= this.deadline : this.deadlineTimer.getRemaining() <= 0; }
 
     resolve(outcome) {
         if (this.destroyed || this.result) return;
@@ -200,11 +203,12 @@ export class BossEncounter {
         this.warning.disableInteractive();
         try {
             const result = await this.spec.settle(this.id, this.result, this.targetAccountId, this.targetGroupId);
+            this.result = result.outcome;
             this.settled = true;
             if (this.destroyed) return;
             this.warning.setText(result.outcome === 'win'
                 ? `擊退${this.spec.name}！${this.spec.reward} ×1 已收入倉庫${result.overflow ? '\n倉庫已滿，請先出售或擴充' : `\n可在商店售出 ${this.spec.salePrice} 金幣`}`
-                : `${this.spec.key === 'eagle' ? '巨飛鷹離開了！' : '防守失敗！雞舍內的蛋已全數損失'}\n扣除 ${result.coinsLost} 金幣`);
+                : `${this.spec.lossText || (this.spec.key === 'eagle' ? '巨飛鷹離開了！' : '防守失敗！雞舍內的蛋已全數損失')}\n扣除 ${result.coinsLost} 金幣`);
             this.scene.time.delayedCall(6000, () => { if (!this.destroyed) this.warning.setVisible(false); });
             this.healthBack.setVisible(false);
             this.healthBar.setVisible(false);
