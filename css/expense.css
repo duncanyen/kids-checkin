@@ -193,3 +193,12 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
     .ledger-row { gap: 6px; grid-template-columns: 32px minmax(0, 1fr) 26px auto; }
     .ledger-row-amount { font-size: 12px; }
 }
+.ledger-fab[hidden] { display: none !important; }
+.ledger-period { justify-content: space-between; }
+.ledger-month-picker { position: relative; min-height: 44px; flex: 1; justify-content: center; font-size: calc(20px * var(--n-font-scale, 1)) !important; color: var(--n-text); }
+.ledger-month-picker input[type=month] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; box-sizing: border-box; }
+.ledger-month-picker:focus-within { outline: 2px solid var(--primary-color); border-radius: 10px; }
+.ledger-pagination { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 20px; }
+.ledger-pagination button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--n-border, #ddd); border-radius: 10px; background: var(--n-soft, #f3f4f6); color: var(--n-text); cursor: pointer; }
+.ledger-pagination button:disabled { opacity: .45; cursor: default; }
+.ledger-pagination span { font-size: 13px; color: var(--n-muted); }

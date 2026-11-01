@@ -3,7 +3,7 @@ import { loadScopedProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, 
-    deleteDoc, doc, serverTimestamp, updateDoc
+    deleteDoc, doc, serverTimestamp, updateDoc, orderBy, documentId, startAfter, limit, getAggregateFromServer, sum, count
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -43,6 +43,15 @@ if (!canViewIncome) {
 let currentDate = new Date();
 currentDate.setDate(1);
 let currentListType = 'expense';
+let currentMainView = 'list';
+const LIST_PAGE_SIZE = 10;
+let listPageIndex = 0;
+let listRequestedPage = 0;
+let listPages = [];
+let listTotals = null;
+let listBusy = false;
+let listProfiles = {};
+
 let monthError = false;
 let savingEntry = false;
 let selectedDateStr = "";     
@@ -126,42 +135,128 @@ async function loadCustomCategories() {
 }
 
 window.switchMainView = function(view) {
+    if (savingEntry || view === currentMainView) return;
+    currentMainView = view;
+    ++monthRequestVersion;
     for (const [name, tab] of [['calendar', 'Calendar'], ['list', 'List'], ['review', 'Review']]) {
         document.getElementById('tab' + tab).classList.toggle('active', view === name);
         document.getElementById(name + 'View').style.display = view === name ? 'flex' : 'none';
     }
     if (view === 'review') fetchAndRenderReviewData();
-    if (view === 'list') renderLedgerList();
+    if (view !== 'review') loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 };
 
 function syncListPeriod() {
-    document.getElementById('listYear').value = currentDate.getFullYear();
-    const months = document.getElementById('listMonth');
-    if (!months.options.length) {
-        for (let month = 1; month <= 12; month++) months.add(new Option(`${month}月`, month));
-    }
-    months.value = currentDate.getMonth() + 1;
+    document.getElementById('listPeriod').value = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    document.getElementById('listPeriodText').textContent = `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月`;
 }
 
 window.selectListMonth = function() {
     if (savingEntry) { syncListPeriod(); return; }
-    const year = Number(document.getElementById('listYear').value);
-    const month = Number(document.getElementById('listMonth').value);
-    if (!Number.isInteger(year) || year < 1900 || year > 9999 || month < 1 || month > 12) {
-        syncListPeriod(); return;
-    }
-    currentDate = new Date(year, month - 1, 1);
-    loadMonthData(year, month);
+    const match = /^(\d{4})-(\d{2})$/.exec(document.getElementById('listPeriod').value);
+    if (!match || Number(match[1]) < 1900 || Number(match[2]) < 1 || Number(match[2]) > 12) { syncListPeriod(); return; }
+    currentDate = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+    closeModal('expenseModal');
+    loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 };
-window.changeListYear = function(offset) {
-    document.getElementById('listYear').value = currentDate.getFullYear() + offset;
-    selectListMonth();
+window.retryListMonth = () => {
+    if (savingEntry || listBusy) return;
+    listPages = listPages.slice(0, listRequestedPage);
+    loadListPage(listRequestedPage, true);
 };
-window.retryListMonth = () => { if (!savingEntry) loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1); };
 window.switchListType = function(type) {
-    if (type === 'income' && !canViewIncome) return;
+    if (savingEntry || type === currentListType || (type === 'income' && !canViewIncome)) return;
     currentListType = type;
+    resetListData();
+    loadListPage(0);
+};
+
+function resetListData() {
+    listPages = []; listPageIndex = 0; listTotals = null; listProfiles = {};
+    monthData = []; monthReady = false;
+}
+
+function listMonthFilters() {
+    const prefix = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    return [where('groupId', '==', currentGroupId), where('date', '>=', prefix + '-01'), where('date', '<=', prefix + '-31')];
+}
+
+async function loadListPage(pageIndex = 0, refreshTotals = false) {
+    const version = ++monthRequestVersion;
+    listRequestedPage = pageIndex;
+    const type = currentListType;
+    listBusy = true; monthReady = false; monthError = false;
     renderLedgerList();
+    try {
+        const filters = listMonthFilters();
+        // Server aggregates return totals/counts, never the month's documents.
+        if (!listTotals || refreshTotals) {
+            const [all, income, expense] = await Promise.all([
+                getAggregateFromServer(query(collection(db, 'expenses'), ...filters), { amount: sum('amount'), records: count() }),
+                getAggregateFromServer(query(collection(db, 'expenses'), ...filters, where('type', '==', 'income')), { amount: sum('amount'), records: count() }),
+                getAggregateFromServer(query(collection(db, 'expenses'), ...filters, where('type', '==', 'expense')), { amount: sum('amount'), records: count() })
+            ]);
+            if (version !== monthRequestVersion) return;
+            listTotals = { income: income.data(), expense: { amount: all.data().amount - income.data().amount, records: all.data().records - income.data().records }, legacy: all.data().records - income.data().records - expense.data().records };
+        }
+        if (!listPages[pageIndex]) {
+            const previous = listPages[pageIndex - 1];
+            let cursor = previous?.cursor || null;
+            let buffer = [...(previous?.buffer || [])];
+            let exhausted = previous?.exhausted || false;
+            const records = [];
+            const needed = Math.min(LIST_PAGE_SIZE, Math.max(0, listTotals[type].records - pageIndex * LIST_PAGE_SIZE));
+            // A bounded stream also includes legacy expense records with no type.
+            // Every document request has limit(10); only requested pages advance it.
+            while (records.length < needed) {
+                if (!buffer.length) {
+                    if (exhausted) break;
+                    const constraints = [...filters];
+                    if (type === 'income' || !listTotals.legacy) constraints.push(where('type', '==', type));
+                    constraints.push(orderBy('date', 'desc'), orderBy(documentId(), 'desc'));
+                    if (cursor) constraints.push(startAfter(cursor));
+                    const snapshot = await getDocs(query(collection(db, 'expenses'), ...constraints, limit(LIST_PAGE_SIZE)));
+                    if (version !== monthRequestVersion) return;
+                    exhausted = snapshot.docs.length < LIST_PAGE_SIZE;
+                    cursor = snapshot.docs.at(-1) || cursor;
+                    buffer = snapshot.docs.map(row => ({ ...row.data(), id: row.id }));
+                    if (!buffer.length) break;
+                }
+                const item = buffer.shift();
+                if ((item.type || 'expense') === type) records.push(item);
+            }
+            if (version !== monthRequestVersion) return;
+            listPages[pageIndex] = { records, cursor, buffer, exhausted };
+        }
+        if (version !== monthRequestVersion) return;
+        listPageIndex = pageIndex;
+        monthData = listPages[pageIndex].records;
+        await categoriesReady;
+        if (version !== monthRequestVersion) return;
+        monthReady = true; listBusy = false;
+        renderLedgerList();
+        const [accounts, legacy] = await Promise.all([
+            loadScopedProfiles(db, monthData.filter(item => item.accountId).map(item => item.accountId), { allowLegacyNames: false }),
+            loadScopedProfiles(db, monthData.filter(item => !item.accountId).map(item => item.operator))
+        ]);
+        if (version !== monthRequestVersion) return;
+        listProfiles = profileAvatarMap([...accounts, ...legacy]);
+        renderLedgerList();
+    } catch (error) {
+        if (version !== monthRequestVersion) return;
+        console.error('讀取清單失敗：', error);
+        listBusy = false; monthError = true;
+        // Profile errors must not invalidate successfully loaded financial data.
+        if (monthReady) { monthError = false; renderLedgerList(); return; }
+        renderLedgerList();
+    }
+}
+
+window.changeListPage = function(offset) {
+    if (listBusy || savingEntry || !monthReady) return;
+    const next = listPageIndex + offset;
+    const pages = Math.ceil((listTotals?.[currentListType].records || 0) / LIST_PAGE_SIZE);
+    if (next >= 0 && next < pages) loadListPage(next);
 };
 
 function renderLedgerList() {
@@ -180,17 +275,23 @@ function renderLedgerList() {
     container.replaceChildren();
     document.getElementById('listCount').textContent = '';
     document.getElementById('retryListMonth').hidden = !monthError;
+    const count = listTotals?.[currentListType]?.records || 0;
+    const pages = Math.max(1, Math.ceil(count / LIST_PAGE_SIZE));
+    document.getElementById('listPageStatus').textContent = `第 ${listPageIndex + 1} / ${pages} 頁`;
+    document.getElementById('listPrevious').disabled = listBusy || !monthReady || listPageIndex === 0;
+    document.getElementById('listNext').disabled = listBusy || !monthReady || listPageIndex + 1 >= pages;
+    document.getElementById('addListExpense').hidden = income;
+    document.getElementById('addListIncome').hidden = !income || !canViewIncome;
     for (const id of ['addListExpense', 'addListIncome']) document.getElementById(id).disabled = !monthReady;
     if (!monthReady) {
-        total.textContent = monthError ? '暫時無法取得' : '讀取中...';
+        total.textContent = listTotals ? `NT$ ${listTotals[currentListType].amount.toLocaleString('zh-TW', { maximumFractionDigits: 2 })}` : (monthError ? '暫時無法取得' : '讀取中...');
         container.textContent = monthError ? '讀取失敗，請檢查網路後重試。' : '正在載入當月紀錄…';
         return;
     }
-    const records = monthData.filter(item => (item.type || 'expense') === currentListType)
-        .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
-    const amount = records.reduce((sum, item) => sum + Math.round(Number(item.amount) * 100), 0) / 100;
+    const records = monthData;
+    const amount = listTotals?.[currentListType]?.amount || 0;
     total.textContent = `NT$ ${amount.toLocaleString('zh-TW', { maximumFractionDigits: 2 })}`;
-    document.getElementById('listCount').textContent = `${records.length} 筆紀錄`;
+    document.getElementById('listCount').textContent = `共 ${count} 筆紀錄 · 每頁 10 筆`;
     if (!records.length) {
         container.textContent = `這個月還沒有${label}紀錄，點選下方「+」開始記帳。`;
         return;
@@ -209,7 +310,7 @@ function renderLedgerList() {
         const operator = item.operator || '未知使用者';
         avatar.title = operator; avatar.setAttribute('aria-label', operator);
         const own = item.accountId === currentAccountId || (!item.accountId && operator === currentUser.name);
-        const url = allUsersMap[item.accountId || operator] || (own && (currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl));
+        const url = listProfiles[item.accountId || operator] || (own && (currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl));
         avatar.textContent = operator.slice(0, 1);
         let safeAvatar = false;
         try { safeAvatar = !!url && /^(https?:|data:image\/)/i.test(new URL(url, location.href).href); } catch {}
@@ -228,7 +329,6 @@ function renderLedgerList() {
 
 window.openListEntry = function(type) {
     if (!monthReady || savingEntry || (type === 'income' && !canViewIncome)) return;
-    switchListType(type);
     const today = new Date();
     const day = today.getFullYear() === currentDate.getFullYear() && today.getMonth() === currentDate.getMonth() ? today.getDate() : 1;
     const date = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -248,10 +348,10 @@ window.changeEntryDate = function() {
 };
 
 async function loadMonthData(year, month) {
+    if (currentMainView === 'list') { resetListData(); return loadListPage(0); }
     const version = ++monthRequestVersion;
     monthReady = false;
     monthError = false;
-    renderLedgerList();
     // Pending means unknown, never a plausible but incorrect $0/old-month sum.
     document.getElementById('monthTotalExpense').innerText = '讀取中...';
     document.getElementById('monthTotalIncome').innerText = '讀取中...';
@@ -445,6 +545,7 @@ async function chartConstructor(canvasId, retry) {
 }
 
 async function renderPieChart() {
+    if (currentMainView === 'list') return;
     const version = ++pieRenderVersion;
     if (!monthReady) return;
     let totalExpense = 0, totalIncome = 0;
@@ -685,6 +786,7 @@ window.openModal = function(modalId, dateStr = null) {
         switchModalType('expense');
         renderDayList();
     }
+    if (modalId === 'expenseModal') document.querySelector('.day-list-title').textContent = currentMainView === 'list' ? '本頁當日明細' : '當日明細';
     if(modalId === 'settingsModal') {
         renderManageCategories();
     }
@@ -942,11 +1044,11 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
         document.getElementById('expenseAmount').value = '';
         document.getElementById('expenseNote').value = '';
         status.textContent = '已儲存，可繼續新增。';
-        renderLedgerList();
+        if (currentMainView === 'list') { resetListData(); await loadListPage(0); }
         renderDayList();
-        renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        if (currentMainView === 'calendar') renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
         renderPersonalAvatars(); 
-        renderPieChart();
+        if (currentMainView === 'calendar') renderPieChart();
 
     } catch (e) {
         console.error("儲存失敗：", e);
@@ -1008,12 +1110,12 @@ window.deleteExpense = async function(docId) {
     try {
         await deleteDoc(doc(db, "expenses", docId));
         monthData = monthData.filter(e => e.id !== docId);
-        renderLedgerList();
+        if (currentMainView === 'list') { resetListData(); await loadListPage(0); }
         
         hasLoadedAllData = false; 
 
         renderDayList();
-        renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        if (currentMainView === 'calendar') renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
         renderPersonalAvatars();
         renderPieChart();
     } catch (e) {

@@ -9,11 +9,25 @@ export const doc=(_, ...parts)=>({path:parts.join('/')});
 export const where=(field,op,value)=>({field,op,value});
 export const query=(ref,...filters)=>({...ref,filters});
 export const serverTimestamp=()=>1234;
+export const orderBy=(field,direction)=>({kind:'order',field,direction});
+export const documentId=()=>'__name__';
+export const startAfter=row=>({kind:'cursor',id:row.id});
+export const limit=value=>({kind:'limit',value});
+export const sum=field=>({field}),count=()=>({});
+function rowsFor(ref){return Object.entries(window.__store).filter(([path,data])=>path.startsWith(ref.path+'/')&&(ref.filters||[]).filter(f=>!f.kind).every(f=>f.op==='=='?data[f.field]===f.value:f.op==='in'?f.value.includes(data[f.field]):f.op==='>='?data[f.field]>=f.value:data[f.field]<=f.value)).map(([path,data])=>({id:path.split('/').at(-1),data:()=>structuredClone(data)}));}
+export const getAggregateFromServer=async ref=>{
+ if(window.__failRead)throw Error('offline');
+ const rows=rowsFor(ref);return{data:()=>({amount:rows.reduce((n,r)=>n+Number(r.data().amount),0),records:rows.length})};
+};
 export const getDocs=async ref=>{
  if(ref.path==='expenses'&&window.__failRead)throw Error('offline');
  const delay=ref.filters?.find(f=>f.field==='date'&&f.op==='>='&&f.value==='2026-10-01');
  if(delay&&window.__delayOctober)await new Promise(resolve=>window.__releaseOctober=resolve);
- const docs=Object.entries(window.__store).filter(([path,data])=>path.startsWith(ref.path+'/')&&(ref.filters||[]).every(f=>f.op==='=='?data[f.field]===f.value:f.op==='in'?f.value.includes(data[f.field]):f.op==='>='?data[f.field]>=f.value:data[f.field]<=f.value)).map(([path,data])=>({id:path.split('/').at(-1),data:()=>structuredClone(data)}));
+ let docs=rowsFor(ref);
+ if(ref.filters?.some(f=>f.kind==='order'))docs.sort((a,b)=>b.data().date.localeCompare(a.data().date)||b.id.localeCompare(a.id));
+ const cursor=ref.filters?.find(f=>f.kind==='cursor');if(cursor)docs=docs.slice(docs.findIndex(r=>r.id===cursor.id)+1);
+ const cap=ref.filters?.find(f=>f.kind==='limit');if(cap)docs=docs.slice(0,cap.value);
+ if(ref.path==='expenses')window.__documentReads.push({limit:cap?.value,count:docs.length});
  return{docs,forEach:fn=>docs.forEach(fn)};
 };
 export const addDoc=async(ref,data)=>{
@@ -39,7 +53,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.addInitScript(()=>{
   const user={accountId:'alice',name:'Alice',role:sessionStorage.getItem('testRole')||'parent',menus:['finance']};
   sessionStorage.setItem('familyCheckInUser',JSON.stringify(user));localStorage.setItem('lastGroupId','A');
-  window.__writes=0;
+  window.__writes=0; window.__documentReads=[];
   window.__store={
    'users/alice':{...user,avatar:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='},
    'expenses/e1':{groupId:'A',accountId:'alice',operator:'Alice',date:'2026-11-01',category:'早餐',note:'早餐三明治',amount:50.25},
@@ -53,14 +67,18 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.goto(base+'/expense.html?nav=1');
  await page.click('#tabList');
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 150.25');
- assert.equal(await page.inputValue('#listYear'),'2026');
- assert.equal(await page.inputValue('#listMonth'),'11');
- assert.equal(await page.locator('#listMonth option').count(),12);
+ assert.equal(await page.inputValue('#listPeriod'),'2026-11');
+ assert.equal(await page.locator('#listPeriodText').innerText(),'2026年11月');
+ assert.equal(await page.locator('#addListExpense').innerText(),'+');
+ assert.equal(await page.locator('#addListIncome').isVisible(),false);
+ assert.ok(await page.evaluate(()=>window.__documentReads.every(r=>r.limit===10&&r.count<=10)));
  assert.equal(await page.locator('.ledger-row').count(),2);
  assert.match(await page.locator('.ledger-row').first().innerText(),/11\/3[\s\S]*未填寫名稱/);
  await page.waitForSelector('.ledger-row-avatar img');
  await page.click('#listIncomeTab');
- assert.equal(await page.locator('#listTotal').innerText(),'NT$ 30,000');
+ await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
+ assert.equal(await page.locator('#addListExpense').isVisible(),false);
+ assert.equal(await page.locator('#addListIncome').innerText(),'+');
  await page.click('#addListIncome');
  assert.equal(await page.inputValue('#expenseDate'),'2026-11-01');
  assert.match(await page.locator('#btnTypeIncome').getAttribute('class'),/active/);
@@ -90,7 +108,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
  await page.click('#expenseModal .btn-close');
  await page.click('#listExpenseTab');
- await page.fill('#listYear','2025');await page.selectOption('#listMonth','2');
+ await page.fill('#listPeriod','2025-02');await page.locator('#listPeriod').dispatchEvent('change');
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 70');
  await page.click('#addListExpense');
  assert.equal(await page.inputValue('#expenseDate'),'2025-02-01');
@@ -100,20 +118,52 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  assert.match(await page.locator('#entryStatus').innerText(),/兩位小數/);
  await page.click('#expenseModal .btn-close');
  // Older requests must not overwrite a newer month.
- await page.evaluate(()=>{window.__delayOctober=true;document.querySelector('#listYear').value='2026';document.querySelector('#listMonth').value='10';window.selectListMonth();});
- await page.selectOption('#listMonth','11');
+ await page.evaluate(()=>{window.__delayOctober=true;document.querySelector('#listPeriod').value='2026-10';window.selectListMonth();});
+ await page.fill('#listPeriod','2026-11');await page.locator('#listPeriod').dispatchEvent('change');
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 150.25');
  await page.evaluate(()=>window.__releaseOctober());
  await page.waitForTimeout(50);
  assert.equal(await page.locator('#listTotal').innerText(),'NT$ 150.25');
  await page.evaluate(()=>window.__failRead=true);
- await page.selectOption('#listMonth','12');
+ await page.fill('#listPeriod','2026-12');await page.locator('#listPeriod').dispatchEvent('change');
  await page.waitForSelector('#retryListMonth:not([hidden])');
  assert.equal(await page.locator('#addListExpense').isDisabled(),true);
  await page.evaluate(()=>window.__failRead=false);
  await page.click('#retryListMonth');
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 0');
  assert.match(await page.locator('#ledgerList').innerText(),/還沒有支出/);
+ // Navigate a year boundary with the month arrows.
+ await page.click('[aria-label="下個月"]');
+ await page.waitForFunction(()=>!document.querySelector('#addListExpense').disabled);
+ assert.equal(await page.inputValue('#listPeriod'),'2027-01');
+ await page.click('[aria-label="上個月"]');
+ await page.waitForFunction(()=>!document.querySelector('#addListExpense').disabled);
+ assert.equal(await page.inputValue('#listPeriod'),'2026-12');
+ // 25 expense rows and one income: only requested pages may read documents.
+ await page.evaluate(()=>{
+  for(let i=1;i<=25;i++)window.__store['expenses/page-'+String(i).padStart(2,'0')]={groupId:'A',date:'2026-12-'+String(i).padStart(2,'0'),type:'expense',category:'早餐',note:'第'+i+'筆',amount:i};
+  window.__store['expenses/page-income']={groupId:'A',date:'2026-12-26',type:'income',amount:999};
+  window.__documentReads=[];
+  window.retryListMonth();
+ });
+ await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 325');
+ assert.equal(await page.locator('.ledger-row').count(),10);
+ assert.match(await page.locator('.ledger-row').first().innerText(),/第25筆/);
+ const firstReads=await page.evaluate(()=>window.__documentReads.length);
+ assert.equal(firstReads,1,'typed first page must use exactly one ten-document query');
+ await page.click('#listNext');
+ await page.waitForFunction(()=>document.querySelector('#listPageStatus').textContent==='第 2 / 3 頁');
+ assert.equal(await page.locator('.ledger-row').count(),10);
+ assert.match(await page.locator('.ledger-row').first().innerText(),/第15筆/);
+ await page.click('#listNext');
+ await page.waitForFunction(()=>document.querySelector('#listPageStatus').textContent==='第 3 / 3 頁');
+ assert.equal(await page.locator('.ledger-row').count(),5);
+ assert.equal(await page.locator('#listNext').isDisabled(),true);
+ const loadedReads=await page.evaluate(()=>window.__documentReads.length);
+ await page.click('#listPrevious');
+ await page.waitForFunction(()=>document.querySelector('#listPageStatus').textContent==='第 2 / 3 頁');
+ assert.equal(await page.evaluate(()=>window.__documentReads.length),loadedReads,'previous page uses cached records');
+ assert.ok(await page.evaluate(()=>window.__documentReads.every(r=>r.limit===10&&r.count<=10)));
  for(const width of [320,390,768]){
   await page.setViewportSize({width,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -128,6 +178,6 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.evaluate(()=>window.openListEntry('income'));
  assert.equal(await page.locator('#expenseModal').isVisible(),false);
  assert.deepEqual(errors,[]);
- console.log('PASS: month/year selection, totals, order, avatars, legacy records, group isolation, income/expense entry, date limits, validation, failed save/retry, duplicate-submit guard, deletion sync, stale requests, read retry, mobile layout and existing income permissions.');
+ console.log('PASS: bounded document reads, pagination, cached pages, monthly aggregate totals, single year/month picker, month arrows, one symbol-only add button; month/year selection, totals, order, avatars, legacy records, group isolation, income/expense entry, date limits, validation, failed save/retry, duplicate-submit guard, deletion sync, stale requests, read retry, mobile layout and existing income permissions.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

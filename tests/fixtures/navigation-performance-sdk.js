@@ -25,3 +25,11 @@ export const getFunctions=()=>({}),httpsCallable=(_,name)=>async()=>{record('cal
 export const getStorage=()=>({}),ref=(_,path)=>({path}),uploadString=async()=>{},getDownloadURL=async()=>'/Nexus.png',deleteObject=async()=>{};
 
 export const startAfter=s=>({after:s.id}),endAt=s=>({end:s.id});
+
+export const documentId=()=>'__name__', sum=field=>({sum:field}), count=()=>({count:true});
+export async function getAggregateFromServer(ref, fields){
+ record('aggregate',ref);await pause();
+ let rows=Object.entries(data()).filter(([path])=>path.startsWith(ref.path+'/')).map(([,value])=>value);
+ for(const f of ref.filters||[]){if(!f.field)continue;rows=rows.filter(d=>f.op==='=='?d[f.field]===f.value:f.op==='>='?d[f.field]>=f.value:f.op==='<='?d[f.field]<=f.value:false);}
+ return{data:()=>Object.fromEntries(Object.entries(fields).map(([key,field])=>[key,field.count?rows.length:rows.reduce((total,row)=>total+Number(row[field.sum]||0),0)]))};
+}

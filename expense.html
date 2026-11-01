@@ -41,15 +41,15 @@
 
     <!-- 頂部 Tab 切換 -->
     <div class="view-tabs">
-        <button id="tabCalendar" class="view-tab-btn active" onclick="switchMainView('calendar')">月曆模式</button>
-        <button id="tabList" class="view-tab-btn" onclick="switchMainView('list')">清單模式</button>
+        <button id="tabCalendar" class="view-tab-btn" onclick="switchMainView('calendar')">月曆模式</button>
+        <button id="tabList" class="view-tab-btn active" onclick="switchMainView('list')">清單模式</button>
         <button id="tabReview" class="view-tab-btn" onclick="switchMainView('review')">回顧</button>
     </div>
 
     <!-- ============================================== -->
     <!-- [視圖 1] 月曆與圓餅圖 (月曆模式) -->
     <!-- ============================================== -->
-    <div id="calendarView" class="main-container">
+    <div id="calendarView" class="main-container" style="display:none;">
         <!-- 月曆區塊 -->
         <div class="calendar-card">
             <div class="month-selector">
@@ -89,13 +89,15 @@
         </div>
     </div>
 
-    <section id="listView" class="main-container ledger-list-view" style="display:none;" aria-label="收支清單">
+    <section id="listView" class="main-container ledger-list-view" aria-label="收支清單">
         <div class="ledger-list-card">
             <div class="ledger-period">
-                <button type="button" class="month-btn" aria-label="前一年" onclick="changeListYear(-1)">❮</button>
-                <label>年份 <input id="listYear" type="number" min="1900" max="9999" inputmode="numeric" onchange="selectListMonth()"></label>
-                <label class="ledger-month-label">月份 <select id="listMonth" onchange="selectListMonth()" aria-label="月份"></select></label>
-                <button type="button" class="month-btn" aria-label="後一年" onclick="changeListYear(1)">❯</button>
+                <button type="button" class="month-btn" aria-label="上個月" onclick="changeMonth(-1)">❮</button>
+                <label class="ledger-month-picker">
+                    <span id="listPeriodText">載入中…</span>
+                    <input id="listPeriod" type="month" min="1900-01" max="9999-12" aria-label="選擇年月" onchange="selectListMonth()">
+                </label>
+                <button type="button" class="month-btn" aria-label="下個月" onclick="changeMonth(1)">❯</button>
             </div>
             <p class="ledger-scope-note">所屬群組的當月紀錄 · 點選明細查看當日紀錄</p>
             <div class="type-toggle" aria-label="清單收支類型">
@@ -108,11 +110,16 @@
                 <span id="listCount"></span>
             </div>
             <div id="ledgerList" aria-live="polite"></div>
+            <nav class="ledger-pagination" aria-label="記帳清單分頁">
+                <button id="listPrevious" type="button" onclick="changeListPage(-1)">上一頁</button>
+                <span id="listPageStatus" aria-live="polite"></span>
+                <button id="listNext" type="button" onclick="changeListPage(1)">下一頁</button>
+            </nav>
             <button type="button" id="retryListMonth" class="ledger-retry" hidden onclick="retryListMonth()">重新載入</button>
         </div>
         <div class="ledger-add-actions">
-            <button type="button" id="addListIncome" class="ledger-fab income require-income" aria-label="新增收入" onclick="openListEntry('income')"><span aria-hidden="true">+</span><small>收入</small></button>
-            <button type="button" id="addListExpense" class="ledger-fab expense" aria-label="新增支出" onclick="openListEntry('expense')"><span aria-hidden="true">+</span><small>支出</small></button>
+            <button type="button" id="addListIncome" class="ledger-fab income require-income" aria-label="新增收入" onclick="openListEntry('income')"><span aria-hidden="true">+</span></button>
+            <button type="button" id="addListExpense" class="ledger-fab expense" aria-label="新增支出" onclick="openListEntry('expense')"><span aria-hidden="true">+</span></button>
         </div>
     </section>
 

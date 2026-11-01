@@ -22,7 +22,7 @@ const mode=process.env.TEST_MODE||'all';
  const cdp=await context.newCDPSession(page);await cdp.send('Network.enable');await cdp.send('Network.setBlockedURLs',{urls:['https://*']});
  if(mode==='all'||mode==='chart'){
   delays['/js/expense.js']=500;
-  await page.goto(server.base+'/expense.html?nav=1',{waitUntil:'commit'});await page.waitForSelector('#calendarGrid');
+  await page.goto(server.base+'/expense.html?nav=1',{waitUntil:'commit'});await page.waitForSelector('#calendarGrid',{state:'attached'});await page.waitForFunction(()=>typeof window.switchMainView==='function');await page.click('#tabCalendar');
   const pendingCalendar=await page.locator('.calendar-card').boundingBox();
   await page.waitForFunction(()=>document.getElementById('monthTotalExpense').textContent==='$125');
   const loadedCalendar=await page.locator('.calendar-card').boundingBox();
@@ -39,6 +39,7 @@ const mode=process.env.TEST_MODE||'all';
   failures['/__cdn/chart.js']=503;
   await cdp.send('Network.clearBrowserCache');
   await page.goto(server.base+'/expense.html?nav=1');
+  await page.waitForFunction(()=>typeof window.switchMainView==='function');await page.click('#tabCalendar');
   await page.waitForSelector('#expensePieChartStatus button');
   assert.equal(await page.locator('#monthTotalExpense').innerText(),'$125');
   delete failures['/__cdn/chart.js'];await page.locator('#expensePieChartStatus button').click();
