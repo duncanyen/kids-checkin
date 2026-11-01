@@ -42,6 +42,7 @@
     <!-- 頂部 Tab 切換 -->
     <div class="view-tabs">
         <button id="tabCalendar" class="view-tab-btn active" onclick="switchMainView('calendar')">月曆模式</button>
+        <button id="tabList" class="view-tab-btn" onclick="switchMainView('list')">清單模式</button>
         <button id="tabReview" class="view-tab-btn" onclick="switchMainView('review')">回顧</button>
     </div>
 
@@ -87,6 +88,33 @@
             </div>
         </div>
     </div>
+
+    <section id="listView" class="main-container ledger-list-view" style="display:none;" aria-label="收支清單">
+        <div class="ledger-list-card">
+            <div class="ledger-period">
+                <button type="button" class="month-btn" aria-label="前一年" onclick="changeListYear(-1)">❮</button>
+                <label>年份 <input id="listYear" type="number" min="1900" max="9999" inputmode="numeric" onchange="selectListMonth()"></label>
+                <label class="ledger-month-label">月份 <select id="listMonth" onchange="selectListMonth()" aria-label="月份"></select></label>
+                <button type="button" class="month-btn" aria-label="後一年" onclick="changeListYear(1)">❯</button>
+            </div>
+            <p class="ledger-scope-note">所屬群組的當月紀錄 · 點選明細查看當日紀錄</p>
+            <div class="type-toggle" aria-label="清單收支類型">
+                <button id="listExpenseTab" class="type-btn active expense" onclick="switchListType('expense')" aria-pressed="true">支出</button>
+                <button id="listIncomeTab" class="type-btn require-income" onclick="switchListType('income')" aria-pressed="false">收入</button>
+            </div>
+            <div class="ledger-total" aria-live="polite">
+                <span id="listTotalLabel">當月總支出</span>
+                <strong id="listTotal" class="expense">讀取中...</strong>
+                <span id="listCount"></span>
+            </div>
+            <div id="ledgerList" aria-live="polite"></div>
+            <button type="button" id="retryListMonth" class="ledger-retry" hidden onclick="retryListMonth()">重新載入</button>
+        </div>
+        <div class="ledger-add-actions">
+            <button type="button" id="addListIncome" class="ledger-fab income require-income" aria-label="新增收入" onclick="openListEntry('income')"><span aria-hidden="true">+</span><small>收入</small></button>
+            <button type="button" id="addListExpense" class="ledger-fab expense" aria-label="新增支出" onclick="openListEntry('expense')"><span aria-hidden="true">+</span><small>支出</small></button>
+        </div>
+    </section>
 
     <!-- ============================================== -->
     <!-- [視圖 2] 回顧分析頁面 (回顧模式) -->
@@ -150,11 +178,15 @@
     <!-- ============================================== -->
     <!-- 記帳與明細 Modal -->
     <!-- ============================================== -->
-    <div class="modal" id="expenseModal">
+    <div class="modal" id="expenseModal" role="dialog" aria-modal="true" aria-labelledby="modalDateTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-date" id="modalDateTitle">選擇日期</div>
                 <button class="btn-close" onclick="closeModal('expenseModal')">✕</button>
+            </div>
+            <div class="input-group">
+                <label class="cat-form-label" for="expenseDate">記帳日期</label>
+                <input type="date" id="expenseDate" class="note-input" onchange="changeEntryDate()">
             </div>
             <!-- 收支切換 -->
             <div class="type-toggle">
@@ -166,12 +198,14 @@
             <!-- 金額與備註 -->
             <div class="input-group">
                 <div class="amount-input-wrapper expense" id="amountWrapper">
-                    $ <input type="number" id="expenseAmount" placeholder="0" inputmode="numeric">
+                    $ <input type="number" id="expenseAmount" aria-label="金額" min="0.01" step="0.01" placeholder="0" inputmode="decimal">
                 </div>
             </div>
             <div class="input-group">
-                <input type="text" id="expenseNote" class="note-input" placeholder="新增備註 (選填，例如：大潤發採買)">
+                <label for="expenseNote" class="cat-form-label">名稱（必填）</label>
+                <input type="text" id="expenseNote" class="note-input" maxlength="100" placeholder="例如：午餐便當、十一月薪資">
             </div>
+            <p id="entryStatus" class="ledger-entry-status" role="status"></p>
             <button class="btn-save expense" id="btnSaveExpense">儲存紀錄</button>
             
             <div class="day-list-title">當日明細</div>

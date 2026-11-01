@@ -151,3 +151,45 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 /* Existing day cells are 65px content + 12px padding/border, with 4px gaps.
    Preserve the pending month's natural height instead of pushing the chart down. */
 #calendarGrid[data-loading]::after {content:"";grid-column:1/-1;height:calc(var(--ledger-week-count,5) * 77px + (var(--ledger-week-count,5) - 1) * 4px);border-radius:8px;background:var(--n-soft);}
+
+/* Monthly ledger list shares the existing calendar's month and records. */
+.ledger-list-view { padding-bottom: 110px; }
+.ledger-list-card { padding: 20px; border-radius: 18px; background: var(--n-surface, #fff); box-shadow: var(--card-shadow); }
+.ledger-period { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ledger-period label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: bold; }
+.ledger-period input, .ledger-period select { min-height: 44px; padding: 6px; border: 1px solid var(--n-border, #ddd); border-radius: 10px; background: var(--n-soft, #f3f4f6); color: var(--n-text, #292c30); font: inherit; }
+.ledger-period input { width: 76px; }
+.ledger-period .month-btn { padding: 8px; min-width: 36px; min-height: 44px; }
+.ledger-scope-note { font-size: 12px; line-height: 1.6; color: var(--n-muted, #62676e); margin: 12px 0 20px; }
+.ledger-total { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; padding: 20px; border-radius: 14px; background: var(--n-soft, #f3f4f6); }
+.ledger-total > span { color: var(--n-muted, #62676e); font-size: 13px; }
+.ledger-total > strong { font-size: calc(28px * var(--n-font-scale, 1)); overflow-wrap: anywhere; }
+.ledger-total .expense, .ledger-row-amount.expense { color: var(--expense-color); }
+.ledger-total .income, .ledger-row-amount.income { color: var(--income-color); }
+#ledgerList { color: var(--n-muted, #62676e); font-size: 14px; line-height: 1.6; }
+.ledger-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 30px auto; align-items: center; gap: 10px; padding: 16px 0; width: 100%; text-align: left; color: var(--n-text, #292c30); background: transparent; border: 0; border-bottom: 1px solid var(--n-border, #eee); font: inherit; cursor: pointer; }
+.ledger-row time { font-size: 12px; color: var(--n-muted, #62676e); }
+.ledger-row-details { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.ledger-row-details strong { overflow-wrap: anywhere; }
+.ledger-row-category { font-size: 12px; color: var(--n-muted, #62676e); }
+.ledger-row-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--n-soft, #f3f4f6); display: grid; place-items: center; overflow: hidden; font-size: 13px; }
+.ledger-row-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ledger-row-amount { font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ledger-add-actions { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: max(20px, calc((100vw - 650px) / 2)); right: max(20px, calc((100vw - 650px) / 2)); display: flex; justify-content: space-between; pointer-events: none; z-index: 60; }
+:is(.has-app-navigation, [data-navigation-entry=nav]) .ledger-add-actions { bottom: calc(var(--app-nav-height) + 18px); }
+.ledger-fab { width: 64px; height: 64px; border: 0; border-radius: 50%; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 16px #0003; cursor: pointer; pointer-events: auto; }
+.ledger-fab.expense { background: var(--expense-color); margin-left: auto; }
+.ledger-fab.income { background: var(--income-color); }
+.ledger-fab > span { font-size: 30px; line-height: 28px; }
+.ledger-fab small { font-size: 11px; }
+.ledger-fab:disabled { opacity: .5; cursor: wait; }
+.ledger-entry-status { font-size: 14px; color: var(--n-text, #292c30); line-height: 1.6; }
+.ledger-retry { min-height: 44px; padding: 8px 16px; margin-top: 12px; border: 1px solid var(--primary-color); background: var(--n-surface, #fff); color: var(--primary-color); border-radius: 10px; cursor: pointer; }
+.ledger-row:focus-visible, .ledger-fab:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+@media (max-width: 380px) {
+    .ledger-list-card { padding: 12px; }
+    .ledger-period { gap: 2px; }
+    .ledger-period label { gap: 3px; font-size: 12px; }
+    .ledger-row { gap: 6px; grid-template-columns: 32px minmax(0, 1fr) 26px auto; }
+    .ledger-row-amount { font-size: 12px; }
+}

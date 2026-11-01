@@ -40,7 +40,11 @@ if (!canViewIncome) {
 }
 
 // --- 全域變數 ---
-let currentDate = new Date(); 
+let currentDate = new Date();
+currentDate.setDate(1);
+let currentListType = 'expense';
+let monthError = false;
+let savingEntry = false;
 let selectedDateStr = "";     
 let monthRequestVersion = 0;
 let monthReady = false;
@@ -104,6 +108,7 @@ async function loadMonthProfiles(records, version) {
         if (version !== monthRequestVersion) return;
         allUsersMap = profileAvatarMap(profiles);
         renderPersonalAvatars();
+        renderLedgerList();
     } catch (error) {
         console.error("載入使用者頭像失敗：", error);
     }
@@ -121,24 +126,132 @@ async function loadCustomCategories() {
 }
 
 window.switchMainView = function(view) {
-    document.getElementById('tabCalendar').classList.remove('active');
-    document.getElementById('tabReview').classList.remove('active');
-    document.getElementById('calendarView').style.display = 'none';
-    document.getElementById('reviewView').style.display = 'none';
-
-    if (view === 'calendar') {
-        document.getElementById('tabCalendar').classList.add('active');
-        document.getElementById('calendarView').style.display = 'flex';
-    } else {
-        document.getElementById('tabReview').classList.add('active');
-        document.getElementById('reviewView').style.display = 'flex';
-        fetchAndRenderReviewData(); 
+    for (const [name, tab] of [['calendar', 'Calendar'], ['list', 'List'], ['review', 'Review']]) {
+        document.getElementById('tab' + tab).classList.toggle('active', view === name);
+        document.getElementById(name + 'View').style.display = view === name ? 'flex' : 'none';
     }
+    if (view === 'review') fetchAndRenderReviewData();
+    if (view === 'list') renderLedgerList();
+};
+
+function syncListPeriod() {
+    document.getElementById('listYear').value = currentDate.getFullYear();
+    const months = document.getElementById('listMonth');
+    if (!months.options.length) {
+        for (let month = 1; month <= 12; month++) months.add(new Option(`${month}月`, month));
+    }
+    months.value = currentDate.getMonth() + 1;
+}
+
+window.selectListMonth = function() {
+    if (savingEntry) { syncListPeriod(); return; }
+    const year = Number(document.getElementById('listYear').value);
+    const month = Number(document.getElementById('listMonth').value);
+    if (!Number.isInteger(year) || year < 1900 || year > 9999 || month < 1 || month > 12) {
+        syncListPeriod(); return;
+    }
+    currentDate = new Date(year, month - 1, 1);
+    loadMonthData(year, month);
+};
+window.changeListYear = function(offset) {
+    document.getElementById('listYear').value = currentDate.getFullYear() + offset;
+    selectListMonth();
+};
+window.retryListMonth = () => { if (!savingEntry) loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1); };
+window.switchListType = function(type) {
+    if (type === 'income' && !canViewIncome) return;
+    currentListType = type;
+    renderLedgerList();
+};
+
+function renderLedgerList() {
+    syncListPeriod();
+    const income = currentListType === 'income';
+    const label = income ? '收入' : '支出';
+    for (const [id, type] of [['listExpenseTab', 'expense'], ['listIncomeTab', 'income']]) {
+        const tab = document.getElementById(id);
+        tab.className = `type-btn ${type === 'income' ? 'require-income' : ''} ${type === currentListType ? 'active ' + type : ''}`;
+        tab.setAttribute('aria-pressed', String(type === currentListType));
+    }
+    document.getElementById('listTotalLabel').textContent = `當月總${label}`;
+    const total = document.getElementById('listTotal');
+    total.className = currentListType;
+    const container = document.getElementById('ledgerList');
+    container.replaceChildren();
+    document.getElementById('listCount').textContent = '';
+    document.getElementById('retryListMonth').hidden = !monthError;
+    for (const id of ['addListExpense', 'addListIncome']) document.getElementById(id).disabled = !monthReady;
+    if (!monthReady) {
+        total.textContent = monthError ? '暫時無法取得' : '讀取中...';
+        container.textContent = monthError ? '讀取失敗，請檢查網路後重試。' : '正在載入當月紀錄…';
+        return;
+    }
+    const records = monthData.filter(item => (item.type || 'expense') === currentListType)
+        .sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+    const amount = records.reduce((sum, item) => sum + Math.round(Number(item.amount) * 100), 0) / 100;
+    total.textContent = `NT$ ${amount.toLocaleString('zh-TW', { maximumFractionDigits: 2 })}`;
+    document.getElementById('listCount').textContent = `${records.length} 筆紀錄`;
+    if (!records.length) {
+        container.textContent = `這個月還沒有${label}紀錄，點選下方「+」開始記帳。`;
+        return;
+    }
+    for (const item of records) {
+        const row = document.createElement('button');
+        row.type = 'button'; row.className = 'ledger-row';
+        const date = document.createElement('time');
+        date.dateTime = item.date;
+        date.textContent = item.date.split('-').slice(1).map(Number).join('/');
+        const details = document.createElement('span'); details.className = 'ledger-row-details';
+        const category = document.createElement('span'); category.className = 'ledger-row-category'; category.textContent = item.category || '未分類';
+        const name = document.createElement('strong'); name.textContent = item.note || item.name || '未填寫名稱';
+        details.append(category, name);
+        const avatar = document.createElement('span'); avatar.className = 'ledger-row-avatar';
+        const operator = item.operator || '未知使用者';
+        avatar.title = operator; avatar.setAttribute('aria-label', operator);
+        const own = item.accountId === currentAccountId || (!item.accountId && operator === currentUser.name);
+        const url = allUsersMap[item.accountId || operator] || (own && (currentUser.avatar || currentUser.photoURL || currentUser.avatarUrl));
+        avatar.textContent = operator.slice(0, 1);
+        let safeAvatar = false;
+        try { safeAvatar = !!url && /^(https?:|data:image\/)/i.test(new URL(url, location.href).href); } catch {}
+        if (safeAvatar) {
+            const image = document.createElement('img'); image.src = url; image.alt = operator;
+            image.onerror = () => avatar.replaceChildren(document.createTextNode(operator.slice(0, 1)));
+            avatar.replaceChildren(image);
+        }
+        const money = document.createElement('strong'); money.className = `ledger-row-amount ${currentListType}`;
+        money.textContent = `${income ? '+' : '−'}$${Number(item.amount).toLocaleString('zh-TW', { maximumFractionDigits: 2 })}`;
+        row.append(date, details, avatar, money);
+        row.onclick = () => { openModal('expenseModal', item.date); switchModalType(currentListType); };
+        container.append(row);
+    }
+}
+
+window.openListEntry = function(type) {
+    if (!monthReady || savingEntry || (type === 'income' && !canViewIncome)) return;
+    switchListType(type);
+    const today = new Date();
+    const day = today.getFullYear() === currentDate.getFullYear() && today.getMonth() === currentDate.getMonth() ? today.getDate() : 1;
+    const date = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    openModal('expenseModal', date);
+    switchModalType(type);
+    document.getElementById('expenseAmount').focus();
+};
+window.changeEntryDate = function() {
+    if (savingEntry) { document.getElementById('expenseDate').value = selectedDateStr; return; }
+    const input = document.getElementById('expenseDate');
+    if (!input.value || input.value < input.min || input.value > input.max) {
+        input.value = selectedDateStr; return;
+    }
+    selectedDateStr = input.value;
+    document.getElementById('modalDateTitle').textContent = `${selectedDateStr.replaceAll('-', '/')} 記帳`;
+    renderDayList();
 };
 
 async function loadMonthData(year, month) {
     const version = ++monthRequestVersion;
     monthReady = false;
+    monthError = false;
+    renderLedgerList();
     // Pending means unknown, never a plausible but incorrect $0/old-month sum.
     document.getElementById('monthTotalExpense').innerText = '讀取中...';
     document.getElementById('monthTotalIncome').innerText = '讀取中...';
@@ -179,9 +292,12 @@ async function loadMonthData(year, month) {
         await categoriesReady;
         if (version !== monthRequestVersion) return;
         monthReady = true;
+        renderLedgerList();
         renderPieChart();
     } catch (error) {
         if (version !== monthRequestVersion) return;
+        monthError = true;
+        renderLedgerList();
         document.getElementById('calendarMonthTitle').innerText = '讀取失敗，請切換月份重試';
         console.error("讀取資料失敗：", error);
         alert("讀取資料失敗，請檢查網路。");
@@ -223,6 +339,8 @@ function renderCalendar(year, month) {
 }
 
 window.changeMonth = function(offset) {
+    if (savingEntry) return;
+    currentDate.setDate(1);
     currentDate.setMonth(currentDate.getMonth() + offset);
     loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 };
@@ -551,9 +669,15 @@ async function processReviewData() {
 }
 
 window.openModal = function(modalId, dateStr = null) {
+    if (savingEntry && modalId === 'expenseModal') return;
     if(dateStr) {
         if (!monthReady) return;
         selectedDateStr = dateStr;
+        const dateInput = document.getElementById('expenseDate');
+        dateInput.min = dateStr.slice(0, 7) + '-01';
+        dateInput.max = dateStr.slice(0, 7) + '-' + new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+        dateInput.value = dateStr;
+        document.getElementById('entryStatus').textContent = '';
         const [y, m, d] = dateStr.split('-');
         document.getElementById('modalDateTitle').innerText = `${y}年${parseInt(m)}月${parseInt(d)}日`;
         document.getElementById('expenseAmount').value = '';
@@ -576,16 +700,18 @@ window.openModal = function(modalId, dateStr = null) {
 };
 
 window.closeModal = function(modalId) {
+    if (savingEntry && modalId === 'expenseModal') return;
     document.getElementById(modalId).style.display = 'none';
 };
 
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) { 
-        event.target.style.display = "none"; 
+        closeModal(event.target.id);
     }
 };
 
 window.switchModalType = function(type) {
+    if (savingEntry) return;
     if (type === 'income' && !canViewIncome) return;
     currentModalType = type;
     document.getElementById('btnTypeExpense').className = `type-btn ${type === 'expense' ? 'active expense' : ''}`;
@@ -611,7 +737,8 @@ function renderCategoryGrid() {
     const fullList = [...baseList, ...myCustoms];
 
     fullList.forEach(cat => {
-        const btn = document.createElement('div');
+        const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'cat-btn';
         btn.id = `cat-${cat.name || cat.id}`; 
         btn.onclick = () => selectCategory(cat.name || cat.id);
@@ -629,6 +756,7 @@ function renderCategoryGrid() {
 }
 
 function selectCategory(catName) {
+    if (savingEntry) return;
     selectedCategory = catName;
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected', 'expense', 'income'));
     const target = document.getElementById(`cat-${catName}`);
@@ -774,9 +902,20 @@ function resizeImageToBase64(file) {
 document.getElementById('btnSaveExpense').addEventListener('click', async () => {
     const amountStr = document.getElementById('expenseAmount').value;
     const note = document.getElementById('expenseNote').value.trim();
-    const amount = parseInt(amountStr);
-
-    if (!amount || amount <= 0) { alert('請輸入有效金額！'); return; }
+    if (savingEntry || !monthReady) return;
+    const status = document.getElementById('entryStatus');
+    const amount = Number(amountStr);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 999999999 || Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001) {
+        status.textContent = '請輸入大於 0、最多兩位小數的金額（上限 999,999,999）。'; return;
+    }
+    if (!note) { status.textContent = '請輸入名稱。'; document.getElementById('expenseNote').focus(); return; }
+    if (!selectedCategory || !selectedDateStr || (currentModalType === 'income' && !canViewIncome)) {
+        status.textContent = '請確認日期與分類。'; return;
+    }
+    savingEntry = true;
+    document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = true);
+    status.textContent = '';
+    const entryVersion = monthRequestVersion;
 
     const btn = document.getElementById('btnSaveExpense');
     btn.disabled = true;
@@ -796,13 +935,14 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
         };
 
         const docRef = await addDoc(collection(db, "expenses"), newItem);
-        monthData.push({ id: docRef.id, ...newItem, timestamp: new Date() });
+        if (entryVersion === monthRequestVersion) monthData.push({ id: docRef.id, ...newItem, timestamp: new Date() });
         
         hasLoadedAllData = false; 
 
         document.getElementById('expenseAmount').value = '';
         document.getElementById('expenseNote').value = '';
-        
+        status.textContent = '已儲存，可繼續新增。';
+        renderLedgerList();
         renderDayList();
         renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
         renderPersonalAvatars(); 
@@ -810,12 +950,18 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
 
     } catch (e) {
         console.error("儲存失敗：", e);
-        alert("儲存失敗，請檢查網路！");
+        status.textContent = '儲存失敗，內容已保留，請檢查網路後重試。';
     } finally {
+        savingEntry = false;
+        document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = false);
         btn.disabled = false;
         btn.innerText = '儲存紀錄';
     }
 });
+
+function ledgerText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+}
 
 function renderDayList() {
     const container = document.getElementById('dayExpenseList');
@@ -843,8 +989,8 @@ function renderDayList() {
             <div class="exp-cat-info">
                 <div class="exp-icon-box" style="color: ${catObj.color}">${iconHtml}</div>
                 <div class="exp-details">
-                    <span class="exp-cat-name">${item.category}</span>
-                    <span class="exp-note">${item.note ? item.note : `<span style="opacity:0.5">${item.operator}記帳</span>`}</span>
+                    <span class="exp-cat-name">${ledgerText(item.category)}</span>
+                    <span class="exp-note">${item.note ? ledgerText(item.note) : `<span style="opacity:0.5">${ledgerText(item.operator)}記帳</span>`}</span>
                 </div>
             </div>
             <div style="display:flex; align-items:center;">
@@ -857,10 +1003,12 @@ function renderDayList() {
 }
 
 window.deleteExpense = async function(docId) {
+    if (savingEntry) return;
     if (!confirm("確定要刪除這筆紀錄嗎？")) return;
     try {
         await deleteDoc(doc(db, "expenses", docId));
         monthData = monthData.filter(e => e.id !== docId);
+        renderLedgerList();
         
         hasLoadedAllData = false; 
 
