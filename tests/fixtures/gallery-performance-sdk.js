@@ -37,3 +37,8 @@ export async function updateDoc(ref,patch){
  window.__galleryTest.emit();
 }
 export async function deleteDoc(ref){delete window.__perfStore[ref.path];window.__galleryTest.emit();}
+
+export async function runTransaction(_, callback){
+ const result=await callback({get:async ref=>({exists:()=>!!window.__perfStore[ref.path],data:()=>structuredClone(window.__perfStore[ref.path])}),update:(ref,patch)=>Object.assign(window.__perfStore[ref.path],patch)});
+ window.__galleryTest.emit();return result;
+}

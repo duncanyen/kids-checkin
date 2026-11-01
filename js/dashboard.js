@@ -1,10 +1,12 @@
+import { photoLikes, updatePhotoLike } from './gallery-core.js';
+import { loadPhotoAliases } from './gallery-identity.js';
 import { loadChatProfiles, watchMemberRooms } from './chat-membership.js';
 import { unreadFor, readFor } from './chat-identity-core.js';
 import { mountAppNavigation } from './app-navigation.js';
 import { icon, enhanceNavigation } from './ui-icons.js';
 import { readPersonalLayout } from './personal-layout.js';
 import { db } from "./firebase-config.js";
-import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit, getCountFromServer } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit, getCountFromServer, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 let unreadUnsubscribe = null;
 let galleryUnsubscribe = null;
@@ -547,7 +549,10 @@ window.fetchAndRenderPhotoCarousel = function(user) {
     carouselUnsubscribe?.(); carouselUnsubscribe = null;
     if (!window.currentGroup) return;
     const q = query(collection(db, "photos"), where("groupId", "==", window.currentGroup.id), orderBy("timestamp", "desc"), limit(5));
-    carouselUnsubscribe = watchMemberWidget(q, (snapshot) => {
+    const groupId = window.currentGroup.id, token = dashboardGeneration;
+    let aliases = [user.name, ...(user.nameHistory || [])], latest;
+    const render = snapshot => {
+        latest = snapshot;
         const section = document.getElementById('photoCarouselSection');
         const container = document.getElementById('photoCarouselContainer');
         if (snapshot.empty) { section.style.display = 'none'; return; }
@@ -560,7 +565,7 @@ window.fetchAndRenderPhotoCarousel = function(user) {
             let displayImageUrl = '';
             if (photo.imageUrls && Array.isArray(photo.imageUrls) && photo.imageUrls.length > 0) displayImageUrl = photo.imageUrls[0]; 
             else displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
-            const likes = photo.likes || []; const isLiked = likes.includes(user.name); const likeCount = likes.length;
+            const { liked: isLiked, count: likeCount } = photoLikes(photo, user.accountId, aliases);
             if (displayImageUrl) {
                 html += `
                     <div class="carousel-item">
@@ -574,25 +579,36 @@ window.fetchAndRenderPhotoCarousel = function(user) {
                                 </div>
                             </div>
                             <div class="carousel-actions">
-                                <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}')">${isLiked ? '❤️' : '♡'} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span></button>
+                                <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="togglePhotoLike('${photoId}', ${isLiked})" aria-pressed="${isLiked}" aria-label="${isLiked ? '取消按讚' : '按讚'}">${icon('heart')} <span class="like-count">${likeCount > 0 ? likeCount : '讚'}</span></button>
                             </div>
                         </div>
                     </div>`;
             }
         });
         container.innerHTML = html;
-    });
+    };
+    carouselUnsubscribe = watchMemberWidget(q, render);
+    loadPhotoAliases(db, user).then(names => {
+        if (token !== dashboardGeneration || window.currentGroup?.id !== groupId) return;
+        aliases = names; if (latest) render(latest);
+    }).catch(() => {});
 };
 
-window.togglePhotoLike = async function(photoId) {
-    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
+const pendingPhotoLikes = new Set();
+window.togglePhotoLike = async function(photoId, wasLiked) {
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null');
+    const groupId = window.currentGroup?.id;
+    if (!user?.accountId || !groupId || pendingPhotoLikes.has(photoId)) return;
+    pendingPhotoLikes.add(photoId);
     try {
-        const photoRef = doc(db, "photos", photoId);
-        const photoSnap = await getDoc(photoRef);
-        if (photoSnap.exists()) {
-            let likes = photoSnap.data().likes || [];
-            if (likes.includes(user.name)) likes = likes.filter(n => n !== user.name); else likes.push(user.name); 
-            await updateDoc(photoRef, { likes: likes });
-        }
-    } catch(e) {}
+        const aliases = await loadPhotoAliases(db, user);
+        await runTransaction(db, async transaction => {
+            const ref = doc(db, 'photos', photoId), snapshot = await transaction.get(ref);
+            const saved = JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null');
+            if (saved?.accountId !== user.accountId || window.currentGroup?.id !== groupId || !snapshot.exists() || snapshot.data().groupId !== groupId) throw new Error('群組或帳號已變更');
+            const liked = typeof wasLiked === 'boolean' ? wasLiked : photoLikes(snapshot.data(), user.accountId, aliases).liked;
+            transaction.update(ref, updatePhotoLike(snapshot.data(), user.accountId, aliases, !liked));
+        });
+    } catch { alert('按讚失敗，請檢查連線後重試。'); }
+    finally { pendingPhotoLikes.delete(photoId); }
 };

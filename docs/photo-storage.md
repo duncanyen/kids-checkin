@@ -34,3 +34,17 @@ photoSession 在伺服器檢查既有密碼或 PIN、有效帳號和目前群組
 本機隔離測試：`node --test tests/gallery-storage.test.mjs`，涵蓋多張上傳、部分失敗清理、穩定帳號欄位、舊資料相容、跨群組路徑拒絕，以及後端帳密／群組／停用帳號驗證。另有 `node tests/gallery-storage-browser.cjs` 驗證真實相簿頁面（SDK 與資料均隔離模擬）。
 
 正式 Storage／Functions 部署與線上權限尚未驗證；Firebase CLI 目前沒有可用登入，模擬器下載先前也遭環境網路限制。發布前需在有權限的環境完成部署及上述實機檢查。
+
+## 照片檢視、儲存與圖片留言
+
+照片檢視器使用 Pointer Events 實作兩指縮放（1–5 倍）、放大後拖曳與雙擊縮放／重設；原尺寸時仍可左右滑動切換、向下滑動關閉。切換照片會重設縮放，兩指手勢不會觸發換圖。
+
+「下載照片」以圖片 Blob 下載原有照片檔，並非螢幕截圖。支援檔案分享的手機瀏覽器會額外顯示「分享／儲存相簿」，由使用者在系統選單選擇儲存影像。網頁無法直接寫入 iOS／Android 系統相簿，部分瀏覽器會先下載到檔案／下載資料夾。舊外站圖片若不允許跨來源讀取，顯示「開啟原圖」供長按儲存，不宣稱下載成功。原生相簿／分享選單仍需在目標手機實機確認。
+
+按讚改存 `likeAccountIds`，陣列以固定 accountId 去重。相簿及首頁輪播共用同一套邏輯，透過 Firestore transaction 避免同時操作覆蓋。舊 `likes` 名稱陣列保留相容，會以目前帳號的 `nameHistory` 合併舊愛心，下一次操作時移除自己的舊名稱並寫入固定帳號。無法從純名稱可靠辨識的歷史資料不做全庫猜測或批次回填。
+
+留言可純文字、純圖片或兩者一起發佈；最多 3 張照片，原始檔單張上限 20 MB，轉為最長邊 1200px JPEG。預覽可逐張移除，失敗保留草稿，傳送中鎖定表單。新留言帶有 `id`、`senderAccountId`、`sender`、`text`、`replyTo`、`timestamp`；附圖另帶 `imageUrls`、`storagePaths` 等儲存欄位。附圖使用既有 Storage 路徑，postId 設為 `{貼文ID}-comment-{留言ID}`，沿用 photoSession／Storage 驗證，不新增公開儲存規則。
+
+刪除留言會嘗試清理該留言附圖；刪除整篇貼文也會收集留言附圖一併清理。既有 Storage 規則僅允許檔案擁有者或群組 admin／parent 刪除：普通貼文擁有者刪掉其他人附圖的貼文時，部分檔案可能需由管理者清理；介面會明確提示，不會誤報所有檔案已刪除。
+
+本機驗證：`node --test tests/gallery-core.test.mjs`、`node tests/gallery-upgrade-browser.cjs`（真實雙指事件、下載、分享介面替身、跨分頁交易、留言圖片回滾）、既有相簿 Storage／分頁／互動回歸。未部署正式站或修改正式資料。

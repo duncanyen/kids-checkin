@@ -1,5 +1,6 @@
 // Local, consistent 24px outline icons. No font/CDN dependency; never alter user content.
 const paths = {
+    download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
     users:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v2"/>',
     camera:'<path d="M8 6l2-3h4l2 3h4a2 2 0 0 1 2 2v12H2V8a2 2 0 0 1 2-2h4Z"/><circle cx="12" cy="13" r="4"/>',
     eraser:'<path d="m14 3 7 7-11 11H5l-4-4L14 3ZM7 11l7 7M10 21h12"/>',

@@ -12,6 +12,7 @@ export const query=(ref,...filters)=>ref,where=()=>({}),orderBy=()=>({}),serverT
 const snapshot=()=>({empty:!t.rows.length,forEach:cb=>t.rows.forEach(({id,...data})=>cb({id,data:()=>data}))});
 let listener;
 export const onSnapshot=(_,cb)=>{listener=cb;cb(snapshot());return()=>{}};
+export const runTransaction=async()=>{throw Error('not used in upload regression')};
 export const addDoc=async()=>({id:'log'}),updateDoc=async()=>{};
 export const setDoc=async(ref,data)=>{if(t.failSave)throw Error('offline');t.writes.push(data);t.rows.push({id:ref.id,...data});listener(snapshot())};
 export const deleteDoc=async ref=>{t.rows=t.rows.filter(row=>row.id!==ref.id);listener(snapshot())};
@@ -39,6 +40,10 @@ export const deleteObject=async path=>{t.deletes.push(path)};
         await page.route('**/js/gallery.js', async route => {
             const response = await route.fetch();
             await route.fulfill({ response, body: (await response.text()).replace(/https:\/\/www.gstatic.com\/firebasejs\/12.19.0\/firebase-[a-z]+.js/g, base + '/mock-sdk.js') });
+        });
+        await page.route('**/js/gallery-identity.js', async route => {
+            const response = await route.fetch();
+            await route.fulfill({ response, body: (await response.text()).replace(/https:\/\/www.gstatic.com\/firebasejs\/12\.19\.0\/firebase-[a-z]+.js/g, base + '/mock-sdk.js') });
         });
         await page.route('**/mock-sdk.js', route => route.fulfill({ contentType: 'text/javascript', body: sdk }));
         await page.route('https://**/*', route => route.abort());

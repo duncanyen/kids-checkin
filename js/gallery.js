@@ -1,9 +1,13 @@
 import {
     collection, addDoc, query, orderBy, onSnapshot, where, getDocs, limit, startAfter, endAt,
-    serverTimestamp, doc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc
+    serverTimestamp, doc, setDoc, deleteDoc, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { db } from './firebase-config.js';
 import { icon } from './ui-icons.js';
+import { photoLikes, updatePhotoLike } from './gallery-core.js';
+import { loadPhotoAliases } from './gallery-identity.js';
+import { createPhotoViewer } from './gallery-viewer.js';
+const html = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Viewing the feed needs only Firestore. Auth/Functions/Storage load when an
 // upload or storage-backed delete actually needs them; native ESM shares the load.
 async function uploadPhotoPost(options) {
@@ -32,9 +36,17 @@ let currentSort = 'latest';
  
 window.viewerQueue = []; 
 let currentViewerIndex = 0; 
-let isZoomed = false;       
 window.replyState = {};
 
+const commentDrafts = new Map(), likePending = new Set();
+let likeAliases = new Set([currentUser?.name, ...(currentUser?.nameHistory || [])].filter(Boolean));
+function sameSession() {
+    const saved = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
+    return JSON.parse(saved || 'null')?.accountId === currentUser.accountId && localStorage.getItem('lastGroupId') === currentGroupId;
+}
+async function loadLikeIdentity() {
+    likeAliases = new Set(await loadPhotoAliases(db, currentUser));
+}
 const feedContainer = document.getElementById('feedContainer');
 const unreadBadge = document.getElementById('unreadBadge');
 
@@ -193,13 +205,13 @@ function renderFeed() {
     let globalImageIndex = 0;
     const sortedList = [...allPhotosData];
     sortedList.sort((a,b)=>{
-        const score = currentSort === 'likes' ? (b.likes?.length||0)-(a.likes?.length||0)
+        const score = currentSort === 'likes' ? photoLikes(b, currentUser.accountId, [...likeAliases]).count-photoLikes(a, currentUser.accountId, [...likeAliases]).count
             : currentSort === 'comments' ? (b.comments?.length||0)-(a.comments?.length||0) : 0;
         return score || (b.timestamp?.toMillis?.() || b.timestamp?.toDate?.()?.getTime() || 0)
             -(a.timestamp?.toMillis?.() || a.timestamp?.toDate?.()?.getTime() || 0) || b.id.localeCompare(a.id);
     });
     if (!cards.size) feedContainer.replaceChildren();
-    for (const [id, entry] of cards) if (!posts.has(id)) { entry.card.remove(); cards.delete(id); delete window.replyState[id]; }
+    for (const [id, entry] of cards) if (!posts.has(id)) { entry.card.remove(); cards.delete(id); delete window.replyState[id]; commentDrafts.delete(id); }
     let previous = null;
     const viewedUrl = photoViewerModal?.style.display === 'flex' ? viewerImage.getAttribute('src') : null;
     for (const photo of sortedList) {
@@ -240,14 +252,18 @@ function renderFeed() {
             entry.signature = signature;
         }
         entry.images = photo.imageUrls || (photo.imageUrl ? [photo.imageUrl] : []);
-        entry.card.querySelectorAll('.card-image').forEach((img,i)=>img.onclick=()=>window.openPhotoViewer(globalIndex+i));
-        const globalIndex = globalImageIndex;
+        entry.card.querySelectorAll('.card-image, .comment-image').forEach(img => {
+            const imageIndex = globalImageIndex++;
+            window.viewerQueue.push(img.getAttribute('src'));
+            img.onclick = () => window.openPhotoViewer(imageIndex);
+        });
         const expected = previous ? previous.nextSibling : feedContainer.firstChild;
         if (expected !== entry.card) feedContainer.insertBefore(entry.card, expected);
         previous = entry.card;
-        entry.images.forEach(img=>{window.viewerQueue.push(img); globalImageIndex++;});
+
     }
-    if (viewedUrl && window.viewerQueue.includes(viewedUrl)) currentViewerIndex = window.viewerQueue.indexOf(viewedUrl);
+    if (viewedUrl && window.viewerQueue.includes(viewedUrl)) { currentViewerIndex = window.viewerQueue.indexOf(viewedUrl); photoViewer.setIndex(currentViewerIndex); }
+    else if (viewedUrl) window.closePhotoViewer();
     if (!sortedList.length) feedContainer.textContent = '相簿空空的，趕快點擊右下角發佈第一張照片吧！';
 }
 feedContainer.addEventListener('keypress', event=>{
@@ -264,9 +280,7 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
     const isMine = ((data.uploaderAccountId ? data.uploaderAccountId === currentUser.accountId : data.uploader === currentUser.name) || currentUser.role === 'admin' || currentUser.role === 'parent');
     const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')" title="刪除貼文" aria-label="刪除貼文">${icon('trash')}</button>` : '';
 
-    const likesArray = Array.isArray(data.likes) ? data.likes : [];
-    const hasLiked = likesArray.includes(currentUser.name);
-    const likesCount = likesArray.length;
+    const { liked: hasLiked, count: likesCount } = photoLikes(data, currentUser.accountId, [...likeAliases]);
 
     const images = data.imageUrls || (data.imageUrl ? [data.imageUrl] : []);
     let imagesHtml = `<div class="photo-carousel">`;
@@ -282,18 +296,19 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
         data.comments.forEach((c, cIndex) => {
             const cTime = new Date(c.timestamp);
             const cTimeStr = `${String(cTime.getMonth()+1).padStart(2,'0')}/${String(cTime.getDate()).padStart(2,'0')} ${String(cTime.getHours()).padStart(2,'0')}:${String(cTime.getMinutes()).padStart(2,'0')}`;
-            const canDeleteComment = (c.sender === currentUser.name || currentUser.role === 'admin' || currentUser.role === 'parent');
+            const canDeleteComment = ((c.senderAccountId ? c.senderAccountId === currentUser.accountId : likeAliases.has(c.sender)) || currentUser.role === 'admin' || currentUser.role === 'parent');
             const delCommentBtn = canDeleteComment ? `<button class="btn-action-sm btn-del-comment" onclick="window.deleteComment('${photoId}', ${cIndex})">刪除</button>` : '';
-            const replyBtn = `<button class="btn-action-sm btn-reply" onclick="window.setupReply('${photoId}', '${c.sender}')">回覆</button>`;
-            const replyTagHtml = c.replyTo ? `<span class="reply-tag">回覆 @${c.replyTo}</span>` : '';
+            const replyBtn = `<button class="btn-action-sm btn-reply" data-reply-photo="${html(photoId)}" data-reply-sender="${html(c.sender)}">回覆</button>`;
+            const replyTagHtml = c.replyTo ? `<span class="reply-tag">回覆 @${html(c.replyTo)}</span>` : '';
 
             commentsHtml += `
                 <div class="comment-item">
                     <div class="comment-header-row">
-                        <span class="comment-sender">${c.sender}</span><span class="comment-time">${cTimeStr}</span>
+                        <span class="comment-sender">${html(c.sender)}</span><span class="comment-time">${cTimeStr}</span>
                     </div>
                     <div class="comment-content-row">
-                        <div class="comment-content">${replyTagHtml}${c.text}</div>
+                        <div class="comment-content">${replyTagHtml}${html(c.text)}
+                            <div class="comment-images">${(c.imageUrls || []).map(url => `<img class="comment-image" src="${html(url)}" alt="${html(c.sender)}的留言照片" loading="lazy" decoding="async">`).join('')}</div></div>
                         <div class="comment-actions">${replyBtn}${delCommentBtn}</div>
                     </div>
                 </div>`;
@@ -334,9 +349,13 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
                 <button class="btn-cancel-reply" onclick="window.cancelReply('${photoId}')" aria-label="取消回覆">${icon('close')}</button>
             </div>
             <div class="comment-input-area">
-                <input type="text" id="input-${photoId}" class="comment-input" placeholder="留個言吧..." autocomplete="off">
+                <button type="button" class="btn-comment-photo" data-attach-photo="${html(photoId)}" aria-label="附加留言照片，最多三張">${icon('camera')}</button>
+                <input type="file" class="comment-file-input" data-photo-id="${html(photoId)}" accept="image/*" multiple hidden>
+                <input type="text" id="input-${photoId}" class="comment-input" maxlength="2000" placeholder="留個言吧，可附三張照片..." autocomplete="off">
                 <button class="btn-comment" onclick="window.submitComment('${photoId}')">留言</button>
             </div>
+            <div class="comment-attachments" data-draft-for="${html(photoId)}"></div>
+            <p class="comment-status" data-status-for="${html(photoId)}" role="status"></p>
         </div>`;
     return card;
 }
@@ -351,31 +370,104 @@ window.setupReply = function(photoId, targetName) {
 window.cancelReply = function(photoId) { window.replyState[photoId] = null; document.getElementById(`reply-indicator-${photoId}`).style.display = 'none'; };
 
 window.toggleLike = async function(photoId, hasLiked) {
-    if (posts.get(photoId)?.groupId !== currentGroupId) return;
-    const photoRef = doc(db, "photos", photoId);
-    hasLiked ? await updateDoc(photoRef, { likes: arrayRemove(currentUser.name) }) : await updateDoc(photoRef, { likes: arrayUnion(currentUser.name) });
+    if (!currentUser.accountId || !sameSession() || posts.get(photoId)?.groupId !== currentGroupId || likePending.has(photoId)) return;
+    likePending.add(photoId);
+    try {
+        await loadLikeIdentity();
+        await runTransaction(db, async transaction => {
+            const ref = doc(db, 'photos', photoId), snapshot = await transaction.get(ref);
+            if (!sameSession() || !snapshot.exists() || snapshot.data().groupId !== currentGroupId) throw new Error('貼文不存在或群組已變更。');
+            transaction.update(ref, updatePhotoLike(snapshot.data(), currentUser.accountId, [...likeAliases], !hasLiked));
+        });
+    } catch { alert('按讚失敗，請檢查連線後重試。'); }
+    finally { likePending.delete(photoId); }
 };
 
-window.submitComment = async function(photoId) {
-    if (posts.get(photoId)?.groupId !== currentGroupId) return;
-    const inputField = document.getElementById(`input-${photoId}`);
-    const text = inputField.value.trim();
-    if (!text) return;
-    const replyTarget = window.replyState[photoId] || null;
-    inputField.value = '';
+function draftElements(photoId) {
+    const card = cards.get(photoId)?.card;
+    return { card, status: card?.querySelector('.comment-status'), previews: card?.querySelector('.comment-attachments') };
+}
+function paintDraft(photoId) {
+    const draft = commentDrafts.get(photoId) || { images: [] };
+    const { card, status, previews } = draftElements(photoId);
+    if (!card) return;
+    previews.replaceChildren();
+    draft.images.forEach((source, index) => {
+        const box = document.createElement('div'), img = document.createElement('img'), remove = document.createElement('button');
+        box.className = 'comment-preview'; img.src = source; img.alt = '待發佈的留言照片';
+        remove.type = 'button'; remove.innerHTML = icon('close'); remove.setAttribute('aria-label', `移除第 ${index + 1} 張照片`);
+        remove.disabled = !!draft.busy || !!draft.processing;
+        remove.onclick = () => { draft.images.splice(index, 1); paintDraft(photoId); };
+        box.append(img, remove); previews.append(box);
+    });
+    card.querySelectorAll('.comment-input-area button, .comment-input-area input').forEach(control => control.disabled = !!draft.busy || !!draft.processing);
+    status.textContent = draft.processing ? '正在處理照片…' : draft.busy ? '留言傳送中…' : draft.message || '';
+}
+feedContainer.addEventListener('click', event => {
+    const reply = event.target.closest('[data-reply-photo]');
+    if (reply) window.setupReply(reply.dataset.replyPhoto, reply.dataset.replySender);
+    const attach = event.target.closest('[data-attach-photo]');
+    if (attach) attach.closest('.photo-card').querySelector('.comment-file-input').click();
+});
+feedContainer.addEventListener('change', async event => {
+    if (!event.target.matches('.comment-file-input')) return;
+    const input = event.target, photoId = input.dataset.photoId, files = [...input.files];
+    input.value = '';
+    if (!files.length || !sameSession()) return;
+    const draft = commentDrafts.get(photoId) || { images: [] };
+    if (draft.busy || draft.processing) return;
+    commentDrafts.set(photoId, draft);
+    if (draft.images.length + files.length > 3 || files.some(file => !file.type.startsWith('image/') || file.size > 20 * 1024 * 1024)) {
+        draft.message = '留言最多三張照片，單張原始檔需小於 20 MB。'; paintDraft(photoId); return;
+    }
+    draft.processing = true; draft.message = ''; paintDraft(photoId);
     try {
-        await updateDoc(doc(db, "photos", photoId), { comments: arrayUnion({ sender: currentUser.name, text: text, replyTo: replyTarget, timestamp: Date.now() }) });
-        window.cancelReply(photoId);
-    } catch (e) { alert("留言失敗！"); inputField.value = text; }
+        const images = await Promise.all(files.map(processImageFile));
+        if (commentDrafts.get(photoId) === draft && sameSession()) draft.images.push(...images);
+    } catch { draft.message = '照片處理失敗，請重新選擇。'; }
+    finally { draft.processing = false; paintDraft(photoId); }
+});
+
+window.submitComment = async function(photoId) {
+    if (!sameSession() || !currentUser.accountId || posts.get(photoId)?.groupId !== currentGroupId) return;
+    const inputField = document.getElementById(`input-${photoId}`), text = inputField.value.trim();
+    const draft = commentDrafts.get(photoId) || { images: [] };
+    if (draft.busy || draft.processing || (!text && !draft.images.length)) return;
+    commentDrafts.set(photoId, draft); draft.busy = true; draft.message = ''; paintDraft(photoId);
+    const comment = { id: crypto.randomUUID(), senderAccountId: currentUser.accountId, sender: currentUser.name, text, replyTo: window.replyState[photoId] || null, timestamp: Date.now() };
+    const save = async attachments => {
+        await runTransaction(db, async transaction => {
+            const ref = doc(db, 'photos', photoId), snapshot = await transaction.get(ref);
+            if (!sameSession() || !snapshot.exists() || snapshot.data().groupId !== currentGroupId) throw new Error('貼文不存在或群組已變更。');
+            transaction.update(ref, { comments: [...(snapshot.data().comments || []), { ...comment, ...attachments }] });
+        });
+    };
+    try {
+        if (draft.images.length) await uploadPhotoPost({ images: [...draft.images], user: currentUser, groupId: currentGroupId, postId: `${photoId}-comment-${comment.id}`, save });
+        else await save({});
+        draft.images = []; inputField.value = ''; window.cancelReply(photoId);
+    } catch { draft.message = '留言失敗，文字與照片已保留，請重試。'; }
+    finally { draft.busy = false; paintDraft(photoId); }
 };
 
 window.deleteComment = async function(photoId, commentIndex) {
-    if (!confirm("確定要刪除這則留言嗎？")) return;
-    const targetPhoto = allPhotosData.find(p => p.id === photoId);
-    if (targetPhoto && targetPhoto.comments) {
-        const comment = targetPhoto.comments[commentIndex];
-        if (comment) await updateDoc(doc(db, "photos", photoId), { comments: arrayRemove(comment) });
-    }
+    const photo = posts.get(photoId), comment = photo?.comments?.[commentIndex];
+    if (!sameSession() || photo?.groupId !== currentGroupId || !comment) return;
+    const mine = comment.senderAccountId ? comment.senderAccountId === currentUser.accountId : likeAliases.has(comment.sender);
+    if (!mine && !['admin', 'parent'].includes(currentUser.role)) return;
+    if (!confirm('確定要刪除這則留言嗎？')) return;
+    try {
+        if (comment.storagePaths?.length) await import('./gallery-storage.js');
+        await runTransaction(db, async transaction => {
+            const ref = doc(db, 'photos', photoId), snapshot = await transaction.get(ref);
+            if (!sameSession() || !snapshot.exists() || snapshot.data().groupId !== currentGroupId) throw new Error('群組或貼文已變更');
+            transaction.update(ref, { comments: (snapshot.data().comments || []).filter(item => comment.id ? item.id !== comment.id : JSON.stringify(item) !== JSON.stringify(comment)) });
+        });
+        try {
+            const results = await removePhotoFiles(comment.storagePaths, currentUser, currentGroupId);
+            if (results.some(result => result.status === 'rejected')) throw new Error('清理未完成');
+        } catch { alert('留言已刪除，但部分附圖清理失敗，請聯絡管理者。'); }
+    } catch { alert('刪除留言失敗，請重試。'); }
 };
 
 window.deletePhoto = async function(photoId) {
@@ -383,11 +475,12 @@ window.deletePhoto = async function(photoId) {
         try {
             const photo = allPhotosData.find(item => item.id === photoId);
             if (!photo || photo.groupId !== currentGroupId) return;
+            const filePaths = [...(photo.storagePaths || []), ...(photo.comments || []).flatMap(comment => comment.storagePaths || [])];
             // Confirm the lazy cleanup code is available before deleting metadata.
-            if (photo.storagePaths?.length) await import('./gallery-storage.js');
+            if (filePaths.length) await import('./gallery-storage.js');
             await deleteDoc(doc(db, "photos", photoId));
             try {
-                const results = await removePhotoFiles(photo.storagePaths, currentUser, currentGroupId);
+                const results = await removePhotoFiles(filePaths, currentUser, currentGroupId);
                 if (results.some(result => result.status === 'rejected')) throw new Error('清理未完成');
             } catch {
                 alert('貼文已刪除，但部分照片檔案清理失敗，請聯絡管理者處理。');
@@ -555,15 +648,12 @@ window.saveDraw = function() {
     document.getElementById('uploadCaption').value = ''; drawModal.style.display = 'none'; document.getElementById('uploadModal').style.display = 'flex';
 };
 
-const photoViewerModal = document.getElementById('photoViewerModal'); const viewerImage = document.getElementById('viewerImage'); const viewerCounter = document.getElementById('viewerCounter');
-window.openPhotoViewer = function(idx) { currentViewerIndex = idx; isZoomed = false; viewerImage.style.transform = 'scale(1)'; updateViewerContent(); photoViewerModal.style.display = 'flex'; };
-window.closePhotoViewer = function() { photoViewerModal.style.display = 'none'; viewerImage.src = ''; isZoomed = false; viewerImage.style.transform = 'scale(1)'; };
-function updateViewerContent() { if (window.viewerQueue.length === 0) return; if (currentViewerIndex < 0) currentViewerIndex = window.viewerQueue.length - 1; if (currentViewerIndex >= window.viewerQueue.length) currentViewerIndex = 0; viewerImage.decoding = 'async'; viewerImage.src = window.viewerQueue[currentViewerIndex]; viewerCounter.innerText = `${currentViewerIndex + 1} / ${window.viewerQueue.length}`; }
-window.prevPhoto = function(e) { e.stopPropagation(); isZoomed = false; viewerImage.style.transform = 'scale(1)'; currentViewerIndex--; updateViewerContent(); };
-window.nextPhoto = function(e) { e.stopPropagation(); isZoomed = false; viewerImage.style.transform = 'scale(1)'; currentViewerIndex++; updateViewerContent(); };
-let lastViewerTapTime = 0; viewerImage.addEventListener('click', (e) => { e.stopPropagation(); if (new Date().getTime() - lastViewerTapTime < 300) { isZoomed = !isZoomed; viewerImage.style.transform = isZoomed ? 'scale(2.5)' : 'scale(1)'; } lastViewerTapTime = new Date().getTime(); });
-let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
-photoViewerModal.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; } }, {passive: true});
-photoViewerModal.addEventListener('touchend', (e) => { if (isZoomed) return; touchEndX = e.changedTouches[0].clientX; touchEndY = e.changedTouches[0].clientY; const diffX = touchEndX - touchStartX; const diffY = touchEndY - touchStartY; if (Math.abs(diffX) > Math.abs(diffY)) { if (diffX > 50) { currentViewerIndex--; updateViewerContent(); } else if (diffX < -50) { currentViewerIndex++; updateViewerContent(); } } else { if (diffY > 100) closePhotoViewer(); } }, {passive: true});
-
+const photoViewerModal = document.getElementById('photoViewerModal');
+const viewerImage = document.getElementById('viewerImage');
+const photoViewer = createPhotoViewer({ modal: photoViewerModal, image: viewerImage, wrapper: document.getElementById('viewerWrapper'), counter: document.getElementById('viewerCounter'), getQueue: () => window.viewerQueue, onIndexChange: index => { currentViewerIndex = index; } });
+window.openPhotoViewer = index => photoViewer.open(index);
+window.closePhotoViewer = () => photoViewer.close();
+window.prevPhoto = event => { event?.stopPropagation(); photoViewer.previous(); };
+window.nextPhoto = event => { event?.stopPropagation(); photoViewer.next(); };
+loadLikeIdentity().then(() => { for (const entry of cards.values()) entry.signature = null; if (active && cards.size) syncFeed(); }).catch(() => {});
 listenToGallery();

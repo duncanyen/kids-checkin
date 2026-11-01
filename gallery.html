@@ -133,7 +133,15 @@
         <div class="viewer-content-wrapper" id="viewerWrapper">
             <img class="viewer-content" id="viewerImage">
         </div>
-        <div class="viewer-footer" id="viewerCounter">1 / 1</div>
+        <div class="viewer-footer">
+            <div id="viewerCounter">1 / 1</div>
+            <div class="viewer-save-actions">
+                <button type="button" data-viewer-download><span data-ui-icon="download"></span>下載照片</button>
+                <button type="button" data-viewer-share hidden>分享／儲存相簿</button>
+                <a data-viewer-original hidden target="_blank" rel="noopener noreferrer">開啟原圖</a>
+            </div>
+            <p data-viewer-status role="status"></p>
+        </div>
     </div>
 
     <!-- 引入外部 JS，注意 type 必須是 module -->
