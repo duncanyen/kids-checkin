@@ -36,7 +36,6 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  await page.route('**/js/farm/halloween.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountHalloween(){}'}));
  // DOM launchers and their shared wood texture are covered in farm-mail-browser.cjs.
  await page.route('**/js/farm/mail-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmMail(){}'}));
- await page.route('**/js/farm/ranking-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmRankings(){}'}));
  await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await page.route('**/assets/farm/*',async r=>{
   const file=new URL(r.request().url()).pathname.split('/').at(-1);requests.push(file);

@@ -7,7 +7,6 @@ import VisitScene from './VisitScene.js';
 import ShopScene from './ShopScene.js';
 import WarehouseScene from './WarehouseScene.js';
 import { mountFarmMail } from './mail-ui.js';
-import { mountFarmRankings } from './ranking-ui.js';
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID } from './constants.js';
 
 // ==========================================
@@ -33,4 +32,3 @@ const config = {
 const game = new Phaser.Game(config);
 game.events.once('destroy',()=>farmLoading.dispose());
 mountFarmMail(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
-mountFarmRankings(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
