@@ -41,18 +41,18 @@
     <div class="sort-bar">
         <span>排序方式：</span>
         <select aria-label="排序已載入的貼文" title="排序範圍：已載入貼文" id="sortSelect" class="sort-select" onchange="changeSortMethod(this.value)">
-            <option value="latest">🕒 時間最晚 (最新)</option>
-            <option value="likes">❤️ 已載入：按讚數最多</option>
-            <option value="comments">💬 已載入：留言數最多</option>
+            <option value="latest">時間最晚 (最新)</option>
+            <option value="likes">已載入：按讚數最多</option>
+            <option value="comments">已載入：留言數最多</option>
         </select>
     </div>
 
     <div class="fab-container">
         <div class="fab-menu" id="fabMenu">
-            <button class="fab-menu-btn" onclick="triggerFileInput()">📷 上傳照片 (最多5張)</button>
-            <button class="fab-menu-btn" onclick="openDrawingBoard()">🎨 開啟塗鴉牆</button>
+            <button class="fab-menu-btn" onclick="triggerFileInput()"><span data-ui-icon="camera"></span> 上傳照片 (最多5張)</button>
+            <button class="fab-menu-btn" onclick="openDrawingBoard()"><span data-ui-icon="palette"></span> 開啟塗鴉牆</button>
         </div>
-        <button class="btn-upload-fab" id="btnToggleFab" title="新增內容">➕</button>
+        <button class="btn-upload-fab" id="btnToggleFab" title="新增內容" aria-label="新增內容"><span data-ui-icon="plus"></span></button>
         <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
     </div>
 
@@ -81,8 +81,8 @@
         <div class="draw-header">
             <button class="draw-btn-text" onclick="closeDrawingBoard()">取消</button>
             <div style="display: flex; gap: 15px;">
-                <button class="draw-btn-text" onclick="undoDraw()" title="還原上一步">↩ 還原</button>
-                <button class="draw-btn-text" style="color: var(--danger);" onclick="clearDraw()" title="清除全部">🗑️ 清除</button>
+                <button class="draw-btn-text" onclick="undoDraw()" title="還原上一步"><span data-ui-icon="undo"></span> 還原</button>
+                <button class="draw-btn-text" style="color: var(--danger);" onclick="clearDraw()" title="清除全部"><span data-ui-icon="trash"></span> 清除</button>
             </div>
             <button class="draw-btn-primary" onclick="saveDraw()">完成</button>
         </div>
@@ -93,8 +93,8 @@
         <div class="draw-toolbar">
             <div class="toolbar-row">
                 <div style="display:flex; gap:12px;">
-                    <button class="tool-btn active" id="toolPen" onclick="setTool('pen')">✏️ 畫筆</button>
-                    <button class="tool-btn" id="toolEraser" onclick="setTool('eraser')">🧼 橡皮擦</button>
+                    <button class="tool-btn active" id="toolPen" onclick="setTool('pen')"><span data-ui-icon="edit"></span> 畫筆</button>
+                    <button class="tool-btn" id="toolEraser" onclick="setTool('eraser')"><span data-ui-icon="eraser"></span> 橡皮擦</button>
                 </div>
                 <div style="display:flex; gap:10px;">
                     <div class="color-btn active" style="background: #000000;" onclick="setColor('#000000', this)"></div>
@@ -125,10 +125,10 @@
 
     <!-- 照片放大檢視器 -->
     <div id="photoViewerModal" class="photo-viewer">
-        <span class="close-viewer" onclick="closePhotoViewer()">&times;</span>
+        <button type="button" class="close-viewer" onclick="closePhotoViewer()" aria-label="關閉照片"><span data-ui-icon="close"></span></button>
         <div class="viewer-nav">
-            <button class="viewer-nav-btn" onclick="window.prevPhoto(event)">❮</button>
-            <button class="viewer-nav-btn" onclick="window.nextPhoto(event)">❯</button>
+            <button class="viewer-nav-btn" onclick="window.prevPhoto(event)" aria-label="上一張照片"><span data-ui-icon="arrow" class="photo-arrow-previous"></span></button>
+            <button class="viewer-nav-btn" onclick="window.nextPhoto(event)" aria-label="下一張照片"><span data-ui-icon="arrow"></span></button>
         </div>
         <div class="viewer-content-wrapper" id="viewerWrapper">
             <img class="viewer-content" id="viewerImage">

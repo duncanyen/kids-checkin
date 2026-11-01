@@ -3,6 +3,7 @@ import {
     serverTimestamp, doc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { db } from './firebase-config.js';
+import { icon } from './ui-icons.js';
 // Viewing the feed needs only Firestore. Auth/Functions/Storage load when an
 // upload or storage-backed delete actually needs them; native ESM shares the load.
 async function uploadPhotoPost(options) {
@@ -261,7 +262,7 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
     }
 
     const isMine = ((data.uploaderAccountId ? data.uploaderAccountId === currentUser.accountId : data.uploader === currentUser.name) || currentUser.role === 'admin' || currentUser.role === 'parent');
-    const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')" title="刪除貼文">🗑️</button>` : '';
+    const delBtnHtml = isMine ? `<button class="btn-delete" onclick="window.deletePhoto('${photoId}')" title="刪除貼文" aria-label="刪除貼文">${icon('trash')}</button>` : '';
 
     const likesArray = Array.isArray(data.likes) ? data.likes : [];
     const hasLiked = likesArray.includes(currentUser.name);
@@ -322,15 +323,15 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
         ${imagesHtml}
         ${data.caption ? `<div class="card-caption">${data.caption}</div>` : ''}
         <div class="interaction-bar">
-            <button class="btn-like ${hasLiked ? 'liked' : ''}" onclick="window.toggleLike('${photoId}', ${hasLiked})">
-                ${hasLiked ? '❤️' : '🤍'} <span class="likes-count">${likesCount > 0 ? likesCount : '按讚'}</span>
+            <button class="btn-like ${hasLiked ? 'liked' : ''}" onclick="window.toggleLike('${photoId}', ${hasLiked})" aria-label="${hasLiked ? '取消按讚' : '按讚'}" aria-pressed="${hasLiked}">
+                ${icon('heart')} <span class="likes-count">${likesCount > 0 ? likesCount : '按讚'}</span>
             </button>
         </div>
         <div class="comments-section">
             <div class="comments-list">${commentsHtml}</div>
             <div class="reply-indicator" id="reply-indicator-${photoId}">
                 <span>回覆給 <span style="color:var(--primary); font-weight:800;">@<span id="reply-target-${photoId}"></span></span></span>
-                <button class="btn-cancel-reply" onclick="window.cancelReply('${photoId}')">✖</button>
+                <button class="btn-cancel-reply" onclick="window.cancelReply('${photoId}')" aria-label="取消回覆">${icon('close')}</button>
             </div>
             <div class="comment-input-area">
                 <input type="text" id="input-${photoId}" class="comment-input" placeholder="留個言吧..." autocomplete="off">

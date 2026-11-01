@@ -1,3 +1,4 @@
+import { icon } from './ui-icons.js';
 import { db } from './firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { TIME_ZONE, dateKey, validDate, normalizeState, completionDay, deadlineDate, occurrenceTodo, materializeRecurring } from './todo-core.js';
@@ -5,6 +6,7 @@ import { TIME_ZONE, dateKey, validDate, normalizeState, completionDay, deadlineD
 const $ = id => document.getElementById(id);
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const button = (action, text, extra = '') => '<button type="button" data-action="' + action + '" ' + extra + '>' + escapeHTML(text) + '</button>';
+const iconButton = (action, key, label, extra = '') => '<button type="button" data-action="' + action + '" aria-label="' + escapeHTML(label) + '" ' + extra + '>' + icon(key) + '</button>';
 const sameId = (a, b) => String(a) === String(b);
 const frequencyNames = { daily: '每天', weekly: '每週', monthly: '每月', yearly: '每年' };
 
@@ -178,7 +180,7 @@ const NexusTodoApp = {
     renderAssigneeChips() {
         for (const [context, container] of [['normal', 'assigneeAvatarContainer'], ['recurring', 'recurringAssigneeContainer']]) {
             const form = this.forms[context];
-            const all = '<span class="everyone-avatar" aria-hidden="true">👥</span><span>所有人員</span>';
+            const all = '<span class="everyone-avatar" aria-hidden="true">' + icon('users') + '</span><span>所有人員</span>';
             let html = '<button type="button" class="assignee-chip ' + (form.scope === 'all' ? 'selected' : '') + '" aria-pressed="' + (form.scope === 'all') + '" data-action="assign-all" data-context="' + context + '">' + all + '</button>';
             for (const member of this.groupMembers) {
                 const selected = form.scope === 'members' && form.ids.includes(member.accountId);
@@ -235,14 +237,14 @@ const NexusTodoApp = {
         return '<div class="todo-item ' + (item.completed ? 'completed' : '') + '" data-todo-id="' + escapeHTML(item.id) + '">' +
             '<div class="todo-item-content"><input type="checkbox" aria-label="完成 ' + escapeHTML(item.title) + '" data-action="toggle" data-id="' + escapeHTML(item.id) + '" ' + (item.completed ? 'checked' : '') + '>' +
             '<div class="todo-copy"><div class="todo-title">' + escapeHTML(item.title) + '</div><div class="todo-details">' +
-            '<span class="badge">📁 ' + escapeHTML(item.category) + '</span><span class="badge">⏰ ' + escapeHTML(item.deadline) + (item.dueTime ? ' ' + escapeHTML(item.dueTime) : '') + '</span>' +
-            (item.recurringTemplateId ? '<span class="badge">↻ 循環待辦</span>' : '') +
+            '<span class="badge">' + escapeHTML(item.category) + '</span><span class="badge">' + icon('clock') + ' ' + escapeHTML(item.deadline) + (item.dueTime ? ' ' + escapeHTML(item.dueTime) : '') + '</span>' +
+            (item.recurringTemplateId ? '<span class="badge">' + icon('switch') + ' 循環待辦</span>' : '') +
             '</div>' + this.assigneeHTML(item) +
-            (item.note ? '<div class="todo-note">📝 ' + escapeHTML(item.note) + '</div>' : '') +
-            (item.completed ? '<div class="completed-time">✓ ' + (completed ? escapeHTML(completed) : '完成時間未記錄') + '</div>' : '') +
+            (item.note ? '<div class="todo-note">' + escapeHTML(item.note) + '</div>' : '') +
+            (item.completed ? '<div class="completed-time">' + icon('check') + ' ' + (completed ? escapeHTML(completed) : '完成時間未記錄') + '</div>' : '') +
             '</div></div><div class="todo-actions">' +
-            button('edit', '✏️', 'class="action-btn edit" title="編輯" data-id="' + escapeHTML(item.id) + '"') +
-            button('delete', '×', 'class="action-btn delete" title="刪除" data-id="' + escapeHTML(item.id) + '"') + '</div></div>';
+            iconButton('edit', 'edit', '編輯待辦', 'class="action-btn edit" title="編輯" data-id="' + escapeHTML(item.id) + '"') +
+            iconButton('delete', 'trash', '刪除待辦', 'class="action-btn delete" title="刪除" data-id="' + escapeHTML(item.id) + '"') + '</div></div>';
     },
 
     renderTodoList() {

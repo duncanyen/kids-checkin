@@ -36,3 +36,7 @@ button:disabled { opacity: .5; cursor: wait; }
 .recurring-existing-item small { display: block; color: var(--text-sub); margin-top: 4px; }
 @media (max-width: 370px) { .nexus-card { padding: 15px; } .todo-item { padding: 12px; } .form-row { grid-template-columns: 1fr; } }
 .avatar-overflow { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 5px; border-radius: 50%; font-size: .75rem; background: var(--primary-light); color: var(--primary-dark); font-weight: 800; }
+
+.todo-details .nexus-icon, .completed-time .nexus-icon { width: 14px; height: 14px; vertical-align: -2px; }
+.todo-actions .nexus-icon { width: 20px; height: 20px; }
+.everyone-avatar .nexus-icon { width: 20px; height: 20px; }
