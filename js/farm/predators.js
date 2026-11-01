@@ -128,7 +128,9 @@ export function predatorDestination(scene, kind = 'wolf') {
 
 export function predatorSpawnPoint(scene, kind) {
     const view = farmView(scene);
-    return { x: view.left + (kind === 'wolf' ? view.width - 65 : 65), y: view.top + view.height - 60 };
+    const area = predatorPatrolArea(scene);
+    // Begin beyond the side edge, with feet aligned to the clearing's ground.
+    return { x: kind === 'wolf' ? view.left + view.width + 96 : view.left - 96, y: area.y };
 }
 
 export function startPredatorPatrol(scene, sprite) {

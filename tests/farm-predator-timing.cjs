@@ -34,6 +34,7 @@ const {execFileSync}=require('node:child_process');
   await p.evaluate(async kind=>{
    const s=window.__farmGame.scene.getScene('VisitScene');
    window.__predatorModule=await import('/js/farm/predators.js');
+   const {farmView}=await import('/js/farm/viewport.js');
    s.time.timeScale=4;s.tweens.timeScale=4;
    window.__arrivals=[];window.__attacks=[];window.__attackDetails=[];window.__patrolDirections=[];window.__patrolErrors=[];
    const original=s[kind+'Escapes'].bind(s);
@@ -43,7 +44,11 @@ const {execFileSync}=require('node:child_process');
    };
    s['spawn'+kind[0].toUpperCase()+kind.slice(1)+'Event']();
    const a=s[kind];
-   if(a.y<700||(kind==='wolf'?a.x<290:a.x>100))throw Error('Wrong entry corner '+kind);
+   const view=farmView(s),area=window.__predatorModule.predatorPatrolArea(s);
+   const bounds=a.getBounds();
+   if(kind==='wolf'?bounds.left<view.left+view.width:bounds.right>view.left)throw Error('Predator must enter from beyond its side edge '+kind);
+   if(Math.abs(a.y-area.y)>.1||a.flipX!==(kind==='wolf'))throw Error('Incorrect entry height or facing '+kind);
+   window.__entry={x:a.x,y:a.y};
    if(a.moveTween.duration!==10000||a.deadlineTimer.delay!==(kind==='wolf'?60000:50000))throw Error('Incorrect approach/deadline '+kind);
    a.moveTween.on('complete',()=>{window.__arrivedAt=a.deadlineTimer.elapsed;});
    a.on('animationstart',animation=>{
@@ -61,6 +66,10 @@ const {execFileSync}=require('node:child_process');
   console.log('Verifying '+kind+' entry, hen attacks, patrol and deadline...');
   for(let n=0;n<5;n++) {
    await p.waitForTimeout(400);
+   if(n===0)await p.evaluate(kind=>{
+    const a=window.__farmGame.scene.getScene('VisitScene')[kind],entry=window.__entry;
+    if(Math.abs(a.y-entry.y)>.1||(kind==='wolf'?a.x>=entry.x:a.x<=entry.x))throw Error('Entry must walk horizontally inward '+kind);
+   },kind);
    await p.evaluate(kind=>{const a=window.__farmGame.scene.getScene('VisitScene')[kind];a.emit('pointerdown',{x:a.x,y:a.y});if(a.moveTween.isPaused())throw Error('Hit paused approach');},kind);
   }
   await p.waitForFunction(kind=>window.__farmGame.scene.getScene('VisitScene')[kind].getData('patrolling'),kind,{timeout:12000});
