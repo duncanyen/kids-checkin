@@ -1,3 +1,5 @@
+import { ChatHistory, MESSAGE_PAGE_SIZE } from './chat-history.js';
+import * as messageStore from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { loadChatProfiles, watchMemberRooms, mutateRoomIdentity } from './chat-membership.js';
 import { roomIdentity, roomHasMember, displayName, senderId, unreadFor, readFor } from './chat-identity-core.js';
 import { watchRoom, watchMessages } from './live-reads.js';
@@ -35,6 +37,7 @@ export const chatState = {
 
 let roomsUnsubscribe = null;
 let messagesUnsubscribe = null;
+let messageHistory = null;
 let singleRoomUnsubscribe = null; 
 let pendingReplyMsgId = null;
 let pendingReplyData = null;
@@ -119,6 +122,7 @@ async function enterRoom(roomId, roomData) {
 
 
     chatState.currentMessagesList = [];
+    messageHistory = null;
     isFirstLoad = true; 
     
     chatState.entryReadTimestamp = readFor(roomData,currentUser.accountId,allProfiles);
@@ -179,34 +183,81 @@ document.getElementById('btnBackToList').addEventListener('click', () => {
     if (messagesUnsubscribe) messagesUnsubscribe();
     if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
     
+    messageHistory = null;
     chatState.activeRoomId = null; chatState.activeRoomData = null; chatState.currentMessagesList = [];
+    document.getElementById('chatMessages').replaceChildren();
     document.getElementById('mainTopNav').style.display = 'flex';
     document.getElementById('viewChatRoom').style.display = 'none';
     document.getElementById('viewRoomList').style.display = 'flex';
 });
 
-const MESSAGE_PAGE_SIZE = 30;
+function messageQuery(roomId, cursor) {
+    return query(collection(db, "messages"), where("roomId", "==", roomId),
+        orderBy("timestamp", "desc"), ...(cursor ? [messageStore.startAfter(cursor)] : []), limit(MESSAGE_PAGE_SIZE));
+}
 
 function listenToMessages(roomId) {
-    const q = query(
-        collection(db, "messages"), 
-        where("roomId", "==", roomId), 
-        orderBy("timestamp", "desc"), 
-        limit(MESSAGE_PAGE_SIZE)
-    );
-    
-    messagesUnsubscribe = watchMessages(q, currentGroupId, roomId, MESSAGE_PAGE_SIZE, (snapshot) => {
-        let tempMsgs = []; 
-        if (!snapshot.empty) {
-            snapshot.forEach((docSnap) => tempMsgs.push({ id: docSnap.id, ...docSnap.data() }));
+    messagesUnsubscribe?.();
+    const history = messageHistory = new ChatHistory(roomId, async (cursor, oldest) => {
+        // RTDB timestamps are decoded values, not Firestore cursor snapshots.
+        // Resolve the oldest displayed document to preserve nanosecond precision
+        // and the document-ID tie breaker, even when timestamps are identical.
+        if (!cursor && oldest) {
+            const anchor = await messageStore.getDoc(doc(db, "messages", oldest.id));
+            if (anchor.exists()) {
+                const data=anchor.data();
+                if (data.roomId !== roomId || (data.groupId && data.groupId !== currentGroupId)) throw Error('無法讀取此聊天室記錄');
+                cursor=anchor;
+            }
         }
-        chatState.currentMessagesList = tempMsgs.reverse(); 
-        
-        renderAllMessages(); 
-        markRoomRead(roomId);
-    }, (error) => {
-        console.error("【索引錯誤】讀取聊天訊息失敗！", error.message);
+        const snapshot=await messageStore.getDocs(messageQuery(roomId,cursor));
+        const rows=snapshot.docs;
+        return { messages:rows.map(row=>({ ...row.data(), id:row.id })),
+            cursor:rows.at(-1), hasMore:rows.length === MESSAGE_PAGE_SIZE };
     });
+    messagesUnsubscribe = watchMessages(messageQuery(roomId), currentGroupId, roomId, MESSAGE_PAGE_SIZE, snapshot => {
+        if (messageHistory !== history) return;
+        const rows=[];
+        snapshot.forEach(row=>rows.push({ ...row.data(), id:row.id }));
+        chatState.currentMessagesList=history.merge(rows);
+        if (!history.cursor && history.messages.size === 0) history.hasMore=false;
+        else if (!history.cursor) history.hasMore=true;
+        renderAllMessages();
+        markRoomRead(roomId);
+    }, error => {
+        if (messageHistory !== history) return;
+        console.error('讀取聊天訊息失敗',error.message);
+        history.error=true;
+        renderAllMessages();
+    });
+}
+
+async function loadOlderMessages() {
+    const history=messageHistory;
+    if (!history || history.loading || !history.hasMore) return;
+    const container=document.getElementById('chatMessages');
+    const pending=history.loadOlder();
+    updateHistoryControl();
+    try {
+        await pending;
+        if (messageHistory !== history) return;
+        const oldTop=container.scrollTop, oldHeight=container.scrollHeight;
+        chatState.currentMessagesList=history.list;
+        renderAllMessages(true);
+        // Keep the message at the top of the reader's viewport in place.
+        container.scrollTop=oldTop+container.scrollHeight-oldHeight;
+    } catch(error) {
+        if (messageHistory !== history) return;
+        console.warn('歷史訊息載入失敗',error);
+        updateHistoryControl();
+    }
+}
+
+function updateHistoryControl() {
+    const button=document.getElementById('loadOlderMessages');
+    if (!button || !messageHistory) return;
+    button.disabled=messageHistory.loading || !messageHistory.hasMore;
+    button.textContent=messageHistory.loading ? '載入中…' : messageHistory.error ? '載入失敗，點此重試' : messageHistory.hasMore ? '載入更早訊息' : '已載入全部記錄';
 }
 
 function lockScrollPosition() {
@@ -217,18 +268,23 @@ function lockScrollPosition() {
     else msgContainer.scrollTop = msgContainer.scrollHeight;
 }
 
-function renderAllMessages() {
+function renderAllMessages(preserveScroll = false) {
     const msgContainer = document.getElementById('chatMessages');
     const prevScrollTop = msgContainer.scrollTop;
     const prevScrollHeight = msgContainer.scrollHeight;
     const isAtBottom = (prevScrollHeight - prevScrollTop) <= (msgContainer.clientHeight + 150);
     
     msgContainer.innerHTML = '';
+    const historyControl=document.createElement('button');
+    historyControl.id='loadOlderMessages';historyControl.type='button';historyControl.className='chat-history-control';
+    historyControl.addEventListener('click',loadOlderMessages);
+    msgContainer.appendChild(historyControl);
+    updateHistoryControl();
     let unreadDividerAdded = false;
     let lastDateStr = ""; // 紀錄上一則訊息的日期
 
     if (chatState.currentMessagesList.length === 0) {
-        msgContainer.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); margin-top:20px; font-weight:600;">發個訊息打招呼吧！</div>';
+        msgContainer.insertAdjacentHTML('beforeend', '<div style="text-align:center; color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); margin-top:20px; font-weight:600;">發個訊息打招呼吧！</div>');
     }
 
     chatState.currentMessagesList.forEach(msg => {
@@ -265,7 +321,7 @@ function renderAllMessages() {
         requestAnimationFrame(() => lockScrollPosition());
         setTimeout(() => { window._isChatJustLoaded = false; }, 1000);
     } else {
-        if (isAtBottom) setTimeout(() => msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' }), 50);
+        if (!preserveScroll && isAtBottom) setTimeout(() => msgContainer.scrollTo({ top: msgContainer.scrollHeight, behavior: 'smooth' }), 50);
         else msgContainer.scrollTop = prevScrollTop;
     }
 }
@@ -535,8 +591,13 @@ async function triggerRetract() {
     if(!message||!isMyMessage(message))return;
 
     if (!confirm("確定要收回此訊息嗎？")) return;
+    const history=messageHistory;
+    const messageId=message.id;
     try {
-        await updateDoc(doc(db, "messages", selectedMsgForAction.id), { isRetracted: true, text: "", imageUrl: null });
+        await updateDoc(doc(db, "messages", messageId), { isRetracted: true, text: "", imageUrl: null });
+        if (messageHistory !== history) return;
+        chatState.currentMessagesList=history.merge([{...message,isRetracted:true,text:"",imageUrl:null}]);
+        renderAllMessages();
         if (chatState.currentMessagesList.length > 0 && chatState.currentMessagesList[chatState.currentMessagesList.length - 1].id === selectedMsgForAction.id) {
             await updateDoc(doc(db, "rooms", chatState.activeRoomId), { lastMessage: `${currentUser.name} 收回了一則訊息` });
         }

@@ -771,3 +771,6 @@ body {
 .chat-photo-progress:has(#chatPhotoStatus:empty) { display: none; }
 .chat-photo-progress button { min-height: 36px; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; background: var(--bg-body); color: var(--text-main); cursor: pointer; }
 .chat-photo-progress [hidden] { display: none !important; }
+
+.chat-history-control { display:block; margin:8px auto 18px; padding:9px 16px; border:1px solid var(--text-sub); border-radius:18px; background:transparent; color:var(--text-sub); font:inherit; cursor:pointer; }
+.chat-history-control:disabled { border-color:transparent; cursor:default; opacity:.75; }
