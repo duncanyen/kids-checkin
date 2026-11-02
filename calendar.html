@@ -97,6 +97,8 @@
         </div>
     </div>
 
+    <button type="button" id="btnAddCalendarEvent" class="calendar-add-fab" aria-label="新增行程" title="新增行程"><span data-ui-icon="plus"></span></button>
+
     <!-- 視圖設定 Modal -->
     <div class="modal" id="settingsModal">
         <div class="modal-content" style="max-height: 50vh;">
@@ -127,6 +129,10 @@
 
                 <!-- 視圖 2：新增/編輯表單 -->
                 <div id="formView" style="display: none;">
+                    <div class="form-group">
+                        <label for="evDate">日期</label>
+                        <input type="date" id="evDate" min="1900-01-01" max="9999-12-31" required>
+                    </div>
                     <div class="form-group">
                         <label>行程標題</label>
                         <input type="text" id="evTitle" placeholder="例如: 班親會、繳電話費">

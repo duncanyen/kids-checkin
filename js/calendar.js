@@ -28,6 +28,7 @@ let viewDate = new Date(); // 用於月、週、日視圖的基準時間
 let selectedDateKey = '';
 let allFetchedEvents = [];
 let editingEventId = null;
+let directAdd = false;
 
 const categoryIcons = { school: 'school', company: 'briefcase', restaurant: 'food', birthday: 'cake', personal: 'user', other: 'pin' };
 
@@ -80,18 +81,19 @@ function listenToEvents() {
             }
         });
         
-        // 資料更新後，重新渲染當前視圖，不改變 viewDate
-        renderCurrentView();
-
         const targetDate = localStorage.getItem('calendar_target_date');
+        let targetHasEvents = false;
         if (targetDate) {
             localStorage.removeItem('calendar_target_date');
-            const [tYear, tMonth] = targetDate.split('-');
-            viewDate = new Date(parseInt(tYear), parseInt(tMonth) - 1, 1);
-            currentView = 'month'; // 導向過去通常以月視圖為主
-            renderCurrentView();
-            openEventModal(targetDate);
+            const target = parseCalendarDate(targetDate);
+            if (target) {
+                viewDate = target;
+                targetHasEvents = allFetchedEvents.some(event => event.date === targetDate);
+            }
         }
+        renderCurrentView();
+        // Empty dates only navigate; opening an add form always requires a tap.
+        if (targetHasEvents) openEventModal(targetDate);
 
         if (document.getElementById('eventModal').style.display === 'flex' && !editingEventId) {
             renderDayEvents(selectedDateKey);
@@ -118,13 +120,13 @@ function initCalendar() {
         const threshold = 50; 
         if (touchEndX - touchStartX > threshold) {
             // 向右滑 (前一個)
-            if(currentView === 'month') viewDate.setMonth(viewDate.getMonth() - 1);
+            if(currentView === 'month') changeCalendarMonth(-1);
             if(currentView === 'week') viewDate.setDate(viewDate.getDate() - 7);
             if(currentView === 'day') viewDate.setDate(viewDate.getDate() - 1);
             renderCurrentView();
         } else if (touchStartX - touchEndX > threshold) {
             // 向左滑 (下一個)
-            if(currentView === 'month') viewDate.setMonth(viewDate.getMonth() + 1);
+            if(currentView === 'month') changeCalendarMonth(1);
             if(currentView === 'week') viewDate.setDate(viewDate.getDate() + 7);
             if(currentView === 'day') viewDate.setDate(viewDate.getDate() + 1);
             renderCurrentView();
@@ -133,6 +135,7 @@ function initCalendar() {
     
     // 載入儲存的視圖設定
     loadSettings();
+    if (!enabledViews.includes(currentView)) currentView = enabledViews[0] || 'month';
     renderCurrentView();
 }
 
@@ -435,7 +438,25 @@ function isEventExpired(evt, dateKey) {
     }
 }
 
+function parseCalendarDate(key) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key || '')) return null;
+    const [year, month, day] = key.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return getFormattedDate(date) === key ? date : null;
+}
+function changeCalendarMonth(offset) {
+    const day = viewDate.getDate();
+    viewDate.setDate(1);
+    viewDate.setMonth(viewDate.getMonth() + offset);
+    viewDate.setDate(Math.min(day, new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate()));
+}
+
 function openEventModal(dateKey) {
+    const date = parseCalendarDate(dateKey);
+    if (!date) return;
+    directAdd = false;
+    viewDate = date;
+    renderCurrentView();
     selectedDateKey = dateKey;
     document.getElementById('modalDateTitle').innerText = `${dateKey} 行程`;
     showListView();
@@ -443,6 +464,8 @@ function openEventModal(dateKey) {
 }
 
 function showListView() {
+    directAdd = false;
+    document.getElementById('modalDateTitle').innerText = `${selectedDateKey} 行程`;
     editingEventId = null;
     document.getElementById('listView').style.display = 'block';
     document.getElementById('formView').style.display = 'none';
@@ -453,6 +476,7 @@ function showListView() {
 }
 
 function showFormView(evtData = null) {
+    document.getElementById('evDate').value = evtData?.date || selectedDateKey || getFormattedDate(new Date());
     document.getElementById('listView').style.display = 'none';
     document.getElementById('formView').style.display = 'block';
     document.getElementById('btnCloseModal').style.display = 'none';
@@ -569,7 +593,20 @@ const btnShowAddForm = document.getElementById('btnShowAddForm');
 if(btnShowAddForm) btnShowAddForm.addEventListener('click', () => showFormView(null));
 
 const btnCancelForm = document.getElementById('btnCancelForm');
-if(btnCancelForm) btnCancelForm.addEventListener('click', showListView);
+if(btnCancelForm) btnCancelForm.addEventListener('click', () => {
+    if (directAdd) { document.getElementById('eventModal').style.display = 'none'; directAdd = false; }
+    else showListView();
+});
+document.getElementById('btnAddCalendarEvent').addEventListener('click', () => {
+    if (document.getElementById('btnSaveEvent').disabled) return;
+    openEventModal(getFormattedDate(new Date()));
+    directAdd = true;
+    showFormView();
+    document.getElementById('evTitle').focus();
+});
+document.getElementById('evDate').addEventListener('change', event => {
+    if (parseCalendarDate(event.target.value)) document.getElementById('modalDateTitle').innerText = `${event.target.value} 行程`;
+});
 
 window.addEventListener('click', (e) => {
     const eventModal = document.getElementById('eventModal');
@@ -582,6 +619,10 @@ const btnCloseModal = document.getElementById('btnCloseModal');
 if(btnCloseModal) btnCloseModal.addEventListener('click', () => { document.getElementById('eventModal').style.display = 'none'; });
 
 async function saveEvent() {
+    if (document.getElementById('btnSaveEvent').disabled) return;
+    const eventDate = document.getElementById('evDate').value;
+    const parsedDate = parseCalendarDate(eventDate);
+    if (!parsedDate) return alert('請選擇有效日期！');
     const title = document.getElementById('evTitle').value.trim();
     if (!title) return alert('請輸入行程標題！');
 
@@ -596,7 +637,7 @@ async function saveEvent() {
 
     const evtData = {
         groupId: currentGroupId,
-        date: selectedDateKey,
+        date: eventDate,
         title: title,
         desc: document.getElementById('evDesc').value.trim(),
         category: document.getElementById('evCategory').value,
@@ -618,6 +659,9 @@ async function saveEvent() {
         } else {
             await addDoc(collection(db, "events"), evtData);
         }
+        selectedDateKey = eventDate;
+        viewDate = parsedDate;
+        renderCurrentView();
         showListView(); 
     } catch (error) {
         alert("儲存失敗，請檢查網路。");
