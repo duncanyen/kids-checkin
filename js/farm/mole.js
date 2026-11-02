@@ -60,7 +60,6 @@ export class MoleEncounter extends BossEncounter {
                 if (!this.result && ['mole_walk','mole_angry','mole_hit'].includes(animation.key)) sprite.play('mole_idle');
             });
         }
-        this.grid=scene.add.graphics().setDepth(23);
         this.cell=-1;this.cells=[];this.nextMove=0;
         this.motion=()=>this.moveInGarden();scene.events.on('update',this.motion);
         this.moveInGarden();
@@ -78,8 +77,6 @@ export class MoleEncounter extends BossEncounter {
             if (this.deadline-Date.now()<10000 && sprite.anims.currentAnim?.key === 'mole_idle') sprite.play('mole_angry');
         }
         const cells=moleCells(this.scene.gardenBounds);
-        this.grid.clear().lineStyle(1,0xffe2a0,.7).fillStyle(0x49301e,.16);
-        for(const c of cells) this.grid.fillRect(c.x-c.width/2,c.y-c.height/2,c.width,c.height).strokeRect(c.x-c.width/2,c.y-c.height/2,c.width,c.height);
         if(Date.now()>=this.nextMove) {
             this.cells=nextMoleCells(this.cells);
             this.cell=this.cells[0];
@@ -104,7 +101,6 @@ export class MoleEncounter extends BossEncounter {
     resolve(outcome) {
         if (this.destroyed || this.result) return;
         super.resolve(outcome);
-        this.grid?.setVisible(false);
         for (const sprite of this.moles) {
             sprite.disableInteractive().setData('resolved',true);
             // All three finish together at their holes, with one settlement.
@@ -115,7 +111,7 @@ export class MoleEncounter extends BossEncounter {
     }
     destroy() {
         if (this.destroyed) return;
-        this.scene.events.off('update',this.motion);this.grid?.destroy();
+        this.scene.events.off('update',this.motion);
         for (const sprite of this.moles.slice(1)) {this.scene.tweens.killTweensOf(sprite);sprite.destroy();}
         super.destroy();
     }
