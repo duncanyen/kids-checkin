@@ -71,16 +71,16 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.evaluate(async()=>{const s=__farmGame.scene.getScene('MyFarmScene');for(let i=0;i<20;i++)await s.searchCabbage(s.gardenPlants[i]);});
  assert.equal(own().gardenCatchCount,before.gardenCatchCount);assert.equal(own().worms,before.worms);
  const bounds=await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),m=s.moleEncounter;return{garden:s.gardenBounds,x:m.sprite.x,y:m.sprite.y,w:m.sprite.displayWidth,h:m.sprite.displayHeight,damage:m.damage};});
- assert.equal(bounds.damage,12);assert.ok(bounds.x>=bounds.garden.left&&bounds.x<=bounds.garden.right);
+ assert.equal(bounds.damage,6);assert.ok(bounds.x>=bounds.garden.left&&bounds.x<=bounds.garden.right);
  await page.screenshot({path:'/tmp/kids-mole-mobile.png'});
  const oldCell=await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').moleEncounter.cell);
  await clock(epoch+1500);
  await page.waitForFunction(old=>__farmGame.scene.getScene('MyFarmScene').moleEncounter.cell!==old,oldCell);
  await page.setViewportSize({width:844,height:390});await page.waitForTimeout(200);
- await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),m=s.moleEncounter,b=s.gardenBounds;if(m.sprite.x<b.left||m.sprite.x>b.right||m.sprite.y<b.top||m.sprite.y>b.bottom)throw Error('Mole escaped garden after resize');});
+ await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),m=s.moleEncounter,b=s.gardenBounds;for(const sprite of m.moles)if(sprite.x<b.left||sprite.x>b.right||sprite.y<b.top||sprite.y>b.bottom)throw Error('Mole escaped garden after resize');});
  await page.setViewportSize({width:390,height:844});
  own().warehouseLimit=1;await notify();
- await page.evaluate(()=>{const m=__farmGame.scene.getScene('MyFarmScene').moleEncounter;for(let i=0;i<49;i++)m.hit();if(m.health!==12||m.result)throw Error('Wrong 49-hit health');m.hit();});
+ await page.evaluate(()=>{const m=__farmGame.scene.getScene('MyFarmScene').moleEncounter;if(m.moles.length!==3 || new Set(m.cells).size!==3)throw Error('Expected three distinct moles');for(let i=0;i<99;i++)m.moles[i%3].emit('pointerdown');if(m.health!==6||m.result)throw Error('Wrong cumulative 99-hit health');m.moles[0].emit('pointerdown');});
  await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').moleEncounter.settled);
  assert.equal(own().sweetPotatoes,1);assert.equal(own().moleChallenge,null);assert.equal(own().coins,300);
  // A resumed timed-out fight costs only the challenger's balance, never target eggs.
@@ -121,6 +121,6 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  own().gardenCatchCount=80;await notify();
  await page.evaluate(async()=>{const s=__farmGame.scene.getScene('VisitScene');s.spawnWolfEvent();const {maybeStartMole}=await import('/js/farm/mole.js');if(await maybeStartMole(s))throw Error('Mole overlaps wolf');});
  assert.equal(own().moleChallenge,null);assert.equal(own().moleLastMilestone,60);
- assert.deepEqual(errors,[]);console.log('PASS mole: twentieth catch, 20/40/60 milestones, garden lock, random cells and resize, 50 hits, full-warehouse loot, timeout, own-only penalty, shop trade, equip, reload deadline and monster exclusion');
+ assert.deepEqual(errors,[]);console.log('PASS mole: twentieth catch, 20/40/60 milestones, garden lock, random cells and resize, 100 cumulative hits across three moles, full-warehouse loot, timeout, own-only penalty, shop trade, equip, reload deadline and monster exclusion');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

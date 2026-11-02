@@ -24,3 +24,13 @@ export function moleCells(bounds) {
     const width = (bounds.right-bounds.left)/4, height = (bounds.bottom-bounds.top)/3;
     return Array.from({length:12},(_,i)=>({x:bounds.left+(i%4+.5)*width,y:bounds.top+(Math.floor(i/4)+.5)*height,width,height}));
 }
+
+// Three distinct holes per exposure; each mole moves away from its last hole.
+export function nextMoleCells(previous = [], roll = (min,max) => Phaser.Math.Between(min,max)) {
+    const chosen=[];
+    for (let i=0;i<3;i++) {
+        const available=Array.from({length:12},(_,n)=>n).filter(n=>!chosen.includes(n) && n!==previous[i]);
+        chosen.push(available[roll(0,available.length-1)]);
+    }
+    return chosen;
+}
