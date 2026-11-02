@@ -26,11 +26,14 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  await page.goto(base+'/settings.html');
  await page.locator('#fontSizeSettings summary').click();
  const sample=page.locator('.font-size-preview h3');
+ const back=page.locator('.btn-back');
+ const backBaseSize=await back.evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
  const baseSize=await sample.evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
  for(const size of [80,90,100,110,120]){
   await page.locator(`[data-font-size="${size}"]`).click();
   assert.equal(await page.evaluate(()=>NexusFontSize.current),size);
   assert.ok(Math.abs(await sample.evaluate(e=>parseFloat(getComputedStyle(e).fontSize))-baseSize*size/100)<.1);
+  assert.ok(Math.abs(await back.evaluate(e=>parseFloat(getComputedStyle(e).fontSize))-backBaseSize*size/100)<.1,'back button text follows the selected font scale');
   assert.equal(await page.locator(`[data-font-size="${size}"]`).getAttribute('aria-checked'),'true');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  }
@@ -38,6 +41,7 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.setViewportSize({width:390,height:844});
  await page.locator('[data-font-cancel]').click();assert.equal(await page.evaluate(()=>NexusFontSize.current),100);
+ assert.ok(Math.abs(await back.evaluate(e=>parseFloat(getComputedStyle(e).fontSize))-backBaseSize)<.1);
  await page.locator('#fontSizeRange').fill('110');
  assert.equal(await page.evaluate(()=>NexusFontSize.current),110);
  await page.evaluate(()=>window.__failSave=true);await page.locator('[data-font-save]').click();
@@ -47,6 +51,7 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  await page.waitForFunction(()=>document.querySelector('[data-font-status]').textContent.includes('已儲存'));
  const write=await page.evaluate(()=>__writes.at(-1));assert.deepEqual(write.data.appearance,{fontScale:110});assert.equal(write.options.merge,true);
  await page.reload();await page.locator('#fontSizeSettings summary').click();assert.equal(await page.evaluate(()=>NexusFontSize.current),110);
+ assert.ok(Math.abs(await back.evaluate(e=>parseFloat(getComputedStyle(e).fontSize))-backBaseSize*1.1)<.1);
  await page.locator('[data-font-size="120"]').click();
  await page.locator('#appearanceSettings summary').click();await page.locator('[data-theme-id="grape"]').click();await page.locator('[data-theme-save]').click();
  await page.waitForFunction(()=>document.querySelector('[data-theme-status]').textContent.includes('已儲存'));
