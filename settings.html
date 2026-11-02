@@ -64,7 +64,7 @@
 
     <div class="settings-container">
         <div class="top-nav">
-            <button class="btn-back" onclick="window.location.href='index.html'">❮ 返回主選單</button>
+            <button class="btn-back" onclick="window.location.href='index.html'"><span data-ui-icon="arrow" style="display:inline-flex;transform:rotate(180deg)"></span> 返回主選單</button>
             <span style="font-weight: 800; font-size: calc(18px * var(--n-font-scale, 1));">個人設定</span>
         </div>
 
@@ -140,12 +140,12 @@
         </div>
 
         <!-- 登出與刪除按鈕 -->
-        <button class="btn-logout" style="background: var(--n-surface, #fff); border: 1px solid #e5e7eb; color: var(--text-main);" onclick="logoutSystem()">🚪 登出系統</button>
+        <button class="btn-logout" style="background: var(--n-surface, #fff); border: 1px solid #e5e7eb; color: var(--text-main);" onclick="logoutSystem()"><span data-ui-icon="logout"></span> 登出系統</button>
         
         <div class="section-card" style="border-color: #fecaca; background: #fff5f5; margin-top: 20px;">
-            <h3 class="section-title" style="color: var(--danger);">⚠️ 危險區域</h3>
+            <h3 class="section-title" style="color: var(--danger);"><span data-ui-icon="warning"></span> 危險區域</h3>
             <p style="font-size: calc(13px * var(--n-font-scale, 1)); color: var(--text-sub); margin-top: 0; margin-bottom: 14px;">刪除帳戶後將無法再進入此群組，需由管理員重新加入。若您有綁定 Email，再次登入將進入建立群組流程；若無 Email，帳號將直接失效。</p>
-            <button class="btn-logout" onclick="deleteMyAccount()">🗑️ 刪除我的帳戶</button>
+            <button class="btn-logout" onclick="deleteMyAccount()"><span data-ui-icon="trash"></span> 刪除我的帳戶</button>
         </div>
         
         <div style="height: 40px;"></div>
@@ -348,7 +348,7 @@
 
         // ★ 刪除帳戶
         window.deleteMyAccount = async function() {
-            const confirm1 = confirm("⚠️ 警告：刪除帳戶後將無法再進入此群組！\n\n您確定要刪除自己的帳戶嗎？");
+            const confirm1 = confirm("警告：刪除帳戶後將無法再進入此群組！\n\n您確定要刪除自己的帳戶嗎？");
             if (!confirm1) return;
             
             const confirm2 = confirm("這是最後的確認，刪除後若要重新加入，需請管理人員協助新增。\n\n請點擊「確定」以永久刪除此帳戶。");
