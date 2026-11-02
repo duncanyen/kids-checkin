@@ -107,3 +107,19 @@ export function deadlineDate(label, today = dateKey()) {
     }
     return validDate(label) ? label : today;
 }
+
+// Homepage visibility follows assignment, not who created the task.
+export function todoAssignedTo(todo, user, profiles = []) {
+    if (!user?.accountId) return false;
+    if (todo.assigneeScope === 'all') return true;
+    if (Array.isArray(todo.assigneeAccountIds)) return todo.assigneeAccountIds.includes(user.accountId);
+    const assignees = Array.isArray(todo.assignees) ? todo.assignees : todo.assignees ? [String(todo.assignees)] : [];
+    if (!todo.assigneeScope && assignees.some(name => name === '所有人員' || name === '所有人')) return true;
+    // Old tasks only have names. Resolve current and historical names uniquely
+    // within the selected group; homonyms must never select a random account.
+    return assignees.some(name => {
+        const matches = new Set(profiles.filter(profile => profile.role !== 'removed' &&
+            [profile.name, ...(Array.isArray(profile.nameHistory) ? profile.nameHistory : [])].includes(name)).map(profile => profile.accountId).filter(Boolean));
+        return matches.size === 1 && matches.has(user.accountId);
+    });
+}

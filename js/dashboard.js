@@ -1,3 +1,4 @@
+import { todoAssignedTo } from './todo-core.js';
 import { photoLikes, updatePhotoLike } from './gallery-core.js';
 import { loadPhotoAliases } from './gallery-identity.js';
 import { loadChatProfiles, watchMemberRooms } from './chat-membership.js';
@@ -269,7 +270,7 @@ window.checkWidgetData = function(user) {
                 if (docData.todos && Array.isArray(docData.todos)) {
                     docData.todos.forEach(t => {
                         const isDone = (t.completed === true || t.isCompleted === true || String(t.completed) === "true");
-                        if (!isDone) incompleteTodos.push(t);
+                        if (!isDone && todoAssignedTo(t, user, window.groupMembers || [])) incompleteTodos.push(t);
                     });
                 }
             });
@@ -342,7 +343,7 @@ window.checkWidgetData = function(user) {
             } else {
                 container.innerHTML = `
                     <div style="display:flex; align-items:center; justify-content:center; padding:20px; color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); font-weight:700; background:var(--bg-body); border-radius:12px; border:1px dashed var(--border-color);">
-                        ✨ 目前無待辦事項，太棒了！
+                        目前沒有指派給你的待辦事項
                     </div>
                 `;
             }
