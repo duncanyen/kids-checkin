@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const {chromium}=require('playwright');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012',epoch=Date.now();
-const seed=()=>({coins:300,hens:2,hensState:[{id:'h1',breed:'hen',laidAt:epoch},{id:'h2',breed:'hen',laidAt:epoch}],coopLevel:2,eggsReady:2,readyEggs:{hen:2,silkie:0,bresse:0},poultryVersion:2,lastLayTime:epoch,inventoryEggs:0,warehouseLimit:99,cleanliness:0,gardenCatchCount:19,ironhammer:1,equippedWeapon:'ironhammer',mace:1,battleaxe:1,shortbow:1,huntingbow:1,paladinbow:1,equippedBow:'paladinbow'});
+const seed=()=>({coins:300,hens:2,hensState:[{id:'h1',breed:'hen',laidAt:epoch},{id:'h2',breed:'hen',laidAt:epoch}],coopLevel:2,eggsReady:2,readyEggs:{hen:2,silkie:0,bresse:0},poultryVersion:2,lastLayTime:epoch,inventoryEggs:0,warehouseLimit:99,cleanliness:0,gardenCatchCount:39,ironhammer:1,equippedWeapon:'ironhammer',mace:1,battleaxe:1,shortbow:1,huntingbow:1,paladinbow:1,equippedBow:'paladinbow'});
 const docs={'groups/A':{members:['self','neighbor'],farmVillageVisibility:'public'},'groups/B':{members:['visitor'],farmVillageVisibility:'public'},'groups/A/users/self':{farm:seed()},'groups/A/users/neighbor':{farm:seed()},'groups/B/users/visitor':{farm:seed()}};
 const own=()=>docs['groups/A/users/self'].farm;
 let commits=0;
@@ -60,12 +60,12 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.goto(base+'/farmgame.html');await ready();
  const challengeReady=()=>page.waitForFunction(()=>!!__farmGame.scene.getScene('MyFarmScene').moleEncounter);
  const tapGarden=()=>page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');return s.searchCabbage(s.gardenPlants[0]);});
- // Force a successful twentieth catch using the normal transaction path.
+ // Force a successful fortieth catch using the normal transaction path.
  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');s.__roll=Phaser.Math.Between;Phaser.Math.Between=()=>1;});
  await tapGarden();await challengeReady();
  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');Phaser.Math.Between=s.__roll;});
- assert.equal(own().gardenCatchCount,20);assert.equal(own().earthworms,1);
- assert.equal(own().moleLastMilestone,20);assert.equal(own().moleChallenge.deadline-epoch,60000);
+ assert.equal(own().gardenCatchCount,40);assert.equal(own().earthworms,1);
+ assert.equal(own().moleLastMilestone,40);assert.equal(own().moleChallenge.deadline-epoch,60000);
  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');s.moleEncounter.startFire();});
  const before=structuredClone(own());
  await page.evaluate(async()=>{const s=__farmGame.scene.getScene('MyFarmScene');for(let i=0;i<20;i++)await s.searchCabbage(s.gardenPlants[i]);});
@@ -84,8 +84,8 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').moleEncounter.settled);
  assert.equal(own().sweetPotatoes,1);assert.equal(own().moleChallenge,null);assert.equal(own().coins,300);
  // A resumed timed-out fight costs only the challenger's balance, never target eggs.
- own().gardenCatchCount=40;own().coins=70;await notify();
- await tapGarden();assert.equal(own().moleLastMilestone,40);
+ own().gardenCatchCount=80;own().coins=70;await notify();
+ await tapGarden();assert.equal(own().moleLastMilestone,80);
  await clock(own().moleChallenge.deadline+1);
  await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').moleEncounter.refresh());
  await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').moleEncounter.settled);
@@ -108,8 +108,8 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').toggleEquipWeapon('ironhammer',true));
  assert.equal(own().equippedWeapon,'club');
  // A claimed fight survives leaving/reloading with the original deadline.
- own().gardenCatchCount=60;await notify();await scene('MyFarmScene');await tapGarden();
- const retained=structuredClone(own().moleChallenge);assert.equal(retained.milestone,60);
+ own().gardenCatchCount=120;await notify();await scene('MyFarmScene');await tapGarden();
+ const retained=structuredClone(own().moleChallenge);assert.equal(retained.milestone,120);
  await page.reload();await ready();await challengeReady();assert.equal(own().moleChallenge.deadline,retained.deadline);
  // Visits charge only the challenger, and entry monsters delay a due mole.
  await scene('VisitScene',{targetAccountId:'neighbor',targetGroupId:'A',targetName:'鄰居'});
@@ -118,9 +118,9 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await clock(retained.deadline+1);
  await page.waitForFunction(()=>__farmGame.scene.getScene('VisitScene').moleEncounter.settled);
  assert.equal(docs['groups/A/users/neighbor'].farm.coins,targetCoins);
- own().gardenCatchCount=80;await notify();
+ own().gardenCatchCount=160;await notify();
  await page.evaluate(async()=>{const s=__farmGame.scene.getScene('VisitScene');s.spawnWolfEvent();const {maybeStartMole}=await import('/js/farm/mole.js');if(await maybeStartMole(s))throw Error('Mole overlaps wolf');});
- assert.equal(own().moleChallenge,null);assert.equal(own().moleLastMilestone,60);
- assert.deepEqual(errors,[]);console.log('PASS mole: twentieth catch, 20/40/60 milestones, garden lock, random cells and resize, 100 cumulative hits across three moles, full-warehouse loot, timeout, own-only penalty, shop trade, equip, reload deadline and monster exclusion');
+ assert.equal(own().moleChallenge,null);assert.equal(own().moleLastMilestone,120);
+ assert.deepEqual(errors,[]);console.log('PASS mole: fortieth catch, 40/80/120 milestones, garden lock, random cells and resize, 100 cumulative hits across three moles, full-warehouse loot, timeout, own-only penalty, shop trade, equip, reload deadline and monster exclusion');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

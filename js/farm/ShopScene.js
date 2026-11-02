@@ -1,3 +1,4 @@
+import { MOLE_CONFIG } from './mole-rules.js';
 import { COBRA_FANG_PRICE } from './cobra-rules.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
@@ -157,7 +158,7 @@ export default class ShopScene extends Phaser.Scene {
             '', '弓箭：短弓／獵弓／聖騎士弓',
             ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
             '蛇王可用近戰或弓；飛行怪物需用弓。',
-            '地鼠：Lv.2，每抓到20隻蟲，限時60秒。'
+            `地鼠：Lv.2，每抓到${MOLE_CONFIG.catchInterval}隻蟲，限時60秒。`
         ].join('\n');
         panel.add(this.add.text(195, 260, guide, { fontSize: '14px', color: '#593b27', align: 'center', lineSpacing: 5 }).setOrigin(.5,0));
         const close = this.add.rectangle(195, 577, 130, 38, 0x735038).setInteractive({ cursor: 'pointer' });

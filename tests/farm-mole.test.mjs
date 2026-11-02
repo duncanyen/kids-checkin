@@ -1,17 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextMoleMilestone, moleSettlement, moleCells, nextMoleCells } from '../js/farm/mole-rules.js';
+import { nextMoleMilestone, moleDue, moleSettlement, moleCells, nextMoleCells } from '../js/farm/mole-rules.js';
 import { WEAPONS_CONFIG, hitsToDefeat, equippedWeapon } from '../js/farm/combat-rules.js';
 import { getUsedSpace } from '../js/farm/inventory-core.js';
 
-test('mole catch milestones are cumulative, level gated and consumed individually',()=>{
-    for(const n of [0,1,19])assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:n}),null);
-    assert.equal(nextMoleMilestone({coopLevel:1,gardenCatchCount:99}),null);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:20}),20);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:39,moleLastMilestone:20}),null);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:40,moleLastMilestone:20}),40);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:80,moleLastMilestone:20,worms:0,earthworms:0}),40);
-    assert.equal(nextMoleMilestone({coopLevel:2,worms:20,earthworms:30}),null);
+test('mole triggers every 40 successful catches at own coop level 2+',()=>{
+    for(const n of [0,1,19,20,39])assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:n}),null);
+    assert.equal(nextMoleMilestone({coopLevel:1,gardenCatchCount:120}),null);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:40}),40);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:79,moleLastMilestone:40}),null);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:80,moleLastMilestone:40}),80);
+    assert.equal(nextMoleMilestone({coopLevel:3,gardenCatchCount:120,moleLastMilestone:80}),120);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:120,moleLastMilestone:40,worms:0,earthworms:0}),80);
+    assert.equal(nextMoleMilestone({coopLevel:2,worms:40,earthworms:40}),null);
+});
+test('legacy 20-catch milestones advance to the next 40 boundary; active fights resume',()=>{
+    for(const [last,count,expected] of [[20,39,null],[20,40,40],[40,60,null],[60,79,null],[60,80,80],[100,120,120]]) {
+        assert.equal(nextMoleMilestone({coopLevel:2,moleLastMilestone:last,gardenCatchCount:count}),expected);
+    }
+    assert.equal(moleDue({coopLevel:2,gardenCatchCount:20,moleLastMilestone:20,moleChallenge:{id:'legacy',milestone:20}}),true);
 });
 test('exact melee counts and iron hammer balance; bows never hurt mole',()=>{
     for(const [key,n]of Object.entries({club:300,mace:200,battleaxe:150,ironhammer:100}))assert.equal(hitsToDefeat(WEAPONS_CONFIG[key],'mole'),n);
