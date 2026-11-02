@@ -1,3 +1,5 @@
+import { holidayClock } from './holiday-clock.js';
+import { theftRankingPatch } from './ranking-core.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { killProgressPatch } from './combat-progress.js';
 import { mountHalloween } from './halloween.js';
@@ -603,10 +605,13 @@ export default class VisitScene extends Phaser.Scene {
         const visitTime = Date.now();
         const attemptId = crypto.randomUUID();
         try {
+            const rankingClock = holidayClock(this.game);
+            await rankingClock.refresh();
             const result = await this.runVisitTransaction(async transaction => {
                 const targetDoc = await transaction.get(targetRef);
                 const ownDoc = await transaction.get(myFarmRef);
                 const target = targetDoc.data()?.farm, own = ownDoc.data()?.farm;
+                const sourceGroup = await transaction.get(doc(db, 'groups', CURRENT_GROUP_ID));
                 if (!target || !own) throw new Error('農場資料不存在。');
                 const now = Date.now();
                 if (now < blockedUntil(own)) throw new Error('這座雞舍仍在禁偷時間內，請稍後再來！');
@@ -626,6 +631,7 @@ export default class VisitScene extends Phaser.Scene {
                     const egg = takePoultryEgg(target, eggRoll);
                     const itemKey = BREEDS[egg.breed].eggKey;
                     updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
+                    Object.assign(updates, theftRankingPatch(own, { now: rankingClock.now(), publicVillage: isPublicVillage(sourceGroup.data()) }));
                     eggName = BREEDS[egg.breed].eggName;
                     transaction.update(targetRef, egg.patch);
                     transaction.set(visitMailRef, visitorNotice(visitTime));

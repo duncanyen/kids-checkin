@@ -77,7 +77,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         });
         await page.goto(base + '/farmgame.html');
         await page.waitForSelector('.farm-mail-launcher').catch(async error => { console.error(await page.evaluate(()=>({ html:document.querySelector('.farm-mail-launcher')?.outerHTML, data:window.__farmGame?.registry?.get('myFarmData'), scenes:window.__farmGame?.scene?.getScenes(true).map(s=>s.scene.key) }))); throw error; });
-        assert.equal(await page.locator('.farm-ranking-launcher,.farm-ranking-overlay').count(),0);
+        await page.waitForSelector('.farm-ranking-launcher');
         await page.waitForSelector('.farm-mail-badge:not([hidden])');
         assert.equal(await page.locator('.farm-mail-badge').textContent(), '1');
         assert.equal(await page.locator('.farm-mail-launcher').innerText(), '1');
@@ -191,6 +191,8 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore - 1);
         assert.deepEqual(Object.keys(visits[0][1]).sort(), ['createdAt', 'note', 'readAt', 'title', 'type']);
         assert.equal(docs[owner].farm.stolenEggsTotal,undefined);
+        const during=Date.now()>=Date.parse('2026-11-02T00:00:00+08:00')&&Date.now()<Date.parse('2026-11-09T01:00:00+08:00');
+        assert.equal(docs[owner].farm.stolenEggs20261102,during?2:undefined);
         assert.equal(Object.keys(docs).some(path=>path.startsWith('farm_theft_events/')),false);
         // Visit records show no detail button, include Taiwan timestamps and can be deleted.
         await page.evaluate(async notice => {
@@ -243,6 +245,38 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.waitForSelector('.farm-mail-empty');
         assert.match(confirmations.at(-1),/未領取獎勵/);assert.equal(docs[owner].farm.coins,1050);
         await page.getByRole('button',{name:'關閉',exact:true}).click();
+        // Global ranking includes only public villages, merges the same player and caps at ten.
+        docs['users/self']={accountId:'self',name:'測試玩家'};
+        docs[owner].farm.stolenEggs20261102=2;
+        docs['groups/Public']={name:'排行榜村',members:['self',...Array.from({length:12},(_,i)=>'r'+i)],farmVillageVisibility:'public'};
+        docs['groups/Public/users/self']={farm:{stolenEggs20261102:100}};
+        docs['groups/B/users/self'].farm.stolenEggs20261102=9999; // B remains private.
+        for(let i=0;i<12;i++){
+            docs['users/r'+i]={accountId:'r'+i,name:'排行玩家'+i};
+            docs['groups/Public/users/r'+i]={farm:{stolenEggs20261102:i+1}};
+        }
+        await page.getByRole('button',{name:'開啟排行榜',exact:true}).click();
+        await page.waitForSelector('.farm-ranking-row');
+        assert.equal(await page.locator('.farm-ranking-row').count(),10);
+        assert.match(await page.locator('.farm-ranking-row').first().textContent(),/測試玩家.*102 顆/);
+        assert.match(await page.locator('.farm-ranking-row').nth(1).textContent(),/排行玩家11.*12 顆/);
+        assert.equal(await page.evaluate(()=>__farmGame.input.enabled),false);
+        assert.match(await page.locator('.farm-ranking-note').innerText(),/2026\/11\/9 01:00:00/);
+        const positions=await page.evaluate(()=>({ranking:document.querySelector('.farm-ranking-launcher').getBoundingClientRect().bottom,mail:document.querySelector('.farm-mail-launcher').getBoundingClientRect().top}));
+        assert.ok(positions.ranking<positions.mail,'ranking is above notifications');
+        for(const viewport of [{width:390,height:844},{width:1440,height:900},{width:844,height:390}]){
+            await page.setViewportSize(viewport);await page.waitForTimeout(100);
+            const layout=await page.evaluate(()=>{
+                const panel=document.querySelector('.farm-ranking-panel').getBoundingClientRect(),content=document.querySelector('.farm-ranking-content');
+                return {top:panel.top,bottom:panel.bottom,height:innerHeight,listHeight:content.clientHeight,scrollHeight:content.scrollHeight};
+            });
+            assert.ok(layout.top>=0&&layout.bottom<=layout.height);assert.ok(layout.listHeight>20);
+            await page.locator('.farm-ranking-row').last().scrollIntoViewIfNeeded();
+            await page.screenshot({path:'/tmp/farm-ranking-'+viewport.width+'.png',fullPage:true});
+        }
+        await page.setViewportSize({width:390,height:844});
+        await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(()=>__farmGame.input.enabled),true);
         await page.evaluate(() => localStorage.setItem('lastGroupId', 'B'));
         await page.reload(); await page.locator('.farm-mail-launcher').click();
         await page.getByRole('tab', { name: '系統', exact: true }).click();
@@ -250,6 +284,6 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.ok(docs['groups/B/users/self/farm_notifications/welcome-v1']);
         assert.equal(docs[owner].farm.coins, 1050);
         assert.deepEqual(errors, []);
-        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launchers, full-viewport layout and input blocking; 103-message batch deletion, partial retry and reward warning; no ranking UI or competition score writes.');
+        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launchers, full-viewport layout and input blocking; 103-message batch deletion, partial retry and reward warning; fixed-period successful-only theft counts, public-only merged Top 10, activity dates and ranking placement above notifications.');
     } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
