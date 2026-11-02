@@ -766,3 +766,8 @@ body {
 .chat-repair-dialog{box-sizing:border-box;width:calc(100% - 32px);max-width:560px;max-height:85dvh;border:1px solid var(--n-border);border-radius:16px;padding:20px;background:var(--n-surface);color:var(--n-text);overflow:auto}
 .chat-repair-dialog::backdrop{background:#0008}.chat-repair-room{border-top:1px solid var(--n-border);padding:12px 0}.chat-repair-room label{display:block;margin:10px 0}.chat-repair-room select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid var(--n-border);border-radius:8px;background:var(--n-soft);color:var(--n-text)}
 .chat-repair-dialog button{padding:9px 12px;border:1px solid var(--n-border);border-radius:8px;background:var(--n-primary);color:var(--n-on-primary);cursor:pointer}.chat-repair-dialog p{font-size:14px;line-height:1.6}
+
+.chat-photo-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 12px; color: var(--text-sub); font-size: calc(12px * var(--n-font-scale, 1)); }
+.chat-photo-progress:has(#chatPhotoStatus:empty) { display: none; }
+.chat-photo-progress button { min-height: 36px; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; background: var(--bg-body); color: var(--text-main); cursor: pointer; }
+.chat-photo-progress [hidden] { display: none !important; }

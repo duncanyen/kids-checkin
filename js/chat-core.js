@@ -369,9 +369,9 @@ chatInput.addEventListener('input', function() {
     mentionDropdown.style.display = 'none';
 });
 
-// Shift+Enter 換行，單純 Enter 送出
+// Enter (including mobile return) inserts a line; only an explicit shortcut sends.
 chatInput.addEventListener('keydown', (e) => { 
-    if (e.key === 'Enter' && !e.shiftKey) { 
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault(); 
         document.getElementById('btnSend').click(); 
     } 
@@ -379,13 +379,14 @@ chatInput.addEventListener('keydown', (e) => {
 
 document.getElementById('btnSend').addEventListener('click', async () => {
     const text = chatInput.value.trim();
-    if (!text || !chatState.activeRoomId) return;
+    if (!text || !chatState.activeRoomId || document.getElementById('btnSend').disabled) return;
     const roomId=chatState.activeRoomId;
     
     // 送出後重置狀態與高度
     chatInput.value = ''; 
     chatInput.style.height = 'auto';
     document.getElementById('btnSend').disabled = true;
+    document.getElementById('btnTriggerPhoto').disabled = true;
     mentionDropdown.style.display = 'none';
 
     try {
@@ -407,46 +408,91 @@ document.getElementById('btnSend').addEventListener('click', async () => {
         if(chatState.activeRoomId===roomId&&!chatInput.value)chatInput.value=text;
         alert(error.message || '傳送失敗，請稍後重試。');
     }
-    finally { document.getElementById('btnSend').disabled = false; chatInput.focus(); }
+    finally { document.getElementById('btnSend').disabled = false; document.getElementById('btnTriggerPhoto').disabled = false; chatInput.focus(); }
 });
 
 const chatPhotoInput = document.getElementById('chatPhotoInput');
 document.getElementById('btnTriggerPhoto').addEventListener('click', () => chatPhotoInput.click());
 
-chatPhotoInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0]; if (!file || !chatState.activeRoomId) return;
-    const roomId = chatState.activeRoomId;
+let photoBatch = null, sendingPhotos = false;
+const photoStatus = document.getElementById('chatPhotoStatus');
+const photoRetry = document.getElementById('chatPhotoRetry');
+const photoCancel = document.getElementById('chatPhotoCancel');
+function compressChatPhoto(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('無法讀取照片'));
+        reader.onload = () => {
+            const image = new Image();
+            image.onerror = () => reject(new Error('無法辨識照片格式'));
+            image.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ratio = Math.min(1, 800 / Math.max(image.width, image.height));
+                    canvas.width = Math.max(1, Math.round(image.width * ratio)); canvas.height = Math.max(1, Math.round(image.height * ratio));
+                    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                    const data = canvas.toDataURL('image/jpeg', 0.8);
+                    if (data.length > 900 * 1024) throw new Error('照片壓縮後仍過大，請選擇較小的照片');
+                    resolve(data);
+                } catch (error) { reject(error); }
+            };
+            image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+function photoSessionMatches() {
+    const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null');
+    return user?.accountId === currentUser.accountId && getSelectedGameGroupId(user) === currentGroupId;
+}
+async function sendPhotoBatch() {
+    if (!photoBatch || sendingPhotos || document.getElementById('btnSend').disabled) return;
+    const batch = photoBatch;
+    sendingPhotos = true; photoRetry.hidden = photoCancel.hidden = true;
     document.getElementById('btnSend').disabled = true; document.getElementById('btnTriggerPhoto').disabled = true;
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        const img = new Image();
-        img.onload = async function() {
-            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-            const maxSize = 800; let width = img.width, height = img.height;
-            if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
-            canvas.width = width; canvas.height = height; ctx.drawImage(img, 0, 0, width, height);
-            const base64Img = canvas.toDataURL('image/jpeg', 0.8); 
-
+    let activityFailed = false;
+    try {
+        while (batch.files.length) {
+            if (!photoSessionMatches() || chatState.activeRoomId !== batch.roomId) throw new Error('請回到原聊天室後重試尚未傳送的照片');
+            photoStatus.textContent = `照片傳送中 ${batch.sent + 1}/${batch.total}…`;
+            const imageUrl = await compressChatPhoto(batch.files[0]);
+            await mutateRoomIdentity(chatContext, batch.roomId);
+            if (!photoSessionMatches() || chatState.activeRoomId !== batch.roomId) throw new Error('已切換聊天室，尚未傳送的照片已保留');
+            const message = { groupId: currentGroupId, roomId: batch.roomId, senderAccountId: currentUser.accountId, sender: currentUser.name, text: '傳送了圖片', imageUrl, timestamp: serverTimestamp() };
+            if (!batch.sent && batch.replyData) message.replyTo = batch.replyData;
+            await addDoc(collection(db, 'messages'), message);
+            // Remove only after the message commit, before the separate room summary.
+            batch.files.shift(); batch.sent++;
+            if (batch.sent === 1 && batch.replyId && pendingReplyMsgId === batch.replyId) cancelReply();
             try {
-                await mutateRoomIdentity(chatContext,roomId);
-                const msgData = { 
-                    groupId: currentGroupId, 
-                    roomId,
-                    senderAccountId: currentUser.accountId,
-                    sender: currentUser.name, 
-                    text: "傳送了圖片", 
-                    imageUrl: base64Img, 
-                    timestamp: serverTimestamp() 
-                };
-                if (pendingReplyMsgId) { msgData.replyTo = pendingReplyData; cancelReply(); }
-                await addDoc(collection(db, "messages"), msgData);
-
-                await mutateRoomIdentity(chatContext,roomId,{activity:{lastMessage:`${currentUser.name}: 傳送了圖片`,lastMessageTime:serverTimestamp()}});
-                setTimeout(() => document.getElementById('chatMessages').scrollTo({ top: 99999, behavior: 'smooth' }), 100);
-            } catch (error) { alert(error.message || '圖片傳送失敗，請稍後重試。'); }
-            finally { document.getElementById('btnSend').disabled = false; document.getElementById('btnTriggerPhoto').disabled = false; chatPhotoInput.value = ''; }
-        }; img.src = evt.target.result;
-    }; reader.readAsDataURL(file);
+                await mutateRoomIdentity(chatContext, batch.roomId, { activity: { lastMessage: `${currentUser.name}: 傳送了圖片`, lastMessageTime: serverTimestamp() } });
+            } catch (error) { activityFailed = true; console.error('照片已送出，聊天室摘要更新失敗', error); }
+        }
+        photoStatus.textContent = `已傳送 ${batch.sent} 張照片${activityFailed ? '（部分聊天室摘要未更新）' : ''}`;
+        photoBatch = null;
+        if (chatState.activeRoomId === batch.roomId) document.getElementById('chatMessages').scrollTo({ top: 99999, behavior: 'smooth' });
+    } catch (error) {
+        photoStatus.textContent = `已傳送 ${batch.sent}/${batch.total} 張，剩餘 ${batch.files.length} 張保留於「${batch.roomName}」。${error.message || '請重試。'}`;
+        photoRetry.hidden = photoCancel.hidden = false;
+    } finally {
+        sendingPhotos = false;
+        document.getElementById('btnSend').disabled = false; document.getElementById('btnTriggerPhoto').disabled = false;
+    }
+}
+photoRetry.addEventListener('click', sendPhotoBatch);
+photoCancel.addEventListener('click', () => {
+    if (sendingPhotos) return;
+    photoBatch = null; photoStatus.textContent = '已取消尚未傳送的照片'; photoRetry.hidden = photoCancel.hidden = true;
+});
+chatPhotoInput.addEventListener('change', async event => {
+    const files = [...event.target.files]; event.target.value = '';
+    if (!files.length || !chatState.activeRoomId) return;
+    if (photoBatch || document.getElementById('btnSend').disabled) { photoStatus.textContent = '請先完成、重試或取消目前的傳送'; return; }
+    if (files.length > 5 || files.some(file => !file.type.startsWith('image/') || file.size > 20 * 1024 * 1024)) {
+        photoStatus.textContent = '一次最多選擇 5 張照片，每張原始檔需不超過 20 MB。'; return;
+    }
+    photoBatch = { roomId: chatState.activeRoomId, roomName: chatState.activeRoomData?.name || '原聊天室', files, total: files.length, sent: 0, replyId: pendingReplyMsgId, replyData: pendingReplyData };
+    await sendPhotoBatch();
 });
 
 document.getElementById('btnBackToDashboard').addEventListener('click', () => { window.location.href = 'index.html'; });

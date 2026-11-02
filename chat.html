@@ -105,14 +105,19 @@
             <!-- @ 標註清單 -->
             <div class="mention-dropdown" id="mentionDropdown"></div>
 
+            <div class="chat-photo-progress" aria-live="polite">
+                <span id="chatPhotoStatus" role="status"></span>
+                <button type="button" id="chatPhotoRetry" hidden>重試剩餘照片</button>
+                <button type="button" id="chatPhotoCancel" hidden>取消剩餘照片</button>
+            </div>
             <div class="chat-input-area" style="align-items: flex-end; padding-bottom: 8px;">
                 <!-- 🛠️ 修正 SVG 顏色指定 -->
-                <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片">
+                <button class="btn-upload-photo" id="btnTriggerPhoto" title="傳送圖片（最多 5 張）" aria-label="傳送圖片，最多五張">
                     <svg viewBox="0 0 24 24" width="26" height="26" fill="#64748b"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"></path></svg>
                 </button>
-                <input type="file" id="chatPhotoInput" accept="image/*" style="display: none;">
+                <input type="file" id="chatPhotoInput" accept="image/*" multiple style="display: none;">
                 
-                <textarea id="chatInput" placeholder="輸入訊息... (@標註)" rows="1"></textarea>
+                <textarea id="chatInput" placeholder="輸入訊息... (@標註)" enterkeyhint="enter" aria-label="訊息內容" title="Enter 換行；Ctrl 或 ⌘ 加 Enter 傳送" rows="1"></textarea>
                 
                 <!-- 紙飛機的尺寸與主題顏色由 chat.css 控制 -->
                 <button class="btn-send" id="btnSend" aria-label="傳送訊息" title="傳送">

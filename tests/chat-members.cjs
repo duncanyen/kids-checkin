@@ -13,7 +13,7 @@ const docs={
  'users/r':{accountId:'removed',name:'已停用成員',role:'removed'},
  'users/o':{accountId:'outsider',name:'別群成員',role:'child'},
 };
-const writes=[],queries=[];let counter=0,failUsers=false;
+const writes=[],queries=[];let counter=0,failUsers=false,imageAttempts=0,failImageAt=Infinity,failPhotoSummary=false,uploadGate=null,signalUpload,releaseUpload;
 const mock=`
 export const doc=(_, ...parts)=>({path:parts.join('/'),id:parts.at(-1),kind:'doc'});
 export const collection=(_, ...parts)=>({path:parts.join('/'),kind:'query'});
@@ -35,7 +35,7 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
  const context=await browser.newContext({viewport:{width:390,height:844}});
- await context.exposeFunction('__chatDb',op=>{
+ await context.exposeFunction('__chatDb',async op=>{
   if(op.kind==='get')return docs[op.path];
   if(op.kind==='query'){
    queries.push(op);if(op.path==='users'&&failUsers)throw Error('offline');
@@ -43,8 +43,9 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
    for(const f of op.filters||[])if(f.field)rows=rows.filter(r=>f.op==='in'?f.value.includes(r.data[f.field]):f.op==='array-contains'?r.data[f.field]?.includes(f.value):r.data[f.field]===f.value);
    return rows;
   }
-  if(op.kind==='add'){const id='new-'+(++counter);docs[op.path+'/'+id]=op.data;writes.push({...op,id});return id;}
+  if(op.kind==='add'){if(op.path==='messages'&&op.data.imageUrl){imageAttempts++;if(uploadGate){const gate=uploadGate;uploadGate=null;signalUpload();await gate;}if(imageAttempts===failImageAt)throw Error('photo offline');}const id='new-'+(++counter);docs[op.path+'/'+id]=op.data;writes.push({...op,id});return id;}
   if(op.kind==='update'){
+   if(failPhotoSummary&&op.data.lastMessage?.includes('傳送了圖片')){failPhotoSummary=false;throw Error('summary offline');}
    for(const [field,value]of Object.entries(op.data)){
     const bits=field.split('.');let target=docs[op.path];for(const bit of bits.slice(0,-1))target=target[bit]??={};const key=bits.at(-1),old=target[key];
     target[key]=value?.operation==='union'?[...new Set([...(old||[]),...value.values])]:value?.operation==='remove'?(old||[]).filter(x=>!value.values.includes(x)):value?.operation==='increment'?(old||0)+value.value:value;
@@ -72,15 +73,58 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
  const [path,room]=rooms()[0];assert.equal(room.groupId,'A');assert.deepEqual(room.participantIds,['alice','bob']);assert.equal(room.creatorAccountId,'alice');
  // Existing rooms and the invitation menu retain their original participant format.
  await page.locator('#roomListContainer .room-item').first().click();
+ // A normal return creates a newline, not a message; composition Enter is safe.
+ const messages=()=>Object.entries(docs).filter(([key])=>key.startsWith('messages/'));
+ const beforeReturn=messages().length;
+ await page.fill('#chatInput','第一行');await page.locator('#chatInput').press('Enter');await page.locator('#chatInput').type('第二行');
+ assert.equal(await page.inputValue('#chatInput'),'第一行\n第二行');assert.equal(messages().length,beforeReturn);
+ await page.locator('#chatInput').evaluate(node=>node.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,isComposing:true,bubbles:true,cancelable:true})));
+ assert.equal(messages().length,beforeReturn);
+ await page.locator('#chatInput').press('Control+Enter');await page.waitForFunction(()=>!document.getElementById('btnSend').disabled);
+ assert.ok(messages().some(([,value])=>value.text==='第一行\n第二行'));
  // Exercise the real FileReader -> Image -> canvas upload callbacks.
- await page.setInputFiles('#chatPhotoInput',{name:'chat-photo.png',mimeType:'image/png',buffer:require('node:fs').readFileSync(require('node:path').join(__dirname,'../Nexus.png'))});
+ const selectedPhoto={name:'chat-photo.png',mimeType:'image/png',buffer:require('node:fs').readFileSync(require('node:path').join(__dirname,'../Nexus.png'))};
+ failPhotoSummary=true;
+ await page.setInputFiles('#chatPhotoInput',[selectedPhoto,{...selectedPhoto,name:'second.png'}]);
  await page.waitForFunction(()=>!document.getElementById('btnSend').disabled&&!document.getElementById('btnTriggerPhoto').disabled&&document.getElementById('chatPhotoInput').value==='');
+ assert.equal(messages().filter(([,value])=>value.imageUrl).length,2);
+ assert.match(await page.locator('#chatPhotoStatus').innerText(),/部分聊天室摘要未更新/);
  const photo=Object.values(docs).find(value=>value.imageUrl);
  assert.ok(photo,'selecting a valid image must create a message');
  assert.equal(photo.roomId,path.split('/')[1]);assert.equal(photo.groupId,'A');assert.equal(photo.senderAccountId,'alice');
  assert.ok(photo.imageUrl.startsWith('data:image/jpeg;base64,'));
  const dimensions=await page.evaluate(url=>new Promise(resolve=>{const image=new Image();image.onload=()=>resolve({width:image.width,height:image.height});image.src=url;}),photo.imageUrl);
  assert.equal(Math.max(dimensions.width,dimensions.height),800);
+ // Fail the middle photo: retry only the unsent files, preserving the text draft.
+ const imagesBefore=messages().filter(([,value])=>value.imageUrl).length;
+ await page.fill('#chatInput','保留的草稿');
+ failImageAt=imageAttempts+2;
+ await page.setInputFiles('#chatPhotoInput',[selectedPhoto,{...selectedPhoto,name:'retry-2.png'},{...selectedPhoto,name:'retry-3.png'}]);
+ await page.waitForSelector('#chatPhotoRetry:not([hidden])');
+ assert.equal(messages().filter(([,value])=>value.imageUrl).length,imagesBefore+1);
+ assert.equal(await page.inputValue('#chatInput'),'保留的草稿');
+ await page.click('#chatPhotoRetry');await page.waitForFunction(()=>!document.getElementById('btnSend').disabled&&document.getElementById('chatPhotoRetry').hidden);
+ assert.equal(messages().filter(([,value])=>value.imageUrl).length,imagesBefore+3);
+ assert.equal(await page.inputValue('#chatInput'),'保留的草稿');
+ // Invalid files do not strand the send controls; cancel releases the queue.
+ await page.setInputFiles('#chatPhotoInput',{name:'broken.png',mimeType:'image/png',buffer:Buffer.from('not an image')});
+ await page.waitForSelector('#chatPhotoRetry:not([hidden])');assert.equal(await page.locator('#btnSend').isEnabled(),true);
+ await page.click('#chatPhotoCancel');
+ const beforeLimit=messages().length;
+ await page.setInputFiles('#chatPhotoInput',Array.from({length:6},(_,i)=>({...selectedPhoto,name:`over-${i}.png`})));
+ assert.match(await page.locator('#chatPhotoStatus').innerText(),/最多選擇 5 張/);assert.equal(messages().length,beforeLimit);
+ await page.fill('#chatInput','');
+ // Leaving during a committed upload cannot redirect the rest into another room.
+ const beforeSwitch=messages().filter(([,value])=>value.imageUrl).length;
+ uploadGate=new Promise(resolve=>releaseUpload=resolve);const uploadEntered=new Promise(resolve=>signalUpload=resolve);
+ await page.setInputFiles('#chatPhotoInput',[selectedPhoto,{...selectedPhoto,name:'after-switch.png'}]);
+ await uploadEntered;await page.click('#btnBackToList');releaseUpload();
+ await page.waitForFunction(()=>!document.getElementById('chatPhotoRetry').hidden&&!document.getElementById('btnSend').disabled);
+ assert.equal(messages().filter(([,value])=>value.imageUrl).length,beforeSwitch+1);
+ assert.ok(messages().filter(([,value])=>value.imageUrl).every(([,value])=>value.roomId===path.split('/')[1]));
+ await page.locator('#roomListContainer .room-item').first().click();
+ await page.click('#chatPhotoRetry');await page.waitForFunction(()=>!document.getElementById('btnSend').disabled&&document.getElementById('chatPhotoRetry').hidden);
+ assert.equal(messages().filter(([,value])=>value.imageUrl).length,beforeSwitch+2);
  await page.click('#btnOpenSettingsMenu');
  await page.evaluate(()=>chatRooms.openInviteMembers());await page.waitForFunction(()=>!document.getElementById('btnSaveInvite').disabled);
  assert.deepEqual(await page.locator('#inviteMemberList input').evaluateAll(inputs=>inputs.map(i=>i.value)),['charlie','same']);
@@ -157,6 +201,6 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
 
  assert.ok(queries.filter(q=>q.path==='users').every(q=>q.filters?.some(f=>f.field==='accountId'&&f.op==='in')));
  assert.deepEqual(errors,[]);
- console.log('PASS: fixed room/creator/sender/reply/read/unread account IDs survive rename; homonyms do not inherit messages or access; explicit legacy admin repair preserves old messages/balances; group checks, invite, removed members and forged repair rejected');
+ console.log('PASS: Enter newline, IME and explicit send shortcut; multi-photo order/limit, partial retry without duplicates, draft preservation, decode errors, summary failures and room-switch guard; fixed room/creator/sender/reply/read/unread account IDs survive rename; homonyms do not inherit messages or access; explicit legacy admin repair preserves old messages/balances; group checks, invite, removed members and forged repair rejected');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
