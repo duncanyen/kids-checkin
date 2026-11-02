@@ -24,6 +24,7 @@ export function mountFarmRankings(game, context) {
     const status = node('p', 'farm-mail-status'); status.setAttribute('role', 'status');
     const content = node('div', 'farm-ranking-content'); content.setAttribute('role', 'tabpanel'); content.id = 'farm-ranking-content';
     const note = node('p', 'farm-ranking-note');
+    const period = node('p', 'farm-ranking-period');
     const buttons = [];
     for (const [key, config] of Object.entries(FARM_RANKINGS)) {
         const tab = node('button', 'farm-mail-tab', config.label); tab.type = 'button';
@@ -33,19 +34,19 @@ export function mountFarmRankings(game, context) {
     }
     const retry = node('button', 'farm-mail-button', '重新整理'); retry.type = 'button';
     let current = Object.keys(FARM_RANKINGS)[0]; retry.addEventListener('click', () => load(current));
-    panel.append(header, tabs, status, content, note, retry); overlay.append(panel); document.body.append(launcher, overlay);
+    panel.append(header, tabs, period, status, content, note, retry); overlay.append(panel); document.body.append(launcher, overlay);
     async function load(key) {
         current = key; const request = ++version, config = FARM_RANKINGS[key];
         buttons.forEach(([id, tab]) => tab.setAttribute('aria-selected', String(id === key)));
         content.setAttribute('aria-labelledby', `farm-ranking-tab-${key}`);
-        content.replaceChildren(); note.textContent = config.note; status.textContent = '正在統計公開村落…'; retry.disabled = true;
+        content.replaceChildren(); note.textContent = config.note; period.textContent = config.period; status.textContent = '正在統計公開村落…'; retry.disabled = true;
         try {
             const rows = await loadFarmRanking(context, key);
             if (disposed || overlay.hidden || request !== version) return;
             const list = node('ol', 'farm-ranking-list');
             rows.forEach((row, index) => {
                 const item = node('li', 'farm-ranking-row'), person = node('div', 'farm-ranking-person');
-                person.append(node('strong', '', row.name), node('small', '', row.villages.join('、')));
+                person.append(node('strong', '', row.name), node('small', '', row.groupName));
                 item.append(node('span', 'farm-ranking-place', String(index + 1)), person, node('span', 'farm-ranking-score', `${row.score} ${config.unit}`)); list.append(item);
             });
             content.append(list); status.textContent = `${theftRankingStatus()} · 公開村落 · Top 10${rows.length ? '' : ' · 尚無本期成功偷蛋紀錄'}`;

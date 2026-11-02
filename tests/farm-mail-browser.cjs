@@ -245,9 +245,9 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.waitForSelector('.farm-mail-empty');
         assert.match(confirmations.at(-1),/未領取獎勵/);assert.equal(docs[owner].farm.coins,1050);
         await page.getByRole('button',{name:'關閉',exact:true}).click();
-        // Global ranking includes only public villages, merges the same player and caps at ten.
+        // Global ranking includes only public villages, separates the same account in different groups and caps at ten.
         docs['users/self']={accountId:'self',name:'測試玩家'};
-        docs[owner].farm.stolenEggs20261102=2;
+        docs[owner].farm.stolenEggs20261102=50;
         docs['groups/Public']={name:'排行榜村',members:['self',...Array.from({length:12},(_,i)=>'r'+i)],farmVillageVisibility:'public'};
         docs['groups/Public/users/self']={farm:{stolenEggs20261102:100}};
         docs['groups/B/users/self'].farm.stolenEggs20261102=9999; // B remains private.
@@ -258,10 +258,14 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.getByRole('button',{name:'開啟排行榜',exact:true}).click();
         await page.waitForSelector('.farm-ranking-row');
         assert.equal(await page.locator('.farm-ranking-row').count(),10);
-        assert.match(await page.locator('.farm-ranking-row').first().textContent(),/測試玩家.*102 顆/);
-        assert.match(await page.locator('.farm-ranking-row').nth(1).textContent(),/排行玩家11.*12 顆/);
+        assert.match(await page.locator('.farm-ranking-row').first().textContent(),/測試玩家.*100 顆/);
+        assert.match(await page.locator('.farm-ranking-row').nth(1).textContent(),/測試玩家.*50 顆/);
+        assert.equal(await page.locator('.farm-ranking-row').nth(1).locator('.farm-ranking-person small').innerText(),'測試村落');
+        assert.match(await page.locator('.farm-ranking-row').nth(2).textContent(),/排行玩家11.*12 顆/);
         assert.equal(await page.evaluate(()=>__farmGame.input.enabled),false);
-        assert.match(await page.locator('.farm-ranking-note').innerText(),/2026\/11\/9 01:00:00/);
+        assert.match(await page.locator('.farm-ranking-period').innerText(),/2026\/11\/9 01:00:00/);
+        assert.equal(await page.locator('.farm-ranking-row').first().locator('.farm-ranking-person small').innerText(),'排行榜村');
+        assert.equal(await page.locator('.farm-ranking-note').innerText(),'截止後依排名發放獎勵，這次除金幣外還會有額外驚喜獎品，請大家繼續努力偷蛋，爭取好成績');
         const positions=await page.evaluate(()=>({ranking:document.querySelector('.farm-ranking-launcher').getBoundingClientRect().bottom,mail:document.querySelector('.farm-mail-launcher').getBoundingClientRect().top}));
         assert.ok(positions.ranking<positions.mail,'ranking is above notifications');
         for(const viewport of [{width:390,height:844},{width:1440,height:900},{width:844,height:390}]){
@@ -284,6 +288,6 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.ok(docs['groups/B/users/self/farm_notifications/welcome-v1']);
         assert.equal(docs[owner].farm.coins, 1050);
         assert.deepEqual(errors, []);
-        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launchers, full-viewport layout and input blocking; 103-message batch deletion, partial retry and reward warning; fixed-period successful-only theft counts, public-only merged Top 10, activity dates and ranking placement above notifications.');
+        console.log('PASS: welcome delivery, rewards/retry/reload/delete, gift indicator, anonymous successful theft only, atomic failure, visitor deletion, group isolation, persistent live unread badges, icon-only launchers, full-viewport layout and input blocking; 103-message batch deletion, partial retry and reward warning; fixed-period successful-only theft counts, public-only group-scoped Top 10, activity dates and ranking placement above notifications.');
     } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

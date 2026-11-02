@@ -26,12 +26,12 @@ export async function loadFarmRanking({ groupId, accountId }, ranking = 'stolenE
                 });
                 rows.push(...await Promise.all([...active.values()].map(async profile => {
                     const snapshot = await getDoc(doc(db, 'groups', group.id, 'users', profile.accountId));
-                    return { accountId: profile.accountId, name: profile.name, farm: snapshot.data()?.farm, village: group.name || '未命名村落' };
+                    return { groupId: group.id, accountId: profile.accountId, name: profile.name, farm: snapshot.data()?.farm };
                 })));
             }
             const latest = await getDoc(doc(db, 'groups', group.id));
             if (!latest.exists() || !isPublicVillage(latest.data())) return [];
-            return rows.filter(row => latest.data().members?.includes(row.accountId));
+            return rows.filter(row => latest.data().members?.includes(row.accountId)).map(row => ({ ...row, groupName: latest.data().name || '未命名群組' }));
         }));
         entries.push(...batches.flat());
     }

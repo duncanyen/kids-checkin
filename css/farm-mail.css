@@ -31,3 +31,5 @@
 .farm-ranking-panel> :not(.farm-ranking-content){flex-shrink:0}
 .farm-ranking-content{flex:1;min-height:0}
 .farm-ranking-note{padding:6px 8px;border-radius:8px;background:#faedcee8;color:#72502d;margin:8px 0}
+
+.farm-ranking-period{font-size:12px;line-height:1.6;color:#72502d;margin:8px 0 0}

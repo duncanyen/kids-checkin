@@ -13,19 +13,19 @@ export function theftRankingStatus(now = Date.now()) {
 // Add future rankings here without changing the launcher or dialog.
 export const FARM_RANKINGS = Object.freeze({
     stolenEggs: { label: '偷蛋王', field: THEFT_RANKING_FIELD, unit: '顆',
-        note: '記錄期間：2026/11/2 00:00:00～2026/11/9 01:00:00（台灣時間）。僅計入公開村落的成功偷蛋；同一 accountId 跨公開村落合併，顯示 Top 10；同分依帳號排序。截止後保留成績，不發放獎勵。' },
+        period: '記錄期間：2026/11/2 00:00:00～2026/11/9 01:00:00（台灣時間）',
+        note: '截止後依排名發放獎勵，這次除金幣外還會有額外驚喜獎品，請大家繼續努力偷蛋，爭取好成績' },
 });
 
 export function rankFarmPlayers(entries, field) {
     const players = new Map();
     for (const entry of entries) {
+        if (!entry.groupId || !entry.accountId) continue;
         const score = Math.max(0, Math.floor(Number(entry.farm?.[field]) || 0));
         if (!Number.isSafeInteger(score) || !score) continue;
-        const player = players.get(entry.accountId) || { accountId: entry.accountId, name: entry.name || entry.accountId, score: 0, villages: [] };
-        player.score += score;
-        if (!player.villages.includes(entry.village)) player.villages.push(entry.village);
-        players.set(entry.accountId, player);
+        // Each farm already stores its own count; never merge another group's farm.
+        const key = JSON.stringify([entry.groupId, entry.accountId]);
+        players.set(key, { groupId: entry.groupId, groupName: entry.groupName || '未命名群組', accountId: entry.accountId, name: entry.name || entry.accountId, score });
     }
-    return [...players.values()].sort((a, b) => b.score - a.score || a.accountId.localeCompare(b.accountId)).slice(0, 10);
+    return [...players.values()].sort((a, b) => b.score - a.score || a.accountId.localeCompare(b.accountId) || a.groupId.localeCompare(b.groupId)).slice(0, 10);
 }
-

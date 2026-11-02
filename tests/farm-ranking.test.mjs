@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 import { rankFarmPlayers, theftRankingPatch, theftRankingStatus, THEFT_RANKING_START, THEFT_RANKING_END, THEFT_RANKING_FIELD } from '../js/farm/ranking-core.js';
 import { readFileSync } from 'node:fs';
 
-test('rankings merge players across villages, order ties consistently and cap at ten', () => {
-    const rows = Array.from({length:15}, (_,i) => ({ accountId:`p${String(i).padStart(2,'0')}`,name:`玩家${i}`,village:'A',farm:{stolenEggs20261102:i} }));
-    rows.push({accountId:'p01',name:'玩家1',village:'B',farm:{stolenEggs20261102:20}},
-        {accountId:'zero',village:'A',farm:{}}, {accountId:'bad',village:'A',farm:{stolenEggs20261102:Infinity}});
+test('rankings separate the same account across groups, deduplicate farms and cap at ten', () => {
+    const rows = Array.from({length:15}, (_,i) => ({ groupId:'A', groupName:'同名群組', accountId:`p${String(i).padStart(2,'0')}`,name:`玩家${i}`,farm:{stolenEggs20261102:i} }));
+    rows.push({groupId:'B',groupName:'同名群組',accountId:'p01',name:'玩家1',farm:{stolenEggs20261102:20}},
+        {groupId:'A',accountId:'zero',farm:{}}, {groupId:'A',accountId:'bad',farm:{stolenEggs20261102:Infinity}});
     const original=structuredClone(rows), result=rankFarmPlayers(rows,'stolenEggs20261102');
-    assert.equal(result.length,10);assert.equal(result[0].accountId,'p01');assert.equal(result[0].score,21);
-    assert.deepEqual(result[0].villages,['A','B']);assert.equal(result[1].score,14);assert.deepEqual(rows,original);
-    assert.deepEqual(rankFarmPlayers([{accountId:'b',farm:{n:2}},{accountId:'a',farm:{n:2}}],'n').map(p=>p.accountId),['a','b']);
+    assert.equal(result.length,10);assert.equal(result[0].accountId,'p01');assert.equal(result[0].score,20);
+    assert.equal(result[0].groupId,'B');assert.equal(result[1].score,14);assert.deepEqual(rows,original);
+    const farms=[{groupId:'B',groupName:'乙',accountId:'same',name:'玩家',farm:{n:3}}, {groupId:'A',groupName:'甲',accountId:'same',name:'玩家',farm:{n:4}}];
+    assert.deepEqual(rankFarmPlayers([...farms,farms[1]],'n').map(row=>[row.groupId,row.groupName,row.score]),[['A','甲',4],['B','乙',3]]);
+    assert.deepEqual(rankFarmPlayers(farms.map(row=>({...row,farm:{n:2}})),'n').map(row=>row.groupId),['A','B']);
 });
 
 test('ranking reads exclude closed villages, removed members/profiles and mid-read privacy changes', async () => {
@@ -34,7 +36,7 @@ test('ranking reads exclude closed villages, removed members/profiles and mid-re
       const isPublicVillage=g=>g?.farmVillageVisibility==='public',listPublicVillages=async()=>groups;`;
     const mod=await import('data:text/javascript;base64,'+Buffer.from(mock+core+source).toString('base64'));
     const result=await mod.loadFarmRanking({groupId:'A',accountId:'self'});
-    assert.equal(result.length,1);assert.equal(result[0].score,7);assert.deepEqual(result[0].villages,['甲','乙']);
+    assert.equal(result.length,2);assert.equal(result[0].score,4);assert.equal(result[0].groupId,'B');assert.equal(result[0].groupName,'乙');assert.equal(result[1].score,3);assert.equal(result[1].groupName,'甲');
     await assert.rejects(mod.loadFarmRanking({groupId:'A',accountId:'outsider'}),/不在此村落/);
     docs['groups/A'].farmVillageVisibility='private';
     assert.equal((await mod.loadFarmRanking({groupId:'A',accountId:'self'}))[0].score,4);
