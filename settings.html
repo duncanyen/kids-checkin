@@ -240,8 +240,8 @@
                     <div><input type="checkbox" id="chk_${modKey}" ${isChecked ? 'checked' : ''}>
                     <label for="chk_${modKey}" style="cursor:pointer;">${icon(modKey)}${moduleMeta[modKey].name.replace(/^[^\p{L}\p{N}]+/u, '')}</label></div>
                     <div class="order-btns">
-                        <button class="order-btn" aria-label="向上移動" onclick="moveItem(${index}, -1)">⬆</button>
-                        <button class="order-btn" aria-label="向下移動" onclick="moveItem(${index}, 1)">⬇</button>
+                        <button class="order-btn" aria-label="向上移動" onclick="moveItem(${index}, -1)">${icon('chevronUp')}</button>
+                        <button class="order-btn" aria-label="向下移動" onclick="moveItem(${index}, 1)">${icon('chevronDown')}</button>
                     </div>
                 `;
                 container.appendChild(itemDiv);
