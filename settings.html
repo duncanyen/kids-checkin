@@ -319,7 +319,10 @@
                         await updateDoc(userDoc.ref, updateData);
 
                         // 更新本地 Session/Local 緩存
-                        if (nameChanged) currentUser.name = newName;
+                        if (nameChanged) {
+                            currentUser.name = newName;
+                            document.getElementById('settingsDisplayName').textContent = newName;
+                        }
                         if (newPin) currentUser.pin = newPin;
                         
                         sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
