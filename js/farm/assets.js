@@ -22,7 +22,15 @@ export function queueAssets(scene, keys) {
     return missing;
 }
 export function registerAvailableAnimations(scene) {
-    for (const key of ['hen','silkie','bresse','wolf','tiger','dragon','gorilla','cobra'])
+    for (const [key,spec] of Object.entries(manifest)) {
+        if (spec.crop && scene.textures.exists(key)) scene.textures.get(key).get().setSize(spec.crop[2],spec.crop[3],spec.crop[0],spec.crop[1]);
+    }
+    if (scene.textures.exists('mole')) {
+        for (const [action,frames,repeat] of [['walk',[9,8,1,2,0],0],['idle',[0,3],-1],['hit',[4,5,0],0],['dead',[10,11],0],['burrow',[0,8,9],0],['angry',[6,7],0]]) {
+            if (!scene.anims.exists('mole_'+action)) scene.anims.create({key:'mole_'+action,frames:frames.map(frame=>({key:'mole',frame:String(frame)})),frameRate:10,repeat});
+        }
+    }
+    for (const key of ['hen','silkie','bresse','wolf','tiger','dragon','gorilla','cobra','mole'])
         if (scene.textures.exists(key)) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     registerPoultryAnimations(scene); registerPredatorAnimations(scene);
     registerDragonAnimations(scene); registerGorillaAnimations(scene); registerEagleAnimations(scene);

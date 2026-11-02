@@ -6,6 +6,7 @@ import { farmLoading } from './loading-ui.js';
 
 // Load art before reserving a milestone, so failed downloads consume no time.
 export async function maybeStartCobra(scene) {
+    if (scene.preparingMole || (scene.myFarmData || scene.farmData)?.moleChallenge || (scene.moleEncounter && !scene.moleEncounter.destroyed && !scene.moleEncounter.settled)) return true;
     if (scene.cobraEncounter && !scene.cobraEncounter.destroyed && !scene.cobraEncounter.settled) return true;
     if (scene.preparingCobra) return true;
     if (!cobraDue(scene.myFarmData || scene.farmData)) return false;

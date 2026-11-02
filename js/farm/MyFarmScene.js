@@ -1,3 +1,4 @@
+import { maybeStartMole, moleBlocksGarden } from './mole.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { mountHalloween } from './halloween.js';
 import { ensureAssets, bossAssets } from './assets.js';
@@ -33,6 +34,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.pendingEncounter = null;
         this.preparingCobra = false;
         this.cobraEntryChecked = false;
+        this.moleEncounter = null; this.preparingMole = false; this.gardenSearching = false;
         this.cobraEncounter = null;
         this.cobra = null;
         this.farmSceneToken = Symbol();
@@ -88,7 +90,7 @@ export default class MyFarmScene extends Phaser.Scene {
         onSceneExit(this, () => {
             this.farmSceneToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
-            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
+            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
             this.farmInterval = null;
@@ -172,7 +174,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.startEggTimer();
             if (!this.cobraEntryChecked) {
                 this.cobraEntryChecked = true;
-                this.time.delayedCall(0, () => maybeStartCobra(this));
+                this.time.delayedCall(0, () => this.farmData?.moleChallenge ? maybeStartMole(this) : maybeStartCobra(this));
             }
             if(!this.game.registry.get('farmInitialReady')){
                 this.game.registry.set('farmInitialReady',true);
@@ -482,6 +484,19 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async searchCabbage(cabSprite) {
+        if (this.gardenSearching || moleBlocksGarden(this)) return;
+        const token = this.farmSceneToken || this.visitToken;
+        const active = () => this.sys.isActive() && token === (this.farmSceneToken || this.visitToken);
+        this.gardenSearching = true;
+        try {
+            if (await maybeStartMole(this)) return;
+            if (!active()) return;
+            await this.searchGardenPlant(cabSprite);
+            if (active()) await maybeStartMole(this);
+        } finally { if (active()) this.gardenSearching = false; }
+    }
+
+    async searchGardenPlant(cabSprite) {
         if (!this.isSaveReady()) return;
         if (!this.farmData || cabSprite.isAnimating) return;
         cabSprite.isAnimating = true;
@@ -503,8 +518,8 @@ export default class MyFarmScene extends Phaser.Scene {
                 const snap = await t.get(myFarmRef);
                 if (!snap.exists() || !snap.data().farm) throw new Error('農莊資料不存在。');
                 const farm = snap.data().farm;
-                if (getUsedSpace(farm) >= (farm.warehouseLimit || 10)) return false;
-                t.update(myFarmRef, { [`farm.${foundType}`]: (farm[foundType] || 0) + 1 });
+                if (farm.moleChallenge || getUsedSpace(farm) >= (farm.warehouseLimit || 10)) return false;
+                t.update(myFarmRef, { [`farm.${foundType}`]: (farm[foundType] || 0) + 1, 'farm.gardenCatchCount': (farm.gardenCatchCount || 0) + 1 });
                 return true;
             });
             if (!feedback?.alive) return;
@@ -518,8 +533,8 @@ export default class MyFarmScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (!this.isSaveReady()) return;
-        if (this.isHarvesting || this.preparingCobra) return;
-        const activeBoss = [this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (this.isHarvesting || this.preparingMole || this.preparingCobra) return;
+        const activeBoss = [this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;

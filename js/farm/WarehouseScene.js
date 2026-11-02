@@ -46,6 +46,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'warehouseCapacity', name: '倉庫容量', icon: 'coop', type: 'warehouse' },
             { key: 'coins', name: '金幣', icon: 'coin' },
             ...Object.values(BREEDS).map(b => ({ key: b.eggKey, name: b.eggName, icon: b.eggIcon })),
+            { key: 'sweetPotatoes', name: '地瓜', icon: 'sweet_potato' },
             { key: 'worms', name: '菜蟲', icon: 'worm' },
             { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' },
             { key: 'wolfFangs', name: '狼牙', icon: 'fang' },
