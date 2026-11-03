@@ -1,3 +1,5 @@
+import { housingPatch } from './poultry-housing.js';
+import { openHousing } from './poultry-housing-ui.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
@@ -65,6 +67,12 @@ export default class WarehouseScene extends Phaser.Scene {
         this.createWarehousePages();
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
+        const housingButton=this.add.rectangle(195,780,210,40,0x735038).setInteractive({cursor:'pointer'});
+        this.add.text(195,780,'雞隻放風設定',{fontSize:'16px',color:'#fff2cc'}).setOrigin(.5);
+        housingButton.on('pointerdown',()=>{if(this.farmData)openHousing(this,async counts=>{
+            await runTransaction(db,async t=>{const snapshot=await t.get(myFarmRef);if(!snapshot.data()?.farm)throw Error('存檔尚未確認');t.update(myFarmRef,housingPatch(snapshot.data().farm,counts));});
+            this.showMsg('放風數量已儲存，所有雞隻產蛋能力不受影響','#4CAF50');
+        });});
         this.initFirebase();
         watchGuardDogInventory(this,()=>this.farmData,()=>this.renderWarehouseItems());
         onSceneExit(this, () => { if (this.unsubscribe) this.unsubscribe(); });
@@ -202,7 +210,7 @@ export default class WarehouseScene extends Phaser.Scene {
         if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'cobraFangs' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
-                this.showMsg('咕咕活力散請在母雞生病時點擊母雞使用！', '#FFD54F');
+                this.showMsg('病雞可直接點選治療；雞舍內病雞請返回農場點選雞舍治療。', '#FFD54F');
             } else {
                 this.showMsg('此物品請至商店販售！', '#FFD54F');
             }

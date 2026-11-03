@@ -1,3 +1,4 @@
+import { outdoorHens } from './poultry-housing.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
 import { holidayClock } from './holiday-clock.js';
 import { theftRankingPatch } from './ranking-core.js';
@@ -267,8 +268,8 @@ export default class VisitScene extends Phaser.Scene {
 
     syncTargetHens() {
         if (!this.targetFarmData) return;
-        const henCount = poultryState(this.targetFarmData).hens.length;
-        const hensState = poultryState(this.targetFarmData).hens;
+        const hensState = outdoorHens(this.targetFarmData);
+        const henCount = hensState.length;
         const now = Date.now();
         setCoopSize(this.coop, this.targetFarmData.coopLevel);
 

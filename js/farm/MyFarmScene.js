@@ -1,3 +1,5 @@
+import { outdoorHens, treatmentPatch } from './poultry-housing.js';
+import { openCoopActions } from './poultry-housing-ui.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { mountHalloween } from './halloween.js';
@@ -158,6 +160,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.farmData = copyFarmSave(farm);
             if (!this.farmData.equippedWeapon) this.farmData.equippedWeapon = 'club';
             this.farmData.hensState = poultryState(this.farmData).hens;
+            this.housingDialog?.refresh?.();
             this.farmData.hens = this.farmData.hensState.length;
             this.farmData.cleanliness ??= 0;
             this.farmData.warehouseLimit ||= 10;
@@ -167,7 +170,7 @@ export default class MyFarmScene extends Phaser.Scene {
             // Coins and inventory updates do not replace moving hens. Include
             // illness age so a fresh snapshot can still update sick/skull art.
             const now = Date.now();
-            const key = JSON.stringify([this.farmData.coopLevel, this.farmData.hensState,
+            const key = JSON.stringify([this.farmData.coopLevel, this.farmData.outdoorHensByBreed, this.farmData.hensState,
                 this.farmData.hensState.map(h => h.isSick && h.sickTimestamp
                     ? Math.floor((now - h.sickTimestamp) / 86400000) : 0)]);
             if (key !== this.henVisualKey || this.farmData.hensState.some(h => h.isSick && h.sickTimestamp && now - h.sickTimestamp > 48 * 3600000)) { this.henVisualKey = key; this.syncHens(); }
@@ -242,8 +245,9 @@ export default class MyFarmScene extends Phaser.Scene {
         }
     }
 
-    askCleanMyFarm() {
+    askCleanMyFarm(cleanOnly = false) {
         if (!this.isSaveReady()) return;
+        if (!cleanOnly && poultryState(this.farmData).hens.some(h=>h.isSick)) { openCoopActions(this); return; }
         if (!this.farmData || (this.farmData.cleanliness || 0) === 0) {
             this.showFloatingText('雞舍非常乾淨，不需要打掃～', '#FFFFFF', 16);
             return;
@@ -266,7 +270,8 @@ export default class MyFarmScene extends Phaser.Scene {
 
     syncHens() {
         if (!this.farmData) return;
-        const henCount = poultryState(this.farmData).hens.length;
+        const outside = outdoorHens(this.farmData);
+        const henCount = outside.length;
         const coopLevel = this.farmData.coopLevel || 1;
         const hensState = Array.isArray(this.farmData.hensState) ? this.farmData.hensState : [];
         const now = Date.now();
@@ -297,11 +302,12 @@ export default class MyFarmScene extends Phaser.Scene {
         this.hensGroup = [];
 
         for (let i = 0; i < henCount; i++) {
-            const hState = hensState[i] || { isSick: false };
+            const hState = outside[i];
+            const originalIndex = hensState.findIndex(h=>h.id===hState.id);
             
             const position = randomHenPosition(this);
             let newHen = addPoultrySprite(this, hState, position.x, position.y);
-            newHen.henIndex = i;
+            newHen.henIndex = originalIndex;
             newHen.hState = hState;
 
             if (hState.isSick) {
@@ -313,7 +319,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 this.tweens.add({ targets: icon, y: newHen.y - 28, duration: 600, yoyo: true, repeat: -1 });
                 newHen.statusIcon = icon;
 
-                newHen.on('pointerdown', () => this.askTreatment(i));
+                newHen.on('pointerdown', () => this.askTreatment(originalIndex));
             } else {
                 newHen.play(poultryAnim(newHen, 'idle'), true);
                 newHen.on('pointerdown', () => {
@@ -356,29 +362,24 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async treatHen(henIndex) {
-        if (!this.isSaveReady()) return;
-        const targetId = this.selectedHenId || this.farmData?.hensState?.[henIndex]?.id;
-        const healedAt = Date.now();
-        try {
-            await runTransaction(db, async (t) => {
-                const snap = await t.get(myFarmRef);
-                const farm = snap.data().farm;
-                if ((farm.medicines || 0) < 1) throw "藥包不足！";
-                
-                const state = settlePoultry(farm);
-                const states = state.hens;
-                if (targetId) henIndex = states.findIndex(h => h.id === targetId);
-                if (!states[henIndex]?.isSick) throw "雞隻已售出或已康復，請重新選擇！";
-                if (states[henIndex]) {
-                    states[henIndex].isSick = false;
-                    states[henIndex].laidAt = healedAt;
-                    delete states[henIndex].sickTimestamp;
-                }
-
-                t.update(myFarmRef, { ...poultryPatch(state), "farm.medicines": farm.medicines - 1 });
+        const targetId=this.selectedHenId || this.farmData?.hensState?.[henIndex]?.id;
+        if(!targetId)return;
+        return this.performTreatment({id:targetId});
+    }
+    async treatRandomSickHen() { return this.performTreatment({roll:Math.random()}); }
+    async performTreatment(options) {
+        if(!this.isSaveReady()||this.isTreating)return;
+        this.isTreating=true;
+        try{
+            await runTransaction(db,async t=>{
+                const snapshot=await t.get(myFarmRef),farm=snapshot.data()?.farm;
+                if(!isFarmSave(farm))throw Error('存檔尚未確認');
+                t.update(myFarmRef,treatmentPatch(farm,{...options,now:Date.now()}));
             });
-            this.showFloatingText('治療成功！雞隻恢復健康了！', '#4CAF50', 18);
-        } catch (e) { this.showFloatingText(typeof e === 'string' ? e : "治療失敗", '#F44336', 16); }
+            this.treatmentMessage='治療成功！雞隻恢復健康了！';
+            this.showFloatingText(this.treatmentMessage,'#4CAF50',18);
+        }catch(error){this.treatmentMessage=error.message||'治療失敗，請重試';this.showFloatingText(this.treatmentMessage,'#F44336',16);}
+        finally{this.isTreating=false;}
     }
 
     wanderSingleHen(henSprite, fleeing = false) {
