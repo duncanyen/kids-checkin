@@ -4,18 +4,18 @@ import { nextMoleMilestone, moleDue, moleSettlement, moleCells, nextMoleCells } 
 import { WEAPONS_CONFIG, hitsToDefeat, equippedWeapon } from '../js/farm/combat-rules.js';
 import { getUsedSpace } from '../js/farm/inventory-core.js';
 
-test('mole triggers every 40 successful catches at own coop level 2+',()=>{
-    for(const n of [0,1,19,20,39])assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:n}),null);
+test('mole triggers every 30 successful catches at own coop level 2+',()=>{
+    for(const n of [0,1,19,20,29])assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:n}),null);
     assert.equal(nextMoleMilestone({coopLevel:1,gardenCatchCount:120}),null);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:40}),40);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:79,moleLastMilestone:40}),null);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:80,moleLastMilestone:40}),80);
-    assert.equal(nextMoleMilestone({coopLevel:3,gardenCatchCount:120,moleLastMilestone:80}),120);
-    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:120,moleLastMilestone:40,worms:0,earthworms:0}),80);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:30}),30);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:59,moleLastMilestone:30}),null);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:60,moleLastMilestone:30}),60);
+    assert.equal(nextMoleMilestone({coopLevel:3,gardenCatchCount:90,moleLastMilestone:60}),90);
+    assert.equal(nextMoleMilestone({coopLevel:2,gardenCatchCount:120,moleLastMilestone:30,worms:0,earthworms:0}),60);
     assert.equal(nextMoleMilestone({coopLevel:2,worms:40,earthworms:40}),null);
 });
-test('legacy 20-catch milestones advance to the next 40 boundary; active fights resume',()=>{
-    for(const [last,count,expected] of [[20,39,null],[20,40,40],[40,60,null],[60,79,null],[60,80,80],[100,120,120]]) {
+test('legacy 20/40-catch milestones advance to the next 30 boundary; active fights resume',()=>{
+    for(const [last,count,expected] of [[20,29,null],[20,30,30],[40,59,null],[40,60,60],[60,89,null],[80,90,90],[100,120,120]]) {
         assert.equal(nextMoleMilestone({coopLevel:2,moleLastMilestone:last,gardenCatchCount:count}),expected);
     }
     assert.equal(moleDue({coopLevel:2,gardenCatchCount:20,moleLastMilestone:20,moleChallenge:{id:'legacy',milestone:20}}),true);

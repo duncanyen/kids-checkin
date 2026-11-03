@@ -1,5 +1,5 @@
 import { ENEMY_HEALTH } from './combat-rules.js';
-export const MOLE_CONFIG = Object.freeze({ health: ENEMY_HEALTH.mole, flightMs: 0, durationMs: 60000, catchInterval: 40 });
+export const MOLE_CONFIG = Object.freeze({ health: ENEMY_HEALTH.mole, flightMs: 0, durationMs: 60000, catchInterval: 30 });
 export function nextMoleMilestone(farm) {
     const next = (Math.floor((farm?.moleLastMilestone || 0) / MOLE_CONFIG.catchInterval) + 1) * MOLE_CONFIG.catchInterval;
     return (farm?.coopLevel || 1) >= 2 && (farm?.gardenCatchCount || 0) >= next ? next : null;
