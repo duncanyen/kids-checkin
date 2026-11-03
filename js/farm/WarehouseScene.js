@@ -1,4 +1,4 @@
-import { housingPatch } from './poultry-housing.js';
+import { housingPatch, outdoorCounts } from './poultry-housing.js';
 import { openHousing } from './poultry-housing-ui.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
@@ -67,12 +67,6 @@ export default class WarehouseScene extends Phaser.Scene {
         this.createWarehousePages();
         this.msgText = this.add.text(195, 680, '', { fontSize: '16px', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
 
-        const housingButton=this.add.rectangle(195,780,210,40,0x735038).setInteractive({cursor:'pointer'});
-        this.add.text(195,780,'雞隻放風設定',{fontSize:'16px',color:'#fff2cc'}).setOrigin(.5);
-        housingButton.on('pointerdown',()=>{if(this.farmData)openHousing(this,async counts=>{
-            await runTransaction(db,async t=>{const snapshot=await t.get(myFarmRef);if(!snapshot.data()?.farm)throw Error('存檔尚未確認');t.update(myFarmRef,housingPatch(snapshot.data().farm,counts));});
-            this.showMsg('放風數量已儲存，所有雞隻產蛋能力不受影響','#4CAF50');
-        });});
         this.initFirebase();
         watchGuardDogInventory(this,()=>this.farmData,()=>this.renderWarehouseItems());
         onSceneExit(this, () => { if (this.unsubscribe) this.unsubscribe(); });
@@ -187,9 +181,23 @@ export default class WarehouseScene extends Phaser.Scene {
             this.showMsg(`倉庫容量 ${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10}\n擴充請到商店「其他」分類`, '#FFD54F');
             return;
         }
-        if (itemConfig?.type === 'bird' || itemConfig?.type === 'coop') {
+        if (itemConfig?.type === 'bird') {
             this.actionPanel.setVisible(false);
-            this.showMsg(itemConfig.type === 'bird' ? `${name}住在雞舍，買賣請到商店「雞」分類！` : `${coopName(this.farmData.coopLevel)}可飼養 ${coopCapacity(this.farmData.coopLevel)} 隻雞`, '#FFD54F');
+            const breed=itemConfig.breed;
+            openHousing(this,async counts=>{
+                await runTransaction(db,async t=>{
+                    const snapshot=await t.get(myFarmRef),farm=snapshot.data()?.farm;
+                    if(!farm)throw Error('存檔尚未確認');
+                    // Preserve other breeds' latest settings across tabs.
+                    t.update(myFarmRef,housingPatch(farm,{...outdoorCounts(farm),[breed]:counts[breed]}));
+                });
+                this.showMsg('放風數量已儲存，所有雞隻產蛋能力不受影響','#4CAF50');
+            },breed);
+            return;
+        }
+        if (itemConfig?.type === 'coop') {
+            this.actionPanel.setVisible(false);
+            this.showMsg(`${coopName(this.farmData.coopLevel)}可飼養 ${coopCapacity(this.farmData.coopLevel)} 隻雞`, '#FFD54F');
             return;
         }
 

@@ -19,7 +19,7 @@ export function housingPatch(farm,counts){
         if(!Number.isSafeInteger(value)||value<0||value>owned)throw Error('雞隻數量已變更，請重新調整');
         patch[key]=value;selected+=value;
     }
-    if(selected<Math.min(MIN_OUTDOOR_HENS,total))throw Error(`至少需要放出 ${Math.min(MIN_OUTDOOR_HENS,total)} 隻雞`);
+    if(selected<Math.min(MIN_OUTDOOR_HENS,total))throw Error(`至少需要 ${Math.min(MIN_OUTDOOR_HENS,total)} 隻在外面`);
     return {'farm.outdoorHensByBreed':patch};
 }
 export function treatmentPatch(farm,{id,roll=0,now=Date.now()}={}){
