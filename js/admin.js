@@ -1,3 +1,5 @@
+import { icon } from './ui-icons.js';
+const adminMenuLabel = value => String(value ?? '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
 import { normalizeAccountId, findAccountsById, newAccountRef, assertAccountAvailable, ACCOUNT_ID_TAKEN } from './account-identity.js';
 import { FOOD_MENU, DEFAULT_MENUS } from './menu-catalog.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
@@ -143,7 +145,9 @@ function renderMenuCheckboxes(containerId, isEdit) {
         const label = document.createElement('label');
         label.className = 'checkbox-label';
         const checkedStr = (!isEdit && menu.isDefault) ? 'checked' : '';
-        label.innerHTML = `<input type="checkbox" value="${menu.id}" ${checkedStr}> ${menu.label}`;
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox'; checkbox.value = menu.id; checkbox.checked = !!checkedStr;
+        label.append(checkbox, document.createTextNode(' ' + adminMenuLabel(menu.label)));
         container.appendChild(label);
     });
 }
@@ -177,7 +181,7 @@ async function saveGroupName() {
         const lastTimeMs = lastGroupNameChange.toMillis ? lastGroupNameChange.toMillis() : lastGroupNameChange;
         const now = Date.now();
         if (now - lastTimeMs < 24 * 60 * 60 * 1000) {
-            return alert("⏳ 群組名稱每 24 小時只能更改一次喔！請稍後再試。");
+            return alert("群組名稱每 24 小時只能更改一次喔！請稍後再試。");
         }
     }
 
@@ -187,7 +191,7 @@ async function saveGroupName() {
             lastNameChange: serverTimestamp() 
         }, { merge: true });
 
-        alert("✅ 群組名稱已更新！");
+        alert("群組名稱已更新！");
         lastGroupNameChange = Date.now();
         await logAction('系統操作', `將群組名稱更改為：${newName}`);
     } catch (error) {
@@ -229,7 +233,7 @@ function renderRequests() {
     }
 
     pendingRequests.forEach(req => {
-        const typeLabel = req.type === 'code' ? '🔑 透過邀請碼' : '🌐 自行申請';
+        const typeLabel = req.type === 'code' ? `${icon('lock')} 透過邀請碼` : `${icon('user')} 自行申請`;
         const div = document.createElement('div');
         div.className = 'user-reset-item';
         div.innerHTML = `
@@ -298,7 +302,7 @@ window.handleRequest = async function(reqId, actionStatus, targetUserId, targetU
 };
 
 // ==========================================
-// 🌟 遊戲進入權限管理邏輯 (整合成員 management)
+// 遊戲進入權限管理邏輯 (整合成員 management)
 // ==========================================
 let groupMembers = [];
 let kidsPermissions = {};
@@ -429,7 +433,8 @@ function renderMemberChips() {
     groupMembers.forEach((memberName) => {
         const chip = document.createElement('div');
         chip.className = `member-chip ${selectedMember === memberName ? 'active' : ''}`;
-        chip.innerHTML = `👤 ${memberName}`;
+        chip.innerHTML = icon('user');
+        chip.append(document.createTextNode(memberName));
         chip.onclick = () => selectMemberToManage(memberName);
         chipsContainer.appendChild(chip);
     });
@@ -537,7 +542,7 @@ function renderUserList() {
         const idDisplay = user.accountId ? `帳號: ${user.accountId}` : '<span style="color:#e53935;">(無帳號)</span>';
         
         const userMenus = user.menus || systemMenuOptions.filter(m => m.isDefault).map(m => m.id);
-        const menuLabels = systemMenuOptions.filter(m => userMenus.includes(m.id)).map(m => m.label).join('、');
+        const menuLabels = systemMenuOptions.filter(m => userMenus.includes(m.id)).map(m => adminMenuLabel(m.label)).join('、');
 
         const div = document.createElement('div');
         div.className = 'user-reset-item';
@@ -786,12 +791,12 @@ function renderLogs() {
         div.style.alignItems = 'flex-start';
         div.innerHTML = `
             <div class="user-info">
-                <div class="user-avatar" style="border:none; font-size:calc(24px * var(--n-font-scale, 1)); background:transparent;">📝</div>
+                <div class="user-avatar" style="border:none; font-size:calc(24px * var(--n-font-scale, 1)); background:transparent;">${icon('todo')}</div>
                 <div style="flex:1;">
                     <div class="user-name" style="color:var(--primary-color);">${log.actionType || '系統操作'}</div>
                     <div class="user-subtext"><b>操作人員:</b> ${log.operator || '未知'}</div>
                     <div class="user-subtext" style="color:#444;">${log.details || ''}</div>
-                    <div class="user-features" style="color:#888; margin-top:6px;">🕒 ${log.datetime || ''}</div>
+                    <div class="user-features" style="color:#888; margin-top:6px;">${icon('clock')} ${log.datetime || ''}</div>
                 </div>
             </div>
         `;

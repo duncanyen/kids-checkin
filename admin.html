@@ -73,7 +73,7 @@
         .btn-cancel { background: #e0e0e0; color: var(--n-text, #292c30); flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-save { background: var(--primary-color); color: white; flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        /* 🌟 遊戲進入權限管理專屬 CSS */
+        /* 遊戲進入權限管理專屬 CSS */
         .config-box { background: var(--n-soft, #f3f4f6); padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-size: calc(14px * var(--n-font-scale, 1)); font-weight: bold; }
         .config-box select { padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: bold; outline: none; background: var(--n-surface, #fff); }
         
@@ -92,6 +92,9 @@
         .btn-perm { padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: var(--n-soft, #f3f4f6); color: #64748b; font-size: calc(12px * var(--n-font-scale, 1)); font-weight: bold; cursor: pointer; transition: all 0.2s; }
         .btn-perm.allow-active { background: #dcfce7; color: #15803d; border-color: #22c55e; }
         .btn-perm.ban-active { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+        .top-nav .nexus-icon, .system-title .nexus-icon, .toggle-form-btn .nexus-icon, .modal-header .nexus-icon, .btn-query .nexus-icon { width:20px; height:20px; margin-right:6px; vertical-align:-4px; }
+        .member-chip .nexus-icon, .user-features .nexus-icon { width:16px; height:16px; margin-right:5px; vertical-align:-3px; }
+        .user-avatar .nexus-icon { width:24px; height:24px; }
     </style>
     <link rel="stylesheet" href="css/nexus-theme.css">
     <script type="module" src="js/ui-icons.js"></script>
@@ -99,15 +102,15 @@
 <body>
     <div class="top-nav">
         <button class="btn-back" id="btnBack">❮ 返回主選單</button>
-        <span style="font-weight: bold; color: var(--primary-color);">🛡️ 管理者專區</span>
+        <span style="font-weight: bold; color: var(--primary-color);"><span data-ui-icon="admin"></span> 管理者專區</span>
     </div>
 
     <!-- 1. 系統/群組設定專區 -->
     <div class="panel">
-        <h2 class="system-title">⚙️ 系統與群組設定</h2>
+        <h2 class="system-title"><span data-ui-icon="settings"></span> 系統與群組設定</h2>
         
         <button class="toggle-form-btn" id="btnToggleGroupSettings">
-            <span>🏠 更改群組名稱</span>
+            <span><span data-ui-icon="home"></span> 更改群組名稱</span>
             <span id="toggleIconGroupSettings">▼</span>
         </button>
 
@@ -122,16 +125,16 @@
 
     <!-- 1.5 入群審核管理專區 -->
     <div class="panel">
-        <h2 class="system-title">📥 入群審核管理</h2>
+        <h2 class="system-title"><span data-ui-icon="notification"></span> 入群審核管理</h2>
         
         <button class="toggle-form-btn" id="btnToggleRequests">
-            <span>📋 審核待加入申請</span>
+            <span><span data-ui-icon="todo"></span> 審核待加入申請</span>
             <span id="toggleIconRequests">▼</span>
         </button>
 
         <div id="requestsSection" style="display: none; margin-top: 10px;">
             <div style="margin-bottom: 10px;">
-                <button class="btn-query" id="btnRefreshRequests">🔄 重新整理審核清單</button>
+                <button class="btn-query" id="btnRefreshRequests"><span data-ui-icon="switch"></span> 重新整理審核清單</button>
             </div>
             <div class="user-reset-list" id="requestsContainer">
                 <div style="text-align:center; color:#888; padding: 15px;">點擊上方按鈕載入待審核名單</div>
@@ -141,24 +144,24 @@
 
     <!-- 2. 遊戲進入權限管理專區 -->
     <div class="panel">
-        <h2 class="system-title">🎮 遊戲進入權限管理</h2>
+        <h2 class="system-title"><span data-ui-icon="gamezone"></span> 遊戲進入權限管理</h2>
 
         <button class="toggle-form-btn" id="btnToggleGamePanel">
-            <span>🛡️ 設定遊戲開放與通知</span>
+            <span><span data-ui-icon="admin"></span> 設定遊戲開放與通知</span>
             <span id="toggleIconGamePanel">▼</span>
         </button>
 
         <div id="adminGameSection" style="display: none; margin-top: 10px;">
             <!-- 推播聊天室設定 -->
             <div class="config-box">
-                <span>📢 遊戲推播頻道：</span>
+                <span><span data-ui-icon="bell"></span> 遊戲推播頻道：</span>
                 <select id="targetGameChatRoomSelect">
                     <option value="">-- 請選擇目標群組 --</option>
                 </select>
             </div>
             
             <div class="config-box" style="display:block">
-                <label for="villageVisibility"><strong>🐔 咕咕村落遊戲權限 · 村落類型</strong></label>
+                <label for="villageVisibility"><strong><span data-ui-icon="gamezone"></span> 咕咕村落遊戲權限 · 村落類型</strong></label>
                 <select id="villageVisibility" disabled style="margin:10px 0;width:100%">
                     <option value="closed">封閉型村落（僅群組內）</option>
                     <option value="public">公開型村落（開放跨群組拜訪）</option>
@@ -181,7 +184,7 @@
                     <!-- 咕咕村落權限 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
-                            <span>🐔 咕咕村落</span>
+                            <span><span data-ui-icon="gamezone"></span> 咕咕村落</span>
                         </div>
                         <div class="perm-action-group">
                             <button class="btn-perm" id="btnFarmAllow">允許進入</button>
@@ -192,7 +195,7 @@
                     <!-- 剪刀石頭布權限 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
-                            <span>✊ 剪刀石頭布對決</span>
+                            <span><span data-ui-icon="gamezone"></span> 剪刀石頭布對決</span>
                         </div>
                         <div class="perm-action-group">
                             <button class="btn-perm" id="btnRpsAllow">允許進入</button>
@@ -203,7 +206,7 @@
                     <!-- 2048權限 -->
                     <div class="game-perm-row">
                         <div class="game-perm-info">
-                            <span>🔢 2048 數字方塊</span>
+                            <span><span data-ui-icon="gamezone"></span> 2048 數字方塊</span>
                         </div>
                         <div class="perm-action-group">
                             <button class="btn-perm" id="btn2048Allow">允許進入</button>
@@ -217,10 +220,10 @@
 
     <!-- 3. 人員管理專區 -->
     <div class="panel">
-        <h2 class="system-title">👥 家族成員管理</h2>
+        <h2 class="system-title"><span data-ui-icon="user"></span> 家族成員管理</h2>
         
         <button class="toggle-form-btn" id="btnToggleAddForm">
-            <span>➕ 新增成員帳號</span>
+            <span><span data-ui-icon="plus"></span> 新增成員帳號</span>
             <span id="toggleIconAdd">▼</span>
         </button>
 
@@ -260,7 +263,7 @@
         </div>
 
         <button class="toggle-form-btn" id="btnToggleUserList">
-            <span>📋 現有成員名單</span>
+            <span><span data-ui-icon="todo"></span> 現有成員名單</span>
             <span id="toggleIconUserList">▼</span>
         </button>
 
@@ -271,10 +274,10 @@
 
     <!-- 4. 成員操作紀錄 (Logs) -->
     <div class="panel">
-        <h2 class="system-title">📜 系統操作紀錄</h2>
+        <h2 class="system-title"><span data-ui-icon="search"></span> 系統操作紀錄</h2>
         
         <button class="toggle-form-btn" id="btnToggleLogs">
-            <span>🔍 展開成員操作紀錄</span>
+            <span><span data-ui-icon="search"></span> 展開成員操作紀錄</span>
             <span id="toggleIconLogs">▼</span>
         </button>
         
@@ -291,7 +294,7 @@
                     </select>
                 </div>
                 <div style="width: 100%; margin-top: 4px;">
-                    <button class="btn-query" id="btnQueryLogs">🔍 查詢紀錄</button>
+                    <button class="btn-query" id="btnQueryLogs"><span data-ui-icon="search"></span> 查詢紀錄</button>
                 </div>
             </div>
 
@@ -304,7 +307,7 @@
     <!-- 編輯成員 Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal-content">
-            <div class="modal-header">✏️ 編輯成員資料</div>
+            <div class="modal-header"><span data-ui-icon="edit"></span> 編輯成員資料</div>
             
             <input type="hidden" id="editDocId">
             
