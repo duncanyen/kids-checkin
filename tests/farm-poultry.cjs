@@ -128,10 +128,10 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
  await page.evaluate(async()=>{
   const s=window.__farmGame.scene.getScene('ShopScene'),f=()=>window.__farmTest.docs['groups/dragon-test/users/self'].farm;const before=f().coins;
-  await s.executeSellItem('inventoryEggs',10,'雞蛋',1);await s.executeSellItem('silkieEggs',30,'烏骨雞蛋',1);await s.executeSellItem('bresseEggs',60,'布雷斯雞蛋',1);
-  if(f().coins!==before+100||f().silkieEggs!==5||f().bresseEggs!==3)throw Error('Egg sale price/count wrong');
-  await s.executeTradePoultry('bresse',1,'sell');if(f().coins!==before+2100||f().hens!==0||f().readyEggs.bresse!==4)throw Error('Bresse sale lost mature eggs or not half price');
-  await s.executeBuyHen(1,'silkie');await s.executeTradePoultry('silkie',1,'sell');if(f().coins!==before+1100||f().hens!==0)throw Error('Silkie half price sale wrong');
+  await s.executeSellItem('inventoryEggs',10,'雞蛋',1);await s.executeSellItem('silkieEggs',30,'烏骨雞蛋',1);await s.executeSellItem('bresseEggs',80,'布雷斯雞蛋',1);
+  if(f().coins!==before+120||f().silkieEggs!==5||f().bresseEggs!==3)throw Error('Egg sale price/count wrong');
+  await s.executeTradePoultry('bresse',1,'sell');if(f().coins!==before+2120||f().hens!==0||f().readyEggs.bresse!==4)throw Error('Bresse sale lost mature eggs or not half price');
+  await s.executeBuyHen(1,'silkie');await s.executeTradePoultry('silkie',1,'sell');if(f().coins!==before+1120||f().hens!==0)throw Error('Silkie half price sale wrong');
   s.scene.start('MyFarmScene');
  });
  await page.waitForFunction(()=>window.__farmGame.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').farmData?.hens===0);
@@ -139,7 +139,7 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');if(!s.coopEgg.visible||!s.coopEgg.input)throw Error('Empty coop eggs not collectible');s.coopEgg.emit('pointerdown');});
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.eggsReady===0);
  await page.evaluate(()=>{if(window.__farmTest.docs['groups/dragon-test/users/self'].farm.bresseEggs!==7)throw Error('Cannot harvest after selling last bird');});
- checks.push('egg prices 10/30/60; bresse sale 2000 and silkie sale 1000; mature eggs retained and no phantom hen after selling all');
+ checks.push('egg prices 10/30/80; bresse sale 2000 and silkie sale 1000; mature eggs retained and no phantom hen after selling all');
  await page.evaluate(()=>{
   const now=Date.now(),f=window.__farmTest.docs['groups/dragon-test/users/neighbor'].farm;
   window.__farmTest.patch('neighbor',{poultryVersion:2,coopLevel:3,hens:3,hensState:['hen','silkie','bresse'].map((breed,i)=>({id:'n'+i,breed,laidAt:now,isSick:false})),readyEggs:{hen:0,silkie:1,bresse:0},eggsReady:1});

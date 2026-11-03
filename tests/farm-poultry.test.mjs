@@ -7,7 +7,7 @@ test('exact per-bird intervals, 24-hour yields, breed prices and offline cap', (
  assert.deepEqual(settlePoultry(seed(), 4*HOUR).ready, { hen:1, silkie:1, bresse:0, onagadori:0});
  assert.deepEqual(settlePoultry(seed(), 6*HOUR).ready, { hen:1, silkie:1, bresse:1, onagadori:0});
  for(const hours of [24,48,365*24]) assert.deepEqual(settlePoultry(seed(), hours*HOUR).ready, { hen:6, silkie:6, bresse:4, onagadori:0});
- assert.deepEqual(Object.values(BREEDS).map(b=>[b.buy,b.sell,b.eggPrice]),[[1000,500,10],[2000,1000,30],[4000,2000,60],[6000,3000,120]]);
+ assert.deepEqual(Object.values(BREEDS).map(b=>[b.buy,b.sell,b.eggPrice]),[[1000,500,10],[2000,1000,30],[4000,2000,80],[6000,3000,120]]);
 });
 test('legacy migration preserves IDs, available eggs, original aggregate cadence and inventories', () => {
  const old={ hens:2,hensState:[{},{}],lastLayTime:0,eggsReady:3,inventoryEggs:4 };
