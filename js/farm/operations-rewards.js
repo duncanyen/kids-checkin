@@ -1,0 +1,3 @@
+import { BREEDS } from './poultry.js';
+export const OPERATION_ITEM_NAMES={worms:'菜蟲',earthworms:'蚯蚓',wolfFangs:'狼牙',tigerPelts:'虎皮',dragonScales:'龍麟',gorillaFangs:'猩猩尖牙',cobraFangs:'眼鏡蛇王毒牙',eagleFeathers:'巨鷹羽毛',sweetPotatoes:'地瓜',medicines:'咕咕活力散',mace:'狼牙棒',battleaxe:'雙手斧',ironhammer:'大鐵槌',shortbow:'短弓',huntingbow:'獵弓',paladinbow:'聖騎士弓'};
+export function rewardLabel(reward){const label=reward.kind==='coins'?'金幣':reward.kind==='eggs'?BREEDS[reward.breed]?.eggName:reward.kind==='chicken'?BREEDS[reward.breed]?.name:OPERATION_ITEM_NAMES[reward.itemKey];return `${label||'遊戲獎勵'} × ${reward.amount}`;}

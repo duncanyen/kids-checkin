@@ -33,3 +33,5 @@
 .farm-ranking-note{padding:6px 8px;border-radius:8px;background:#faedcee8;color:#72502d;margin:8px 0}
 
 .farm-ranking-period{font-size:12px;line-height:1.6;color:#72502d;margin:8px 0 0}
+
+.farm-mail-tabs{gap:5px}.farm-mail-tab{padding:9px 5px;font-size:13px}.farm-redeem-form{display:grid;gap:14px;margin-top:18px}.farm-redeem-form label{display:grid;gap:8px}.farm-redeem-form input{width:100%;box-sizing:border-box;border:1px solid #b58d61;border-radius:8px;padding:12px;background:#fffaf0;color:#493526;font:inherit}.farm-redeem-form input:focus{outline:3px solid #b3d9bd}.farm-mail-body{white-space:pre-wrap;overflow-wrap:anywhere}

@@ -1,0 +1,12 @@
+// Merge these matches INSIDE match /databases/{database}/documents.
+// This is NOT a complete production ruleset. Broad legacy allow rules must be
+// narrowed: Firestore combines matching allows with OR, so deny cannot override them.
+match /ops_announcements/{path=**} { allow read, write: if false; }
+match /ops_gifts/{path=**} { allow read, write: if false; }
+match /ops_code_index/{path=**} { allow read, write: if false; }
+match /ops_receipts/{path=**} { allow read, write: if false; }
+match /ops_redemptions/{path=**} { allow read, write: if false; }
+match /ops_audit/{path=**} { allow read, write: if false; }
+match /ops_admin_requests/{path=**} { allow read, write: if false; }
+match /ops_limits/{path=**} { allow read, write: if false; }
+match /ops_admins/{path=**} { allow read, write: if false; }

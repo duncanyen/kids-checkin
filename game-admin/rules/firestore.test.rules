@@ -1,0 +1,8 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Integration-test baseline only. Never deploy over existing Nexus rules.
+    // New operations collections have no client access; Functions use Admin SDK.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
