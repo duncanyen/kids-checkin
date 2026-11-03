@@ -334,7 +334,6 @@ window.openListEntry = function(type) {
     const date = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     openModal('expenseModal', date);
     switchModalType(type);
-    document.getElementById('expenseAmount').focus();
 };
 window.changeEntryDate = function() {
     if (savingEntry) { document.getElementById('expenseDate').value = selectedDateStr; return; }
