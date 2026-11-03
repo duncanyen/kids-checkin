@@ -4,11 +4,14 @@ import { BREEDS,HOUR,settlePoultry,poultryPatch,collectPoultry,tradePoultry,feed
 import { getUsedSpace } from '../js/farm/inventory-core.js';
 const apply=(farm,patch)=>({...farm,...Object.fromEntries(Object.entries(patch).map(([k,v])=>[k.slice(5),v]))});
 const seed=()=>({poultryVersion:2,hens:1,hensState:[{id:'long',breed:'onagadori',laidAt:0}],readyEggs:{hen:0,silkie:0,bresse:0,onagadori:0},eggsReady:0,coins:20000,warehouseLimit:10,coopLevel:2,worms:1,earthworms:1});
-test('onagadori is listed at 6000/3000, but purchase is rejected regardless of money or capacity',()=>{
-    assert.equal(BREEDS.onagadori.buy,6000);assert.equal(BREEDS.onagadori.sell,3000);assert.equal(BREEDS.onagadori.eggPrice,120);
+test('onagadori is available at 100000/50000 with balance and capacity checks',()=>{
+    assert.equal(BREEDS.onagadori.buy,100000);assert.equal(BREEDS.onagadori.sell,50000);assert.equal(BREEDS.onagadori.eggPrice,120);
     const farm=seed(),copy=structuredClone(farm);
-    assert.throws(()=>tradePoultry(farm,'onagadori',1,'buy',0),/尚未開賣/);assert.deepEqual(farm,copy);
-    assert.equal(tradePoultry(farm,'onagadori',1,'sell',0)['farm.coins'],23000);
+    assert.throws(()=>tradePoultry(farm,'onagadori',1,'buy',0),/金幣不足/);assert.deepEqual(farm,copy);
+    const bought=tradePoultry({...farm,coins:150000},'onagadori',1,'buy',0,['new-long']);
+    assert.equal(bought['farm.coins'],50000);assert.equal(bought['farm.hens'],2);assert.equal(bought['farm.hensState'][1].breed,'onagadori');
+    assert.throws(()=>tradePoultry({...farm,coins:150000,coopLevel:1,hens:3,hensState:Array.from({length:3},(_,i)=>({id:String(i),breed:'hen',laidAt:0}))},'onagadori',1,'buy',0),/空間不足/);
+    assert.equal(tradePoultry(farm,'onagadori',1,'sell',0)['farm.coins'],70000);
 });
 test('onagadori produces every 6 hours, caps at 4 eggs per bird, sickness and full storage follow poultry rules',()=>{
     const f=seed();assert.equal(settlePoultry(f,6*HOUR-1).ready.onagadori,0);assert.equal(settlePoultry(f,6*HOUR).ready.onagadori,1);

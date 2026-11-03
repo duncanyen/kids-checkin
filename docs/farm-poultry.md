@@ -5,9 +5,9 @@
 | 母雞 | 1000 | 500 | 4 小時 | 6 顆 | 10 |
 | 烏骨雞 | 2000 | 1000 | 4 小時 | 6 顆 | 30 |
 | 布雷斯雞 | 4000 | 2000 | 6 小時 | 4 顆 | 60 |
-| 日本長尾雞（尚未開賣） | 6000 | 3000 | 6 小時 | 4 顆 | 120 |
+| 日本長尾雞 | 100000 | 50000 | 6 小時 | 4 顆 | 120 |
 
-日本長尾雞目前僅在商店展示，標示「尚未開賣」；展示卡、購買視窗與交易規則均封鎖購買，不會發送免費雞隻。購買價保留為未來開賣設定；已有雞隻或蛋時，出售與養殖沿用共通規則。
+日本長尾雞已開放購買，買進 100,000 金幣、賣出 50,000 金幣；須有足夠金幣與雞舍空間。產蛋、餵食、疾病、收蛋等規則維持共用模型。
 
 價格均為金幣。數值與純邏輯集中在 `js/farm/poultry.js`。商店新增雞隻圖鑑；商店買入／售出依雞、武器、雞舍、其他分類，各分類每頁六項；倉庫各分類每頁八項（詳見 farm-item-categories.md）。
 
@@ -52,8 +52,8 @@
 
 - `node --test tests/farm-poultry-atlas.test.cjs`：檢查四品種共 64 格的完整雞身、固定腳底及排除鄰格碎片；`node scripts/build-poultry-atlases.cjs` 可重建裁切資訊，不改動 PNG。
 - `node --test tests/farm-poultry.test.mjs`：各品種時程／價格、離線上限、舊資料、混養容量、買賣、空雞舍、餵食、收取／偷蛋／敗北、生病與死亡。
-- `node --test tests/farm-onagadori.test.mjs`：停售檢查、6 小時產蛋、24 小時 4 顆上限、容量、餵食、偷蛋、首領清蛋與出售後保留雞蛋。
-- `node tests/farm-onagadori-browser.cjs`：展示卡及直接購買封鎖、圖像動畫、收蛋、倉庫、每顆蛋 120 與雞隻售價 3000；所有養殖測試資料僅建立在隔離替身內。
+- `node --test tests/farm-onagadori.test.mjs`：購買、餘額與容量檢查、6 小時產蛋、24 小時 4 顆上限、容量、餵食、偷蛋、首領清蛋與出售後保留雞蛋。
+- `node tests/farm-onagadori-browser.cjs`：上架展示及實際購買、圖像動畫、收蛋、倉庫、每顆蛋 120 與雞隻售價 50000；所有養殖測試資料僅建立在隔離替身內。
 - `node tests/farm-poultry.cjs`：真實 Phaser 與隔離 Firestore，實際購買、出售、選品種餵食、單品種直接餵食、16 顆分品種收蛋、售完雞後收剩餘蛋、偷蛋與首領敗北。
 - `node tests/farm-weapons.cjs`、`node tests/farm-gorilla.cjs`：原武器與大金剛回歸。
 - `FARM_BASE_URL=http://127.0.0.1:8012 node tests/farm-dragon.cjs`、`tests/farm-public-villages.cjs`、`tests/farm-hen-lifecycle.cjs`、`tests/farm-hen-avoidance.cjs`：烈火龍、跨群組村落、場景生命週期與避讓回歸。

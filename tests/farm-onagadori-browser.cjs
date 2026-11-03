@@ -49,18 +49,18 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').hensGroup?.length===2);
 
 
- await page.evaluate(()=>{window.__farmTest.patch('self',{coins:30000,warehouseLimit:99,coopLevel:3});window.__farmGame.scene.getScene('MyFarmScene').scene.start('ShopScene');});
+ await page.evaluate(()=>{window.__farmTest.patch('self',{coins:300000,warehouseLimit:99,coopLevel:3});window.__farmGame.scene.getScene('MyFarmScene').scene.start('ShopScene');});
  await page.waitForFunction(()=>{const s=__farmGame.scene.getScene('ShopScene');return s.sys.isActive()&&s.farmData&&s.buyContainer;});
  await page.evaluate(async()=>{
   const s=__farmGame.scene.getScene('ShopScene'),f=()=>__farmTest.docs['groups/dragon-test/users/self'].farm;
   s.selectShopCategory('chickens');
   const entry=s.catalog.buy.find(([key])=>key==='onagadori');
-  if(!entry||!entry[2].includes('6000金幣')||!entry[2].includes('尚未開賣'))throw Error('Missing locked display');
-  const bg=s.buyContainer.list.find(c=>c.catalogKey==='onagadori'&&c.getData?.('purchaseDisabled'));
-  if(!bg?.visible)throw Error('Locked bird not visible');
-  bg.emit('pointerdown');if(!s.msgText.text.includes('尚未開賣')||s.dialogContainer.visible)throw Error('Locked card opens trade');
-  s.openTradeModal('buy','onagadori','日本長尾雞',6000);if(s.dialogContainer.visible)throw Error('Direct modal bypass');
-  const before=JSON.stringify(f());await s.executeBuyHen(1,'onagadori');if(JSON.stringify(f())!==before)throw Error('Direct purchase bypass');
+  if(!entry||!entry[2].includes('100000金幣')||entry[2].includes('尚未開賣'))throw Error('Missing active display');
+  const bg=s.buyContainer.list.find(c=>c.catalogKey==='onagadori'&&c.type==='Rectangle');
+  if(!bg?.visible||bg.getData('purchaseDisabled'))throw Error('Bird unavailable');
+  bg.emit('pointerdown');if(!s.dialogContainer.visible)throw Error('Card did not open purchase');
+  if(s.tradeUnitPrice!==100000)throw Error('Wrong purchase price');s.dialogContainer.setVisible(false);
+  const before=f().hens;await s.executeBuyHen(1,'onagadori');if(f().coins!==200000||f().hens!==before+1||!f().hensState.some(h=>h.breed==='onagadori'))throw Error('Purchase failed');
   for(const action of ['idle','walk'])if(s.anims.get('onagadori_'+action).frames.length!==8)throw Error('Missing long tail animation');
  });
  await page.screenshot({path:'/tmp/farm-onagadori-shop.png'});
@@ -82,8 +82,8 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.evaluate(async()=>{
   const s=__farmGame.scene.getScene('ShopScene'),f=()=>__farmTest.docs['groups/dragon-test/users/self'].farm,before=f().coins;
   await s.executeSellItem('onagadoriEggs',120,'日本長尾雞蛋',1);if(f().coins!==before+120||f().onagadoriEggs!==3)throw Error('Egg sale incorrect');
-  await s.executeTradePoultry('onagadori',1,'sell');if(f().coins!==before+3120||f().hens!==0)throw Error('Bird sale incorrect');
+  await s.executeTradePoultry('onagadori',1,'sell');if(f().coins!==before+50120||f().hens!==0)throw Error('Bird sale incorrect');
  });
- assert.deepEqual(errors,[]);console.log('PASS onagadori: visible locked shop card, modal and transaction purchase guards, 16 animation frames, 6-hour/24-hour production, collection, warehouse, 120 egg sale and 3000 bird sale');
+ assert.deepEqual(errors,[]);console.log('PASS onagadori: available shop card, 100000 purchase, 16 animation frames, 6-hour/24-hour production, collection, warehouse, 120 egg sale and 50000 bird sale');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
