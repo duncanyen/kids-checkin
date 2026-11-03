@@ -52,17 +52,19 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.evaluate(()=>{const now=Date.now();__farmTest.patch('self',{hens:10,hensState:Array.from({length:10},(_,i)=>({id:'h'+i,breed:'hen',laidAt:now,isSick:i===0||i===9,sickTimestamp:now})),poultryVersion:2,readyEggs:{hen:0,silkie:0,bresse:0},eggsReady:0,coopLevel:2,medicines:2,cleanliness:50});__farmGame.scene.getScene('MyFarmScene').scene.start('WarehouseScene');});
  await page.waitForFunction(()=>__farmGame.scene.getScene('WarehouseScene').farmData?.hens===10);
  const openBird=()=>page.evaluate(()=>{const s=__farmGame.scene.getScene('WarehouseScene');if(s.children.list.some(c=>c.text==='雞隻放風設定'))throw Error('Standalone housing button still present');s.selectWarehouseCategory('chickens');s.itemsPanel.list.find(c=>c.type==='Rectangle'&&c.x===100&&c.y===0).emit('pointerdown');});
+ const press=key=>page.evaluate(key=>__farmGame.scene.getScene('WarehouseScene').housingDialog[key].emit('pointerdown'),key);
  await openBird();
- await page.getByRole('button',{name:'減少母雞放風',exact:true}).click();await page.getByRole('button',{name:'取消',exact:true}).click();
+ assert.equal(await page.locator('[role=dialog][aria-label="母雞放風設定"]').count(),0);
+ await press('minus');await press('cancel');
  assert.equal(await page.evaluate(()=>__farmTest.docs['groups/dragon-test/users/self'].farm.outdoorHensByBreed),undefined);
  await openBird();
- for(let i=0;i<5;i++)await page.getByRole('button',{name:'減少母雞放風',exact:true}).click();
- await page.getByRole('button',{name:'確認',exact:true}).click();
- await page.getByText('至少需要 6 隻在外面',{exact:true}).waitFor();
+ for(let i=0;i<5;i++)await press('minus');await press('confirm');
+ assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').housingDialog.message.text),'至少需要 6 隻在外面');
  assert.equal(await page.evaluate(()=>__farmTest.docs['groups/dragon-test/users/self'].farm.outdoorHensByBreed),undefined);
- await page.getByRole('button',{name:'增加母雞放風',exact:true}).click();
- await page.getByRole('button',{name:'確認',exact:true}).click();
- await page.getByRole('dialog',{name:'母雞放風設定'}).waitFor({state:'hidden'});
+ await press('max');assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').housingDialog.qty.text),'10');
+ for(let i=0;i<4;i++)await press('minus');
+ await page.screenshot({path:'/tmp/farm-housing-game-panel.png'});
+ await press('confirm');await page.waitForFunction(()=>!__farmGame.scene.getScene('WarehouseScene').housingDialog);
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').scene.start('MyFarmScene'));
  await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').hensGroup?.length===6);
  await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene');if(s.hensGroup.some(h=>h.hState.id==='h9'))throw Error('Indoor sick hen still outside');s.askCleanMyFarm();Math.random=()=>.99;});
@@ -73,6 +75,6 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.waitForFunction(()=>__farmTest.docs['groups/dragon-test/users/self'].farm.medicines===0);
  assert.equal(await page.getByRole('button',{name:'餵食咕咕活力飲',exact:true}).count(),0);
  assert.equal(await page.evaluate(()=>__farmTest.docs['groups/dragon-test/users/self'].farm.hens),10);
- assert.deepEqual(errors,[]);console.log('PASS housing: bird item entry, cancel without saving, minimum warning on confirm, valid save, only six rendered, hidden sick hen cured, one medicine each, treatment option disappears');
+ assert.deepEqual(errors,[]);console.log('PASS housing: canvas shop-style quantity panel and MAX, bird item entry, cancel without saving, minimum warning on confirm, valid save, only six rendered, hidden sick hen cured, one medicine each, treatment option disappears');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
