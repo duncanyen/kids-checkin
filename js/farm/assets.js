@@ -30,7 +30,7 @@ export function registerAvailableAnimations(scene) {
             if (!scene.anims.exists('mole_'+action)) scene.anims.create({key:'mole_'+action,frames:frames.map(frame=>({key:'mole',frame:String(frame)})),frameRate:10,repeat});
         }
     }
-    for (const key of ['hen','silkie','bresse','wolf','tiger','dragon','gorilla','cobra','mole'])
+    for (const key of ['hen','silkie','bresse','onagadori','wolf','tiger','dragon','gorilla','cobra','mole'])
         if (scene.textures.exists(key)) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     registerPoultryAnimations(scene); registerPredatorAnimations(scene);
     registerDragonAnimations(scene); registerGorillaAnimations(scene); registerEagleAnimations(scene);

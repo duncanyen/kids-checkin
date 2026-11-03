@@ -12,7 +12,7 @@ for (const breed of BREEDS) test(`${breed}: every animation crop contains one wh
         const { frame: f, spriteSourceSize: trim, sourceSize: size } = atlas.frames[index];
         const body = analysis.bodies.get(sourceFrame(breed, index));
         assert.ok(f.x <= body.left && f.y <= body.top && f.x + f.w > body.right && f.y + f.h > body.bottom, `${index}: clipped feet/comb/body`);
-        assert.equal(size.w, 314); assert.equal(size.h, 314);
+        assert.equal(size.w, breed === 'onagadori' ? 400 : 314); assert.equal(size.h, size.w);
         assert.equal(trim.y + trim.h, 306, 'Stable feet while the pose changes');
         assert.ok(trim.x >= 0 && trim.y >= 0 && trim.x + trim.w <= size.w && trim.y + trim.h <= size.h);
         const foreign = new Set();

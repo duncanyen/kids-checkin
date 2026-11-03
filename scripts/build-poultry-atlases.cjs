@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 const ROOT = path.resolve(__dirname, '..');
-const BREEDS = ['hen', 'silkie', 'bresse'];
+const BREEDS = ['hen', 'silkie', 'bresse', 'onagadori'];
 // Omit the decorative flying feathers in this idle pose, using a clean pose.
 const sourceFrame = (breed, index) => breed === 'silkie' && index === 4 ? 5 : index;
 
@@ -42,7 +42,7 @@ async function analyzeSheet(breed) {
 
 function buildAtlas(breed, analysis) {
     const { info, bodies } = analysis, frames = {};
-    const canvas = 314, baseline = 306, padding = 2;
+    const canvas = breed === 'onagadori' ? 400 : 314, baseline = 306, padding = 2;
     for (let index = 0; index < 16; index++) {
         const body = bodies.get(sourceFrame(breed, index));
         const x = Math.max(0, body.left - padding), y = Math.max(0, body.top - padding);

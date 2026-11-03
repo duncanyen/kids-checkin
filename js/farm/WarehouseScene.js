@@ -281,14 +281,14 @@ export default class WarehouseScene extends Phaser.Scene {
         this.feedPicker.add([shade, paper, this.add.text(195, 260, '選擇要餵食的品種', { fontSize: '20px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5)]);
         this.feedBreedButtons = {};
         Object.entries(BREEDS).forEach(([breed, config], i) => {
-            const y = 325 + i * 65;
+            const y = 310 + i * 60;
             const button = this.add.rectangle(195, y, 290, 50, 0x735038).setInteractive({ cursor: 'pointer' });
             const label = this.add.text(195, y, config.name, { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5);
             this.feedPicker.add([button, label]);
             this.feedBreedButtons[breed] = { button, label };
             button.on('pointerdown', () => { this.feedPicker.setVisible(false); this.feedItem(this.pendingFeedItem, breed); });
         });
-        const cancel = this.add.text(195, 540, '取消', { fontSize: '18px', color: '#735038', padding: 10 }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+        const cancel = this.add.text(195, 565, '取消', { fontSize: '18px', color: '#735038', padding: 10 }).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         cancel.on('pointerdown', () => this.feedPicker.setVisible(false));
         this.feedPicker.add(cancel);
     }

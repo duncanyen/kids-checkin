@@ -44,6 +44,9 @@ test('cache miss verifies the server without changing any existing asset or unre
     assert.equal(f.isFarmSave({ ...farm, paladinbow: 1 }), true);
     for (const paladinbow of [-1, NaN, Infinity]) assert.equal(f.isFarmSave({ ...farm, paladinbow }), false);
     assert.equal(f.isFarmSave({ ...farm, eggsReady: 4, readyEggs: { hen: 0, silkie: 0, bresse: 4 } }), true);
+    assert.equal(f.isFarmSave({ ...farm, eggsReady: 4, onagadoriEggs: 2, readyEggs: { hen: 0, silkie: 0, bresse: 0, onagadori: 4 } }), true);
+    assert.equal(f.isFarmSave({ ...farm, readyEggs: { hen: 0, silkie: 0, bresse: 0, onagadori: -1 } }), false);
+    assert.equal(f.isFarmSave({ ...farm, readyEggs: { hen: 0, silkie: 0, bresse: 0, onagadori: 1 } }), false);
 });
 
 test('display copies preserve timestamp readers and cannot mutate saved hen state', async () => {

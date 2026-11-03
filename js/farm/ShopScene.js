@@ -76,7 +76,7 @@ export default class ShopScene extends Phaser.Scene {
         const buy = this.catalog.buy, sell = this.catalog.sell;
         for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,`${breed.name}\n${breed.dayPrice}／天\n${breed.weekPrice}／週`,()=>openGuardDogRental(this,breedId)]);
         for (const [key, breed] of Object.entries(BREEDS)) {
-            buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣`, () => this.openTradeModal('buy', key, breed.name, breed.buy)]);
+            buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣${breed.purchasable === false ? '\n尚未開賣' : ''}`, () => breed.purchasable === false ? this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F') : this.openTradeModal('buy', key, breed.name, breed.buy)]);
             sell.push([`bird:${key}`, breed.texture, `${breed.name}\n${breed.sell}金幣`, () => this.openTradeModal('sell', `bird:${key}`, breed.name, breed.sell)]);
             sell.push([breed.eggKey, breed.eggIcon, `${breed.eggName}\n${breed.eggPrice}金幣`, () => this.openTradeModal('sell', breed.eggKey, breed.eggName, breed.eggPrice)]);
         }
@@ -104,6 +104,10 @@ export default class ShopScene extends Phaser.Scene {
                 categoryIndexes[category] = index + 1;
                 const slot = index % 6;
                 const objects = this.addShopItem(container, slot % 2 ? 295 : 95, 40 + Math.floor(slot / 2) * 100, icon, text, 0x735038, action);
+                if (mode === 'buy' && BREEDS[key]?.purchasable === false) {
+                    objects[0].setFillStyle(0x635a50,.9);
+                    objects[0].setData('purchaseDisabled',true);
+                }
                 for (const object of objects) { object.catalogPage = Math.floor(index / 6); object.catalogCategory = category; object.catalogKey = key; }
             });
         }
@@ -171,7 +175,8 @@ export default class ShopScene extends Phaser.Scene {
     addShopItem(container, x, y, iconKey, text, color, callback) {
         const bg = this.add.rectangle(x, y, 170, 80, color, 0.9).setInteractive({ cursor: 'pointer' });
         const icon = this.add.image(x - 45, y, iconKey);
-        const scale = Math.min(45 / icon.width, 45 / icon.height);
+        const iconSize = iconKey === 'onagadori' ? 56 : 45;
+        const scale = Math.min(iconSize / icon.width, iconSize / icon.height);
         icon.setScale(scale);
         const txt = this.add.text(x + 18, y, text, { fontSize: '13px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
         bg.on('pointerdown', callback);
@@ -227,6 +232,7 @@ export default class ShopScene extends Phaser.Scene {
 
     openTradeModal(type, itemKey, itemName, unitPrice, isSingleOnly = false) {
         if (this.isProcessing || !this.farmData) return;
+        if (type === 'buy' && BREEDS[itemKey]?.purchasable === false) { this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F'); return; }
 
         if (['coop4', 'coop5'].includes(itemKey)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
 

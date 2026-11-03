@@ -4,7 +4,8 @@ export const HOUR = 3600000;
 export const BREEDS = Object.freeze({
     hen: { name: '母雞', texture: 'hen', buy: 1000, sell: 500, interval: 4 * HOUR, daily: 6, eggKey: 'inventoryEggs', eggName: '雞蛋', eggIcon: 'egg', eggPrice: 10 },
     silkie: { name: '烏骨雞', texture: 'silkie', buy: 2000, sell: 1000, interval: 4 * HOUR, daily: 6, eggKey: 'silkieEggs', eggName: '烏骨雞蛋', eggIcon: 'silkie_egg', eggPrice: 30 },
-    bresse: { name: '布雷斯雞', texture: 'bresse', buy: 4000, sell: 2000, interval: 6 * HOUR, daily: 4, eggKey: 'bresseEggs', eggName: '布雷斯雞蛋', eggIcon: 'bresse_egg', eggPrice: 60 }
+    bresse: { name: '布雷斯雞', texture: 'bresse', buy: 4000, sell: 2000, interval: 6 * HOUR, daily: 4, eggKey: 'bresseEggs', eggName: '布雷斯雞蛋', eggIcon: 'bresse_egg', eggPrice: 60 },
+    onagadori: { name: '日本長尾雞', texture: 'onagadori', buy: 6000, sell: 3000, purchasable: false, displayWidth: 104, interval: 6 * HOUR, daily: 4, eggKey: 'onagadoriEggs', eggName: '日本長尾雞蛋', eggIcon: 'egg', eggPrice: 120 }
 });
 export const breedOf = hen => BREEDS[hen?.breed] ? hen.breed : 'hen';
 export const coopCapacity = level => level >= 3 ? 20 : level >= 2 ? 10 : 3;
@@ -64,13 +65,13 @@ export function releaseFullClocks(state, now) {
 }
 export function clearPoultryEggs(farm, now = Date.now()) {
     const state = settlePoultry(farm, now);
-    state.ready = { hen: 0, silkie: 0, bresse: 0 }; releaseFullClocks(state, now);
+    state.ready = Object.fromEntries(Object.keys(BREEDS).map(key=>[key,0])); releaseFullClocks(state, now);
     return poultryPatch(state);
 }
 export function collectPoultry(farm, now = Date.now()) {
     const state = settlePoultry(farm, now), inventory = {}, collected = {};
     let available = Math.max(0, Math.floor((farm.warehouseLimit || 10) - getUsedSpace(farm)));
-    // Stable breed order: ordinary eggs, silkie eggs, then Bresse eggs.
+    // Stable catalog order preserves collection priority for existing breeds.
     for (const [key, config] of Object.entries(BREEDS)) {
         collected[key] = Math.min(available, state.ready[key]);
         available -= collected[key];
@@ -100,6 +101,7 @@ export function tradePoultry(farm, breed, quantity, type, now = Date.now(), ids 
     const state = settlePoultry(farm, now), config = BREEDS[breed];
     let coins = Number(farm.coins) || 0;
     if (type === 'buy') {
+        if (config.purchasable === false) throw new Error('日本長尾雞尚未開賣，目前僅供展示。');
         if (state.hens.length + quantity > coopCapacity(farm.coopLevel)) throw new Error('雞舍空間不足，請先升級或賣出雞隻！');
         if (coins < config.buy * quantity) throw new Error('金幣不足！');
         coins -= config.buy * quantity;
