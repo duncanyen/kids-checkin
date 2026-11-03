@@ -5,7 +5,7 @@ export const BREEDS = Object.freeze({
     hen: { name: '母雞', texture: 'hen', buy: 1000, sell: 500, interval: 4 * HOUR, daily: 6, eggKey: 'inventoryEggs', eggName: '雞蛋', eggIcon: 'egg', eggPrice: 10 },
     silkie: { name: '烏骨雞', texture: 'silkie', buy: 2000, sell: 1000, interval: 4 * HOUR, daily: 6, eggKey: 'silkieEggs', eggName: '烏骨雞蛋', eggIcon: 'silkie_egg', eggPrice: 30 },
     bresse: { name: '布雷斯雞', texture: 'bresse', buy: 4000, sell: 2000, interval: 6 * HOUR, daily: 4, eggKey: 'bresseEggs', eggName: '布雷斯雞蛋', eggIcon: 'bresse_egg', eggPrice: 60 },
-    onagadori: { name: '日本長尾雞', texture: 'onagadori', buy: 100000, sell: 50000, purchasable: true, displayWidth: 104, interval: 6 * HOUR, daily: 4, eggKey: 'onagadoriEggs', eggName: '日本長尾雞蛋', eggIcon: 'egg', eggPrice: 120 }
+    onagadori: { name: '日本長尾雞', texture: 'onagadori', buy: 6000, sell: 3000, purchasable: false, displayWidth: 104, interval: 6 * HOUR, daily: 4, eggKey: 'onagadoriEggs', eggName: '日本長尾雞蛋', eggIcon: 'egg', eggPrice: 120 }
 });
 export const breedOf = hen => BREEDS[hen?.breed] ? hen.breed : 'hen';
 export const coopCapacity = level => level >= 3 ? 20 : level >= 2 ? 10 : 3;
