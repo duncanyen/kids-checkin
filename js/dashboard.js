@@ -1,4 +1,4 @@
-import { todoAssignedTo } from './todo-core.js';
+import { todoAssignedTo, todoAssigneeProfiles } from './todo-core.js';
 import { photoLikes, updatePhotoLike } from './gallery-core.js';
 import { loadPhotoAliases } from './gallery-identity.js';
 import { loadChatProfiles, watchMemberRooms } from './chat-membership.js';
@@ -313,18 +313,16 @@ window.checkWidgetData = function(user) {
                     let title = t.title || t.text || t.task || "未命名任務";
                     if (title.length > 10) title = title.substring(0, 10) + '...';
                     
-                    let assigneesArray = [];
-                    if (t.assignees) {
-                        if (Array.isArray(t.assignees)) assigneesArray = t.assignees;
-                        else assigneesArray = [String(t.assignees)];
-                    }
-                    if (assigneesArray.length === 0) assigneesArray = ['未指派'];
-                    
-                    let avatarsHtml = assigneesArray.map((name, index) => {
-                        let actualName = (name === '所有人員' || name === '所有人') ? '所有人' : name;
-                        let avatarUrl = window.userAvatarMap[actualName] || `https://ui-avatars.com/api/?name=${actualName}&background=e5e7eb`;
-                        let marginLeft = index === 0 ? '0' : '-8px'; 
-                        return `<img src="${avatarUrl}" title="${actualName}" style="width:24px; height:24px; border-radius:50%; border:2px solid #fff; margin-left:${marginLeft}; object-fit:cover; background:var(--bg-body); box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
+                    const assignees = todoAssigneeProfiles(t, window.groupMembers || []);
+                    if (!assignees.length) assignees.push({ name: '未指派' });
+                    const escapeAttribute = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+                    const avatarsHtml = assignees.map((profile, index) => {
+                        const name = profile.name || profile.accountId || '未指派';
+                        const avatarUrl = profile.avatar || profile.photoURL || profile.avatarUrl ||
+                            (profile.accountId ? window.userAvatarMap[profile.accountId] : null) ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e5e7eb`;
+                        const marginLeft = index === 0 ? '0' : '-8px';
+                        return `<img src="${escapeAttribute(avatarUrl)}" alt="${escapeAttribute(name)}" title="${escapeAttribute(name)}" style="width:24px; height:24px; border-radius:50%; border:2px solid #fff; margin-left:${marginLeft}; object-fit:cover; background:var(--bg-body); box-shadow:0 2px 4px rgba(0,0,0,0.1);">`;
                     }).join('');
 
                     let badgeStyle = isToday ? 'color: var(--danger); background: var(--danger-light);' : 'color: var(--primary-dark); background: var(--primary-light);';

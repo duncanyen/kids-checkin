@@ -108,6 +108,23 @@ export function deadlineDate(label, today = dateKey()) {
     return validDate(label) ? label : today;
 }
 
+// Display profiles use the stable account identity, never a saved display name.
+export function todoAssigneeProfiles(todo, profiles = []) {
+    const members = profiles.filter(profile => profile.role !== 'removed');
+    const names = Array.isArray(todo.assignees) ? todo.assignees : todo.assignees ? [String(todo.assignees)] : [];
+    if (todo.assigneeScope === 'all' || (!todo.assigneeScope && !Array.isArray(todo.assigneeAccountIds) && names.some(name => ['所有人員', '所有人'].includes(name)))) return [{ name: '所有人' }];
+    if (Array.isArray(todo.assigneeAccountIds)) {
+        return [...new Set(todo.assigneeAccountIds)].map(accountId =>
+            members.find(profile => profile.accountId === accountId) || { accountId, name: accountId });
+    }
+    // Legacy assignments can resolve a previous name only when it is unique
+    // within this group. Ambiguous names receive a neutral avatar.
+    return names.map(name => {
+        const matches = members.filter(profile => [profile.name, ...(Array.isArray(profile.nameHistory) ? profile.nameHistory : [])].includes(name));
+        return matches.length === 1 ? matches[0] : { name };
+    });
+}
+
 // Homepage visibility follows assignment, not who created the task.
 export function todoAssignedTo(todo, user, profiles = []) {
     if (!user?.accountId) return false;

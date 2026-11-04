@@ -13,7 +13,7 @@ test('assignment IDs take priority, all members are visible, and legacy names re
     assert.equal(todoAssignedTo({ accountId: 'alice', assigneeAccountIds: [] }, alice, profiles), false);
 });
 test('homepage widget shows only the current assignee or everyone, including after reassignment/account changes', async () => {
-    const { todoAssignedTo } = await core;
+    const { todoAssignedTo, todoAssigneeProfiles } = await core;
     const todos = [
         { title: '給Alice', assigneeScope: 'members', assigneeAccountIds: ['alice'] },
         { title: '給Bob', accountId: 'alice', assigneeAccountIds: ['bob'] },
@@ -25,7 +25,7 @@ test('homepage widget shows only the current assignee or everyone, including aft
     const element = { innerHTML: '' }; let receive, unsubscribed = 0;
     const context = { window: { currentGroup: { id: 'A' }, groupMembers: profiles, userAvatarMap: {} },
         document: { getElementById: id => id === 'todoWidgetContent' ? element : null },
-        todoAssignedTo, todoUnsubscribe: null, financeUnsubscribe: null, console,
+        todoAssignedTo, todoAssigneeProfiles, todoUnsubscribe: null, financeUnsubscribe: null, console,
         db: {}, collection: (_, name) => name, where: () => ({}), query: (...args) => args,
         watchMemberWidget: (_, callback) => { receive = callback; return () => unsubscribed++; } };
     const source = fs.readFileSync('js/dashboard.js', 'utf8');
@@ -41,4 +41,47 @@ test('homepage widget shows only the current assignee or everyone, including aft
     assert.ok(!element.innerHTML.includes('舊名稱指派'));
     todos.forEach(todo => { todo.assigneeScope = 'members'; todo.assigneeAccountIds = ['alice']; }); emit();
     assert.match(element.innerHTML, /目前沒有指派給你的待辦事項/);
+});
+
+test('assignee profiles resolve account IDs before old names and handle legacy ambiguity safely', async () => {
+    const { todoAssigneeProfiles } = await core;
+    const members = [
+        { accountId: 'alice', name: '新名字', nameHistory: ['舊名字'], avatar: 'alice.jpg' },
+        { accountId: 'bob', name: '舊名字', avatar: 'bob.jpg' }
+    ];
+    assert.deepEqual(todoAssigneeProfiles({ assigneeAccountIds: ['alice'], assignees: ['舊名字'] }, members), [members[0]]);
+    assert.deepEqual(todoAssigneeProfiles({ assignees: ['舊名字'] }, members), [{ name: '舊名字' }]);
+    assert.deepEqual(todoAssigneeProfiles({ assignees: ['舊名字'] }, [members[0]]), [members[0]]);
+    assert.deepEqual(todoAssigneeProfiles({ assigneeAccountIds: ['missing'], assignees: ['舊名字'] }, members), [{ accountId: 'missing', name: 'missing' }]);
+    assert.deepEqual(todoAssigneeProfiles({ assigneeScope: 'all', assigneeAccountIds: [] }, members), [{ name: '所有人' }]);
+});
+
+test('homepage avatars and labels follow users.accountId through renames and late profile refreshes', async () => {
+    const { todoAssignedTo, todoAssigneeProfiles } = await core;
+    const todo = { title: '測試頭像', assigneeAccountIds: ['alice'], assignees: ['舊名字'] };
+    const element = { innerHTML: '' }; let receive;
+    const context = {
+        window: { currentGroup: { id: 'A' }, groupMembers: [], userAvatarMap: { '舊名字': 'wrong-person.jpg', alice: 'account-avatar.jpg' } },
+        document: { getElementById: id => id === 'todoWidgetContent' ? element : null },
+        todoAssignedTo, todoAssigneeProfiles, todoUnsubscribe: null, financeUnsubscribe: null, console, db: {},
+        collection: (_, name) => name, where: () => ({}), query: (...args) => args,
+        watchMemberWidget: (_, callback) => { receive = callback; return () => {}; }
+    };
+    const source = fs.readFileSync('js/dashboard.js', 'utf8');
+    vm.createContext(context);
+    vm.runInContext(source.slice(source.indexOf('window.checkWidgetData ='), source.indexOf('window.checkUnreadMessages =')), context);
+    const emit = () => receive({ forEach: cb => cb({ data: () => ({ todos: [todo] }) }) });
+    context.window.checkWidgetData({ accountId: 'alice' }); emit();
+    assert.match(element.innerHTML, /src="account-avatar.jpg"/);
+    assert.ok(!element.innerHTML.includes('wrong-person.jpg'));
+    context.window.groupMembers = [{ accountId: 'alice', name: '目前名稱', avatar: 'current-upload.jpg' }];
+    emit();
+    assert.match(element.innerHTML, /src="current-upload.jpg"/);
+    assert.match(element.innerHTML, /title="目前名稱"/);
+    assert.ok(!element.innerHTML.includes('舊名字'));
+    context.window.groupMembers[0] = { accountId: 'alice', name: '再次改名', avatar: 'latest-upload.jpg' };
+    emit();
+    assert.match(element.innerHTML, /src="latest-upload.jpg"/);
+    assert.match(element.innerHTML, /title="再次改名"/);
+    assert.ok(!element.innerHTML.includes('current-upload.jpg'));
 });
