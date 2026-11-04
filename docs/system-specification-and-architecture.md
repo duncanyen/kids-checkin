@@ -51,7 +51,7 @@ Nexus 是以家庭／群組為協作單位的生活整合網站，將溝通、�
 | --- | --- | --- |
 | Nexus 一般成員 | 使用獲授權的生活模組、遊戲及個人設定 | 既有 users 角色、menus、群組成員與遊戲權限 |
 | Nexus 管理者／家長 | 入群審核、成員、功能與遊戲開放、群組設定及操作紀錄 | 既有管理者專區的身分與群組檢查 |
-| 遊戲營運管理員 | 獨立管理站內的公告、禮包、兌換追蹤及稽核 | Firebase Auth Custom Claim `role: admin`、MFA 及後端當前角色檢查 |
+| 遊戲營運管理員 | 獨立管理站內的公告、禮包、兌換追蹤及稽核 | Firebase Auth Custom Claim `role: admin` 及後端當前角色檢查（MFA 選用） |
 | Firebase 專案擁有者 | 建立首位管理員、IAM、驗證服務、部署、規則及索引 | Google Cloud／Firebase 專案權限 |
 
 **上述管理身分不可互相推定。** users 文件中的管理角色，不等於 Firebase Auth 的營運管理員 Claim；Firebase 專案的 IAM 身分也不等於網頁中的遊戲管理角色。
@@ -101,7 +101,7 @@ flowchart TB
     ReadLayer --> Life
     Operator[營運管理員] --> AdminSite[獨立 game-admin 管理站]
     AdminSite --> Auth
-    AdminSite --> Ops[營運 callable API：角色與 MFA 驗證]
+    AdminSite --> Ops[營運 callable API：管理員角色驗證]
     Ops --> FS
     Game -. 營運開關目前關閉 .-> PlayerAPI[公告與禮包 API]
     PlayerAPI --> Auth
@@ -216,7 +216,7 @@ flowchart TB
 
 | 能力 | 設計 |
 | --- | --- |
-| 管理登入 | Firebase Auth 電子郵件登入、Custom Claims、TOTP MFA；無預設 admin/admin |
+| 管理登入 | Firebase Auth 電子郵件登入、Custom Claims、選用 TOTP MFA；無預設 admin/admin |
 | Dashboard | 從伺服器統計玩家文件、公告、有效公告、禮包、有效禮包與成功兌換，並顯示最近操作 |
 | 公告 | 草稿、排程、發布、下架、類型／狀態篩選、前綴搜尋、預覽、分頁、指定帳號及 popup |
 | 禮包 | 通用、限量、單次、指定玩家；安全隨機碼或自訂活動碼；僅保存雜湊 |
@@ -417,7 +417,7 @@ sequenceDiagram
 
 1. **建立可信任身分與權限基線**：取得正式規則、盤點敏感欄位，逐步完成玩家 Auth 遷移。
 2. **遷移經濟寫入**：先處理金幣、物品、歡迎禮、買賣與戰鬥獎勵，避免新後台安全、舊入口仍可任意改資產。
-3. **完成隔離驗證及營運啟用**：補跑 Emulator，確認真正 MFA、App Check 與獨立 Hosting，才啟用新公告及兌換。
+3. **完成隔離驗證及營運啟用**：補跑 Emulator，確認管理員密碼登入、選用 MFA、App Check 與獨立 Hosting，才啟用新公告及兌換。
 4. **再做規模擴展**：評估子集合拆分、排程、讀取鏡像、索引、資產打包及成本監控。
 
 ---
@@ -467,7 +467,7 @@ python3 -m http.server 8030 --bind 127.0.0.1
 - [ ] 確認主站與管理站的 Hosting 所屬、網域、發布與回復方式。
 - [ ] 區分 users 文件 ID、accountId、Auth UID、groupId，檢查舊同名與多群組資料。
 - [ ] 盤點可從前端修改的資產、身分及群組欄位，訂定後端遷移計畫。
-- [ ] 驗證真正的管理員 MFA、撤銷權限及登出；不要只測介面。
+- [ ] 驗證管理員密碼登入、選用 MFA、撤銷權限及登出；不要只測介面。
 - [ ] 先在測試專案跑必要整合測試，再做正式發布驗收。
 - [ ] 建立備份、錯誤追蹤、用量／費用警示及操作紀錄保留政策。
 

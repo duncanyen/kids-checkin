@@ -51,7 +51,7 @@ cd /workspace/kids-checkin/game-admin
   'node --test tests/emulator.integration.cjs'
 ```
 
-測試程式在缺少 Emulator 環境變數時直接失敗，絕不回退正式服務。涵蓋 Admin SDK 原子發獎、真正並發交易爭搶單一名額、失敗回滾與同請求重試、匿名／玩家／管理員客戶端對新增集合的禁止讀寫，以及直接增加農場資產被拒絕。Auth Emulator 測試驗證原生登入取得角色，但缺少 MFA 的 token 仍遭拒絕。
+測試程式在缺少 Emulator 環境變數時直接失敗，絕不回退正式服務。涵蓋 Admin SDK 原子發獎、真正並發交易爭搶單一名額、失敗回滾與同請求重試、匿名／玩家／管理員客戶端對新增集合的禁止讀寫，以及直接增加農場資產被拒絕。Auth Emulator 測試驗證原生登入取得角色，但具有 admin 角色而未使用 MFA 的 token 可正常存取管理 API。
 
 TOTP 實際註冊及第二因素登入仍須在擁有者設定好的 Firebase 專案／測試專案人工驗證；不可把 UI 替身的 MFA 測試當作 Firebase 真實 MFA 已驗證。
 
@@ -59,7 +59,7 @@ TOTP 實際註冊及第二因素登入仍須在擁有者設定好的 Firebase �
 
 由專案擁有者在可信任環境完成，**本次未執行以下正式操作**：
 
-1. 使用既有 Firebase 專案 `homebasedb`。啟用 Authentication Email/Password，啟用 Identity Platform／TOTP MFA（依專案方案要求），設定密碼政策與電子郵件列舉保護。
+1. 使用既有 Firebase 專案 `homebasedb`。啟用 Authentication Email/Password；MFA 為選用，只有希望使用驗證器時才需啟用 Identity Platform／TOTP MFA（依專案方案要求），設定密碼政策與電子郵件列舉保護。
 2. 在 Firebase Console 建立專用管理員 Auth 帳號並完成電子郵件驗證。不要以玩家 `users.role` 或玩家 App 的 admin 身分作為後台管理權限。
 3. 在具有最小必要 IAM 權限及 Application Default Credentials 的可信任機器執行：
 
@@ -68,7 +68,7 @@ TOTP 實際註冊及第二因素登入仍須在擁有者設定好的 Firebase �
    ```
 
    工具只修改既有 Auth 使用者 Custom Claims 的 `role: admin`，保留其他 claims，不接受或輸出密碼／憑證。沒有從前端設定管理員權限的功能。
-4. 首次登入獨立管理站後設定 TOTP，登出重新登入並完成第二因素。後端同時驗證 token 的 `role`、`firebase.sign_in_second_factor`，以及 Auth 使用者當前未停用且仍有 admin claim。
+4. 以電子郵件及密碼登入即可進入管理站。後端驗證 token 的 `role`，以及 Auth 使用者當前未停用且仍有 admin claim；不強制要求 MFA。管理員可由頂部「雙重驗證（選用）」自行設定 TOTP，未啟用專案 TOTP 不影響一般登入。已綁定 MFA 的帳號仍須完成 Firebase 原生第二因素挑戰，不會繞過既有 MFA；本次不自動解除任何帳號的綁定。
 5. 撤銷管理權限時，在可信任後端移除 role claim 並撤銷 refresh tokens；管理 API 每次重新讀取 Auth claims，角色撤銷立即生效。登出使用 Firebase signOut 清除該管理工作階段。
 6. 設定 App Check reCAPTCHA Enterprise；管理站 `site/config.js` 與玩家 `operations-config.js` 填入公開 site key。正式 callable 強制 App Check，只有 Functions Emulator 關閉此檢查。所有 key／Auth provider／授權網域設定須先在測試環境驗證。
 7. 建立獨立 Firebase Hosting site，不可部署到玩家既有 site。以 `firebase target:apply hosting nexus-game-admin SITE_ID --project homebasedb` 綁定本地 target；`firebase.json` 的 hosting target 已明確指定 `nexus-game-admin`。站台只發布 `site/`，不含 Admin SDK、測試或後端檔案。`firebase.json` 也包含 CSP 與防嵌入標頭。
@@ -108,6 +108,8 @@ API 為 `gameOpsAdmin`、`gameOpsAnnouncements`、`gameOpsRedeem`，區域 asia-
 
 已通過：後端 service 10 項隔離測試、既有 120 項單元測試、管理站桌面／手機瀏覽器流程。玩家公告／兌換與舊通知瀏覽器回歸均通過（隔離資料與 transport）。
 
-未完成／需人工設定：真實 Emulator 整合與規則測試、正式規則取得與舊經濟寫入遷移、Firebase Auth／Identity Platform／MFA／App Check／獨立 Hosting site、合併索引、正式 TOTP 登入驗證。尚未正式部署、未啟用玩家營運開關。GitHub 原始碼發布與正式部署是分開的狀態，詳見 DEPLOYMENT.md。
+未完成／需人工設定：真實 Emulator 整合與規則測試、正式規則取得與舊經濟寫入遷移、Firebase Auth／Identity Platform／MFA／App Check／獨立 Hosting site、合併索引、選用 TOTP 的實際登入驗證。尚未正式部署、未啟用玩家營運開關。GitHub 原始碼發布與正式部署是分開的狀態，詳見 DEPLOYMENT.md。
 
 請保留操作／兌換紀錄；ops_limits 可由未來可信任排程清理過期桶，但收據、個人次數及稽核不可隨意清理，以免重複發獎。限制／紀錄保留排程目前沒有部署。
+
+登入政策更新（2026-11-05）：管理員 MFA 改為選用。此變更須同時更新管理站前端及 `nexus-ops` 的 `gameOpsAdmin` 後端；只推送前端無法解除舊後端的強制 MFA 檢查。

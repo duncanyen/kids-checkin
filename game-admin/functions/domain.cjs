@@ -88,7 +88,6 @@ async function award(farm,value,now){
 function adminIdentity(auth){
     if(!auth?.uid)fail('unauthenticated','請先登入管理後台');
     if(auth.token?.role!=='admin')fail('permission-denied','此帳號沒有遊戲管理權限');
-    if(!auth.token?.firebase?.sign_in_second_factor)fail('permission-denied','請完成管理員 MFA 驗證後重新登入');
     return auth.uid;
 }
 function safeGift(value){const {codeHash,...data}=value;return data;}

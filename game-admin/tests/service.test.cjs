@@ -3,10 +3,12 @@ const {MemoryDB}=require('./memory-db.cjs');
 const {createService}=require('../functions/service.cjs');
 const D=require('../functions/domain.cjs');
 const {fixture,scenarios,uid}=require('./fixture.cjs');
-test('admin Auth claims and MFA gate every API, including reads',async()=>{
+test('admin Auth claims gate every API; MFA is optional, including reads and writes',async()=>{
     const f=await fixture();await assert.rejects(f.admin('dashboard',{}, {auth:null}),{code:'unauthenticated'});
     await assert.rejects(f.admin('dashboard',{}, {auth:{uid:'alice',token:{role:'player',firebase:{sign_in_second_factor:'totp'}}}}),{code:'permission-denied'});
-    await assert.rejects(f.admin('dashboard',{}, {auth:{uid:'admin',token:{role:'admin'}}}),{code:'permission-denied'});
+    const withoutMfa={auth:{uid:'admin',token:{role:'admin'}}};
+    assert.equal((await f.admin('dashboard',{},withoutMfa)).players,3);
+    assert.ok((await f.admin('saveAnnouncement',f.announcement(),withoutMfa)).id);
     assert.equal((await f.admin('dashboard')).players,3);f.revoke();await assert.rejects(f.admin('dashboard'),{code:'permission-denied'});
 });
 test('announcements draft, edit, scheduled effectiveness, targets, expiry and archive',async()=>{

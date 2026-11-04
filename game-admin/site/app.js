@@ -8,7 +8,7 @@ const formatTime=value=>value?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Ta
 const wallTime=value=>new Date(value+8*3600000).toISOString().slice(0,16);
 const utc=value=>new Date(value+':00+08:00').getTime();
 let view='dashboard',rows=[],pages=[null],page=0,nextCursor=null,revision=0,busy=false,catalog,editing,writeId;
-const errorText=error=>error.code==='functions/permission-denied'?'權限驗證失敗，請確認管理員角色與 MFA，並重新登入。':error.message||'操作失敗，請稍後重試。';
+const errorText=error=>error.code==='functions/permission-denied'?'權限驗證失敗，請確認管理員角色，並重新登入。':error.message||'操作失敗，請稍後重試。';
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 const pill=value=>node('span',statusNames[value]||value,'pill '+value);
 const button=(text,fn,cls)=>{const b=node('button',text,cls);b.type='button';b.onclick=fn;return b;};
@@ -153,6 +153,8 @@ $('menuButton').onclick=()=>{const open=document.body.classList.toggle('menu-ope
 $('logout').onclick=async()=>{try{await runtime.logout();location.replace('login.html'+location.search);}catch(error){status(errorText(error),true);}};
 runtime.observe(async user=>{
     if(!user){location.replace('login.html'+location.search);return;}
-    try{const identity=await runtime.identity(user);if(!identity.admin||!identity.mfa){await runtime.logout();location.replace('login.html'+location.search);return;}$('adminEmail').textContent=identity.email||identity.uid;$('app').hidden=false;$('loading').hidden=true;await selectView('dashboard');}
+    try{const identity=await runtime.identity(user);if(!identity.admin){await runtime.logout();location.replace('login.html'+location.search);return;}$('adminEmail').textContent=identity.email||identity.uid;$('app').hidden=false;$('loading').hidden=true;await selectView('dashboard');}
     catch(error){$('loading').textContent=errorText(error);}
 });
+
+$('manageMfa').onclick=()=>{const url=new URL('login.html'+location.search,location.href);url.searchParams.set('setupMfa','1');location.assign(url.href);};
