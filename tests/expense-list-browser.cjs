@@ -36,7 +36,7 @@ export const addDoc=async(ref,data)=>{
  const id='new-'+(++window.__writes);window.__store[ref.path+'/'+id]=structuredClone(data);return{id};
 };
 export const deleteDoc=async ref=>{delete window.__store[ref.path];};
-export const updateDoc=async()=>{};
+export const updateDoc=async(ref,patch)=>{if(window.__failSave)throw Error('offline');Object.assign(window.__store[ref.path],patch);};
 export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>window.__store[ref.path]});
 `;
 (async()=>{
@@ -48,7 +48,8 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  const page=await context.newPage(),errors=[];
  page.setDefaultTimeout(10000);
  page.on('pageerror',error=>{errors.push(error.message);console.error('PAGE ERROR',error.message);});
- page.on('dialog',dialog=>dialog.accept());
+ let promptAnswer;
+ page.on('dialog',dialog=>dialog.accept(promptAnswer));
  await page.clock.setFixedTime(new Date('2026-11-01T04:00:00Z'));
  await page.addInitScript(()=>{
   const user={accountId:'alice',name:'Alice',role:sessionStorage.getItem('testRole')||'parent',menus:['finance']};
@@ -83,8 +84,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  assert.equal(await page.inputValue('#expenseDate'),'2026-11-01');
  assert.match(await page.locator('#btnTypeIncome').getAttribute('class'),/active/);
  await page.fill('#expenseAmount','123.45');
- await page.click('#btnSaveExpense');
- assert.match(await page.locator('#entryStatus').innerText(),/名稱/);
+ assert.match(await page.locator('label[for=expenseNote]').innerText(),/選填/);
  await page.fill('#expenseNote','<img src=x onerror=alert(1)>');
  await page.evaluate(()=>window.__failSave=true);
  await page.click('#btnSaveExpense');
@@ -104,7 +104,24 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  assert.equal(await page.locator('#ledgerList .ledger-row-details img').count(),0);
  // Reopen a row, delete the saved entry, and verify the shared monthly totals.
  await page.locator('.ledger-row').filter({hasText:'<img src=x'}).click();
- await page.locator('#dayExpenseList .expense-item').filter({hasText:'<img src=x'}).locator('button').click();
+ await page.locator('#dayExpenseList .expense-item').filter({hasText:'<img src=x'}).locator('.btn-del-exp').click();
+ await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
+ await page.click('#expenseModal .btn-close');
+ // Save a record without a name, then fill its name without changing money.
+ await page.evaluate(()=>window.__delaySave=false);
+ await page.click('#addListIncome');
+ await page.fill('#expenseAmount','88');
+ await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent.includes('已儲存'));
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'');
+ assert.match(await page.locator('#dayExpenseList').innerText(),/補上名稱/);
+ promptAnswer='補記薪資';
+ await page.locator('#dayExpenseList button.exp-note').filter({hasText:'補上名稱'}).click();
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='名稱已更新。');
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'補記薪資');
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].amount),88);
+ assert.equal(await page.locator('#listTotal').innerText(),'NT$ 30,088');
+ await page.locator('#dayExpenseList .expense-item').filter({hasText:'補記薪資'}).locator('.btn-del-exp').click();
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
  await page.click('#expenseModal .btn-close');
  await page.click('#listExpenseTab');

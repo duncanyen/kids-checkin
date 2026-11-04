@@ -1009,7 +1009,6 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
     if (!Number.isFinite(amount) || amount <= 0 || amount > 999999999 || Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001) {
         status.textContent = '請輸入大於 0、最多兩位小數的金額（上限 999,999,999）。'; return;
     }
-    if (!note) { status.textContent = '請輸入名稱。'; document.getElementById('expenseNote').focus(); return; }
     if (!selectedCategory || !selectedDateStr || (currentModalType === 'income' && !canViewIncome)) {
         status.textContent = '請確認日期與分類。'; return;
     }
@@ -1091,7 +1090,7 @@ function renderDayList() {
                 <div class="exp-icon-box" style="color: ${catObj.color}">${iconHtml}</div>
                 <div class="exp-details">
                     <span class="exp-cat-name">${ledgerText(item.category)}</span>
-                    <span class="exp-note">${item.note ? ledgerText(item.note) : `<span style="opacity:0.5">${ledgerText(item.operator)}記帳</span>`}</span>
+                    <button type="button" class="exp-note" style="border:0;background:none;padding:0;text-align:left;cursor:pointer" aria-label="修改名稱" onclick="editExpenseName('${item.id}')">${item.note ? ledgerText(item.note) : '補上名稱（選填）'}</button>
                 </div>
             </div>
             <div style="display:flex; align-items:center;">
@@ -1102,6 +1101,38 @@ function renderDayList() {
         container.appendChild(div);
     });
 }
+
+// Name edits leave amounts, categories, dates and monthly totals unchanged.
+window.editExpenseName = async function(docId) {
+    if (savingEntry || !monthReady) return;
+    const item = monthData.find(entry => entry.id === docId && entry.groupId === currentGroupId);
+    if (!item) return;
+    const entered = window.prompt('名稱（選填，可留空）', item.note || '');
+    if (entered === null) return;
+    const note = entered.trim();
+    const status = document.getElementById('entryStatus');
+    if (note.length > 100) { status.textContent = '名稱最多 100 個字。'; return; }
+    if (note === (item.note || '')) return;
+    savingEntry = true;
+    const version = monthRequestVersion;
+    document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = true);
+    status.textContent = '更新名稱中…';
+    try {
+        await updateDoc(doc(db, 'expenses', docId), { note });
+        if (version !== monthRequestVersion) return;
+        item.note = note;
+        hasLoadedAllData = false;
+        if (currentMainView === 'list') { resetListData(); await loadListPage(0); }
+        renderDayList();
+        status.textContent = '名稱已更新。';
+    } catch (error) {
+        console.error('更新名稱失敗：', error);
+        status.textContent = '更新名稱失敗，請檢查網路後重試。';
+    } finally {
+        savingEntry = false;
+        document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = false);
+    }
+};
 
 window.deleteExpense = async function(docId) {
     if (savingEntry) return;
