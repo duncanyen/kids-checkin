@@ -57,7 +57,7 @@ export function productionChanged(farm, now) {
 export function nextEggStatus(farm, now = Date.now()) {
     const state = poultryState(farm, now);
     const active = state.hens.filter(h => !h.isSick && !h.pausedFull);
-    const next = active.map(h => ({ breed: h.breed, ms: Math.max(0, BREEDS[h.breed].interval - (now - h.laidAt)) })).sort((a, b) => a.ms - b.ms)[0];
+    const next = active.map(h => ({ id: h.id, breed: h.breed, dueAt: h.laidAt + BREEDS[h.breed].interval, ms: Math.max(0, BREEDS[h.breed].interval - (now - h.laidAt)) })).sort((a, b) => a.dueAt - b.dueAt)[0];
     return { next, hens: state.hens.length, eggs: Object.values(state.ready).reduce((a, b) => a + b, 0), full: state.hens.length > 0 && state.hens.every(h => h.pausedFull) };
 }
 export function releaseFullClocks(state, now) {

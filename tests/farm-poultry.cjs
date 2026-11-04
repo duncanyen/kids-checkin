@@ -76,9 +76,43 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
  await page.screenshot({path:'/tmp/farm-poultry-home.png'});
  await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hensGroup.forEach(h=>{h.anims.stop();h.setFrame(11);}));
  await page.screenshot({path:'/tmp/farm-poultry-walk-clean.png'});
+ // The actual next bird alone approaches; production snapshots preserve its sprite.
+ for(const breed of ['hen','silkie','bresse']){
+  await page.evaluate(async breed=>{
+   const {BREEDS}=await import('/js/farm/poultry.js');
+   const s=window.__farmGame.scene.getScene('MyFarmScene'),f=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
+   s.layingVisit.cancel();
+   const now=Date.now();
+   window.__farmTest.patch('self',{cleanliness:0,eggsReady:0,readyEggs:{hen:0,silkie:0,bresse:0,onagadori:0},hensState:f.hensState.map(h=>({...h,isSick:false,pausedFull:false,laidAt:h.breed===breed?now-BREEDS[breed].interval+2000:now}))});
+   window.__layingBird=s.hensGroup.find(h=>h.hState.breed===breed);
+  },breed);
+  await page.waitForFunction(breed=>{
+   const s=window.__farmGame.scene.getScene('MyFarmScene');
+   return s.layingVisit.task?.breed===breed;
+  },breed);
+  await page.waitForFunction(breed=>{
+   const s=window.__farmGame.scene.getScene('MyFarmScene');
+   return s.farmData.readyEggs[breed]===1&&s.layingVisit.task?.dueAt<=Date.now();
+  },breed);
+  await page.evaluate(async breed=>{
+   const {farmEggPosition}=await import('/js/farm/scenery.js');
+   const s=window.__farmGame.scene.getScene('MyFarmScene'),h=window.__layingBird,door=farmEggPosition(s);
+   if(!s.hensGroup.includes(h)||s.hensGroup.filter(h=>h.nesting).length!==1)throw Error('Production replaced bird or moved entire flock');
+   if(Math.abs(h.x-door.x)>1||Math.abs(h.y-door.y-12)>1||h.scaleY>=h.baseScale)throw Error('Bird missed laying deadline/door');
+   if(!s.coopEgg.visible)throw Error('Due egg absent from doorway');
+   Phaser.Math.Between=(_,max)=>max;
+   h.emit('pointerdown');
+  },breed);
+  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.eggsReady===0);
+  await page.evaluate(()=>{
+   const s=window.__farmGame.scene.getScene('MyFarmScene');
+   if(s.layingVisit.task||window.__layingBird.nesting)throw Error('Collected egg still playing nest animation');
+  });
+ }
+ checks.push('deadline-driven solo hen/silkie/bresse doorway visits, stable sprites, real production, chicken-tap collection cancels animation');
  await page.evaluate(()=>{
   const f=window.__farmTest.docs['groups/dragon-test/users/self'].farm;
-  window.__farmTest.patch('self',{hensState:f.hensState.map(h=>({...h,laidAt:Date.now()-24*3600000,pausedFull:false})),readyEggs:{hen:0,silkie:0,bresse:0},eggsReady:0,cleanliness:0});
+  window.__farmTest.patch('self',{inventoryEggs:0,silkieEggs:0,bresseEggs:0,hensState:f.hensState.map(h=>({...h,laidAt:Date.now()-24*3600000,pausedFull:false})),readyEggs:{hen:0,silkie:0,bresse:0},eggsReady:0,cleanliness:0});
  });
  await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.eggsReady===16);
  await page.evaluate(async()=>{

@@ -1,3 +1,4 @@
+import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
 import { openCoopActions } from './poultry-housing-ui.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
@@ -87,7 +88,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.createConfirmDialog();
         this.initFirebase();
         mountGuardDog(this,()=>this.farmData,true);
-        this.time.addEvent({ delay: 30000, callback: this.prepareToLayEgg, callbackScope: this, loop: true });
+        this.layingVisit = new LayingVisit(this);
 
         onSceneExit(this, () => {
             this.farmSceneToken = null;
@@ -97,6 +98,8 @@ export default class MyFarmScene extends Phaser.Scene {
             if (this.farmInterval) clearInterval(this.farmInterval);
             this.farmInterval = null;
             if (this.cleanFlashTween) this.cleanFlashTween.stop();
+            this.layingVisit?.cancel();
+            this.eggTick = null;
             this.hensGroup.forEach(hen => {
                 hen.walkTimer?.remove();
                 if (hen.statusIcon) hen.statusIcon.destroy();
@@ -106,6 +109,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     update(time) {
+        this.layingVisit?.update();
         for (const hen of this.hensGroup || []) {
             if (hen.statusIcon?.active) hen.statusIcon.setPosition(hen.x, hen.y - 26 + Math.sin(time / 200) * 2);
         }
@@ -170,7 +174,7 @@ export default class MyFarmScene extends Phaser.Scene {
             // Coins and inventory updates do not replace moving hens. Include
             // illness age so a fresh snapshot can still update sick/skull art.
             const now = Date.now();
-            const key = JSON.stringify([this.farmData.coopLevel, this.farmData.outdoorHensByBreed, this.farmData.hensState,
+            const key = JSON.stringify([this.farmData.coopLevel, this.farmData.outdoorHensByBreed, this.farmData.hensState.map(({ laidAt, pausedFull, ...visual }) => visual),
                 this.farmData.hensState.map(h => h.isSick && h.sickTimestamp
                     ? Math.floor((now - h.sickTimestamp) / 86400000) : 0)]);
             if (key !== this.henVisualKey || this.farmData.hensState.some(h => h.isSick && h.sickTimestamp && now - h.sickTimestamp > 48 * 3600000)) { this.henVisualKey = key; this.syncHens(); }
@@ -289,6 +293,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.cleanupDeadHens(validHensState); return;
         }
 
+        this.layingVisit?.cancel();
         this.isHenSitting = false;
         this.hensGroup.forEach(hen => {
             hen.walkTimer?.remove();
@@ -323,7 +328,7 @@ export default class MyFarmScene extends Phaser.Scene {
             } else {
                 newHen.play(poultryAnim(newHen, 'idle'), true);
                 newHen.on('pointerdown', () => {
-                    if (!this.isHenSitting && this.emptyClickCount < 4) {
+                    if (!newHen.nesting && this.emptyClickCount < 4) {
                         // 同步放大點擊時的動畫比例 (原本是 1.1 / 0.9，改成基準值 2 乘上去，也就是 2.2 / 1.8)
                         this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
                     }
@@ -383,7 +388,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     wanderSingleHen(henSprite, fleeing = false) {
-        if (!henSprite?.active || (this.isHenSitting && !fleeing) || (henSprite.hState?.isSick && !fleeing)) return;
+        if (!henSprite?.active || (henSprite.nesting && !fleeing) || (henSprite.hState?.isSick && !fleeing)) return;
         const route = planHenPath(this, henSprite, getHenWanderArea(this));
         henSprite.walkPath = route.points;
         henSprite.isEvading = route.evading;
@@ -415,39 +420,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     prepareToLayEgg() {
-        if (!this.isSaveReady()) return;
-        if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.result)) return;
-        this.isHenSitting = true;
-        const nestX = this.coop.x;
-        const area = getHenWalkArea(this);
-        const nestY = Math.min(area.bottom, area.top + 10);
-
-        this.hensGroup.forEach(hen => {
-            if (hen.walkTween) hen.walkTween.stop();
-            hen.setFlipX(nestX < hen.x);
-            hen.play(poultryAnim(hen, 'walk'), true);
-
-            this.tweens.add({
-                targets: hen, x: nestX + Phaser.Math.Between(-20, 20), y: Phaser.Math.Clamp(nestY + Phaser.Math.Between(-8, 8), area.top, area.bottom), duration: 2000, ease: 'Power2',
-                onComplete: () => {
-                    if (!hen.active) return;
-                    hen.play(poultryAnim(hen, 'idle'), true);
-                    // 同步放大生蛋時的壓扁特效 (原本是 0.7 / 1.15，改成 1.4 / 2.3)
-                    this.tweens.add({
-                        targets: hen, scaleY: hen.baseScale * 0.7, scaleX: hen.baseScale * 1.15, y: hen.y + 10, duration: 300, ease: 'Power2',
-                        onComplete: () => {
-                            this.time.delayedCall(3000, () => {
-                                if (!hen.active) return;
-                                // 恢復時必須恢復成 2 倍大小
-                                this.tweens.add({ targets: hen, scaleY: hen.baseScale, scaleX: hen.baseScale, y: hen.y - 10, duration: 300, onComplete: () => {
-                                    this.isHenSitting = false; this.wanderSingleHen(hen); 
-                                } });
-                            });
-                        }
-                    });
-                }
-            });
-        });
+        this.layingVisit?.update();
     }
 
     startEggTimer() {
@@ -461,7 +434,7 @@ export default class MyFarmScene extends Phaser.Scene {
             else if (status.full) this.timerText.setText(`產能已滿 (${status.eggs} 顆)`);
             else if (!status.next) this.timerText.setText('雞隻生病了，請先治療');
             else {
-                const ms = status.next.ms;
+                const ms = Math.ceil(status.next.ms / 1000) * 1000;
                 const time = `${Math.floor(ms / 3600000)}:${String(Math.floor(ms / 60000) % 60).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
                 this.timerText.setText(`${BREEDS[status.next.breed].name}下顆蛋 ${time}`);
             }
@@ -481,6 +454,7 @@ export default class MyFarmScene extends Phaser.Scene {
             } catch (e) { console.error('生蛋計時更新失敗:', e); }
             finally { this.isUpdatingEggs = false; }
         };
+        this.eggTick = tick;
         this.farmInterval = setInterval(tick, 1000);
     }
 
@@ -545,14 +519,14 @@ export default class MyFarmScene extends Phaser.Scene {
         if (await maybeStartCobra(this)) return;
         if (!this.sys.isActive() || this.farmSceneToken !== cobraToken) return;
 
-        if (!this.farmData || (this.farmData.eggsReady || 0) <= 0) {
+        if (!this.farmData || !Object.values(settlePoultry(this.farmData).ready).some(n => n > 0)) {
             this.emptyClickCount++;
             if (this.emptyClickTimer) this.emptyClickTimer.remove();
             this.emptyClickTimer = this.time.delayedCall(2000, () => this.emptyClickCount = 0);
 
             if (this.emptyClickCount >= 5) {
                 this.showFloatingText('沒蛋啦還一直點~咕咕', '#F44336', 16);
-                this.hensGroup.forEach(hen => {
+                this.hensGroup.filter(hen => !hen.nesting).forEach(hen => {
                     hen.setTint(0xff0000); 
                     this.time.delayedCall(500, () => hen.clearTint());
                     this.tweens.add({ targets: hen, y: hen.y - 25, duration: 100, yoyo: true, repeat: 1 });
@@ -613,6 +587,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
             this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;
+            if (this.layingVisit?.task && result.collected[this.layingVisit.task.breed] > 0 && Date.now() >= this.layingVisit.task.dueAt) this.layingVisit.cancel();
             const warning = result.remaining ? `\n倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
             this.showFloatingText((Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning, '#FFD54F', result.remaining ? 14 : 18);
         } catch (e) { this.showFloatingText(e.message || '收蛋失敗，請稍後重試', '#F44336', 16); }

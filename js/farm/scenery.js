@@ -74,9 +74,15 @@ function reflowFarm(scene, oldMap, map) {
         scene.gardenBounds={left:a.x,top:a.y,right:b.x,bottom:b.y};
     }
     for (const hen of scene.hensGroup || []) {
-        // Let the nesting sequence finish its callbacks; killing it could leave
-        // isHenSitting locked. Its next wander uses the new clearing.
-        if (scene.isHenSitting) { move(hen); continue; }
+        // The deadline-driven nest walk recalculates its doorway each frame.
+        if (hen.nesting) {
+            move(hen);
+            const task = scene.layingVisit?.task;
+            if (task?.hen === hen && Date.now() < task.dueAt) {
+                task.x = hen.x; task.y = hen.y; task.startedAt = Date.now();
+            }
+            continue;
+        }
         scene.tweens.killTweensOf(hen); hen.walkTimer?.remove(); move(hen);
         scene.wanderSingleHen?.(hen);
     }
