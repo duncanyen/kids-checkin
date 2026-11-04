@@ -1,4 +1,4 @@
-// Run with a local static server: FARM_BASE_URL=http://127.0.0.1:8006 node tests/farm-gorilla.cjs
+// Run with a local static server: FARM_BASE_URL=http://127.0.0.1:8030 node tests/farm-weapons.cjs
 // All Firestore reads, transactions and listeners use an isolated in-memory database.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -63,6 +63,9 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   s.openTradeModal('buy','battleaxe','雙手斧',5000);if(!s.dialogContainer.visible||s.currentMaxQty!==2)throw Error('Axe unavailable in shop');
   s.dialogContainer.list.find(child=>child.type==='Rectangle'&&child.x===130&&child.y===505).emit('pointerdown');await new Promise(r=>setTimeout(r,50));
   if(farm().coins!==5000||farm().battleaxe!==1||farm().equippedWeapon!=='club')throw Error('Purchase wrong data/equipped automatically');
+  if(!s.catalog.sell.some(([key,,text])=>key==='battleaxe'&&text.includes('2500金幣')))throw Error('Axe absent from sell catalog');
+  const guide=s.weaponGuide.list.filter(child=>child.type==='Text').map(child=>child.text).join('\n');
+  if(guide.includes('菜園地鼠')||!guide.includes('地鼠：300／200／150／100 下'))throw Error('Inconsistent mole guide');
   window.__farmTest.patch('self',{warehouseLimit:2});await s.executeBuyWeapon('battleaxe',1,5000);if(farm().battleaxe!==1||farm().coins!==5000)throw Error('Overfilled warehouse');
   window.__farmTest.patch('self',{warehouseLimit:99,coins:4999});await s.executeBuyWeapon('battleaxe',1,5000);if(farm().battleaxe!==1||farm().coins!==4999)throw Error('Bought without coins');
   s.weaponGuide.setVisible(true);
@@ -96,6 +99,36 @@ window.__farmTest={docs,commits:0,patch:(who,values)=>{Object.assign(docs[prefix
   await s.executeSellItem('mace',1000,'狼牙棒',1);if(farm().coins!==before+1000)throw Error('Sold nonexistent mace');
  });
  checks.push('warehouse equip/unequip and unowned protection, equipped and stale-dialog sale blocked, unequipped mace sale exactly 1000');
+ await page.evaluate(async()=>{
+  const {WEAPONS_CONFIG}=await import('/js/farm/combat-rules.js');
+  const s=window.__farmGame.scene.getScene('ShopScene'),farm=()=>window.__farmTest.docs['groups/dragon-test/users/self'].farm;
+  const reminder='請到倉庫卸下武器，再至商店賣出';
+  for(const [key,weapon] of Object.entries(WEAPONS_CONFIG).filter(([,w])=>w.sellPrice)){
+   const slot=weapon.ranged?'equippedBow':'equippedWeapon';
+   window.__farmTest.patch('self',{[key]:1,[slot]:key});
+   s.dialogContainer.setVisible(false);
+   const before=farm().coins,commits=window.__farmTest.commits;
+   s.catalog.sell.find(([item])=>item===key)[3]();
+   if(s.dialogContainer.visible||s.msgText.text!==reminder)throw Error('Equipped modal not blocked: '+key);
+   await s.executeSellItem(key,weapon.sellPrice,weapon.name,1);
+   if(farm()[key]!==1||farm().coins!==before||window.__farmTest.commits!==commits)throw Error('Equipped sale allowed: '+key);
+   window.__farmTest.patch('self',{[slot]:weapon.ranged?null:'club'});
+  }
+  // A bow equipped in another tab after confirmation opens must still be protected.
+  s.openTradeModal('sell','paladinbow','聖騎士弓',5000);
+  window.__farmTest.patch('self',{equippedBow:'paladinbow'});
+  const before=farm().coins;
+  await s.executeSellItem('paladinbow',5000,'聖騎士弓',1);
+  if(farm().paladinbow!==1||farm().coins!==before)throw Error('Stale bow modal sale bypass');
+  window.__farmTest.patch('self',{equippedBow:null});
+  s.dialogContainer.setVisible(false);
+  s.catalog.sell.find(([key])=>key==='battleaxe')[3]();
+  if(!s.dialogContainer.visible)throw Error('Unequipped axe sale unavailable');
+  s.dialogContainer.list.find(child=>child.type==='Rectangle'&&child.x===130&&child.y===505).emit('pointerdown');
+  await new Promise(r=>setTimeout(r,50));
+  if(farm().battleaxe!==0||farm().coins!==before+2500)throw Error('Wrong axe sale result');
+ });
+ checks.push('all six equipped weapons block modal and sale, stale bow protection, axe catalog and confirmed sale 2500, mole guide naming');
  await page.evaluate(()=>{
   window.__farmTest.patch('self',{battleaxe:1,equippedWeapon:'battleaxe',coins:5000});
   Phaser.Math.Between=(_,max)=>max;

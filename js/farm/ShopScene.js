@@ -158,7 +158,7 @@ export default class ShopScene extends Phaser.Scene {
         const hits = (enemy, keys, suffix) => keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
         const guide = [
             '近戰：木棒／狼牙棒／雙手斧／大鐵槌',
-            ...[['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '菜園地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer'], ' 下')}`),
+            ...[['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer'], ' 下')}`),
             '', '弓箭：短弓／獵弓／聖騎士弓',
             ...[['dragon', '烈火龍'], ['eagle', '巨飛鷹'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
             '蛇王可用近戰或弓；飛行怪物需用弓。',
@@ -236,8 +236,8 @@ export default class ShopScene extends Phaser.Scene {
 
         if (['coop4', 'coop5'].includes(itemKey)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
 
-        if (type === 'sell' && WEAPONS_CONFIG[itemKey] && this.farmData.equippedWeapon === itemKey) {
-            this.showMsg('請先到倉庫卸下武器，再至商店賣出！', '#FFD54F');
+        if (type === 'sell' && WEAPONS_CONFIG[itemKey] && (this.farmData.equippedWeapon === itemKey || this.farmData.equippedBow === itemKey)) {
+            this.showMsg('請到倉庫卸下武器，再至商店賣出', '#FFD54F');
             return;
         }
 
@@ -387,7 +387,7 @@ export default class ShopScene extends Phaser.Scene {
             await runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
-                if (weapon && (farm.equippedWeapon === itemKey || farm.equippedBow === itemKey)) throw '請先到倉庫卸下武器！';
+                if (weapon && (farm.equippedWeapon === itemKey || farm.equippedBow === itemKey)) throw '請到倉庫卸下武器，再至商店賣出';
                 if ((farm[itemKey] || 0) >= qty) {
                     t.update(myFarmRef, { 
                         [`farm.${itemKey}`]: farm[itemKey] - qty, 
