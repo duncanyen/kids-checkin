@@ -18,7 +18,11 @@ export class LayingVisit {
 
     update(now = Date.now()) {
         const scene = this.scene;
-        if (!scene.isSaveReady() || document.hidden || getThreatZones(scene).length ||
+        // A pending Firestore write temporarily marks the save as loading.
+        // Keep animating the last confirmed farm through that acknowledgement;
+        // only the production/collection transaction requires a writable save.
+        if (!scene.farmData || scene.henAssetsPending || scene.preparingEncounter ||
+            scene.registry?.get('farmLoadState')?.phase === 'error' || document.hidden || getThreatZones(scene).length ||
             [scene.moleEncounter, scene.cobraEncounter, scene.eagleEncounter, scene.dragonEncounter, scene.gorillaEncounter]
                 .some(boss => boss && !boss.destroyed && !boss.settled)) {
             this.cancel();
@@ -58,7 +62,7 @@ export class LayingVisit {
         const hen = scene.hensGroup.find(h => h.active && h.hState.id === next.id);
         if (!hen) return;
         const door = farmEggPosition(scene);
-        const travelMs = Math.min(12000, Math.max(2000, Math.hypot(door.x - hen.x, door.y + 12 - hen.y) * 20));
+        const travelMs = Math.min(20000, Math.max(8000, Math.hypot(door.x - hen.x, door.y + 12 - hen.y) * 20));
         if (next.ms > travelMs) return;
         hen.walkTimer?.remove();
         scene.tweens.killTweensOf(hen);

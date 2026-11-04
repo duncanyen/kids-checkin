@@ -73,7 +73,7 @@ test('clock changes, illness, housing changes and interrupted sessions release t
         s => { s.farmData.hensState[0].laidAt -= 1000; },
         s => { s.farmData.hensState[0].isSick = true; },
         s => { s.hensGroup = []; },
-        s => { s.isSaveReady = () => false; },
+        s => { s.registry = { get: () => ({ phase: 'error' }) }; },
         s => { s.moleEncounter = { settled: false }; }
     ]) {
         const { scene, hen, visit } = fixture();
@@ -97,4 +97,22 @@ test('a delayed or failed production response does not cause a save request ever
     for (let offset = 0; offset < 1000; offset += 16) visit.update(dueAt + offset);
     assert.equal(calls, 1);
     visit.update(dueAt + 1000); assert.equal(calls, 2);
+});
+
+test('pending-write loading does not cancel the approach or the crouch at the egg deadline', () => {
+    const { scene, hen, visit } = fixture();
+    visit.update(dueAt - 7000);
+    assert.equal(visit.task.id, 'next');
+    scene.isSaveReady = () => false;
+    scene.registry = { get: () => ({ phase: 'loading' }) };
+    visit.update(dueAt - 500);
+    assert.equal(hen.nesting, true);
+    visit.update(dueAt);
+    assert.equal(hen.animation, 'hen_idle');
+    assert.ok(hen.scaleY < hen.baseScale);
+    apply(scene.farmData, poultryPatch(settlePoultry(scene.farmData, dueAt)));
+    scene.isSaveReady = () => true;
+    scene.registry = { get: () => ({ phase: 'ready' }) };
+    visit.update(dueAt + 100);
+    assert.equal(visit.task.id, 'next');
 });
