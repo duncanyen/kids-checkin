@@ -187,3 +187,22 @@ test('legacy three-slot gardens remain usable without resetting plants or resour
  await f.call('alice','water',{id:planted.id});await f.call('alice','buyPlot',{});
  assert.equal((await f.call('alice','snapshot')).plants[0].id,planted.id);assert.equal((await f.call('alice','snapshot')).garden.plotCount,4);
 });
+
+test('new flower seeds charge exact prices and grow through all five stages in legacy gardens',async()=>{
+ const f=await setup();await f.call('alice','snapshot');
+ const catalog={rose:{name:'玫瑰花',price:100,required:200},daffodil:{name:'水仙花',price:150,required:300},lavender:{name:'薰衣草',price:200,required:400}};
+ const snapshot=await f.call('alice','snapshot');for(const [type,expected]of Object.entries(catalog))assert.deepEqual(snapshot.plantCatalog[type],expected);
+ const gardenRef=f.db.doc('groups/A/gardens/alice'),walletRef=f.db.doc('groups/A/growthProfiles/alice');
+ await gardenRef.set({...snapshot.garden,seeds:{sunflower:1,tulip:2,sakura:0}});await walletRef.set({...snapshot.wallet,coinBalance:1000,waterBalance:1000});
+ let position=0,spent=0;
+ for(const [type,item]of Object.entries(catalog)){
+  const rid=crypto.randomUUID();await f.call('alice','buySeed',{plantType:type,price:0},rid);spent+=item.price;
+  await f.call('alice','buySeed',{plantType:type,price:0},rid);assert.equal((await f.wallet('alice')).coinBalance,1000-spent);
+  const planted=await f.call('alice','plant',{plantType:type,positionIndex:position++}),stages=new Set([1]);
+  for(let amount=0;amount<item.required;amount+=10){const result=await f.call('alice','water',{id:planted.id});stages.add(result.stage);}
+  assert.deepEqual([...stages],[1,2,3,4,5]);
+  const plant=(await f.db.doc('groups/A/gardenPlants/'+planted.id).get()).data();assert.equal(plant.plantType,type);assert.equal(plant.growthValue,item.required);assert.equal(plant.growthStage,5);
+  await assert.rejects(f.call('alice','water',{id:plant.id}),{code:'failed-precondition'});
+ }
+ const seeds=(await gardenRef.get()).data().seeds;assert.equal(seeds.sunflower,1);assert.equal(seeds.tulip,2);assert.equal((await f.wallet('alice')).coinBalance,550);assert.equal((await f.wallet('alice')).waterBalance,100);
+});

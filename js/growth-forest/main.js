@@ -23,7 +23,7 @@ function closeSheet(){if(busy)return;$('sheet').close();photoUrls.forEach(URL.re
 $('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{game?.setInputEnabled(!$('sheet').open);photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 async function action(action,payload,{close=true}={}){
  if(busy||!client)return null;busy=true;const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
- try{const result=await client.api(action,payload,true);if(close)$('sheet').close();try{await refresh();}catch(error){status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}status(result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result));return result;}
+ try{const result=await client.api(action,payload,true);try{await refresh();}catch(error){if(close)$('sheet').close();status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}if(close)$('sheet').close();status(result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result));return result;}
  catch(error){status(message(error),true);const panel=$('sheetBody').querySelector('.form-error');if(panel)panel.textContent=message(error);return null;}
  finally{busy=false;controls.filter(c=>c.isConnected).forEach(c=>c.disabled=false);}
 }
@@ -43,6 +43,7 @@ async function refresh(){
  $('buyPlot').textContent=`開墾新土地 · ${data.plotPrice.coins} 金幣＋${data.plotPrice.water} 水滴`;
  if(view==='rewards')renderRewards();if(view==='parent'&&!document.querySelector('#parentContent form:focus-within'))await renderParent();if(view==='records')await loadRecords(true);
 }
+function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{if(stopped)return;if(busy){scheduleRefresh();return;}refresh().catch(error=>status(message(error),true));},220);}
 async function openView(next){
  if(!data||busy||next==='parent'&&!data.parent)return;view=next;
  for(const item of ['forest','records','rewards','parent'])$(item+'View').hidden=item!==view;
@@ -194,7 +195,7 @@ function settingsForm(root){
 }
 async function initialize(){
  $('retry').hidden=true;status('正在連接你的森林…');
- try{if(!client){const m=await import('./client.js');client=await m.connect(context);}await refresh();if(stopped)return;if(!initializedOnce&&data.parent)view='parent';initializedOnce=true;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh().catch(e=>status(message(e),true)),220);},e=>status('即時同步中斷：'+message(e),true));}
+ try{if(!client){const m=await import('./client.js');client=await m.connect(context);}await refresh();if(stopped)return;if(!initializedOnce&&data.parent)view='parent';initializedOnce=true;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,scheduleRefresh,e=>status('即時同步中斷：'+message(e),true));}
  catch(error){status(message(error),true);$('retry').hidden=false;}
 }
 $('retry').onclick=initialize;

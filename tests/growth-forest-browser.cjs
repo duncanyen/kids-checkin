@@ -7,7 +7,7 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
 (async()=>{
  const db=new MemoryDB(),now=Date.parse('2026-11-05T04:00:00Z');
  await db.doc('users/alice').set({accountId:'alice',name:'小森林',role:'child'});await db.doc('users/parent').set({accountId:'parent',name:'森林家長',role:'parent'});await db.doc('groups/A').set({name:'森林家庭',members:['alice','parent']});
- const service=createGrowthService({db,now:()=>now}),browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+ const service=createGrowthService({db,now:()=>now,markCutover:!direct}),browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  const errors=[],network=[];
  try{
  const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Taipei'});
@@ -44,6 +44,7 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
   }catch(error){return{error:{code:'functions/'+error.code,message:error.message}};}
  });
  async function open(accountId){const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.setDefaultTimeout(15000);const wait=p.waitForFunction.bind(p);p.waitForFunction=(fn,arg,opts)=>wait(fn,arg,{timeout:15000,...opts});await p.clock.setFixedTime(new Date(now));await p.addInitScript(accountId=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name:'舊顯示',role:'child',groupId:'B'}));localStorage.setItem('lastGroupId','A');},accountId);await p.goto(base+'/wishwall.html');await p.waitForFunction(()=>document.querySelector('#pointsBalance').textContent!=='—');return p;}
+ if(!process.env.GROWTH_FLOWERS_ONLY){
  const child=await open('alice');await child.waitForSelector('#forestGame canvas');assert.equal(await child.locator('#parentNav').isVisible(),false);assert.match(await child.title(),/成長森林/);assert.equal(await child.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await child.click('[data-plot="0"]');await child.click('[data-plant="sunflower"]');await child.waitForFunction(()=>!document.querySelector('#sheet').open);await child.screenshot({path:'/tmp/nexus-growth-forest-child.png',fullPage:true});
  await child.click('#resourceGuide');assert.ok((await child.locator('#sheetBody').innerText()).includes('家長核准後，三種資源才會一起入帳'));await child.click('#closeSheet');
@@ -71,8 +72,23 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
  await parent.click('[data-parent=requests]');await parent.selectOption('[name=parentTarget]','alice');await parent.waitForSelector('[data-request][data-status=completed]');await parent.click('[data-request][data-status=completed]');await parent.fill('[name=reason]','獎品已交付');await parent.click('#reasonForm button[type=submit]');await parent.waitForFunction(()=>!document.querySelector('#sheet').open);
  await parent.setViewportSize({width:1440,height:1000});await parent.click('[data-parent=overview]');await parent.waitForSelector('.summary-grid');await parent.screenshot({path:'/tmp/nexus-growth-forest-parent.png',fullPage:true});
  assert.equal(await parent.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- await child.bringToFront();await child.click('[data-view=forest]');await child.screenshot({path:'/tmp/nexus-growth-forest-progress.png',fullPage:true});
+ await child.bringToFront();await child.click('[data-view=forest]');await child.screenshot({path:'/tmp/nexus-growth-forest-progress.png',fullPage:true});await child.close();await parent.close();
+ }
+ // New flower catalog works for an existing-style seed bag and the real renderer.
+ await db.doc('users/flora').set({accountId:'flora',name:'花園',role:'child'});await db.doc('groups/A').set({name:'森林家庭',members:['alice','parent','flora']});
+ await service.handle({auth:{uid:'flora',token:{photoAccountId:'flora',photoGroupId:'A'}},data:{groupId:'A',action:'snapshot'}});
+ const floraWallet=(await db.doc('groups/A/growthProfiles/flora').get()).data();await db.doc('groups/A/growthProfiles/flora').set({...floraWallet,coinBalance:1000,waterBalance:1000});
+ const floraGarden=(await db.doc('groups/A/gardens/flora').get()).data();await db.doc('groups/A/gardens/flora').set({...floraGarden,seeds:{sunflower:1,tulip:0,sakura:0}});
+ const florist=await open('flora');let flowerCoins=1000;
+ for(const [index,[type,name,price,required]]of [['rose','玫瑰花',100,200],['daffodil','水仙花',150,300],['lavender','薰衣草',200,400]].entries()){
+  await florist.click('#seedShop');assert.equal(await florist.locator('[data-buy]').count(),6);const card=florist.locator(`[data-buy="${type}"]`).locator('..');assert.ok((await card.innerText()).includes(name));assert.ok((await card.innerText()).includes(`${price} 金幣`));await florist.click(`[data-buy="${type}"]`);await florist.click('#buyForm button[type=submit]');flowerCoins-=price;await florist.waitForFunction(expected=>document.querySelector('#coinBalance').textContent===String(expected),flowerCoins);
+  await florist.click(`[data-plot="${index}"]`);await florist.click(`[data-plant="${type}"]`);await florist.waitForFunction(({index,name})=>!document.querySelector('#sheet').open&&document.querySelector(`[data-plot="${index}"]`)?.textContent.includes(name),{index,name});await florist.click(`[data-plot="${index}"]`);await florist.click('#waterPlant');await florist.waitForFunction(required=>document.querySelector('#sheetBody').textContent.includes(`10 / ${required}`),required).catch(async error=>{console.error('Flower watering diagnostic:',type,await florist.locator('#status').innerText(),await florist.locator('#sheetBody').innerText());await florist.screenshot({path:'/tmp/new-flowers-error.png',fullPage:true});throw error;});await florist.click('#closeSheet');
+ }
+ // Render all mature assets in the actual Phaser scene after isolated fixture hydration.
+ for(const [path,plant]of db.data)if(path.startsWith('groups/A/gardenPlants/')&&plant.accountId==='flora')db.data.set(path,{...plant,growthValue:plant.growthRequired,growthStage:5});
+ await florist.reload();await florist.waitForFunction(()=>[...document.querySelectorAll('[data-plot]')].every(button=>button.textContent.includes('Lv.5')));await florist.waitForSelector('#forestGame canvas');await florist.waitForTimeout(500);await florist.screenshot({path:'/tmp/nexus-growth-forest-new-flowers.png',fullPage:true});await florist.click('#seedShop');await florist.screenshot({path:'/tmp/nexus-growth-forest-new-seeds.png',fullPage:true});
+ assert.equal(await florist.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);console.log('growth: six seed types, exact new prices, legacy seed bag, three new plants, watering and mature Phaser rendering verified');
  if(direct){assert.ok(!network.some(url=>/cloudfunctions[.]net|firebase-functions[.]js|firebase-auth[.]js/.test(url)));assert.equal(db.data.has('groups/A/settings/growthForestCutover'),false);}
- assert.deepEqual(errors,[]);console.log((direct?'PASS DIRECT FIRESTORE (no Auth/Functions calls): ':'PASS CLOUD SERVICE FIXTURE: ')+'Growth Forest: real Phaser, child/parent separation, initial planting, pending exam, parent approval, live balances, water/stage change, reading rewards, rule snapshots, seed purchase/plant/reload, modal input isolation, expandable plots and pagination, XSS-safe history, transaction ledger, legacy reward request and completion, 390px mobile and 1440px desktop.');
+ assert.deepEqual(errors,[]);console.log((process.env.GROWTH_FLOWERS_ONLY?'FLOWER CATALOG FLOW: ':'')+(direct?'PASS DIRECT FIRESTORE (no Auth/Functions calls): ':'PASS CLOUD SERVICE FIXTURE: ')+(process.env.GROWTH_FLOWERS_ONLY?'six seed types, exact new prices, legacy seed bag, planting/watering and mature flower rendering.':'Growth Forest: real Phaser, child/parent separation, initial planting, pending exam, parent approval, live balances, water/stage change, reading rewards, rule snapshots, seed purchase/plant/reload, modal input isolation, expandable plots and pagination, XSS-safe history, transaction ledger, legacy reward request and completion, 390px mobile and 1440px desktop.'));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -26,3 +26,5 @@ for(const type of ['sunflower','tulip','sakura'])for(let stage=1;stage<=5;stage+
  }
  fs.writeFileSync(path.join(root,`${type}-${stage}.svg`),`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="240" viewBox="0 0 200 240"><ellipse cx="100" cy="203" rx="31" ry="6" fill="#35563d" opacity=".13"/>${art}</svg>`);
 }
+
+require('./build-growth-flower-art.cjs');

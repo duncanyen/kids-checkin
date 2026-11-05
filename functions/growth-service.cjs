@@ -52,7 +52,7 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
             if(legacyBalance<0||!Number.isFinite(reserved)||reserved<0)D.fail('failed-precondition','舊積分需先由家長核對，未變更任何歷史資料');
             const time=now(),wallet={schemaVersion:1,accountId,gardenLevel:1,pointsBalance:D.round(legacyBalance+reserved),pointsReserved:reserved,waterBalance:0,coinBalance:0,redeemedPoints:D.round(redeemRows.filter(r=>legacyStatus[r.status]==='completed').reduce((sum,r)=>sum+Number(r.cost||0),0)),createdAt:time,...stamp(c,time)};
             const report={schemaVersion:1,accountId,legacyBalance,pointsReserved:reserved,scoreCount:scores.size,requestCount:redeems.size,sourceRevision:oldRevision.data()?.revision||0,sourceFingerprint:await D.hash({scoreRows,redeemRows,oldRules}),sourcePaths:['scores','redeems','settings/wishWall'],createdAt:time,groupId:c.groupId};
-            t.create(walletRef,wallet);if(!garden.exists)t.create(ref(c.groupId,'gardens',accountId),{schemaVersion:1,accountId,slots:[null,null,null],plotCount:3,seeds:{sunflower:1,tulip:0,sakura:0},createdAt:time,...stamp(c,time)});
+            t.create(walletRef,wallet);if(!garden.exists)t.create(ref(c.groupId,'gardens',accountId),{schemaVersion:1,accountId,slots:[null,null,null],plotCount:3,seeds:Object.fromEntries(Object.keys(D.PLANTS).map(type=>[type,type==='sunflower'?1:0])),createdAt:time,...stamp(c,time)});
             t.create(ref(c.groupId,'growthMigrations',accountId),report);
             journal(t,c,'opening_'+await D.hash(accountId),accountId,'legacy-opening',{points:wallet.pointsBalance,water:0,coins:0},zero(),balances(wallet),{kind:'migration',id:accountId},'依舊規則保留積分，歷史紀錄不再發水滴或金幣');
             if(!settings.exists){
