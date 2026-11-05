@@ -6,7 +6,7 @@ const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&
 const dates=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}),today=()=>dates.format(new Date());
 const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revoked:'已撤銷',legacy:'歷史紀錄',requested:'申請中',processing:'準備中',completed:'已發放',cancelled:'已取消'};
 const context=readGameContext(),clock=new ReadingClock(localStorage,`nexus.growth.clock:${context.groupId}:${context.accountId}`);
-let initializedOnce=false,refreshGeneration=0;
+let initializedOnce=false,refreshGeneration=0,forestPage=0,pageLoading=false;
 if(new URLSearchParams(location.search).get('nav')==='1'){const nav=document.querySelector('.forest-nav');nav.classList.add('inline');document.querySelector('main').before(nav);}
 let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},timer,refreshTimer,unsubscribe,photoUrls=[];
 let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -18,9 +18,9 @@ function select(label,name,options,value=''){return `<label>${esc(label)}<select
 const note=(label='備註（選填）',name='note',value='')=>`<label class="full">${esc(label)}<textarea name="${name}" maxlength="1000">${esc(value)}</textarea></label>`;
 const formEnd=(text='儲存')=>`<p class="form-error full" role="status"></p><footer class="full"><button type="button" data-close class="outline">取消</button><button type="submit">${esc(text)}</button></footer></form>`;
 const available=()=>Math.round((data.wallet.pointsBalance-data.wallet.pointsReserved)*100)/100;
-function sheet(title,html){delete $('sheet').dataset.recordId;delete $('sheet').dataset.recordStatus;photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];$('sheetTitle').textContent=title;$('sheetBody').innerHTML=html;if(!$('sheet').open)$('sheet').showModal();$('sheetBody').querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeSheet());updateTimer();}
+function sheet(title,html){delete $('sheet').dataset.recordId;delete $('sheet').dataset.recordStatus;photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];game?.setInputEnabled(false);$('sheetTitle').textContent=title;$('sheetBody').innerHTML=html;if(!$('sheet').open)$('sheet').showModal();$('sheetBody').querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeSheet());updateTimer();}
 function closeSheet(){if(busy)return;$('sheet').close();photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];}
-$('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+$('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{game?.setInputEnabled(!$('sheet').open);photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 async function action(action,payload,{close=true}={}){
  if(busy||!client)return null;busy=true;const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
  try{const result=await client.api(action,payload,true);if(close)$('sheet').close();try{await refresh();}catch(error){status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}status(result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result));return result;}
@@ -29,31 +29,36 @@ async function action(action,payload,{close=true}={}){
 }
 function rewardMessage(result){const r=result.rewards;if(r&&Object.values(r).some(n=>n>0))return `努力已化成養分：星星 +${r.points}、水滴 +${r.water}、金幣 +${r.coins}。`;return '已儲存，你的森林已同步。';}
 async function refresh(){
- if(stopped||!client)return;const generation=++refreshGeneration,incoming=await client.api('snapshot');if(stopped||generation!==refreshGeneration)return;const previous=data;data=incoming;if(previous&&!busy&&['pointsBalance','waterBalance','coinBalance'].some(key=>data.wallet[key]>previous.wallet[key]))status('你的努力有回報！森林資源已更新。');
+ if(stopped||!client)return;const generation=++refreshGeneration,incoming=await client.api('snapshot',{page:forestPage});if(stopped||generation!==refreshGeneration)return;const previous=data;data=incoming;forestPage=data.gardenPage.page;if(previous&&!busy&&['pointsBalance','waterBalance','coinBalance'].some(key=>data.wallet[key]>previous.wallet[key]))status('你的努力有回報！森林資源已更新。');
  $('groupName').textContent=data.group.name+' · 成長森林';$('greeting').textContent=data.actor.name+'的成長森林';
  $('pointsBalance').textContent=available().toLocaleString();$('waterBalance').textContent=data.wallet.waterBalance.toLocaleString();$('coinBalance').textContent=data.wallet.coinBalance.toLocaleString();$('parentNav').hidden=!data.parent;
  $('reservedNote').textContent=`可用 ${available()} 點 · 兌換保留 ${data.wallet.pointsReserved} 點。獎品發放時才會正式扣除保留積分。`;
- $('sceneMessage').textContent=data.garden.slots.every(p=>!p)?'點一塊土壤，種下送給你的第一顆向日葵。':'每一株植物，都記得你的努力。';
+ $('sceneMessage').textContent=data.gardenPage.plots.every(p=>!p.plantId)?(Object.values(data.garden.seeds).some(n=>n>0)?'選一塊土壤，種下背包裡的種子。':'這區還有空地，可以先到種子小舖購買種子。'):'每一株植物，都記得你的努力。';
  game?.set(data);
- for(let i=0;i<3;i++){const plant=data.plants.find(p=>p.id===data.garden.slots[i]);document.querySelector(`[data-plot="${i}"]`).textContent=plant?`${data.plantCatalog[plant.plantType].name} · Lv.${plant.growthStage}`:`位置${i+1} · 種植`;}
- if(view==='rewards')renderRewards();if(view==='parent'&&!document.querySelector('#parentPanel form:focus-within'))await renderParent();if(view==='records')await loadRecords(true);
+ const section=data.gardenPage;
+ document.querySelector('.plot-access').innerHTML=section.plots.map(slot=>{const plant=data.plants.find(p=>p.id===slot.plantId);return `<button data-plot="${slot.positionIndex}">${plant?`${esc(data.plantCatalog[plant.plantType].name)} · Lv.${plant.growthStage}`:`位置 ${slot.positionIndex+1} · 種植`}</button>`;}).join('');
+ $('forestPageLabel').textContent=`第 ${section.page+1} / ${section.totalPages} 區 · 共 ${data.garden.plotCount} 塊土地`;
+ $('previousForest').disabled=section.page===0||pageLoading;$('nextForest').disabled=section.page===section.totalPages-1||pageLoading;
+ $('forestGame').setAttribute('aria-label',`我的森林，第 ${section.page+1} 區，共 ${data.garden.plotCount} 塊土地`);
+ $('buyPlot').textContent=`開墾新土地 · ${data.plotPrice.coins} 金幣＋${data.plotPrice.water} 水滴`;
+ if(view==='rewards')renderRewards();if(view==='parent'&&!document.querySelector('#parentContent form:focus-within'))await renderParent();if(view==='records')await loadRecords(true);
 }
 async function openView(next){
  if(!data||busy||next==='parent'&&!data.parent)return;view=next;
  for(const item of ['forest','records','rewards','parent'])$(item+'View').hidden=item!==view;
  document.querySelectorAll('[data-view]').forEach(b=>{if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  if(view==='forest'){
-  if(!game&&!gamePending){gamePending=import('./scene.js').then(m=>m.createForest($('forestGame'),plot,lowPower)).then(g=>{if(stopped){g.destroy();return;}game=g;g.set(data);if(view!=='forest'||document.hidden)g.pause();}).catch(e=>status(message(e),true)).finally(()=>gamePending=null);}
+  if(!game&&!gamePending){gamePending=import('./scene.js').then(m=>m.createForest($('forestGame'),index=>{if(!$('sheet').open)plot(index);},lowPower)).then(g=>{if(stopped){g.destroy();return;}game=g;g.set(data);g.setInputEnabled(!$('sheet').open);if(view!=='forest'||document.hidden)g.pause();}).catch(e=>status(message(e),true)).finally(()=>gamePending=null);}
   game?.resume();
  }else game?.pause();
  if(view==='records'){renderFilters($('recordFilters'),false);await loadRecords(true);}if(view==='rewards')renderRewards();if(view==='parent')await renderParent();
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view).catch(e=>status(message(e),true)));
 $('powerMode').onclick=async()=>{lowPower=!lowPower;localStorage.setItem('nexus.growth.lowPower',lowPower?'1':'0');$('powerMode').setAttribute('aria-pressed',String(lowPower));game?.destroy();game=null;if(view==='forest')await openView('forest');};
-document.querySelectorAll('[data-plot]').forEach(b=>b.onclick=()=>plot(Number(b.dataset.plot)));
+document.querySelector('.plot-access').onclick=e=>{const button=e.target.closest('[data-plot]');if(button)plot(Number(button.dataset.plot));};
 function plot(index){
- if(!data||busy)return;const plant=data.plants.find(p=>p.id===data.garden.slots[index]);
- if(!plant){sheet('種下新的可能',`<p class="body-copy">位置 ${index+1} · 選一顆背包裡的種子。第一次的向日葵種子已送給你。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-2.svg" alt="${esc(c.name)}"><h3>${esc(c.name)}</h3><p>背包 ${data.garden.seeds[type]||0} 顆</p><button data-plant="${type}" ${!(data.garden.seeds[type]>0)?'disabled':''}>種下</button></article>`).join('')}</div><button class="text-link" id="shopFromPlant">前往種子小舖</button>`);
+ if(!data||busy||!data.gardenPage.plots.some(slot=>slot.positionIndex===index))return;const plant=data.plants.find(p=>p.positionIndex===index);
+ if(!plant){sheet('種下新的可能',`<p class="body-copy">位置 ${index+1} · 選一顆背包裡的種子；不足時可到種子小舖購買。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-2.svg" alt="${esc(c.name)}"><h3>${esc(c.name)}</h3><p>背包 ${data.garden.seeds[type]||0} 顆</p><button data-plant="${type}" ${!(data.garden.seeds[type]>0)?'disabled':''}>種下</button></article>`).join('')}</div><button class="text-link" id="shopFromPlant">前往種子小舖</button>`);
   $('sheetBody').querySelectorAll('[data-plant]').forEach(b=>b.onclick=async()=>{const r=await action('plant',{plantType:b.dataset.plant,positionIndex:index});if(r)game?.effect(index,'growth');});$('shopFromPlant').onclick=seedShop;return;
  }
  const next=[0,20,40,70,100][plant.growthStage],required=plant.growthRequired;
@@ -65,7 +70,32 @@ function seedShop(){
  sheet('種子小舖',`<p class="body-copy">金幣餘額 ${data.wallet.coinBalance} · 種子買下後會放進背包，再選位置種下。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-5.svg" alt="${esc(c.name)}成熟樣貌"><h3>${esc(c.name)}</h3><p>${c.price} 金幣</p><button data-buy="${type}">購買種子</button></article>`).join('')}</div><p class="form-error" role="status"></p>`);
  $('sheetBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const c=data.plantCatalog[b.dataset.buy];sheet('確認購買',`<p>花費 ${c.price} 金幣購買一顆${esc(c.name)}種子？</p><form id="buyForm">${formEnd('確認購買')}`);$('buyForm').onsubmit=async e=>{e.preventDefault();await action('buySeed',{plantType:b.dataset.buy});};});
 }
-$('seedShop').onclick=seedShop;$('openPlants').onclick=()=>{if(!data||busy)return;sheet('我的植物',`<div class="record-list">${[0,1,2].map(i=>{const p=data.plants.find(p=>p.id===data.garden.slots[i]);return `<div class="record-row"><div><strong>${p?esc(data.plantCatalog[p.plantType].name):'等待種下新植物'}</strong><p>${p?`Lv.${p.growthStage} · ${p.growthValue} / ${p.growthRequired} 滴`:'還有一塊空地'}</p></div><button data-open-plot="${i}">位置 ${i+1}</button></div>`;}).join('')}</div>`);$('sheetBody').querySelectorAll('[data-open-plot]').forEach(b=>b.onclick=()=>plot(Number(b.dataset.openPlot)));};
+$('seedShop').onclick=seedShop;
+async function changeForestPage(page){
+ if(!data||busy||pageLoading)return;const previous=forestPage;pageLoading=true;forestPage=page;$('previousForest').disabled=true;$('nextForest').disabled=true;
+ try{await refresh();if($('sheet').open&&$('sheetTitle').textContent==='我的植物')myPlants();}
+ catch(error){forestPage=previous;status(message(error),true);}
+ finally{pageLoading=false;$('previousForest').disabled=data.gardenPage.page===0;$('nextForest').disabled=data.gardenPage.page===data.gardenPage.totalPages-1;}
+}
+$('previousForest').onclick=()=>changeForestPage(Math.max(0,forestPage-1));$('nextForest').onclick=()=>changeForestPage(forestPage+1);
+function myPlants(){
+ if(!data||busy)return;const section=data.gardenPage;
+ sheet('我的植物',`<p class="body-copy">共 ${data.garden.plotCount} 塊土地 · 第 ${section.page+1} / ${section.totalPages} 區</p><div class="record-list">${section.plots.map(slot=>{const p=data.plants.find(p=>p.id===slot.plantId);return `<div class="record-row"><div><strong>${p?esc(data.plantCatalog[p.plantType].name):'等待種下新植物'}</strong><p>${p?`Lv.${p.growthStage} · ${p.growthValue} / ${p.growthRequired} 滴`:'還有一塊空地'}</p></div><button data-open-plot="${slot.positionIndex}">位置 ${slot.positionIndex+1}</button></div>`;}).join('')}</div><div class="forest-pages"><button id="plantPrevious" class="outline" ${section.page===0?'disabled':''}>上一區</button><button id="plantNext" class="outline" ${section.page===section.totalPages-1?'disabled':''}>下一區</button></div><button id="expandFromPlants" class="outline wide">開墾新土地</button>`);
+ $('sheetBody').querySelectorAll('[data-open-plot]').forEach(b=>b.onclick=()=>plot(Number(b.dataset.openPlot)));
+ $('plantPrevious').onclick=()=>changeForestPage(forestPage-1);$('plantNext').onclick=()=>changeForestPage(forestPage+1);$('expandFromPlants').onclick=buyPlotForm;
+}
+$('openPlants').onclick=myPlants;
+function buyPlotForm(){
+ if(!data||busy)return;const cost=data.plotPrice,enough=data.wallet.coinBalance>=cost.coins&&data.wallet.waterBalance>=cost.water;
+ sheet('開墾新土地',`<p>花費 ${cost.coins} 森林金幣與 ${cost.water} 成長水滴，增加一塊永久土地。可持續購買，不扣星星積分。</p><p class="body-copy">目前共有 ${data.garden.plotCount} 塊土地。餘額：${data.wallet.coinBalance} 金幣、${data.wallet.waterBalance} 水滴。${enough?'':'資源不足，請先完成考試或閱讀並取得獎勵。'}</p><form id="buyPlotForm">${formEnd('確認開墾')}`);
+ $('buyPlotForm').querySelector('[type=submit]').disabled=!enough;
+ $('buyPlotForm').onsubmit=async e=>{e.preventDefault();const result=await action('buyPlot',{});if(result){await changeForestPage(Math.floor(result.positionIndex/3));status(`已開墾位置 ${result.positionIndex+1}，可以種植新植物了。`);}};
+}
+$('buyPlot').onclick=buyPlotForm;
+$('resourceGuide').onclick=()=>{
+ if(!data||busy)return;const s=data.settings,n=esc;
+ sheet('資源怎麼獲得？',`<p>星星積分可申請夢想獎勵；成長水滴用於澆水與開墾；森林金幣用於購買種子與開墾。</p><h3>考試：依目前群組規則</h3><p>${s.examApproval?'家長核准後，三種資源才會一起入帳。':'提交有效紀錄後，三種資源自動入帳。'}分數先換算為百分制，再套用下列區間。</p><div class="resource-table"><table><thead><tr><th>百分制區間</th><th>星星積分</th><th>成長水滴</th><th>森林金幣</th></tr></thead><tbody>${s.examBands.map((b,i)=>`<tr><td>${n(b.min)}${i?`～未滿 ${n(s.examBands[i-1].min)}`:'～100'} 分</td><td>${n(b.points)}</td><td>${n(b.water)}</td><td>${n(b.coins)}</td></tr>`).join('')}</tbody></table></div><p>同科目、同考試類型與前一次有效成績比較，進步時僅額外增加星星：${s.improvementBands.map(b=>`進步至少 ${n(b.min)} 個百分點，額外 ${n(b.points)} 點`).join('；')}。只取符合的最高區間，不累加；首次紀錄沒有進步加分。</p><h3>閱讀</h3><p>每筆達 ${n(s.reading.minutes)} 分鐘可獲得一份：星星 ${n(s.reading.points)}、水滴 ${n(s.reading.water)}、金幣 ${n(s.reading.coins)}。每位使用者每日最多 ${n(s.reading.dailyLimit)} 份；未滿門檻仍保留紀錄，不發資源。${s.readingApproval?'需家長核准後一起入帳。':'目前採自動核准，不必等待家長。'}</p><h3>家長個別獎勵</h3><p>家長可以手動調整星星積分並填寫原因；手動調整不會增加水滴或金幣。既有歷史積分保留，不補發水滴或金幣。規則變更只影響之後提交的紀錄。</p>`);
+};
 function examForm(){
  if(!data||busy)return;
  sheet('紀錄考試',`<form id="examForm" class="form-grid">${field('考試日期','eventDate','date',today(),`required max="${today()}"`)}${select('科目','subject',['國文','英文','數學','自然','社會','自訂'],'數學')}${field('自訂科目（選自訂時填寫）','customSubject','text','','maxlength="40"')}${select('考試類型','examType',['小考','段考','期中考','期末考','練習測驗'])}${field('考試分數','score','number','','required min="0" max="10000" step="0.01" inputmode="decimal"')}${field('考試滿分','maxScore','number',100,'required min="0.01" max="10000" step="0.01"')}${note()}<label class="full">考卷照片（選填，最大 5 MB）<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="hint full">${data.settings.examApproval?'成績需家長核准後才發放獎勵。':'目前考試採自動核准。'} 不同滿分會換算為百分制比較。</p>${formEnd('提交考試紀錄')}`);

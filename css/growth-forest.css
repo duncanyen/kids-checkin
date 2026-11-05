@@ -5,3 +5,5 @@
 .forest-nav.inline{position:sticky;top:0;bottom:auto;left:auto;right:auto;gap:12px;justify-content:flex-start;backdrop-filter:blur(8px);padding:8px 0;z-index:30;margin:0 0 18px;border-top:0;border-bottom:1px solid var(--border)}
 
 .record-row>div:first-child,.forest-identity>div{min-width:0;overflow-wrap:anywhere}.record-row .row-actions{flex-shrink:0}.reward h3,#greeting,.body-copy,.sheet-heading h2{overflow-wrap:anywhere}
+
+.forest-pages{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0;font-size:12px}.forest-pages span{text-align:center}#buyPlot{margin-bottom:10px}.resource-table{overflow-x:auto;margin:16px 0}.resource-table table{border-collapse:collapse;width:100%;font-size:13px}.resource-table th,.resource-table td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}

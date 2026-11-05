@@ -153,3 +153,37 @@ test('malformed requests and foreign or nested exam-photo paths are rejected',as
  const f=await setup();await assert.rejects(f.service.handle({auth:{uid:'alice'},data:null}),{code:'invalid-argument'});
  for(const photoPath of ['growth-exams/B/alice/file.jpg','growth-exams/A/parent/file.jpg','growth-exams/A/alice/nested/file.jpg','growth-exams/A/alice/script.svg'])await assert.rejects(f.call('alice','createRecord',exam({photoPath})),{code:'permission-denied'});
 });
+
+test('land expands atomically without a fixed cap; page reads preserve old plants and bounded garden size',async()=>{
+ const f=await setup();await f.call('alice','snapshot');const first=await f.call('alice','plant',{positionIndex:0,plantType:'sunflower'});
+ const walletRef=f.db.doc('groups/A/growthProfiles/alice'),gardenRef=f.db.doc('groups/A/gardens/alice');
+ await walletRef.set({...await f.wallet('alice'),pointsBalance:123,coinBalance:1000,waterBalance:1000});
+ const bought=await Promise.all([f.call('alice','buyPlot',{coins:0,water:0}),f.call('alice','buyPlot',{})]);
+ assert.deepEqual(bought.map(r=>r.positionIndex).sort(),[3,4]);assert.equal((await f.wallet('alice')).coinBalance,800);assert.equal((await f.wallet('alice')).waterBalance,960);assert.equal((await f.wallet('alice')).pointsBalance,123);
+ const rid=crypto.randomUUID(),third=await f.call('alice','buyPlot',{},rid);assert.deepEqual(await f.call('alice','buyPlot',{},rid),third);
+ assert.equal((await gardenRef.get()).data().plotCount,6);assert.equal((await gardenRef.get()).data().slots.length,3);
+ await f.call('alice','buySeed',{plantType:'tulip'});const planted=await f.call('alice','plant',{positionIndex:5,plantType:'tulip'});
+ await f.call('alice','water',{id:planted.id});
+ const page=await f.service.handle(f.request('alice','snapshot',{page:1}));assert.equal(page.gardenPage.totalPages,2);assert.deepEqual(page.gardenPage.plots.map(p=>p.positionIndex),[3,4,5]);assert.equal(page.plants[0].growthValue,10);
+ const old=await f.call('alice','snapshot');assert.equal(old.plants[0].id,first.id);
+ await assert.rejects(f.call('alice','plant',{positionIndex:6,plantType:'sunflower'}),{code:'invalid-argument'});
+ await f.call('alice','buySeed',{plantType:'tulip'});await assert.rejects(f.call('alice','plant',{positionIndex:5,plantType:'tulip'}),{code:'failed-precondition'});
+ await gardenRef.set({...((await gardenRef.get()).data()),plotCount:2501});
+ const far=await f.service.handle(f.request('alice','snapshot',{page:833}));assert.equal(far.garden.plotCount,2501);assert.equal(far.gardenPage.plots.length,2);assert.equal(far.plants.length,0);
+ const beyond=await f.service.handle(f.request('alice','snapshot',{page:9999}));assert.equal(beyond.gardenPage.page,833);
+ await assert.rejects(f.service.handle(f.request('alice','snapshot',{page:-1})),{code:'invalid-argument'});
+ // A failed purchase cannot partially consume either resource or change land.
+ const before=await f.wallet('alice');await walletRef.set({...before,coinBalance:99});
+ await assert.rejects(f.call('alice','buyPlot',{}),{code:'failed-precondition'});assert.equal((await f.wallet('alice')).waterBalance,before.waterBalance);assert.equal((await gardenRef.get()).data().plotCount,2501);
+ await walletRef.set({...before,waterBalance:19});await assert.rejects(f.call('alice','buyPlot',{}),{code:'failed-precondition'});assert.equal((await f.wallet('alice')).coinBalance,before.coinBalance);
+});
+
+test('legacy three-slot gardens remain usable without resetting plants or resources',async()=>{
+ const f=await setup();await f.call('alice','snapshot');const planted=await f.call('alice','plant',{positionIndex:0,plantType:'sunflower'});
+ // Model a garden created before indexed plots and plotCount existed.
+ f.db.data.delete('groups/A/gardenPlots/alice_0');const garden=(await f.db.doc('groups/A/gardens/alice').get()).data();delete garden.plotCount;await f.db.doc('groups/A/gardens/alice').set(garden);
+ const wallet=await f.wallet('alice');await f.db.doc('groups/A/growthProfiles/alice').set({...wallet,waterBalance:30,coinBalance:100});
+ assert.equal((await f.call('alice','snapshot')).garden.plotCount,3);
+ await f.call('alice','water',{id:planted.id});await f.call('alice','buyPlot',{});
+ assert.equal((await f.call('alice','snapshot')).plants[0].id,planted.id);assert.equal((await f.call('alice','snapshot')).garden.plotCount,4);
+});

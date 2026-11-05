@@ -52,7 +52,7 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
             if(legacyBalance<0||!Number.isFinite(reserved)||reserved<0)D.fail('failed-precondition','舊積分需先由家長核對，未變更任何歷史資料');
             const time=now(),wallet={schemaVersion:1,accountId,gardenLevel:1,pointsBalance:D.round(legacyBalance+reserved),pointsReserved:reserved,waterBalance:0,coinBalance:0,redeemedPoints:D.round(redeemRows.filter(r=>legacyStatus[r.status]==='completed').reduce((sum,r)=>sum+Number(r.cost||0),0)),createdAt:time,...stamp(c,time)};
             const report={schemaVersion:1,accountId,legacyBalance,pointsReserved:reserved,scoreCount:scores.size,requestCount:redeems.size,sourceRevision:oldRevision.data()?.revision||0,sourceFingerprint:await D.hash({scoreRows,redeemRows,oldRules}),sourcePaths:['scores','redeems','settings/wishWall'],createdAt:time,groupId:c.groupId};
-            t.create(walletRef,wallet);if(!garden.exists)t.create(ref(c.groupId,'gardens',accountId),{schemaVersion:1,accountId,slots:[null,null,null],seeds:{sunflower:1,tulip:0,sakura:0},createdAt:time,...stamp(c,time)});
+            t.create(walletRef,wallet);if(!garden.exists)t.create(ref(c.groupId,'gardens',accountId),{schemaVersion:1,accountId,slots:[null,null,null],plotCount:3,seeds:{sunflower:1,tulip:0,sakura:0},createdAt:time,...stamp(c,time)});
             t.create(ref(c.groupId,'growthMigrations',accountId),report);
             journal(t,c,'opening_'+await D.hash(accountId),accountId,'legacy-opening',{points:wallet.pointsBalance,water:0,coins:0},zero(),balances(wallet),{kind:'migration',id:accountId},'依舊規則保留積分，歷史紀錄不再發水滴或金幣');
             if(!settings.exists){
@@ -156,21 +156,28 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
                     t.create(ref(c.groupId,'growthRecordHistory',key),{recordId:record.id,accountId:record.accountId,before:old,after:updated,reason,createdAt:time,...stamp(c,time)});
                     t.set(recordRef,updated);t.set(ownerRef,{...owner,...stamp(c,time)});journal(t,c,key,record.accountId,p.revoke?'record-revoked':'record-corrected',delta,before,balances(owner),{kind:'record',id:record.id},reason);result={id:record.id,status:updated.approvalStatus};
                 }
-            }else if(action==='buySeed'||action==='plant'||action==='water'){
+            }else if(action==='buyPlot'||action==='buySeed'||action==='plant'||action==='water'){
                 const before=balances(wallet);
-                if(action==='buySeed'){
+                if(action==='buyPlot'){
+                    const count=D.plotCount(garden);if(count>=Number.MAX_SAFE_INTEGER)D.fail('resource-exhausted','土地數量超過可處理的數值範圍');
+                    change(wallet,{coins:-D.PLOT_PRICE.coins,water:-D.PLOT_PRICE.water});garden.plotCount=count+1;
+                    journal(t,c,key,c.accountId,'plot-purchased',{points:0,water:-D.PLOT_PRICE.water,coins:-D.PLOT_PRICE.coins},before,balances(wallet),{kind:'plot',id:String(count)});result={positionIndex:count,plotCount:count+1};
+                }else if(action==='buySeed'){
                     const type=D.id(p.plantType),plant=D.PLANTS[type];if(!plant)D.fail('invalid-argument','種子不存在');
                     if((garden.seeds[type]||0)>=99)D.fail('resource-exhausted','同一種子最多持有 99 顆');
                     change(wallet,{coins:-plant.price});garden.seeds[type]=(garden.seeds[type]||0)+1;
                     journal(t,c,key,c.accountId,'seed-purchased',{points:0,water:0,coins:-plant.price},before,balances(wallet),{kind:'seed',id:type});
                 }else if(action==='plant'){
-                    const position=D.number(p.positionIndex,'種植位置',0,2),type=D.id(p.plantType),plant=D.PLANTS[type];
-                    if(!plant||garden.slots[position]||!(garden.seeds[type]>0))D.fail('failed-precondition','種植位置已使用或沒有這顆種子');
-                    const plantId='p_'+key.slice(0,40);garden.seeds[type]--;garden.slots[position]=plantId;
+                    const position=D.number(p.positionIndex,'種植位置',0,D.plotCount(garden)-1),type=D.id(p.plantType),plant=D.PLANTS[type];
+                    const plotRef=ref(c.groupId,'gardenPlots',c.accountId+'_'+position),occupied=await t.get(plotRef);
+                    if(!plant||occupied.data()?.plantId||garden.slots?.[position]||!(garden.seeds[type]>0))D.fail('failed-precondition','種植位置已使用或沒有這顆種子');
+                    const plantId='p_'+key.slice(0,40);garden.seeds[type]--;if(position<3)garden.slots[position]=plantId;
+                    t.set(plotRef,{accountId:c.accountId,positionIndex:position,plantId,...stamp(c,time)});
                     t.create(ref(c.groupId,'gardenPlants',plantId),{schemaVersion:1,id:plantId,accountId:c.accountId,ownerAccountId:c.accountId,plantType:type,growthValue:0,growthStage:1,growthRequired:plant.required,positionIndex:position,plantedAt:time,...stamp(c,time)});result={id:plantId,positionIndex:position};
                 }else{
                     const plantRef=ref(c.groupId,'gardenPlants',D.id(p.id)),snapshot=await t.get(plantRef),plant=snapshot.data();
-                    if(!plant||plant.accountId!==c.accountId||!garden.slots.includes(plant.id))D.fail('permission-denied','這不是你的植物');
+                    const plot=plant?await t.get(ref(c.groupId,'gardenPlots',c.accountId+'_'+plant.positionIndex)):null;
+                    if(!plant||plant.accountId!==c.accountId||!(plot?.data()?.plantId===plant.id||garden.slots?.[plant.positionIndex]===plant.id))D.fail('permission-denied','這不是你的植物');
                     const amount=Math.min(10,plant.growthRequired-plant.growthValue);if(amount<=0)D.fail('failed-precondition','植物已成熟，不需要再澆水');
                     if(wallet.waterBalance<amount)D.fail('failed-precondition','水滴不夠了！完成閱讀或紀錄考試，就能獲得更多水滴。');
                     change(wallet,{water:-amount});plant.growthValue+=amount;plant.growthStage=D.stage(plant.growthValue,plant.growthRequired);
@@ -239,10 +246,20 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
     }
     async function snapshot(request){
         const c=await context(request),accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
-        const [wallet,garden,plants,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),collection(c.groupId,'gardenPlants').where('accountId','==',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
+        const [wallet,garden,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
+        const count=D.plotCount(garden.data()),totalPages=Math.ceil(count/3),requestedPage=D.number(request.data.payload?.page??0,'森林頁碼',0,Number.MAX_SAFE_INTEGER),page=Math.min(requestedPage,totalPages-1),start=page*3;
+        // Read only this page. Separate plot documents avoid an ever-growing
+        // garden array and Firestore's one-document size limit.
+        const plots=await Promise.all(Array.from({length:Math.min(3,count-start)},async(_,i)=>{
+            const positionIndex=start+i,slot=(await ref(c.groupId,'gardenPlots',accountId+'_'+positionIndex).get()).data();
+            const plantId=slot?.plantId||garden.data().slots?.[positionIndex]||null;
+            const plant=plantId?(await ref(c.groupId,'gardenPlants',D.id(plantId)).get()).data():null;
+            if(plant&&(plant.accountId!==accountId||plant.positionIndex!==positionIndex))D.fail('failed-precondition','土地與植物資料不一致，請由家長確認');
+            return{positionIndex,plant:plant||null};
+        }));
         const ids=c.parent?c.group.members:[c.accountId],members=[];
         for(let start=0;start<ids.length;start+=10){const batch=await db.collection('users').where('accountId','in',ids.slice(start,start+10)).get();members.push(...batch.docs.map(d=>cleanMember(d.data())).filter(m=>m.role!=='removed'));}
-        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:garden.data(),plants:plants.docs.map(d=>d.data()),settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
+        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:{...garden.data(),plotCount:count},gardenPage:{page,totalPages,start,plots:plots.map(p=>({positionIndex:p.positionIndex,plantId:p.plant?.id||null}))},plants:plots.map(p=>p.plant).filter(Boolean),plotPrice:D.PLOT_PRICE,settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
     }
     async function list(request){
         const c=await context(request),p=request.data.payload||{},kind=D.text(p.kind||'records','清單',30);
@@ -280,7 +297,7 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
         if(!resolveContext&&!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
         if(!request.data||typeof request.data!=='object'||Array.isArray(request.data))D.fail('invalid-argument','請求格式不正確');
         const action=request.data.action;
-        if(!['snapshot','list','legacyList','overview','createRecord','editRecord','reviewRecord','correctRecord','buySeed','plant','water','saveSettings','manualReward','saveReward','requestReward','changeRewardRequest'].includes(action))D.fail('invalid-argument','不支援的操作');
+        if(!['snapshot','list','legacyList','overview','createRecord','editRecord','reviewRecord','correctRecord','buyPlot','buySeed','plant','water','saveSettings','manualReward','saveReward','requestReward','changeRewardRequest'].includes(action))D.fail('invalid-argument','不支援的操作');
         if(request.data.payload&&(typeof request.data.payload!=='object'||Array.isArray(request.data.payload)||JSON.stringify(request.data.payload).length>50000))D.fail('invalid-argument','操作內容格式不正確或過大');
         if(action==='snapshot')return snapshot(request);
         if(action==='list')return list(request);

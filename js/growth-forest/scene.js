@@ -10,20 +10,21 @@ export async function createForest(element,onPlot,lowPower=false){
  class Forest extends Phaser.Scene{
   preload(){this.load.image('forest',art.background);for(const type of PLANT_TYPES)art.plants[type].forEach((path,i)=>this.load.image(type+'-'+(i+1),path));}
   create(){
-   scene=this;this.add.image(390,500,'forest');this.sprites=[];
-   points.forEach((p,i)=>{this.add.ellipse(p.x,p.y+10,150,49,0x5a6944,.14);this.add.ellipse(p.x,p.y,142,47,0xa27d57).setStrokeStyle(3,0xceb68d);this.add.ellipse(p.x,p.y-2,120,32,0x816441);const hit=this.add.zone(p.x,p.y-50,200,180).setInteractive({cursor:'pointer'}).setDepth(20);hit.on('pointerdown',()=>onPlot(i));});
+   scene=this;this.add.image(390,500,'forest');this.sprites=[];this.hits=[];this.soils=[];
+   points.forEach((p,i)=>{const soil=this.add.container(0,0,[this.add.ellipse(p.x,p.y+10,150,49,0x5a6944,.14),this.add.ellipse(p.x,p.y,142,47,0xa27d57).setStrokeStyle(3,0xceb68d),this.add.ellipse(p.x,p.y-2,120,32,0x816441)]);this.soils.push(soil);const hit=this.add.zone(p.x,p.y-50,200,180).setInteractive({cursor:'pointer'}).setDepth(20);this.hits.push(hit);hit.on('pointerdown',()=>{const slot=latest?.gardenPage.plots[i];if(slot)onPlot(slot.positionIndex);});});
    if(!lowPower){for(let i=0;i<7;i++){const mote=this.add.circle(85+i*97,280+(i%3)*130,3,0xfff6c9,.7);this.tweens.add({targets:mote,y:mote.y-60,alpha:.15,duration:3500+i*300,yoyo:true,repeat:-1});}}
    this.render(latest);
   }
   render(data){
    if(!data)return;latest=data;
    for(let i=0;i<3;i++){
-    const plant=data.plants.find(p=>p.id===data.garden.slots[i]),old=this.sprites[i];
+    const slot=data.gardenPage.plots[i],plant=data.plants.find(p=>p.id===slot?.plantId),old=this.sprites[i];
+    this.soils[i].setVisible(Boolean(slot));this.hits[i].input.enabled=Boolean(slot);
     if(!plant){if(old){this.tweens.killTweensOf(old);old.destroy();this.sprites[i]=null;}continue;}
     const key=plant.plantType+'-'+plant.growthStage;
-    if(old?.texture.key===key)continue;
+    if(old?.texture.key===key&&old.forestPlantId===plant.id)continue;
     if(old){this.tweens.killTweensOf(old);old.destroy();}
-    const p=points[i],sprite=this.add.image(p.x,p.y,key).setOrigin(.5,.84).setDepth(5+i);this.sprites[i]=sprite;
+    const p=points[i],sprite=this.add.image(p.x,p.y,key).setOrigin(.5,.84).setDepth(5+i);sprite.forestPlantId=plant.id;this.sprites[i]=sprite;
     if(!lowPower)this.tweens.add({targets:sprite,angle:2,duration:1700+i*200,yoyo:true,repeat:-1});
     if(old)this.effect(i,'growth');
    }
@@ -38,5 +39,5 @@ export async function createForest(element,onPlot,lowPower=false){
   }
  }
  const game=new Phaser.Game({type:Phaser.AUTO,parent:element,backgroundColor:'#c4d7ae',width:780,height:1000,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},transparent:false,antialias:true,fps:{target:lowPower?30:60},scene:Forest,audio:{noAudio:true}});
- return{set(data){latest=data;scene?.render(data);},effect(i,kind){scene?.effect(i,kind);},pause(){game.loop.sleep();},resume(){if(!dead)game.loop.wake();},destroy(){dead=true;game.destroy(true);}};
+ return{set(data){latest=data;scene?.render(data);},effect(i,kind){scene?.effect(i-(latest?.gardenPage.start||0),kind);},setInputEnabled(enabled){game.input.enabled=enabled;if(scene)scene.input.enabled=enabled;},pause(){game.loop.sleep();},resume(){if(!dead)game.loop.wake();},destroy(){dead=true;game.destroy(true);}};
 }
