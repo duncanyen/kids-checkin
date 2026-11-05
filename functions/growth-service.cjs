@@ -178,8 +178,7 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
                     const plantRef=ref(c.groupId,'gardenPlants',D.id(p.id)),snapshot=await t.get(plantRef),plant=snapshot.data();
                     const plot=plant?await t.get(ref(c.groupId,'gardenPlots',c.accountId+'_'+plant.positionIndex)):null;
                     if(!plant||plant.accountId!==c.accountId||!(plot?.data()?.plantId===plant.id||garden.slots?.[plant.positionIndex]===plant.id))D.fail('permission-denied','這不是你的植物');
-                    const amount=Math.min(10,plant.growthRequired-plant.growthValue);if(amount<=0)D.fail('failed-precondition','植物已成熟，不需要再澆水');
-                    if(wallet.waterBalance<amount)D.fail('failed-precondition','水滴不夠了！完成閱讀或紀錄考試，就能獲得更多水滴。');
+                    const amount=D.waterAmount(p.amount,plant,wallet.waterBalance);
                     change(wallet,{water:-amount});plant.growthValue+=amount;plant.growthStage=D.stage(plant.growthValue,plant.growthRequired);
                     t.set(plantRef,{...plant,...stamp(c,time)});journal(t,c,key,c.accountId,'plant-watered',{points:0,water:-amount,coins:0},before,balances(wallet),{kind:'plant',id:plant.id});result={id:plant.id,stage:plant.growthStage,watered:amount};
                 }
@@ -247,10 +246,10 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
     async function snapshot(request){
         const c=await context(request),accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
         const [wallet,garden,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
-        const count=D.plotCount(garden.data()),totalPages=Math.ceil(count/3),requestedPage=D.number(request.data.payload?.page??0,'森林頁碼',0,Number.MAX_SAFE_INTEGER),page=Math.min(requestedPage,totalPages-1),start=page*3;
+        const count=D.plotCount(garden.data()),totalPages=Math.ceil(count/D.PLOTS_PER_PAGE),requestedPage=D.number(request.data.payload?.page??0,'森林頁碼',0,Number.MAX_SAFE_INTEGER),page=Math.min(requestedPage,totalPages-1),start=page*D.PLOTS_PER_PAGE;
         // Read only this page. Separate plot documents avoid an ever-growing
         // garden array and Firestore's one-document size limit.
-        const plots=await Promise.all(Array.from({length:Math.min(3,count-start)},async(_,i)=>{
+        const plots=await Promise.all(Array.from({length:Math.min(D.PLOTS_PER_PAGE,count-start)},async(_,i)=>{
             const positionIndex=start+i,slot=(await ref(c.groupId,'gardenPlots',accountId+'_'+positionIndex).get()).data();
             const plantId=slot?.plantId||garden.data().slots?.[positionIndex]||null;
             const plant=plantId?(await ref(c.groupId,'gardenPlants',D.id(plantId)).get()).data():null;
@@ -259,7 +258,7 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
         }));
         const ids=c.parent?c.group.members:[c.accountId],members=[];
         for(let start=0;start<ids.length;start+=10){const batch=await db.collection('users').where('accountId','in',ids.slice(start,start+10)).get();members.push(...batch.docs.map(d=>cleanMember(d.data())).filter(m=>m.role!=='removed'));}
-        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:{...garden.data(),plotCount:count},gardenPage:{page,totalPages,start,plots:plots.map(p=>({positionIndex:p.positionIndex,plantId:p.plant?.id||null}))},plants:plots.map(p=>p.plant).filter(Boolean),plotPrice:D.PLOT_PRICE,settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
+        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:{...garden.data(),plotCount:count},gardenPage:{page,totalPages,start,pageSize:D.PLOTS_PER_PAGE,plots:plots.map(p=>({positionIndex:p.positionIndex,plantId:p.plant?.id||null}))},plants:plots.map(p=>p.plant).filter(Boolean),plotPrice:D.PLOT_PRICE,settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
     }
     async function list(request){
         const c=await context(request),p=request.data.payload||{},kind=D.text(p.kind||'records','清單',30);

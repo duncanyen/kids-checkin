@@ -7,3 +7,5 @@
 .record-row>div:first-child,.forest-identity>div{min-width:0;overflow-wrap:anywhere}.record-row .row-actions{flex-shrink:0}.reward h3,#greeting,.body-copy,.sheet-heading h2{overflow-wrap:anywhere}
 
 .forest-pages{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0;font-size:12px}.forest-pages span{text-align:center}#buyPlot{margin-bottom:10px}.resource-table{overflow-x:auto;margin:16px 0}.resource-table table{border-collapse:collapse;width:100%;font-size:13px}.resource-table th,.resource-table td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+
+.plot-access{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.plot-access button{min-width:0;overflow-wrap:anywhere}.water-quantity{display:flex;align-items:center;gap:10px}.water-quantity output{flex:1;min-width:65px;text-align:center;font-size:22px;font-variant-numeric:tabular-nums}.water-quantity button{padding:10px 14px;flex-shrink:0}.water-picker .hint{font-size:12px;line-height:1.7;color:var(--muted)}.water-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:18px}#waterPreview{font-size:13px;line-height:1.7}

@@ -2,6 +2,7 @@ import '../app-navigation.js';
 import {readGameContext,getSelectedGameGroupId} from '../game-context.js';
 import {ReadingClock} from './reading-clock.js';
 import {STAGE_NAMES} from './art.js';
+import {PLOTS_PER_PAGE} from './layout.js';
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dates=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}),today=()=>dates.format(new Date());
 const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revoked:'已撤銷',legacy:'歷史紀錄',requested:'申請中',processing:'準備中',completed:'已發放',cancelled:'已取消'};
@@ -62,9 +63,18 @@ function plot(index){
  if(!plant){sheet('種下新的可能',`<p class="body-copy">位置 ${index+1} · 選一顆背包裡的種子；不足時可到種子小舖購買。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-2.svg" alt="${esc(c.name)}"><h3>${esc(c.name)}</h3><p>背包 ${data.garden.seeds[type]||0} 顆</p><button data-plant="${type}" ${!(data.garden.seeds[type]>0)?'disabled':''}>種下</button></article>`).join('')}</div><button class="text-link" id="shopFromPlant">前往種子小舖</button>`);
   $('sheetBody').querySelectorAll('[data-plant]').forEach(b=>b.onclick=async()=>{const r=await action('plant',{plantType:b.dataset.plant,positionIndex:index});if(r)game?.effect(index,'growth');});$('shopFromPlant').onclick=seedShop;return;
  }
- const next=[0,20,40,70,100][plant.growthStage],required=plant.growthRequired;
- sheet(data.plantCatalog[plant.plantType].name,`<div class="plant-info"><img src="assets/growth-forest/${plant.plantType}-${plant.growthStage}.svg" alt="${esc(STAGE_NAMES[plant.growthStage-1])}"><div><h3>Lv.${plant.growthStage} ${esc(STAGE_NAMES[plant.growthStage-1])}</h3><p>目前成長 ${plant.growthValue} / ${required}</p><progress value="${plant.growthValue}" max="${required}"></progress><p>${plant.growthStage===5?'已經成熟，謝謝你的照顧。':`下一階段：${Math.ceil(next/100*required)} 滴`}</p><button id="waterPlant" ${plant.growthStage===5?'disabled':''}>${plant.growthStage===5?'已成熟':`澆水 · ${Math.min(10,required-plant.growthValue)} 滴`}</button><p>水滴餘額 ${data.wallet.waterBalance}</p></div></div><p class="form-error" role="status"></p>`);
- $('waterPlant').onclick=async()=>{const r=await action('water',{id:plant.id});if(r){game?.effect(index,'water');plot(index);}};
+ const next=[0,20,40,70,100][plant.growthStage],required=plant.growthRequired,remaining=Math.max(0,required-plant.growthValue),maximum=Math.min(remaining,data.wallet.waterBalance);
+ let selected=Math.min(10,maximum);
+ sheet(data.plantCatalog[plant.plantType].name,`<div class="plant-info"><img src="assets/growth-forest/${plant.plantType}-${plant.growthStage}.svg" alt="${esc(STAGE_NAMES[plant.growthStage-1])}"><div><h3>Lv.${plant.growthStage} ${esc(STAGE_NAMES[plant.growthStage-1])}</h3><p>目前成長 ${plant.growthValue} / ${required}</p><progress value="${plant.growthValue}" max="${required}"></progress><p>${plant.growthStage===5?'已經成熟，謝謝你的照顧。':`下一階段：${Math.ceil(next/100*required)} 滴`}</p><p>水滴餘額 ${data.wallet.waterBalance} · 還需 ${remaining} 滴成熟</p></div></div><div class="water-picker" ${remaining===0?'hidden':''}><p id="waterLabel">本次澆水數量</p><div class="water-quantity" role="group" aria-labelledby="waterLabel"><button type="button" id="waterMinus" class="outline" aria-label="減少10滴">−</button><output id="waterAmount" aria-live="polite"></output><button type="button" id="waterPlus" class="outline" aria-label="增加10滴">＋</button><button type="button" id="waterMax" class="outline">MAX</button></div><p class="hint">每次增減 10 滴；MAX 取剩餘需求與水滴餘額的較小值，最後不足 10 滴也能使用。</p><p id="waterPreview" aria-live="polite"></p></div><div class="water-actions"><button type="button" class="outline" data-close>取消</button><button type="button" id="waterPlant"></button></div><p class="form-error" role="status"></p>`);
+ const updateQuantity=()=>{
+  $('waterAmount').textContent=`${selected} 滴`;
+  $('waterMinus').disabled=selected<=Math.min(10,maximum);$('waterPlus').disabled=selected>=maximum;$('waterMax').disabled=maximum===0||selected===maximum;
+  $('waterPlant').disabled=selected===0;$('waterPlant').textContent=remaining===0?'已成熟':selected===0?'水滴不足':`確認澆水 · ${selected} 滴`;
+  $('waterPreview').textContent=maximum>0?`澆水後：成長 ${plant.growthValue+selected} / ${required}，水滴餘額 ${data.wallet.waterBalance-selected}。`:'目前沒有可使用的水滴，取得獎勵後再來照顧植物。';
+ };
+ $('waterMinus').onclick=()=>{selected=Math.max(Math.min(10,maximum),selected%10?Math.floor(selected/10)*10:selected-10);updateQuantity();};
+ $('waterPlus').onclick=()=>{selected=Math.min(maximum,selected+10);updateQuantity();};$('waterMax').onclick=()=>{selected=maximum;updateQuantity();};updateQuantity();
+ $('waterPlant').onclick=async()=>{const r=await action('water',{id:plant.id,amount:selected});if(r){game?.effect(index,'water');plot(index);}};
 }
 function seedShop(){
  if(!data||busy)return;
@@ -90,7 +100,7 @@ function buyPlotForm(){
  if(!data||busy)return;const cost=data.plotPrice,enough=data.wallet.coinBalance>=cost.coins&&data.wallet.waterBalance>=cost.water;
  sheet('開墾新土地',`<p>花費 ${cost.coins} 森林金幣與 ${cost.water} 成長水滴，增加一塊永久土地。可持續購買，不扣星星積分。</p><p class="body-copy">目前共有 ${data.garden.plotCount} 塊土地。餘額：${data.wallet.coinBalance} 金幣、${data.wallet.waterBalance} 水滴。${enough?'':'資源不足，請先完成考試或閱讀並取得獎勵。'}</p><form id="buyPlotForm">${formEnd('確認開墾')}`);
  $('buyPlotForm').querySelector('[type=submit]').disabled=!enough;
- $('buyPlotForm').onsubmit=async e=>{e.preventDefault();const result=await action('buyPlot',{});if(result){await changeForestPage(Math.floor(result.positionIndex/3));status(`已開墾位置 ${result.positionIndex+1}，可以種植新植物了。`);}};
+ $('buyPlotForm').onsubmit=async e=>{e.preventDefault();const result=await action('buyPlot',{});if(result){await changeForestPage(Math.floor(result.positionIndex/PLOTS_PER_PAGE));status(`已開墾位置 ${result.positionIndex+1}，可以種植新植物了。`);}};
 }
 $('buyPlot').onclick=buyPlotForm;
 $('resourceGuide').onclick=()=>{

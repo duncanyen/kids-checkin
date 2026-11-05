@@ -164,13 +164,13 @@ test('land expands atomically without a fixed cap; page reads preserve old plant
  assert.equal((await gardenRef.get()).data().plotCount,6);assert.equal((await gardenRef.get()).data().slots.length,3);
  await f.call('alice','buySeed',{plantType:'tulip'});const planted=await f.call('alice','plant',{positionIndex:5,plantType:'tulip'});
  await f.call('alice','water',{id:planted.id});
- const page=await f.service.handle(f.request('alice','snapshot',{page:1}));assert.equal(page.gardenPage.totalPages,2);assert.deepEqual(page.gardenPage.plots.map(p=>p.positionIndex),[3,4,5]);assert.equal(page.plants[0].growthValue,10);
+ const page=await f.service.handle(f.request('alice','snapshot',{page:1}));assert.equal(page.gardenPage.totalPages,1);assert.equal(page.gardenPage.pageSize,9);assert.deepEqual(page.gardenPage.plots.map(p=>p.positionIndex),[0,1,2,3,4,5]);assert.equal(page.plants.find(p=>p.id===planted.id).growthValue,10);
  const old=await f.call('alice','snapshot');assert.equal(old.plants[0].id,first.id);
  await assert.rejects(f.call('alice','plant',{positionIndex:6,plantType:'sunflower'}),{code:'invalid-argument'});
  await f.call('alice','buySeed',{plantType:'tulip'});await assert.rejects(f.call('alice','plant',{positionIndex:5,plantType:'tulip'}),{code:'failed-precondition'});
  await gardenRef.set({...((await gardenRef.get()).data()),plotCount:2501});
- const far=await f.service.handle(f.request('alice','snapshot',{page:833}));assert.equal(far.garden.plotCount,2501);assert.equal(far.gardenPage.plots.length,2);assert.equal(far.plants.length,0);
- const beyond=await f.service.handle(f.request('alice','snapshot',{page:9999}));assert.equal(beyond.gardenPage.page,833);
+ const far=await f.service.handle(f.request('alice','snapshot',{page:277}));assert.equal(far.garden.plotCount,2501);assert.equal(far.gardenPage.plots.length,8);assert.equal(far.plants.length,0);
+ const beyond=await f.service.handle(f.request('alice','snapshot',{page:9999}));assert.equal(beyond.gardenPage.page,277);
  await assert.rejects(f.service.handle(f.request('alice','snapshot',{page:-1})),{code:'invalid-argument'});
  // A failed purchase cannot partially consume either resource or change land.
  const before=await f.wallet('alice');await walletRef.set({...before,coinBalance:99});
@@ -205,4 +205,36 @@ test('new flower seeds charge exact prices and grow through all five stages in l
   await assert.rejects(f.call('alice','water',{id:plant.id}),{code:'failed-precondition'});
  }
  const seeds=(await gardenRef.get()).data().seeds;assert.equal(seeds.sunflower,1);assert.equal(seeds.tulip,2);assert.equal((await f.wallet('alice')).coinBalance,550);assert.equal((await f.wallet('alice')).waterBalance,100);
+});
+
+test('nine-plot pages preserve global positions across the ninth and tenth plots',async()=>{
+ const f=await setup(),initial=await f.call('alice','snapshot');assert.equal(initial.garden.plotCount,3);assert.equal(initial.gardenPage.plots.length,3);
+ await f.db.doc('groups/A/gardens/alice').set({...initial.garden,plotCount:10,seeds:{sunflower:3}});
+ const first=await f.call('alice','plant',{positionIndex:0,plantType:'sunflower'}),ninth=await f.call('alice','plant',{positionIndex:8,plantType:'sunflower'}),tenth=await f.call('alice','plant',{positionIndex:9,plantType:'sunflower'});
+ const page0=await f.call('alice','snapshot',{page:0}),page1=await f.call('alice','snapshot',{page:1});
+ assert.equal(page0.gardenPage.totalPages,2);assert.equal(page0.gardenPage.plots.length,9);assert.deepEqual(page0.plants.map(p=>p.id),[first.id,ninth.id]);
+ assert.equal(page1.gardenPage.start,9);assert.equal(page1.gardenPage.plots.length,1);assert.equal(page1.plants[0].id,tenth.id);
+ assert.equal((await f.call('alice','snapshot',{page:999})).gardenPage.page,1);
+});
+
+test('bulk watering validates ten-drop units and tails, is atomic and cannot overfill or double spend',async()=>{
+ const f=await setup(),initial=await f.call('alice','snapshot'),plant=await f.call('alice','plant',{positionIndex:0,plantType:'sunflower'});
+ const walletRef=f.db.doc('groups/A/growthProfiles/alice'),plantRef=f.db.doc('groups/A/gardenPlants/'+plant.id);
+ await walletRef.set({...initial.wallet,waterBalance:250});
+ for(const amount of [0,-10,1.5,15,'20',NaN])await assert.rejects(f.call('alice','water',{id:plant.id,amount}),{code:'invalid-argument'});
+ await assert.rejects(f.call('alice','water',{id:plant.id,amount:110}),{code:'failed-precondition'});
+ const rid=crypto.randomUUID(),payload={id:plant.id,amount:40},award=await f.call('alice','water',payload,rid);
+ assert.equal(award.watered,40);assert.equal(award.stage,3);assert.deepEqual(await f.call('alice','water',payload,rid),award);assert.equal((await f.wallet('alice')).waterBalance,210);
+ await f.call('alice','water',{id:plant.id,amount:60});assert.equal((await plantRef.get()).data().growthStage,5);assert.equal((await f.wallet('alice')).waterBalance,150);
+ await assert.rejects(f.call('alice','water',{id:plant.id,amount:10}),{code:'failed-precondition'});
+ const logs=await f.db.collection('groups/A/growthTransactions').where('kind','==','plant-watered').get();assert.equal(logs.size,2);
+ // The available balance can be an odd tail, and MAX can spend that exact tail.
+ await plantRef.set({...((await plantRef.get()).data()),growthValue:0,growthStage:1});await walletRef.set({...await f.wallet('alice'),waterBalance:35});
+ await f.call('alice','water',{id:plant.id,amount:35});assert.equal((await plantRef.get()).data().growthValue,35);assert.equal((await f.wallet('alice')).waterBalance,0);
+ await assert.rejects(f.call('alice','water',{id:plant.id,amount:10}),{code:'failed-precondition'});
+ await plantRef.set({...((await plantRef.get()).data()),growthValue:95,growthStage:4});await walletRef.set({...await f.wallet('alice'),waterBalance:20});
+ await f.call('alice','water',{id:plant.id,amount:5});assert.equal((await plantRef.get()).data().growthValue,100);assert.equal((await f.wallet('alice')).waterBalance,15);
+ // Competing requests must revalidate against the latest remaining growth.
+ await plantRef.set({...((await plantRef.get()).data()),growthValue:0,growthStage:1});await walletRef.set({...await f.wallet('alice'),waterBalance:100});
+ const raced=await Promise.allSettled([f.call('alice','water',{id:plant.id,amount:60}),f.call('alice','water',{id:plant.id,amount:60})]);assert.equal(raced.filter(r=>r.status==='fulfilled').length,1);assert.equal((await plantRef.get()).data().growthValue,60);assert.equal((await f.wallet('alice')).waterBalance,40);
 });

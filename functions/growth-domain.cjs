@@ -9,8 +9,19 @@ const round=n=>Math.round(n*100)/100;
 const dateKey=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
 function eventDate(value,now){const s=text(value,'日期',10);if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s+'T00:00:00Z'))||new Date(s+'T00:00:00Z').toISOString().slice(0,10)!==s||s>dateKey(now))fail('invalid-argument','日期不正確或超過今天');return s;}
 const PLANTS=Object.freeze({sunflower:{name:'向日葵',price:50,required:100},tulip:{name:'鬱金香',price:80,required:150},sakura:{name:'櫻花樹',price:200,required:400},rose:{name:'玫瑰花',price:100,required:200},daffodil:{name:'水仙花',price:150,required:300},lavender:{name:'薰衣草',price:200,required:400}});
+const PLOTS_PER_PAGE=9;
 const PLOT_PRICE=Object.freeze({coins:100,water:20});
 const plotCount=garden=>Math.max(3,Number.isSafeInteger(garden.plotCount)?garden.plotCount:0,garden.slots?.length||0);
+function waterAmount(requested,plant,balance){
+    const remaining=Math.max(0,plant.growthRequired-plant.growthValue);
+    if(!remaining)fail('failed-precondition','植物已成熟，不需要再澆水');
+    const maximum=Math.min(remaining,balance);
+    if(maximum<=0)fail('failed-precondition','水滴不夠了！取得考試或閱讀獎勵後，就能再澆水。');
+    const amount=requested===undefined?Math.min(10,maximum):number(requested,'澆水數量',1,1000000000);
+    if(amount>maximum)fail('failed-precondition','水滴餘額或植物剩餘需求已變更，請重新選擇澆水數量。');
+    if(amount%10!==0&&amount!==maximum)fail('invalid-argument','請以 10 滴為單位選擇，或使用 MAX 的最後可用水量。');
+    return amount;
+}
 const EXAM_TYPES=['小考','段考','期中考','期末考','練習測驗'];
 const STAGES=[{at:0,name:'種子'},{at:20,name:'發芽'},{at:40,name:'幼苗'},{at:70,name:'成長'},{at:100,name:'成熟'}];
 const stage=(growth,required)=>STAGES.filter(s=>growth/required*100>=s.at).length;
@@ -39,4 +50,4 @@ function examAward(r,policy,previous){
     return{...reward(base),points:round(base.points+bonus),percent,previousPercent:previous??null,improvement:round(improvement),bonus};
 }
 const transitions={requested:['approved','processing','completed','rejected','cancelled'],approved:['processing','completed','rejected'],processing:['completed','rejected']};
-module.exports={GrowthError,fail,hash,text,id,number,round,dateKey,eventDate,PLANTS,PLOT_PRICE,plotCount,STAGES,stage,DEFAULT_SETTINGS,settings,reward,validateRecord,examAward,transitions};
+module.exports={GrowthError,fail,hash,text,id,number,round,dateKey,eventDate,PLANTS,PLOTS_PER_PAGE,PLOT_PRICE,plotCount,waterAmount,STAGES,stage,DEFAULT_SETTINGS,settings,reward,validateRecord,examAward,transitions};
