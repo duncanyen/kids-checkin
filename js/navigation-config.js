@@ -7,7 +7,7 @@ export const NAV_FEATURES = Object.freeze([
     {id:'photodump',label:'Photo Dump',url:'gallery.html'},
     {id:'gamezone',label:'遊戲大廳',url:'games.html'},
     {id:'checkin',label:'到家打卡',url:'checkin.html'},
-    {id:'wishlist',label:'許願牆',url:'wishwall.html'},
+    {id:'wishlist',label:'成長森林',url:'wishwall.html'},
     {id:'food',label:'吃什麼',url:'food-decision.html'}
 ]);
 const known=new Set(NAV_FEATURES.map(item=>item.id));

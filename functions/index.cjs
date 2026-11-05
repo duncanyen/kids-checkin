@@ -59,3 +59,15 @@ exports.liveSession = onCall({ region, cors: true, maxInstances: 5 }, async requ
     const token = await getAuth().createCustomToken(user.id, { accountKey: key(accountId), groupKey: key(groupId) });
     return { token };
 });
+
+// Growth Forest shares the existing verified Nexus custom-token identity.
+let growthService;
+exports.growthForest=onCall({region,cors:true,maxInstances:10},async request=>{
+    try{growthService ||= require('./growth-service.cjs').createGrowthService({db:firestore});return await growthService.handle(request);}
+    catch(error){
+        const codes=['invalid-argument','unauthenticated','permission-denied','not-found','already-exists','failed-precondition','resource-exhausted'];
+        if(codes.includes(error.code))throw new HttpsError(error.code,error.message);
+        console.error('growth-forest-failure',{code:typeof error.code==='string'?error.code:'internal'});
+        throw new HttpsError('internal','暫時無法儲存，請以同一請求重試');
+    }
+});

@@ -27,7 +27,7 @@ Nexus 是以家庭／群組為協作單位的生活整合網站，將溝通、�
 
 | 目標 | 主要能力 |
 | --- | --- |
-| 集中日常協作 | 聊天室、行事曆、待辦、相簿、記帳本、到家打卡、許願牆、餐食決策 |
+| 集中日常協作 | 聊天室、行事曆、待辦、相簿、記帳本、到家打卡、成長森林、餐食決策 |
 | 支援多群組 | 群組切換、入群申請、邀請、成員管理及功能開放設定 |
 | 保持身分穩定 | 以 accountId 連結資料，更名不應改變資料歸屬 |
 | 提供遊戲互動 | 多品種雞隻、產蛋、倉庫、武器、怪物、偷蛋、護衛犬、通知與排行榜 |
@@ -159,7 +159,7 @@ flowchart TB
 | 待辦 | 分類、指派、循環任務、完成紀錄 | 群組文件保存；以帳號指派；循環任務由頁面載入／定時檢查補齊 |
 | 記帳本 | 收支、分類、月度清單、分頁、日曆及統計 | expenses 依群組／日期查詢；彙總查詢與清單分頁分開；新增不自動聚焦金額 |
 | Photo Dump 相簿 | 多圖上傳、瀏覽、分頁、留言與圖片互動 | 新圖經壓縮上傳 Storage，再保存照片資料；支援部分失敗清理 |
-| 許願牆 | 成績／家事積分、獎品與兌換 | 群組內保存規則與紀錄；交易與版本文件避免使用過期積分 |
+| 成長森林 | 考試／閱讀、三種資源、植物培育、家長審核與夢想獎勵 | `growthForest` callable 驗證群組、帳號及角色；資源與紀錄在 Firestore 交易中處理，舊許願牆保留作遷移來源 |
 | 吃什麼 | 餐廳、篩選、輪盤、投票與用餐決定 | groupId＋日期＋餐別形成固定文件；票以 accountId 為 key |
 | 到家打卡 | 到家時間、歷史及聊天室通知 | 保留舊 checkins／settings／messages 流程；存在舊姓名與共用設定依賴 |
 | 遊戲大廳 | 咕咕村落、猜拳、2048 與排行 | game_permissions 控制功能開放；不同遊戲的紀錄集合分開 |
@@ -259,7 +259,7 @@ flowchart TB
 | expenses/{expenseId}、customCategories | 群組收支、金額、日期、類型、accountId／operator、分類 |
 | photos/{photoId} | 圖片網址／Storage 路徑、建立者、群組、內容及互動資訊 |
 | food_restaurants、food_votes/{固定ID} | 群組餐廳；groupId＋日期＋餐別的每日投票與 decision |
-| groups/{groupId}/settings/wishWall | 許願牆共用規則與獎品 |
+| groups/{groupId}/settings/wishWall | 舊版許願牆共用規則與獎品，作為成長森林唯讀遷移來源 |
 | groups/{groupId}/scores、redeems、messages | 許願積分、兌換及通知；與頂層聊天／遊戲同名集合並非相同業務 |
 | game_permissions、game_records、game_records_2048 | 遊戲開放、猜拳與 2048 紀錄；文件識別需依各遊戲相容邏輯確認 |
 | checkins、settings/checkinConfig | 原有打卡與通知目標設定；含舊共用設定，不應假設已全部按群組切分 |
@@ -489,3 +489,5 @@ python3 -m http.server 8030 --bind 127.0.0.1
 | 營運後台 | ../game-admin/README.md、DEPLOYMENT.md、FILES.md；functions/domain.cjs、service.cjs、index.cjs |
 
 新增功能時，同步維護「目前啟用狀態」「資料識別與 Schema」「安全邊界」「主要規則」「驗證範圍」；數值調整以單一規則設定為來源，避免文件、商店、圖鑑與測試各自保留不同數字。
+
+成長森林 Phase 1（2026-11-05）已在功能分支實作，保留 `wishwall.html`／`wishlist` 相容入口。新增資料模型、安全規則合併限制與實際驗證結果，以 [成長森林開發報告](growth-forest-phase1-report.md) 為準；尚未正式部署或執行正式遷移。

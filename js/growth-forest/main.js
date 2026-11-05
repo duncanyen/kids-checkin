@@ -1,0 +1,176 @@
+import '../app-navigation.js';
+import {readGameContext,getSelectedGameGroupId} from '../game-context.js';
+import {ReadingClock} from './reading-clock.js';
+import {STAGE_NAMES} from './art.js';
+const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dates=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}),today=()=>dates.format(new Date());
+const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revoked:'已撤銷',legacy:'歷史紀錄',requested:'申請中',processing:'準備中',completed:'已發放',cancelled:'已取消'};
+const context=readGameContext(),clock=new ReadingClock(localStorage,`nexus.growth.clock:${context.groupId}:${context.accountId}`);
+let initializedOnce=false,refreshGeneration=0;
+if(new URLSearchParams(location.search).get('nav')==='1'){const nav=document.querySelector('.forest-nav');nav.classList.add('inline');document.querySelector('main').before(nav);}
+let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},timer,refreshTimer,unsubscribe,photoUrls=[];
+let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
+$('powerMode').setAttribute('aria-pressed',String(lowPower));
+const status=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'success';};
+const message=error=>({'functions/unauthenticated':'登入已失效，請返回 Nexus 重新登入。','functions/not-found':'找不到紀錄或森林後端尚未部署。','functions/unavailable':'目前無法連線；請保留畫面後重試。','functions/internal':'後端暫時無法完成操作，請保留內容後重試。'}[error.code]||error.message||'操作失敗，請稍後重試。');
+function field(label,name,type='text',value='',attrs=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}" ${attrs}></label>`;}
+function select(label,name,options,value=''){return `<label>${esc(label)}<select name="${esc(name)}">${options.map(o=>{const v=typeof o==='string'?o:o.value,l=typeof o==='string'?o:o.label;return `<option value="${esc(v)}" ${v===value?'selected':''}>${esc(l)}</option>`;}).join('')}</select></label>`;}
+const note=(label='備註（選填）',name='note',value='')=>`<label class="full">${esc(label)}<textarea name="${name}" maxlength="1000">${esc(value)}</textarea></label>`;
+const formEnd=(text='儲存')=>`<p class="form-error full" role="status"></p><footer class="full"><button type="button" data-close class="outline">取消</button><button type="submit">${esc(text)}</button></footer></form>`;
+const available=()=>Math.round((data.wallet.pointsBalance-data.wallet.pointsReserved)*100)/100;
+function sheet(title,html){delete $('sheet').dataset.recordId;delete $('sheet').dataset.recordStatus;photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];$('sheetTitle').textContent=title;$('sheetBody').innerHTML=html;if(!$('sheet').open)$('sheet').showModal();$('sheetBody').querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeSheet());updateTimer();}
+function closeSheet(){if(busy)return;$('sheet').close();photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];}
+$('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+async function action(action,payload,{close=true}={}){
+ if(busy||!client)return null;busy=true;const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
+ try{const result=await client.api(action,payload,true);if(close)$('sheet').close();try{await refresh();}catch(error){status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}status(result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result));return result;}
+ catch(error){status(message(error),true);const panel=$('sheetBody').querySelector('.form-error');if(panel)panel.textContent=message(error);return null;}
+ finally{busy=false;controls.filter(c=>c.isConnected).forEach(c=>c.disabled=false);}
+}
+function rewardMessage(result){const r=result.rewards;if(r&&Object.values(r).some(n=>n>0))return `努力已化成養分：星星 +${r.points}、水滴 +${r.water}、金幣 +${r.coins}。`;return '已儲存，你的森林已同步。';}
+async function refresh(){
+ if(stopped||!client)return;const generation=++refreshGeneration,incoming=await client.api('snapshot');if(stopped||generation!==refreshGeneration)return;const previous=data;data=incoming;if(previous&&!busy&&['pointsBalance','waterBalance','coinBalance'].some(key=>data.wallet[key]>previous.wallet[key]))status('你的努力有回報！森林資源已更新。');
+ $('groupName').textContent=data.group.name+' · 成長森林';$('greeting').textContent=data.actor.name+'的成長森林';
+ $('pointsBalance').textContent=available().toLocaleString();$('waterBalance').textContent=data.wallet.waterBalance.toLocaleString();$('coinBalance').textContent=data.wallet.coinBalance.toLocaleString();$('parentNav').hidden=!data.parent;
+ $('reservedNote').textContent=`可用 ${available()} 點 · 兌換保留 ${data.wallet.pointsReserved} 點。獎品發放時才會正式扣除保留積分。`;
+ $('sceneMessage').textContent=data.garden.slots.every(p=>!p)?'點一塊土壤，種下送給你的第一顆向日葵。':'每一株植物，都記得你的努力。';
+ game?.set(data);
+ for(let i=0;i<3;i++){const plant=data.plants.find(p=>p.id===data.garden.slots[i]);document.querySelector(`[data-plot="${i}"]`).textContent=plant?`${data.plantCatalog[plant.plantType].name} · Lv.${plant.growthStage}`:`位置${i+1} · 種植`;}
+ if(view==='rewards')renderRewards();if(view==='parent'&&!document.querySelector('#parentPanel form:focus-within'))await renderParent();if(view==='records')await loadRecords(true);
+}
+async function openView(next){
+ if(!data||busy||next==='parent'&&!data.parent)return;view=next;
+ for(const item of ['forest','records','rewards','parent'])$(item+'View').hidden=item!==view;
+ document.querySelectorAll('[data-view]').forEach(b=>{if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+ if(view==='forest'){
+  if(!game&&!gamePending){gamePending=import('./scene.js').then(m=>m.createForest($('forestGame'),plot,lowPower)).then(g=>{if(stopped){g.destroy();return;}game=g;g.set(data);if(view!=='forest'||document.hidden)g.pause();}).catch(e=>status(message(e),true)).finally(()=>gamePending=null);}
+  game?.resume();
+ }else game?.pause();
+ if(view==='records'){renderFilters($('recordFilters'),false);await loadRecords(true);}if(view==='rewards')renderRewards();if(view==='parent')await renderParent();
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view).catch(e=>status(message(e),true)));
+$('powerMode').onclick=async()=>{lowPower=!lowPower;localStorage.setItem('nexus.growth.lowPower',lowPower?'1':'0');$('powerMode').setAttribute('aria-pressed',String(lowPower));game?.destroy();game=null;if(view==='forest')await openView('forest');};
+document.querySelectorAll('[data-plot]').forEach(b=>b.onclick=()=>plot(Number(b.dataset.plot)));
+function plot(index){
+ if(!data||busy)return;const plant=data.plants.find(p=>p.id===data.garden.slots[index]);
+ if(!plant){sheet('種下新的可能',`<p class="body-copy">位置 ${index+1} · 選一顆背包裡的種子。第一次的向日葵種子已送給你。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-2.svg" alt="${esc(c.name)}"><h3>${esc(c.name)}</h3><p>背包 ${data.garden.seeds[type]||0} 顆</p><button data-plant="${type}" ${!(data.garden.seeds[type]>0)?'disabled':''}>種下</button></article>`).join('')}</div><button class="text-link" id="shopFromPlant">前往種子小舖</button>`);
+  $('sheetBody').querySelectorAll('[data-plant]').forEach(b=>b.onclick=async()=>{const r=await action('plant',{plantType:b.dataset.plant,positionIndex:index});if(r)game?.effect(index,'growth');});$('shopFromPlant').onclick=seedShop;return;
+ }
+ const next=[0,20,40,70,100][plant.growthStage],required=plant.growthRequired;
+ sheet(data.plantCatalog[plant.plantType].name,`<div class="plant-info"><img src="assets/growth-forest/${plant.plantType}-${plant.growthStage}.svg" alt="${esc(STAGE_NAMES[plant.growthStage-1])}"><div><h3>Lv.${plant.growthStage} ${esc(STAGE_NAMES[plant.growthStage-1])}</h3><p>目前成長 ${plant.growthValue} / ${required}</p><progress value="${plant.growthValue}" max="${required}"></progress><p>${plant.growthStage===5?'已經成熟，謝謝你的照顧。':`下一階段：${Math.ceil(next/100*required)} 滴`}</p><button id="waterPlant" ${plant.growthStage===5?'disabled':''}>${plant.growthStage===5?'已成熟':`澆水 · ${Math.min(10,required-plant.growthValue)} 滴`}</button><p>水滴餘額 ${data.wallet.waterBalance}</p></div></div><p class="form-error" role="status"></p>`);
+ $('waterPlant').onclick=async()=>{const r=await action('water',{id:plant.id});if(r){game?.effect(index,'water');plot(index);}};
+}
+function seedShop(){
+ if(!data||busy)return;
+ sheet('種子小舖',`<p class="body-copy">金幣餘額 ${data.wallet.coinBalance} · 種子買下後會放進背包，再選位置種下。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-5.svg" alt="${esc(c.name)}成熟樣貌"><h3>${esc(c.name)}</h3><p>${c.price} 金幣</p><button data-buy="${type}">購買種子</button></article>`).join('')}</div><p class="form-error" role="status"></p>`);
+ $('sheetBody').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const c=data.plantCatalog[b.dataset.buy];sheet('確認購買',`<p>花費 ${c.price} 金幣購買一顆${esc(c.name)}種子？</p><form id="buyForm">${formEnd('確認購買')}`);$('buyForm').onsubmit=async e=>{e.preventDefault();await action('buySeed',{plantType:b.dataset.buy});};});
+}
+$('seedShop').onclick=seedShop;$('openPlants').onclick=()=>{if(!data||busy)return;sheet('我的植物',`<div class="record-list">${[0,1,2].map(i=>{const p=data.plants.find(p=>p.id===data.garden.slots[i]);return `<div class="record-row"><div><strong>${p?esc(data.plantCatalog[p.plantType].name):'等待種下新植物'}</strong><p>${p?`Lv.${p.growthStage} · ${p.growthValue} / ${p.growthRequired} 滴`:'還有一塊空地'}</p></div><button data-open-plot="${i}">位置 ${i+1}</button></div>`;}).join('')}</div>`);$('sheetBody').querySelectorAll('[data-open-plot]').forEach(b=>b.onclick=()=>plot(Number(b.dataset.openPlot)));};
+function examForm(){
+ if(!data||busy)return;
+ sheet('紀錄考試',`<form id="examForm" class="form-grid">${field('考試日期','eventDate','date',today(),`required max="${today()}"`)}${select('科目','subject',['國文','英文','數學','自然','社會','自訂'],'數學')}${field('自訂科目（選自訂時填寫）','customSubject','text','','maxlength="40"')}${select('考試類型','examType',['小考','段考','期中考','期末考','練習測驗'])}${field('考試分數','score','number','','required min="0" max="10000" step="0.01" inputmode="decimal"')}${field('考試滿分','maxScore','number',100,'required min="0.01" max="10000" step="0.01"')}${note()}<label class="full">考卷照片（選填，最大 5 MB）<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="hint full">${data.settings.examApproval?'成績需家長核准後才發放獎勵。':'目前考試採自動核准。'} 不同滿分會換算為百分制比較。</p>${formEnd('提交考試紀錄')}`);
+ $('examForm').elements.photo.onchange=()=>{delete $('examForm').dataset.photoPath;};
+ $('examForm').onsubmit=async e=>{
+  e.preventDefault();if(busy)return;const form=e.currentTarget,fd=new FormData(form),subject=fd.get('subject')==='自訂'?fd.get('customSubject'):fd.get('subject');if(!String(subject).trim()){form.querySelector('.form-error').textContent='請輸入自訂科目';return;}
+  const payload={type:'exam',eventDate:fd.get('eventDate'),subject,examType:fd.get('examType'),score:Number(fd.get('score')),maxScore:Number(fd.get('maxScore')),note:fd.get('note')};
+  if(payload.score>payload.maxScore){form.querySelector('.form-error').textContent='分數不可高於滿分';return;}
+  const file=fd.get('photo');let photoPath=form.dataset.photoPath||null;
+  try{if(file?.size&&!photoPath){busy=true;form.querySelector('button[type=submit]').disabled=true;photoPath=await client.upload(file);form.dataset.photoPath=photoPath;}}
+  catch(error){form.querySelector('.form-error').textContent=message(error);return;}
+  finally{busy=false;form.querySelector('button[type=submit]').disabled=false;}
+  await action('createRecord',{...payload,photoPath});
+ };
+}
+$('openExam').onclick=examForm;
+function readingForm(){
+ if(!data||busy)return;
+ sheet('閱讀紀錄',`<form id="readingForm" class="form-grid"><div class="timer-panel"><output id="readingTime">00:00:00</output><button type="button" id="startClock">${clock.running?'計時中':'開始／繼續'}</button><button type="button" id="pauseClock" class="outline">暫停</button><button type="button" id="finishClock" class="outline">完成並帶入分鐘</button><p class="hint">離開頁面也會保留計時。可使用下方手動輸入，計時並非閱讀證明。</p></div>${field('閱讀日期','eventDate','date',today(),`required max="${today()}"`)}${field('書籍名稱','bookName','text','','required maxlength="150"')}${field('閱讀分鐘（可手動輸入）','readingMinutes','number',0,'required min="0" max="1440" step="0.01" inputmode="decimal"')}${field('閱讀頁數','readingPages','number',0,'required min="0" max="10000" step="1"')}${field('閱讀章節（選填）','chapter','text','','maxlength="100"')}${note('閱讀心得（選填）')}<p class="hint full">${data.settings.readingApproval?'需家長確認後發獎。':'閱讀紀錄自動核准。'}每 ${data.settings.reading.minutes} 分鐘可獲獎，每日上限 ${data.settings.reading.dailyLimit} 份；未達門檻也會保留紀錄。</p>${formEnd('記下今天的閱讀')}`);
+ $('startClock').onclick=()=>{clock.start();updateTimer();};$('pauseClock').onclick=()=>{clock.pause();updateTimer();};$('finishClock').onclick=()=>{$('readingForm').elements.readingMinutes.value=clock.finish();updateTimer();};
+ $('readingForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);await action('createRecord',{type:'reading',eventDate:fd.get('eventDate'),bookName:fd.get('bookName'),readingMinutes:Number(fd.get('readingMinutes')),readingPages:Number(fd.get('readingPages')),chapter:fd.get('chapter'),note:fd.get('note')});};
+}
+$('openReading').onclick=readingForm;
+function updateTimer(){const out=$('readingTime');if(!out)return;const secs=Math.floor(clock.elapsed()/1000);out.textContent=[Math.floor(secs/3600),Math.floor(secs/60)%60,secs%60].map(n=>String(n).padStart(2,'0')).join(':');$('startClock').disabled=clock.running||busy;}
+function memberOptions(){return data.members.map(m=>({value:m.accountId,label:m.name}));}
+function childName(id){return data.members.find(m=>m.accountId===id)?.name||id;}
+function renderFilters(container,parent){
+ container.innerHTML=`<form class="filters" data-forest-filters>${parent?select('孩子','accountId',[{value:'all',label:'全部成員'},...memberOptions()],recordFilters.accountId||'all'):''}${select('類型','type',[{value:'',label:'全部'},{value:'exam',label:'考試'},{value:'reading',label:'閱讀'}],recordFilters.type||'')}${select('狀態','status',[{value:'',label:'全部'},...['pending','approved','rejected','revoked'].map(v=>({value:v,label:labels[v]}))],recordFilters.status||'')}${field('開始日期','from','date',recordFilters.from||'')}${field('結束日期','to','date',recordFilters.to||'')}${field('科目','subject','text',recordFilters.subject||'')}${field('考試類型','examType','text',recordFilters.examType||'')}${field('書名包含','bookName','text',recordFilters.bookName||'')}<button>套用篩選</button></form>`;
+ container.querySelector('form').onsubmit=async e=>{e.preventDefault();recordFilters=Object.fromEntries(new FormData(e.currentTarget));await loadRecords(true,parent);};
+}
+async function loadRecords(reset=false,parent=view==='parent'){
+ if(!client)return;const container=parent?$('parentRecords'):$('recordList');if(!container)return;
+ try{if(reset){recordCursor=null;recordRows=[];}const result=await client.api('list',{kind:'records',...recordFilters,accountId:parent?(recordFilters.accountId||'all'):context.accountId,cursor:recordCursor});recordRows.push(...result.rows);recordCursor=result.cursor;
+  container.innerHTML=recordRows.length?recordRows.map(recordRow).join(''):'<p class="empty">這裡會記得你的每一份努力。<br>目前沒有符合條件的紀錄。</p>';
+  container.querySelectorAll('[data-record]').forEach(b=>b.onclick=()=>recordDetail(recordRows.find(r=>r.id===b.dataset.record)));
+  const open=recordRows.find(r=>r.id===$('sheet').dataset.recordId);if($('sheet').open&&open&&open.approvalStatus!==$('sheet').dataset.recordStatus)recordDetail(open);
+  const more=parent?$('parentMore'):$('recordMore');more.hidden=!result.hasMore;more.onclick=()=>loadRecords(false,parent);
+ }catch(error){status(message(error),true);}
+}
+function recordRow(r){const title=r.type==='exam'?`${r.subject} · ${r.score} / ${r.maxScore}`:`${r.bookName} · ${r.readingMinutes} 分鐘`;return `<article class="record-row"><div><time>${esc(r.eventDate)} · ${esc(childName(r.accountId))}</time><strong>${esc(title)}</strong><p>${r.type==='exam'?esc(r.examType):`${r.readingPages} 頁 · ${esc(r.chapter)}`}</p><p>${r.approvalStatus==='approved'?`星星 +${r.rewardPoints} · 水滴 +${r.rewardWater} · 金幣 +${r.rewardCoins}`:'獎勵依審核結果發放'}</p></div><div class="row-actions"><span class="status-pill ${esc(r.approvalStatus)}">${esc(labels[r.approvalStatus]||r.approvalStatus)}</span><button class="outline" data-record="${esc(r.id)}">查看${data.parent&&r.approvalStatus==='pending'?'／審核':''}</button></div></article>`;}
+function recordDetail(r){
+ sheet(r.type==='exam'?'考試紀錄':'閱讀紀錄',`<div class="record-detail">${esc(childName(r.accountId))} · ${esc(r.eventDate)}\n${r.type==='exam'?esc(`${r.subject}／${r.examType}：${r.score} / ${r.maxScore}`):esc(`${r.bookName}\n${r.readingMinutes} 分鐘 · ${r.readingPages} 頁 · ${r.chapter}`)}\n${esc(r.note)}\n狀態：${esc(labels[r.approvalStatus])}\n${r.reviewNote?'家長備註：'+esc(r.reviewNote):''}\n${r.approvalStatus==='approved'?`星星 ${r.rewardPoints} · 水滴 ${r.rewardWater} · 金幣 ${r.rewardCoins}`:''}${r.improvementBonus?`\n進步 ${r.improvement} 百分點，加獎 ${r.improvementBonus} 星星`:''}</div>${r.photoPath?'<button id="viewPhoto" class="outline">查看考卷照片</button><div id="photoContainer"></div>':''}${data.parent&&r.approvalStatus==='pending'?'<div class="row-actions"><button id="approveRecord">核准並發放</button><button id="rejectRecord" class="outline">退回</button></div>':''}${data.parent&&r.approvalStatus==='approved'?'<div class="row-actions"><button id="correctRecord" class="outline">更正紀錄</button><button id="revokeRecord" class="danger">撤銷並沖回獎勵</button></div>':''}${['pending','rejected'].includes(r.approvalStatus)?'<button id="editPending" class="outline">編輯並重新送審</button>':''}<p class="form-error"></p>`);
+ $('sheet').dataset.recordId=r.id;$('sheet').dataset.recordStatus=r.approvalStatus;
+ if(['pending','rejected'].includes(r.approvalStatus))$('editPending').onclick=()=>editPendingForm(r);
+ if(r.photoPath)$('viewPhoto').onclick=async()=>{try{const blob=await client.photo(r.photoPath),url=URL.createObjectURL(blob);photoUrls.push(url);const image=new Image();image.src=url;image.alt='考卷照片';image.className='exam-photo';$('photoContainer').replaceChildren(image);}catch(e){status(message(e),true);}};
+ if(data.parent&&r.approvalStatus==='pending'){$('approveRecord').onclick=()=>action('reviewRecord',{id:r.id,accountId:r.accountId,status:'approved'});$('rejectRecord').onclick=()=>reasonForm('退回紀錄','reviewRecord',{id:r.id,accountId:r.accountId,status:'rejected'});}
+ if(data.parent&&r.approvalStatus==='approved'){$('revokeRecord').onclick=()=>reasonForm('撤銷並沖回獎勵','correctRecord',{id:r.id,accountId:r.accountId,revoke:true});$('correctRecord').onclick=()=>correctForm(r);}
+}
+function editPendingForm(r){
+ sheet('編輯並重新送審',`<form id="editPendingForm" class="form-grid">${field('日期','eventDate','date',r.eventDate,`required max="${today()}"`)}${r.type==='exam'?field('科目','subject','text',r.subject,'required maxlength="40"')+select('考試類型','examType',['小考','段考','期中考','期末考','練習測驗',r.examType].filter((v,i,a)=>a.indexOf(v)===i),r.examType)+field('分數','score','number',r.score,'required min="0" step="0.01"')+field('滿分','maxScore','number',r.maxScore,'required min="0.01" step="0.01"'):field('書名','bookName','text',r.bookName,'required maxlength="150"')+field('分鐘','readingMinutes','number',r.readingMinutes,'required min="0" step="0.01"')+field('頁數','readingPages','number',r.readingPages,'required min="0" step="1"')+field('章節','chapter','text',r.chapter)}${note('備註','note',r.note)}${formEnd('重新送審')}`);
+ $('editPendingForm').onsubmit=e=>{e.preventDefault();const fields=Object.fromEntries(new FormData(e.currentTarget));for(const key of ['score','maxScore','readingMinutes','readingPages'])if(key in fields)fields[key]=Number(fields[key]);action('editRecord',{id:r.id,fields});};
+}
+function reasonForm(title,actionName,payload){sheet(title,`<form id="reasonForm" class="form-grid"><p class="hint full">請說明原因。系統會保留操作紀錄；若可用資源不足，撤銷會被拒絕，原紀錄不會被覆蓋。</p>${note('原因（必填）','reason')}${formEnd('確認')}`);$('reasonForm').onsubmit=e=>{e.preventDefault();const reason=new FormData(e.currentTarget).get('reason');if(!reason.trim())return e.currentTarget.querySelector('.form-error').textContent='請填寫原因';action(actionName,{...payload,reason});};}
+function correctForm(r){sheet('更正已核准紀錄',`<form id="correctForm" class="form-grid">${r.type==='exam'?field('分數','score','number',r.score,'required min="0" step="0.01"')+field('滿分','maxScore','number',r.maxScore,'required min="0.01" step="0.01"'):field('書名','bookName','text',r.bookName,'required maxlength="150"')+field('分鐘','readingMinutes','number',r.readingMinutes,'required min="0" step="0.01"')+field('頁數','readingPages','number',r.readingPages,'required min="0" step="1"')+field('章節','chapter','text',r.chapter)}${note('備註','note',r.note)}${note('更正原因（必填）','reason')}<p class="hint full">沿用提交時獎勵規則，以差額交易調整，不重發原獎勵。日期、科目與考試類型若有誤，請先撤銷再新增。</p>${formEnd('確認更正')}`);$('correctForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget),fields={};for(const key of r.type==='exam'?['score','maxScore']:['bookName','readingMinutes','readingPages','chapter'])fields[key]=['score','maxScore','readingMinutes','readingPages'].includes(key)?Number(fd.get(key)):fd.get(key);fields.note=fd.get('note');action('correctRecord',{id:r.id,accountId:r.accountId,fields,reason:fd.get('reason')});};}
+function renderRewards(parent=false){
+ const container=parent?$('parentRewards'):$('rewardList');if(!container)return;
+ const rewards=data.rewards.filter(r=>parent||r.status==='active');container.innerHTML=rewards.length?rewards.map(r=>`<article class="reward"><p class="eyebrow">DREAM REWARD</p><h3>${esc(r.name)}</h3><p>${esc(r.description)}</p><p><strong>${r.cost}</strong> 星星積分${parent?' · '+(r.status==='active'?'已上架':'已下架'):''}</p><button data-reward="${esc(r.id)}">${parent?'編輯獎品':'申請兌換'}</button></article>`).join(''):'<p class="empty">夢想正在準備中。請家長加入第一個獎勵。</p>';
+ container.querySelectorAll('[data-reward]').forEach(b=>b.onclick=()=>{const r=data.rewards.find(r=>r.id===b.dataset.reward);if(parent)return rewardForm(r);sheet('申請夢想獎勵',`<form id="requestForm" class="form-grid"><p class="full">${esc(r.name)} · 需要 ${r.cost} 點<br>目前可用 ${available()} 點。申請後先保留積分，待家長確認發放。</p>${note('想對家長說的話（選填）','detail')}${formEnd('確認申請')}`);$('requestForm').onsubmit=e=>{e.preventDefault();action('requestReward',{giftId:r.id,detail:new FormData(e.currentTarget).get('detail')});};});
+}
+function rewardForm(r={}){sheet(r.id?'編輯夢想獎勵':'新增夢想獎勵',`<form id="rewardForm" class="form-grid">${field('獎品名稱','name','text',r.name||'','required maxlength="100"')}${field('所需星星積分','cost','number',r.cost||10,'required min="0.01" step="0.01"')}${select('上架狀態','status',[{value:'active',label:'上架'},{value:'inactive',label:'下架'}],r.status||'active')}${note('獎品說明','description',r.description||'')}${formEnd('儲存獎品')}`);$('rewardForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget);action('saveReward',{...(r.id?{id:r.id}:{}),name:fd.get('name'),cost:Number(fd.get('cost')),status:fd.get('status'),description:fd.get('description')});};}
+async function requestList(container,legacy=false,cursor=null,append=false){
+ try{const result=await client.api(legacy?'legacyList':'list',{kind:'requests',accountId:view==='parent'?targetId:context.accountId,cursor}),html=result.rows.map(r=>`<article class="record-row"><div><strong>${esc(r.name)}</strong><p>${esc(childName(r.accountId))} · ${r.cost} 點 · ${esc(labels[r.status]||r.status)}</p><p>${esc(r.detail||r.reason||'')}</p></div><div class="row-actions">${data.parent&&['requested','approved','processing'].includes(r.status)?['approved','processing','completed','rejected'].filter(s=>s!==r.status&&!(r.status==='processing'&&s==='approved')).map(s=>`<button data-request="${esc(r.id)}" data-status="${s}">${esc(labels[s])}</button>`).join(''):r.accountId===context.accountId&&r.status==='requested'?`<button data-request="${esc(r.id)}" data-status="cancelled">取消申請</button>`:''}</div></article>`).join('')||'<p class="empty">目前沒有兌換申請。</p>';
+  if(!append){container._requestRows=new Map();container.innerHTML='<div class="requests-rows"></div><button class="more-requests outline" hidden>載入更多</button>';}for(const r of result.rows)container._requestRows.set(r.id,r);container.querySelector('.requests-rows').insertAdjacentHTML('beforeend',html);
+  container.querySelectorAll('[data-request]').forEach(b=>b.onclick=()=>{const r=container._requestRows.get(b.dataset.request);if(!r)return;reasonForm('更新為'+labels[b.dataset.status],'changeRewardRequest',{id:r.id,accountId:r.accountId,status:b.dataset.status});});
+  const more=container.querySelector('.more-requests');more.hidden=!result.hasMore;more.onclick=()=>requestList(container,legacy,result.cursor,true);
+ }catch(error){status(message(error),true);}
+}
+$('rewardRequests').onclick=async()=>{if(!data||busy)return;sheet('我的兌換申請','<div id="myRequests"></div><button id="oldRequests" class="text-link">查看改版前申請</button>');await requestList($('myRequests'));$('oldRequests').onclick=()=>requestList($('myRequests'),true);};
+async function transactions(container,accountId,cursor=null,append=false){
+ const result=await client.api('list',{kind:'transactions',accountId,cursor});const html=result.rows.map(r=>`<article class="record-row"><div><time>${esc(new Date(r.createdAt).toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}))}</time><strong>${esc(({ 'legacy-opening':'歷史積分銜接','record-award':'成長獎勵','parent-adjustment':'家長積分調整','seed-purchased':'購買種子','plant-watered':'植物澆水','record-corrected':'紀錄更正','record-revoked':'紀錄撤銷','reward-reserved':'申請保留','reward-completed':'獎品已發放','reward-rejected':'兌換退回','reward-cancelled':'兌換取消' })[r.kind]||r.kind)}</strong><p>星星 ${r.delta.points>=0?'+':''}${r.delta.points} · 水滴 ${r.delta.water} · 金幣 ${r.delta.coins}</p><p>${esc(r.reason)}<br>來源 ${esc(r.source.kind)}／${esc(r.source.id)}</p><p>交易後：星星 ${r.after.points}、保留 ${r.after.reserved||0}、水滴 ${r.after.water}、金幣 ${r.after.coins}</p></div></article>`).join('')||'<p class="empty">目前沒有資源交易。</p>';
+ if(!append)container.innerHTML='<div class="transaction-rows"></div><button class="more-transactions outline" hidden>載入更多</button>';container.querySelector('.transaction-rows').insertAdjacentHTML('beforeend',html);const more=container.querySelector('.more-transactions');more.hidden=!result.hasMore;more.onclick=()=>transactions(container,accountId,result.cursor,true);
+}
+$('showTransactions').onclick=async()=>{if(!data||busy)return;sheet('資源交易明細','<div id="transactions"></div>');try{await transactions($('transactions'),context.accountId);}catch(e){status(message(e),true);}};
+$('legacyRecords').onclick=()=>legacyRecords();
+async function legacyRecords(cursor=null,append=false){
+ if(!data||busy)return;
+ if(!append)sheet('改版前成長紀錄','<p class="hint">保留原始紀錄與積分；這些歷史資料不會再次獲得水滴、金幣或新積分。</p><div id="oldRecordRows"></div><button id="oldRecordMore" class="outline" hidden>載入更多</button>');
+ try{const r=await client.api('legacyList',{kind:'records',accountId:view==='parent'?targetId:context.accountId,cursor});$('oldRecordRows').insertAdjacentHTML('beforeend',r.rows.map(row=>`<div class="record-row"><div><time>${esc(row.eventDate||row.date||'歷史日期未提供')}</time><strong>${esc(row.subject||row.category||'歷史紀錄')}</strong><p>${esc(row.examType||row.note||'')} ${row.score!=null?esc(row.score)+' 分':''}</p></div><span class="status-pill">已保留</span></div>`).join('')||'<p class="empty">沒有可依帳號確認歸屬的歷史紀錄。</p>');$('oldRecordMore').hidden=!r.hasMore;$('oldRecordMore').onclick=()=>legacyRecords(r.cursor,true);}catch(e){status(message(e),true);}
+}
+async function renderParent(){
+ if(!data.parent)return;const root=$('parentContent');targetId=targetId&&data.members.some(m=>m.accountId===targetId)?targetId:(data.members.find(m=>!['parent','admin'].includes(m.role))?.accountId||context.accountId);
+ root.innerHTML=`<div class="filters">${select('查看成員','parentTarget',memberOptions(),targetId)}</div><div id="parentPanel"></div>`;root.querySelector('[name=parentTarget]').onchange=e=>{targetId=e.target.value;renderParent().catch(e=>status(message(e),true));};
+ const panel=$('parentPanel');
+ if(parentMode==='records'){panel.innerHTML='<div id="parentFilters"></div><div id="parentRecords" class="record-list"></div><button id="parentMore" class="outline" hidden>載入更多紀錄</button>';renderFilters($('parentFilters'),true);await loadRecords(true,true);}
+ if(parentMode==='overview'){const r=await client.api('overview',{accountId:targetId});panel.innerHTML=`<p class="hint">${esc(r.month)} · 統計已核准紀錄與可確認歸屬的歷史考試；未審核不列入。</p><div class="summary-grid">${[['考試次數',r.examCount],['百分制平均',r.average==null?'尚無資料':r.average],['閱讀分鐘',r.readingMinutes],['閱讀頁數',r.readingPages],['可用星星',r.available],['已兌換積分',r.redeemed]].map(([l,n])=>`<div><small>${l}</small><strong>${n}</strong></div>`).join('')}</div><button id="manualReward" class="outline">手動調整星星積分</button>`;$('manualReward').onclick=()=>{sheet('調整星星積分',`<form id="manualForm" class="form-grid"><p class="full">對象：${esc(childName(targetId))}</p>${field('積分（可輸入負數扣除）','points','number','','required min="-100000" max="100000" step="0.01"')}${note('調整原因（必填）','reason')}${formEnd('確認調整')}`);$('manualForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget);action('manualReward',{accountId:targetId,points:Number(fd.get('points')),reason:fd.get('reason')});};};}
+ if(parentMode==='settings')settingsForm(panel);
+ if(parentMode==='rewards'){panel.innerHTML='<button id="newReward">新增夢想獎勵</button><div id="parentRewards" class="reward-grid"></div>';$('newReward').onclick=()=>rewardForm();renderRewards(true);}
+ if(parentMode==='requests'){panel.innerHTML='<div id="parentRequests"></div><button id="oldParentRequests" class="text-link">查看改版前申請</button>';await requestList($('parentRequests'));$('oldParentRequests').onclick=()=>requestList($('parentRequests'),true);}
+ if(parentMode==='transactions')await transactions(panel,targetId);
+ if(parentMode==='migration'){const r=await client.api('snapshot',{accountId:targetId}),m=r.migration;panel.innerHTML=`<h3>舊資料已安全銜接</h3><p class="body-copy">${esc(childName(targetId))} 的歷史成績 ${m.scoreCount} 筆、兌換 ${m.requestCount} 筆。<br>原可用積分 ${m.legacyBalance}，另有 ${m.pointsReserved} 點處於舊申請保留中。<br>原始資料保留不刪除，不重新發放歷史獎勵。</p><p class="hint">缺少 accountId 或群組歸屬矛盾的舊資料不會依姓名猜測，請專案擁有者查閱遷移報告。</p><button id="parentLegacy" class="outline">查看歷史紀錄</button>`;$('parentLegacy').onclick=()=>legacyRecords();}
+}
+document.querySelectorAll('[data-parent]').forEach(b=>b.onclick=async()=>{if(busy)return;parentMode=b.dataset.parent;document.querySelectorAll('[data-parent]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));try{await renderParent();}catch(e){status(message(e),true);}});
+function settingsForm(root){
+ const s=data.settings;root.innerHTML=`<form id="settingsForm"><p class="body-copy">新規則只套用於之後提交的紀錄；已提交紀錄使用當時的規則快照。</p><section class="settings-section"><h3>考試獎勵</h3>${s.examBands.map((b,i)=>`<div class="settings-row">${field('最低百分比',`examMin${i}`,'number',b.min,'required min="0" max="100" step="0.01"')}${field('星星',`examPoints${i}`,'number',b.points,'required min="0" step="0.01"')}${field('水滴',`examWater${i}`,'number',b.water,'required min="0" step="1"')}${field('金幣',`examCoins${i}`,'number',b.coins,'required min="0" step="1"')}</div>`).join('')}<label><input name="examApproval" type="checkbox" ${s.examApproval?'checked':''}> 考試需要家長審核</label></section><section class="settings-section"><h3>進步獎勵</h3>${s.improvementBands.map((b,i)=>`<div class="settings-row">${field('進步百分點',`improvementMin${i}`,'number',b.min,'required min="0.01" step="0.01"')}${field('額外星星',`improvementPoints${i}`,'number',b.points,'required min="0" step="0.01"')}</div>`).join('')}</section><section class="settings-section"><h3>閱讀獎勵與每日上限</h3><div class="form-grid">${field('每份需閱讀分鐘','readingMinutes','number',s.reading.minutes,'required min="1" max="1440" step="1"')}${field('每日最多獎勵份數','readingDaily','number',s.reading.dailyLimit,'required min="0" max="20" step="1"')}${field('每份星星','readingPoints','number',s.reading.points,'required min="0" step="0.01"')}${field('每份水滴','readingWater','number',s.reading.water,'required min="0" step="1"')}${field('每份金幣','readingCoins','number',s.reading.coins,'required min="0" step="1"')}</div><label><input name="readingApproval" type="checkbox" ${s.readingApproval?'checked':''}> 閱讀需要家長審核</label></section><p class="form-error"></p><button type="submit">儲存未來適用規則</button></form>`;
+ $('settingsForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget),n=name=>Number(fd.get(name));action('saveSettings',{settings:{examApproval:fd.has('examApproval'),readingApproval:fd.has('readingApproval'),examBands:s.examBands.map((_,i)=>({min:n('examMin'+i),points:n('examPoints'+i),water:n('examWater'+i),coins:n('examCoins'+i)})),improvementBands:s.improvementBands.map((_,i)=>({min:n('improvementMin'+i),points:n('improvementPoints'+i)})),reading:{minutes:n('readingMinutes'),dailyLimit:n('readingDaily'),points:n('readingPoints'),water:n('readingWater'),coins:n('readingCoins')}}},{close:false});};
+}
+async function initialize(){
+ $('retry').hidden=true;status('正在連接你的森林…');
+ try{if(!client){const m=await import('./client.js');client=await m.connect(context);}await refresh();if(stopped)return;if(!initializedOnce&&data.parent)view='parent';initializedOnce=true;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>refresh().catch(e=>status(message(e),true)),220);},e=>status('即時同步中斷：'+message(e),true));}
+ catch(error){status(message(error),true);$('retry').hidden=false;}
+}
+$('retry').onclick=initialize;
+function startTimer(){clearInterval(timer);if(!document.hidden)timer=setInterval(updateTimer,500);}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);game?.pause();}else{startTimer();if(view==='forest')game?.resume();checkContext();}});
+function checkContext(){let user;try{user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{}if(user?.accountId!==context.accountId||getSelectedGameGroupId(user)!==context.groupId)location.replace('wishwall.html');}
+window.addEventListener('storage',checkContext);window.addEventListener('focus',checkContext);window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
+window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();photoUrls.forEach(URL.revokeObjectURL);});
+startTimer();initialize();

@@ -7,7 +7,7 @@ export const DEFAULT_MENUS = [
     { id: 'photodump', label: '📸 Photo Dump', isDefault: true, group: 'all', order: 5 },
     { id: 'gamezone', label: '🎮 遊戲大廳', isDefault: true, group: 'all', order: 6 },
     { id: 'checkin', label: '📍 到家打卡', isDefault: false, group: 'family', order: 7 },
-    { id: 'wishlist', label: '⭐ 許願牆', isDefault: false, group: 'family', order: 8 },
+    { id: 'wishlist', label: '⭐ 成長森林', isDefault: false, group: 'family', order: 8 },
     FOOD_MENU,
 ];
 export const MODULE_META = Object.fromEntries(DEFAULT_MENUS.map(menu => [menu.id, { name: menu.label }]));

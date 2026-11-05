@@ -1,0 +1,291 @@
+const D=require('./growth-domain.cjs');
+const zero=()=>({points:0,water:0,coins:0});
+const cleanMember=(row)=>({accountId:row.accountId,name:row.name||row.accountId,role:row.role||'member'});
+const legacyStatus={申請中:'requested',執行中:'processing',已完成:'completed',已取消:'cancelled',已駁回:'rejected'};
+function createGrowthService({db,now=Date.now}){
+    const ref=(group,kind,id)=>db.doc(`groups/${group}/${kind}/${id}`);
+    const collection=(group,kind)=>db.collection(`groups/${group}/${kind}`);
+    const read=async(t,source)=>t?t.get(source):source.get();
+    function checkPhoto(photo,groupId,accountId){if(!photo)return;const prefix=`growth-exams/${groupId}/${accountId}/`;if(!photo.startsWith(prefix)||!(/^[a-zA-Z0-9_-]+[.](jpg|png|webp)$/).test(photo.slice(prefix.length)))D.fail('permission-denied','照片路徑不屬於紀錄擁有人或格式不正確');}
+    async function context(request,t){
+        if(!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
+        const groupId=D.id(request.data?.groupId),token=request.auth.token||{};
+        const profile=await read(t,db.doc(`users/${D.id(request.auth.uid)}`));
+        const actor=profile.data();
+        if(!actor||actor.role==='removed'||token.photoAccountId!==actor.accountId||token.photoGroupId!==groupId)D.fail('permission-denied','帳號或群組驗證失敗，請重新登入');
+        const group=await read(t,db.doc(`groups/${groupId}`));
+        if(!group.exists||!(group.data().members||[]).includes(actor.accountId))D.fail('permission-denied','你已不在這個群組');
+        return{groupId,accountId:actor.accountId,actor:cleanMember(actor),group:group.data(),parent:['admin','parent'].includes(actor.role)};
+    }
+    const parent=c=>{if(!c.parent)D.fail('permission-denied','只有目前群組的家長可執行此操作');};
+    const target=(c,value)=>{const accountId=value?D.id(value):c.accountId;if(accountId!==c.accountId)parent(c);if(!c.group.members.includes(accountId))D.fail('permission-denied','帳號不在目前群組');return accountId;};
+    function change(wallet,delta){
+        wallet.pointsBalance=D.round(wallet.pointsBalance+(delta.points||0));wallet.waterBalance+=delta.water||0;wallet.coinBalance+=delta.coins||0;
+        if(wallet.pointsBalance<0||wallet.pointsBalance<wallet.pointsReserved||wallet.waterBalance<0||wallet.coinBalance<0)D.fail('failed-precondition','可用資源不足；已使用或已保留的資源不能直接撤銷，請先由家長處理相關兌換');
+        if([wallet.pointsBalance,wallet.waterBalance,wallet.coinBalance].some(n=>!Number.isFinite(n)||n>1000000000))D.fail('resource-exhausted','資源已達帳戶上限');
+    }
+    const stamp=(c,time)=>({groupId:c.groupId,updatedAt:time,updatedByAccountId:c.accountId});
+    function journal(t,c,key,accountId,kind,delta,before,after,source,reason=''){
+        t.create(ref(c.groupId,'growthTransactions',key),{schemaVersion:1,accountId,kind,delta,before,after,source,reason,createdAt:now(),actorAccountId:c.accountId,groupId:c.groupId});
+    }
+    const balances=w=>({points:w.pointsBalance,reserved:w.pointsReserved,water:w.waterBalance,coins:w.coinBalance});
+    async function ensureProfile(request,requested){
+        const legacy=await import('./game/wishwall-core.mjs');
+        return db.runTransaction(async t=>{
+            const c=await context(request,t),accountId=target(c,requested),walletRef=ref(c.groupId,'growthProfiles',accountId);
+            const exists=await t.get(walletRef);if(exists.exists)return exists.data();
+            const [oldSetting,oldRevision,scores,redeems,settings,garden]=await Promise.all([
+                t.get(ref(c.groupId,'settings','wishWall')),t.get(ref(c.groupId,'settings','wishWallRevision')),
+                t.get(collection(c.groupId,'scores').where('accountId','==',accountId).limit(1001)),
+                t.get(collection(c.groupId,'redeems').where('accountId','==',accountId).limit(1001)),
+                t.get(ref(c.groupId,'growthSettings','main')),t.get(ref(c.groupId,'gardens',accountId))]);
+            if(scores.size>1000||redeems.size>1000)D.fail('failed-precondition','歷史資料超過安全匯入上限，請由管理員執行分批遷移');
+            const oldRules=legacy.normalizeSettings(oldSetting.exists?oldSetting.data():legacy.DEFAULT_SETTINGS);
+            if(oldRules.gifts.length>100)D.fail('failed-precondition','歷史獎品超過安全匯入上限，請先執行分批遷移');
+            const rows=snap=>snap.docs.map(d=>({...d.data(),id:d.id}));
+            const scoreRows=rows(scores),redeemRows=rows(redeems).filter(r=>legacy.belongsToGroup(r,c.groupId));
+            const legacyBalance=legacy.calculatePoints(scoreRows,redeemRows,oldRules,c.groupId).balances.get(accountId)||0;
+            if(redeemRows.some(r=>!Number.isFinite(Number(r.cost||0))||Number(r.cost||0)<0||(r.status&&!legacyStatus[r.status])))D.fail('failed-precondition','舊兌換有無效金額或未知狀態，請先核對遷移報告');
+            const pending=redeemRows.filter(r=>['requested','approved','processing'].includes(legacyStatus[r.status]||'requested'));
+            const reserved=D.round(pending.reduce((sum,r)=>sum+Number(r.cost||0),0));
+            if(legacyBalance<0||!Number.isFinite(reserved)||reserved<0)D.fail('failed-precondition','舊積分需先由家長核對，未變更任何歷史資料');
+            const time=now(),wallet={schemaVersion:1,accountId,gardenLevel:1,pointsBalance:D.round(legacyBalance+reserved),pointsReserved:reserved,waterBalance:0,coinBalance:0,redeemedPoints:D.round(redeemRows.filter(r=>legacyStatus[r.status]==='completed').reduce((sum,r)=>sum+Number(r.cost||0),0)),createdAt:time,...stamp(c,time)};
+            const report={schemaVersion:1,accountId,legacyBalance,pointsReserved:reserved,scoreCount:scores.size,requestCount:redeems.size,sourceRevision:oldRevision.data()?.revision||0,sourceFingerprint:D.hash({scoreRows,redeemRows,oldRules}),sourcePaths:['scores','redeems','settings/wishWall'],createdAt:time,groupId:c.groupId};
+            t.create(walletRef,wallet);if(!garden.exists)t.create(ref(c.groupId,'gardens',accountId),{schemaVersion:1,accountId,slots:[null,null,null],seeds:{sunflower:1,tulip:0,sakura:0},createdAt:time,...stamp(c,time)});
+            t.create(ref(c.groupId,'growthMigrations',accountId),report);
+            journal(t,c,'opening_'+D.hash(accountId),accountId,'legacy-opening',{points:wallet.pointsBalance,water:0,coins:0},zero(),balances(wallet),{kind:'migration',id:accountId},'依舊規則保留積分，歷史紀錄不再發水滴或金幣');
+            if(!settings.exists){
+                t.create(ref(c.groupId,'growthSettings','main'),{...D.DEFAULT_SETTINGS,revision:1,createdAt:time,...stamp(c,time)});
+                t.set(ref(c.groupId,'settings','growthForestCutover'),{schemaVersion:1,createdAt:time,groupId:c.groupId});
+                for(const gift of oldRules.gifts){
+                    if(!Number.isFinite(Number(gift.points))||Number(gift.points)<=0)continue;
+                    const giftId='legacy_'+D.hash(String(gift.id)).slice(0,32);
+                    t.create(ref(c.groupId,'growthRewards',giftId),{schemaVersion:1,id:giftId,name:String(gift.name||'歷史獎品'),description:'原有夢想獎勵',cost:Number(gift.points),status:'active',legacyId:String(gift.id),createdAt:time,...stamp(c,time)});
+                }
+            }
+            return wallet;
+        });
+    }
+    async function applyAward(t,c,record,wallet,key,previous,daily){
+        let delta,units=0;
+        if(record.type==='exam')delta=D.examAward(record,record.policy,previous);
+        else{
+            units=Math.min(Math.floor(record.readingMinutes/record.policy.reading.minutes),Math.max(0,record.policy.reading.dailyLimit-(daily?.units||0)));
+            delta=Object.fromEntries(['points','water','coins'].map(k=>[k,record.policy.reading[k]*units]));
+        }
+        const before=balances(wallet);change(wallet,delta);
+        record.rewardPoints=delta.points;record.rewardWater=delta.water;record.rewardCoins=delta.coins;record.rewardUnits=units;
+        if(record.type==='exam')Object.assign(record,{percent:delta.percent,previousPercent:delta.previousPercent,improvement:delta.improvement,improvementBonus:delta.bonus});
+        record.approvalStatus='approved';record.approvedAt=now();record.approvedBy=c.accountId;
+        if(record.type==='reading')t.set(ref(c.groupId,'growthReadingDays',D.hash(record.accountId+':'+record.eventDate)),{accountId:record.accountId,eventDate:record.eventDate,units:(daily?.units||0)+units,...stamp(c,now())});
+        journal(t,c,key,record.accountId,'record-award',delta,before,balances(wallet),{kind:'record',id:record.id});
+    }
+    async function mutation(request){
+        const action=D.text(request.data.action,'操作',40),p=request.data.payload||{},rid=D.id(request.data.requestId),time=now();
+        const init=await context(request);await ensureProfile(request,init.accountId);
+        if(['reviewRecord','correctRecord','manualReward','changeRewardRequest'].includes(action)&&p.accountId)await ensureProfile(request,target(init,p.accountId));
+        return db.runTransaction(async t=>{
+            const c=await context(request,t),key=D.hash(c.accountId+':'+rid),receiptRef=ref(c.groupId,'growthRequests',key),fingerprint=D.hash({action,p});
+            const receipt=await t.get(receiptRef);if(receipt.exists){if(receipt.data().fingerprint!==fingerprint)D.fail('already-exists','同一請求代碼不能用於不同操作');return receipt.data().result;}
+            const settingsSnap=await t.get(ref(c.groupId,'growthSettings','main')),policy=settingsSnap.data();
+            const walletRef=ref(c.groupId,'growthProfiles',c.accountId),gardenRef=ref(c.groupId,'gardens',c.accountId);
+            const [walletSnap,gardenSnap]=await Promise.all([t.get(walletRef),t.get(gardenRef)]);
+            const wallet=walletSnap.data(),garden=gardenSnap.data();let result={ok:true},auditDiff=null;
+            if(action==='createRecord'){
+                const record=D.validateRecord(p,time),canonical={...record};delete canonical.note;delete canonical.photoPath;
+                const duplicateRef=ref(c.groupId,'growthRecordKeys',D.hash({accountId:c.accountId,...canonical}));
+                const duplicate=await t.get(duplicateRef);if(duplicate.exists)D.fail('already-exists','這筆紀錄已提交，請查看成長紀錄');
+                checkPhoto(record.photoPath,c.groupId,c.accountId);
+                const recordId='r_'+key.slice(0,40);Object.assign(record,{id:recordId,accountId:c.accountId,groupId:c.groupId,schemaVersion:1,policy:structuredClone(policy),approvalStatus:'pending',rewardPoints:0,rewardWater:0,rewardCoins:0,createdAt:time,...stamp(c,time)});
+                const auto=record.type==='exam'?!policy.examApproval:!policy.readingApproval;
+                let previous=null,daily=null;
+                if(auto){
+                    if(record.type==='exam')previous=await previousScore(t,c,record);
+                    else daily=(await t.get(ref(c.groupId,'growthReadingDays',D.hash(c.accountId+':'+record.eventDate)))).data();
+                    await applyAward(t,c,record,wallet,key,previous,daily);
+                }
+                t.create(ref(c.groupId,'growthRecords',recordId),record);t.create(duplicateRef,{recordId,accountId:c.accountId,createdAt:time});
+                t.set(walletRef,{...wallet,...stamp(c,time)});result={id:recordId,status:record.approvalStatus,rewards:{points:record.rewardPoints,water:record.rewardWater,coins:record.rewardCoins}};
+            }else if(action==='editRecord'){
+                const recordRef=ref(c.groupId,'growthRecords',D.id(p.id)),snapshot=await t.get(recordRef),old=snapshot.data();
+                if(!old)D.fail('not-found','紀錄不存在');
+                if(old.accountId!==c.accountId)parent(c);
+                if(!['pending','rejected'].includes(old.approvalStatus))D.fail('failed-precondition','已核准紀錄必須由家長使用更正交易');
+                const revised=D.validateRecord({...old,...p.fields,type:old.type},time),canonical={...revised};delete canonical.note;delete canonical.photoPath;
+                checkPhoto(revised.photoPath,c.groupId,old.accountId);
+                const duplicateRef=ref(c.groupId,'growthRecordKeys',D.hash({accountId:old.accountId,...canonical})),duplicate=await t.get(duplicateRef);
+                if(duplicate.exists&&duplicate.data().recordId!==old.id)D.fail('already-exists','另一筆紀錄已使用相同內容');
+                const updated={...old,...revised,approvalStatus:'pending',reviewNote:'',...stamp(c,time)};
+                t.set(duplicateRef,{recordId:old.id,accountId:old.accountId,createdAt:time});
+                t.set(recordRef,updated);t.create(ref(c.groupId,'growthRecordHistory',key),{recordId:old.id,accountId:old.accountId,before:old,after:updated,reason:'編輯並重新送審',createdAt:time,...stamp(c,time)});
+                result={id:old.id,status:'pending'};
+            }else if(action==='reviewRecord'||action==='correctRecord'){
+                parent(c);const recordRef=ref(c.groupId,'growthRecords',D.id(p.id)),snapshot=await t.get(recordRef);if(!snapshot.exists)D.fail('not-found','紀錄不存在');
+                const record=snapshot.data();target(c,record.accountId);
+                if(p.accountId!==record.accountId)D.fail('invalid-argument','帳號與紀錄不一致');
+                const ownerRef=ref(c.groupId,'growthProfiles',record.accountId),owner=(await t.get(ownerRef)).data();
+                if(!owner)D.fail('failed-precondition','請先初始化孩子的森林');
+                const dailyRef=ref(c.groupId,'growthReadingDays',D.hash(record.accountId+':'+record.eventDate));
+                const daily=record.type==='reading'?(await t.get(dailyRef)).data():null;
+                if(action==='reviewRecord'){
+                    if(!['approved','rejected'].includes(p.status))D.fail('invalid-argument','審核狀態不正確');
+                    if(record.approvalStatus===p.status)result={id:record.id,status:p.status};
+                    else{
+                        if(record.approvalStatus!=='pending')D.fail('failed-precondition','這筆紀錄已審核，請使用更正或撤銷');
+                        record.reviewNote=D.text(p.reason||'','審核備註',500,p.status!=='rejected');
+                        const previous=record.type==='exam'&&p.status==='approved'?await previousScore(t,c,record):null;
+                        if(p.status==='approved')await applyAward(t,c,record,owner,key,previous,daily);
+                        else{record.approvalStatus='rejected';record.approvedBy=c.accountId;record.approvedAt=time;}
+                        t.set(recordRef,{...record,...stamp(c,time)});t.set(ownerRef,{...owner,...stamp(c,time)});result={id:record.id,status:record.approvalStatus};
+                    }
+                }else{
+                    const reason=D.text(p.reason,'更正原因',500),before=balances(owner),old={...record};
+                    if(record.approvalStatus!=='approved')D.fail('failed-precondition','僅能調整已核准紀錄');
+                    const revised=p.revoke?null:D.validateRecord({...record,...p.fields,type:record.type},time);
+                    checkPhoto(revised?.photoPath,c.groupId,record.accountId);
+                    if(revised&&revised.eventDate!==record.eventDate)D.fail('failed-precondition','更正不可移動日期；請先撤銷，再建立新紀錄');
+                    if(revised?.type==='exam'&&(revised.subject!==record.subject||revised.examType!==record.examType))D.fail('failed-precondition','更正不可更換科目與考試類型');
+                    let award=zero(),units=0;
+                    if(revised?.type==='exam')award=D.examAward(revised,record.policy,record.previousPercent);
+                    else if(revised){units=Math.min(Math.floor(revised.readingMinutes/record.policy.reading.minutes),Math.max(record.rewardUnits||0,record.policy.reading.dailyLimit-((daily?.units||0)-(record.rewardUnits||0))));award=Object.fromEntries(['points','water','coins'].map(k=>[k,record.policy.reading[k]*units]));}
+                    const delta={points:D.round(award.points-record.rewardPoints),water:award.water-record.rewardWater,coins:award.coins-record.rewardCoins};change(owner,delta);
+                    if(record.type==='reading')t.set(dailyRef,{accountId:record.accountId,eventDate:record.eventDate,units:(daily?.units||0)-(record.rewardUnits||0)+units,...stamp(c,time)});
+                    const updated={...record,...(revised||{}),approvalStatus:p.revoke?'revoked':'approved',rewardPoints:award.points,rewardWater:award.water,rewardCoins:award.coins,rewardUnits:units,...stamp(c,time)};
+                    if(revised?.type==='exam')Object.assign(updated,{percent:award.percent,improvement:award.improvement,improvementBonus:award.bonus});
+                    t.create(ref(c.groupId,'growthRecordHistory',key),{recordId:record.id,accountId:record.accountId,before:old,after:updated,reason,createdAt:time,...stamp(c,time)});
+                    t.set(recordRef,updated);t.set(ownerRef,{...owner,...stamp(c,time)});journal(t,c,key,record.accountId,p.revoke?'record-revoked':'record-corrected',delta,before,balances(owner),{kind:'record',id:record.id},reason);result={id:record.id,status:updated.approvalStatus};
+                }
+            }else if(action==='buySeed'||action==='plant'||action==='water'){
+                const before=balances(wallet);
+                if(action==='buySeed'){
+                    const type=D.id(p.plantType),plant=D.PLANTS[type];if(!plant)D.fail('invalid-argument','種子不存在');
+                    if((garden.seeds[type]||0)>=99)D.fail('resource-exhausted','同一種子最多持有 99 顆');
+                    change(wallet,{coins:-plant.price});garden.seeds[type]=(garden.seeds[type]||0)+1;
+                    journal(t,c,key,c.accountId,'seed-purchased',{points:0,water:0,coins:-plant.price},before,balances(wallet),{kind:'seed',id:type});
+                }else if(action==='plant'){
+                    const position=D.number(p.positionIndex,'種植位置',0,2),type=D.id(p.plantType),plant=D.PLANTS[type];
+                    if(!plant||garden.slots[position]||!(garden.seeds[type]>0))D.fail('failed-precondition','種植位置已使用或沒有這顆種子');
+                    const plantId='p_'+key.slice(0,40);garden.seeds[type]--;garden.slots[position]=plantId;
+                    t.create(ref(c.groupId,'gardenPlants',plantId),{schemaVersion:1,id:plantId,accountId:c.accountId,ownerAccountId:c.accountId,plantType:type,growthValue:0,growthStage:1,growthRequired:plant.required,positionIndex:position,plantedAt:time,...stamp(c,time)});result={id:plantId,positionIndex:position};
+                }else{
+                    const plantRef=ref(c.groupId,'gardenPlants',D.id(p.id)),snapshot=await t.get(plantRef),plant=snapshot.data();
+                    if(!plant||plant.accountId!==c.accountId||!garden.slots.includes(plant.id))D.fail('permission-denied','這不是你的植物');
+                    const amount=Math.min(10,plant.growthRequired-plant.growthValue);if(amount<=0)D.fail('failed-precondition','植物已成熟，不需要再澆水');
+                    if(wallet.waterBalance<amount)D.fail('failed-precondition','水滴不夠了！完成閱讀或紀錄考試，就能獲得更多水滴。');
+                    change(wallet,{water:-amount});plant.growthValue+=amount;plant.growthStage=D.stage(plant.growthValue,plant.growthRequired);
+                    t.set(plantRef,{...plant,...stamp(c,time)});journal(t,c,key,c.accountId,'plant-watered',{points:0,water:-amount,coins:0},before,balances(wallet),{kind:'plant',id:plant.id});result={id:plant.id,stage:plant.growthStage,watered:amount};
+                }
+                t.set(walletRef,{...wallet,...stamp(c,time)});t.set(gardenRef,{...garden,...stamp(c,time)});
+            }else if(action==='saveSettings'){
+                parent(c);const updated=D.settings(p.settings);auditDiff={before:policy,after:updated};t.set(ref(c.groupId,'growthSettings','main'),{...updated,revision:(policy.revision||1)+1,...stamp(c,time)});result={revision:(policy.revision||1)+1};
+            }else if(action==='manualReward'){
+                parent(c);const ownerId=target(c,p.accountId),ownerRef=ref(c.groupId,'growthProfiles',ownerId),owner=(await t.get(ownerRef)).data();
+                const points=D.number(p.points,'手動積分',-100000,100000,2),reason=D.text(p.reason,'調整原因',500),before=balances(owner);
+                change(owner,{points});t.set(ownerRef,{...owner,...stamp(c,time)});journal(t,c,key,ownerId,'parent-adjustment',{points,water:0,coins:0},before,balances(owner),{kind:'manual',id:key},reason);
+            }else if(action==='saveReward'){
+                parent(c);const giftId=p.id?D.id(p.id):'g_'+key.slice(0,40),giftRef=ref(c.groupId,'growthRewards',giftId),old=await t.get(giftRef);
+                if(!old.exists&&(await t.get(collection(c.groupId,'growthRewards').limit(100))).size>=100)D.fail('resource-exhausted','第一階段最多保留 100 個獎品，請編輯現有獎品');
+                if(!['active','inactive'].includes(p.status))D.fail('invalid-argument','獎品狀態不正確');
+                const reward={schemaVersion:1,id:giftId,name:D.text(p.name,'獎品名稱',100),description:D.text(p.description||'','獎品說明',500,true),cost:D.number(p.cost,'所需積分',0.01,1000000,2),status:p.status,createdAt:old.data()?.createdAt||time,...stamp(c,time)};
+                auditDiff={before:old.data()||null,after:reward};t.set(giftRef,reward);result={id:giftId};
+            }else if(action==='requestReward'){
+                const gift=(await t.get(ref(c.groupId,'growthRewards',D.id(p.giftId)))).data();if(!gift||gift.status!=='active')D.fail('failed-precondition','獎品已下架');
+                const lockRef=ref(c.groupId,'growthRewardLocks',D.hash(c.accountId+':'+gift.id)),lock=await t.get(lockRef);
+                if(lock.data()?.active)D.fail('already-exists','這項獎品已有進行中的申請，請先查看申請紀錄');
+                if(wallet.pointsBalance-wallet.pointsReserved<gift.cost)D.fail('failed-precondition','可用星星積分不足');
+                const before=balances(wallet);wallet.pointsReserved=D.round(wallet.pointsReserved+gift.cost);
+                const requestId='q_'+key.slice(0,40);t.create(ref(c.groupId,'growthRewardRequests',requestId),{schemaVersion:1,id:requestId,accountId:c.accountId,giftId:gift.id,name:gift.name,cost:gift.cost,detail:D.text(p.detail||'','兌換備註',500,true),status:'requested',createdAt:time,eventDate:D.dateKey(time),...stamp(c,time)});
+                t.set(lockRef,{accountId:c.accountId,giftId:gift.id,requestId,active:true,...stamp(c,time)});t.set(walletRef,{...wallet,...stamp(c,time)});journal(t,c,key,c.accountId,'reward-reserved',zero(),before,balances(wallet),{kind:'reward-request',id:requestId});result={id:requestId};
+            }else if(action==='changeRewardRequest'){
+                const requestId=D.id(p.id),requestRef=ref(c.groupId,'growthRewardRequests',requestId),snapshot=await t.get(requestRef);let record=snapshot.data();
+                if(!record&&requestId.startsWith('legacy_')){
+                    const oldId=D.id(requestId.slice(7)),old=(await t.get(ref(c.groupId,'redeems',oldId))).data();
+                    if(!old||!old.accountId||(old.groupId&&old.groupId!==c.groupId))D.fail('not-found','歷史兌換不存在或未確認歸屬');
+                    record={id:requestId,accountId:old.accountId,name:old.item||'歷史獎品',cost:Number(old.cost||0),detail:old.detail||'',status:legacyStatus[old.status]||'requested',legacyId:oldId,createdAt:typeof old.timestamp==='number'?old.timestamp:old.timestamp?.toMillis?.()||time,eventDate:old.date||D.dateKey(time)};
+                }
+                if(!record)D.fail('not-found','兌換申請不存在');
+                if(record.accountId!==c.accountId)parent(c);
+                if(!c.parent&&!(p.status==='cancelled'&&record.status==='requested'))D.fail('permission-denied','孩子只能取消自己尚未確認的申請');
+                if(p.accountId!==record.accountId)D.fail('invalid-argument','帳號與兌換申請不一致');
+                target(c,record.accountId); // Membership still applies to parents.
+                if(record.status!==p.status){
+                    if(!D.transitions[record.status]?.includes(p.status))D.fail('failed-precondition','無法變更此兌換狀態');
+                    const ownerRef=ref(c.groupId,'growthProfiles',record.accountId),owner=(await t.get(ownerRef)).data();if(!owner)D.fail('failed-precondition','請先初始化孩子森林');
+                    const lockRef=record.giftId?ref(c.groupId,'growthRewardLocks',D.hash(record.accountId+':'+record.giftId)):null,lock=lockRef?await t.get(lockRef):null;
+                    const before=balances(owner),reason=D.text(p.reason||'','狀態備註',500,['rejected','cancelled'].includes(p.status)?false:true);
+                    if(['rejected','cancelled','completed'].includes(p.status))owner.pointsReserved=D.round(owner.pointsReserved-record.cost);
+                    if(p.status==='completed'){owner.pointsBalance=D.round(owner.pointsBalance-record.cost);owner.redeemedPoints=D.round(owner.redeemedPoints+record.cost);}
+                    if(owner.pointsReserved<0||owner.pointsBalance<owner.pointsReserved)D.fail('failed-precondition','歷史積分保留額不一致，請先核對遷移報告');
+                    auditDiff={before:{status:record.status},after:{status:p.status,reason}};
+                    if(lockRef&&lock?.data()?.requestId===record.id&&['rejected','cancelled','completed'].includes(p.status))t.set(lockRef,{...lock.data(),active:false,...stamp(c,time)});
+                    record={...record,status:p.status,reason,...stamp(c,time)};t.set(requestRef,record);t.set(ownerRef,{...owner,...stamp(c,time)});
+                    journal(t,c,key,record.accountId,'reward-'+p.status,{points:p.status==='completed'?-record.cost:0,water:0,coins:0},before,balances(owner),{kind:'reward-request',id:requestId},reason);
+                }
+                result={id:requestId,status:p.status};
+            }else D.fail('invalid-argument','不支援的操作');
+            t.create(ref(c.groupId,'growthAudit',key),{action,accountId:c.accountId,actorAccountId:c.accountId,targetAccountId:p.accountId||c.accountId,result,changes:auditDiff,createdAt:time,groupId:c.groupId});
+            t.create(receiptRef,{schemaVersion:1,accountId:c.accountId,fingerprint,result,action,createdAt:time});return result;
+        });
+    }
+    async function previousScore(t,c,record){
+        const rows=await t.get(collection(c.groupId,'growthRecords').where('accountId','==',record.accountId).where('type','==','exam').where('subject','==',record.subject).where('examType','==',record.examType).where('approvalStatus','==','approved').where('eventDate','<=',record.eventDate).orderBy('eventDate','desc').orderBy('createdAt','desc').limit(200));
+        const historical=await t.get(collection(c.groupId,'scores').where('accountId','==',record.accountId).limit(1001));
+        if(historical.size>1000)D.fail('failed-precondition','歷史成績超過安全比較上限');
+        const old=historical.docs.map(d=>({...d.data(),id:'legacy_'+d.id})).filter(r=>(!r.groupId||r.groupId===c.groupId)&&r.category==='exam'&&r.subject===record.subject&&r.examType===record.examType&&Number.isFinite(r.score)&&r.score>=0&&r.score<=100).map(r=>({...r,eventDate:r.date,maxScore:100,createdAt:typeof r.timestamp==='number'?r.timestamp:r.timestamp?.toMillis?.()||0}));
+        const previous=[...rows.docs.map(d=>d.data()),...old].filter(r=>r.id!==record.id&&typeof r.eventDate==='string'&&(r.eventDate<record.eventDate||(r.eventDate===record.eventDate&&r.createdAt<record.createdAt))).sort((a,b)=>b.eventDate.localeCompare(a.eventDate)||b.createdAt-a.createdAt)[0];
+        if(rows.size===200&&!previous)D.fail('failed-precondition','此日期有過多後補成績，請家長核對進步比較');
+        return previous?previous.score/previous.maxScore*100:null;
+    }
+    async function snapshot(request){
+        const c=await context(request),accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
+        const [wallet,garden,plants,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),collection(c.groupId,'gardenPlants').where('accountId','==',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
+        const ids=c.parent?c.group.members:[c.accountId],members=[];
+        for(let start=0;start<ids.length;start+=10){const batch=await db.collection('users').where('accountId','in',ids.slice(start,start+10)).get();members.push(...batch.docs.map(d=>cleanMember(d.data())).filter(m=>m.role!=='removed'));}
+        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:garden.data(),plants:plants.docs.map(d=>d.data()),settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
+    }
+    async function list(request){
+        const c=await context(request),p=request.data.payload||{},kind=D.text(p.kind||'records','清單',30);
+        const kinds={records:'growthRecords',transactions:'growthTransactions',requests:'growthRewardRequests',history:'growthRecordHistory',audit:'growthAudit'};
+        if(!kinds[kind])D.fail('invalid-argument','清單類型不正確');
+        if(['audit','history'].includes(kind))parent(c);
+        let accountId=c.parent&&p.accountId==='all'?null:target(c,p.accountId);
+        let query=collection(c.groupId,kinds[kind]);if(accountId)query=query.where('accountId','==',accountId);
+        query=kind==='records'?query.orderBy('eventDate','desc').orderBy('createdAt','desc'):query.orderBy('createdAt','desc');if(p.cursor){const cursor=await collection(c.groupId,kinds[kind]).doc(D.id(p.cursor)).get();if(cursor.exists){if(accountId&&cursor.data().accountId!==accountId)D.fail('permission-denied','分頁位置不屬於此帳號');query=query.startAfter(cursor);}}
+        const rows=await query.limit(201).get(),matches=r=>(!p.type||r.type===p.type)&&(!p.status||r.approvalStatus===p.status||r.status===p.status)&&(!p.subject||r.subject===p.subject)&&(!p.examType||r.examType===p.examType)&&(!p.bookName||r.bookName?.toLowerCase().includes(String(p.bookName).toLowerCase()))&&(!p.from||(r.eventDate||D.dateKey(r.createdAt))>=p.from)&&(!p.to||(r.eventDate||D.dateKey(r.createdAt))<=p.to);
+        const result=[];let scanned=0;for(const row of rows.docs.slice(0,200)){scanned++;const r={...row.data(),id:row.id};if(matches(r))result.push(r);if(result.length===20)break;}
+        const hasMore=scanned<rows.size;return{rows:result,cursor:hasMore?rows.docs[scanned-1]?.id:null,hasMore};
+    }
+    async function legacyList(request){
+        const c=await context(request),p=request.data.payload||{},accountId=target(c,p.accountId),kind=p.kind==='requests'?'redeems':'scores';await ensureProfile(request,accountId);
+        const q=collection(c.groupId,kind).where('accountId','==',accountId).orderBy('date','desc');let query=q;if(p.cursor){const row=await collection(c.groupId,kind).doc(D.id(p.cursor)).get();if(row.exists)query=query.startAfter(row);}
+        const records=await query.limit(21).get(),rows=[];
+        for(const d of records.docs.slice(0,20)){
+            const old=d.data();if(old.groupId&&old.groupId!==c.groupId)continue;
+            if(kind==='redeems'){const updated=await ref(c.groupId,'growthRewardRequests','legacy_'+d.id).get();rows.push(updated.exists?updated.data():{...old,id:'legacy_'+d.id,name:old.item||'歷史獎品',status:legacyStatus[old.status]||'requested',legacy:true});}
+            else rows.push({...old,id:d.id,legacy:true,approvalStatus:'legacy',eventDate:old.date,rewardPoints:null});
+        }
+        return{rows,hasMore:records.size>20,cursor:records.size>20?records.docs[19].id:null};
+    }
+    async function overview(request){
+        const c=await context(request);parent(c);const accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
+        const month=D.dateKey(now()).slice(0,7),snap=await collection(c.groupId,'growthRecords').where('accountId','==',accountId).where('eventDate','>=',month+'-01').where('eventDate','<=',month+'-31').limit(1001).get();
+        if(snap.size>1000)D.fail('resource-exhausted','本月紀錄超過概覽上限，請使用分頁查詢');
+        const historical=await collection(c.groupId,'scores').where('accountId','==',accountId).limit(1001).get();if(historical.size>1000)D.fail('resource-exhausted','歷史成績超過概覽安全上限');
+        const oldExams=historical.docs.map(d=>d.data()).filter(r=>(!r.groupId||r.groupId===c.groupId)&&r.category==='exam'&&String(r.date||'').startsWith(month)&&Number.isFinite(r.score)&&r.score>=0&&r.score<=100).map(r=>({...r,maxScore:100}));
+        const rows=snap.docs.map(d=>d.data()).filter(r=>r.approvalStatus==='approved'),exams=[...rows.filter(r=>r.type==='exam'),...oldExams],reading=rows.filter(r=>r.type==='reading'),wallet=(await ref(c.groupId,'growthProfiles',accountId).get()).data();
+        return{month,examCount:exams.length,average:exams.length?D.round(exams.reduce((sum,r)=>sum+r.score/r.maxScore*100,0)/exams.length):null,readingMinutes:reading.reduce((sum,r)=>sum+r.readingMinutes,0),readingPages:reading.reduce((sum,r)=>sum+r.readingPages,0),points:wallet.pointsBalance,available:D.round(wallet.pointsBalance-wallet.pointsReserved),redeemed:wallet.redeemedPoints};
+    }
+    return{ensureProfile,context,async handle(request){
+        if(!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
+        if(!request.data||typeof request.data!=='object'||Array.isArray(request.data))D.fail('invalid-argument','請求格式不正確');
+        const action=request.data.action;
+        if(!['snapshot','list','legacyList','overview','createRecord','editRecord','reviewRecord','correctRecord','buySeed','plant','water','saveSettings','manualReward','saveReward','requestReward','changeRewardRequest'].includes(action))D.fail('invalid-argument','不支援的操作');
+        if(request.data.payload&&(typeof request.data.payload!=='object'||Array.isArray(request.data.payload)||JSON.stringify(request.data.payload).length>50000))D.fail('invalid-argument','操作內容格式不正確或過大');
+        if(action==='snapshot')return snapshot(request);
+        if(action==='list')return list(request);
+        if(action==='legacyList')return legacyList(request);
+        if(action==='overview')return overview(request);
+        return mutation(request);
+    }};
+}
+module.exports={createGrowthService};

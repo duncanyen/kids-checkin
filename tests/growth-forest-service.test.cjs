@@ -1,0 +1,154 @@
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const {MemoryDB}=require('../game-admin/tests/memory-db.cjs');
+const D=require('../functions/growth-domain.cjs');
+const {createGrowthService}=require('../functions/growth-service.cjs');
+require('../scripts/prepare-growth-forest.cjs');
+async function setup(){
+ const db=new MemoryDB();let now=Date.parse('2026-11-05T04:00:00Z');
+ for(const [accountId,role]of [['parent','parent'],['alice','child'],['bob','child']])await db.doc('users/'+accountId).set({accountId,role,name:accountId==='alice'?'新的名字':accountId});
+ await db.doc('groups/A').set({name:'森林家庭',members:['parent','alice']});await db.doc('groups/B').set({members:['bob']});
+ const service=createGrowthService({db,now:()=>now});
+ const request=(who,action,payload={},requestId=crypto.randomUUID(),groupId=who==='bob'?'B':'A')=>({auth:{uid:who,token:{photoAccountId:who,photoGroupId:groupId}},data:{groupId,action,payload,requestId}});
+ const call=(who,action,payload={},rid)=>service.handle(request(who,action,payload,rid));
+ const wallet=async who=>(await db.doc(`groups/A/growthProfiles/${who}`).get()).data();
+ return{db,service,request,call,wallet,tick:()=>now++,now:()=>now};
+}
+const exam=patch=>({type:'exam',eventDate:'2026-11-05',subject:'數學',examType:'小考',score:95,maxScore:100,note:'',...patch});
+const reading=patch=>({type:'reading',eventDate:'2026-11-05',bookName:'森林裡的故事',readingMinutes:20,readingPages:15,chapter:'第三章',note:'',...patch});
+
+test('migration preserves exact old balance, reservations, rewards and historical request transitions once',async()=>{
+ const f=await setup();await f.db.doc('groups/A/settings/wishWall').set({examRules:[],choreRules:[],gifts:[{id:'book',name:'課外讀物',points:30}]});
+ await f.db.doc('groups/A/scores/old').set({accountId:'alice',points:150,category:'chore',date:'2026-10-01'});
+ await f.db.doc('groups/A/redeems/pending').set({accountId:'alice',cost:20,status:'執行中',date:'2026-10-01',item:'圖書'});
+ await f.db.doc('groups/A/redeems/done').set({accountId:'alice',cost:10,status:'已完成',date:'2026-10-01'});
+ const a=await f.call('alice','snapshot');assert.equal(a.wallet.pointsBalance,140);assert.equal(a.wallet.pointsReserved,20);assert.equal(a.wallet.waterBalance,0);assert.equal(a.rewards[0].cost,30);
+ await f.call('alice','snapshot');assert.equal((await f.db.collection('groups/A/growthTransactions').get()).size,1);
+ await f.call('parent','changeRewardRequest',{id:'legacy_pending',accountId:'alice',status:'rejected',reason:'改選其他獎勵'});
+ assert.equal((await f.wallet('alice')).pointsReserved,0);assert.equal((await f.wallet('alice')).pointsBalance,140);
+ await f.call('parent','changeRewardRequest',{id:'legacy_pending',accountId:'alice',status:'rejected',reason:'重試'});
+ assert.equal((await f.wallet('alice')).pointsBalance,140);assert.equal((await f.db.doc('groups/A/redeems/pending').get()).data().status,'執行中');
+ const records=await f.call('alice','legacyList',{kind:'requests'});assert.ok(records.rows.some(r=>r.id==='legacy_pending'&&r.status==='rejected'));
+});
+
+test('exam approval, normalized score, improvement and snapshot rules never pay twice',async()=>{
+ const f=await setup(),first=await f.call('alice','createRecord',exam({score:40,maxScore:50,eventDate:'2026-11-04'}));
+ assert.equal(first.status,'pending');assert.equal((await f.wallet('alice')).pointsBalance,0);
+ await f.call('parent','reviewRecord',{id:first.id,accountId:'alice',status:'approved'});
+ assert.equal((await f.wallet('alice')).pointsBalance,80);
+ f.tick();const second=await f.call('alice','createRecord',exam());
+ await f.call('parent','saveSettings',{settings:{...D.DEFAULT_SETTINGS,examBands:[{min:0,points:1,water:0,coins:0}]}});
+ await Promise.all([f.call('parent','reviewRecord',{id:second.id,accountId:'alice',status:'approved'}),f.call('parent','reviewRecord',{id:second.id,accountId:'alice',status:'approved'})]);
+ assert.equal((await f.wallet('alice')).pointsBalance,210);assert.equal((await f.wallet('alice')).waterBalance,45);
+ const r=(await f.db.doc('groups/A/growthRecords/'+second.id).get()).data();assert.equal(r.previousPercent,80);assert.equal(r.improvementBonus,30);
+ await assert.rejects(f.call('alice','createRecord',exam()),{code:'already-exists'});
+ for(const input of [exam({score:-1}),exam({score:101}),exam({maxScore:0}),exam({eventDate:'2026-02-30'})])await assert.rejects(f.call('alice','createRecord',input),{code:'invalid-argument'});
+});
+
+test('reading auto approval, subthreshold history, duplicate keys and concurrent daily cap',async()=>{
+ const f=await setup();await Promise.all([f.call('alice','createRecord',reading()),f.call('alice','createRecord',reading({bookName:'另一本書',readingMinutes:60}))]);
+ const w=await f.wallet('alice');assert.equal(w.pointsBalance,10);assert.equal(w.waterBalance,15);assert.equal(w.coinBalance,5);
+ const low=await f.call('alice','createRecord',reading({readingMinutes:5,bookName:'短篇'}));assert.deepEqual(low.rewards,{points:0,water:0,coins:0});
+ await assert.rejects(f.call('alice','createRecord',reading()),{code:'already-exists'});
+ const rows=await f.call('alice','list',{kind:'records',type:'reading'});assert.equal(rows.rows.length,3);
+ const overview=await f.call('parent','overview',{accountId:'alice'});assert.equal(overview.readingMinutes,85);assert.equal(overview.readingPages,45);
+});
+
+test('initial seed, planting, catalog prices, water spending and maturity guard are atomic',async()=>{
+ const f=await setup();await f.call('alice','snapshot');await f.call('alice','snapshot');
+ const planted=await f.call('alice','plant',{positionIndex:0,plantType:'sunflower'});
+ await assert.rejects(f.call('alice','plant',{positionIndex:1,plantType:'sunflower'}),{code:'failed-precondition'});
+ await assert.rejects(f.call('alice','water',{id:planted.id}),{code:'failed-precondition'});
+ await f.call('parent','saveSettings',{settings:{...D.DEFAULT_SETTINGS,reading:{minutes:1,points:10,water:110,coins:100,dailyLimit:1}}});
+ await f.call('alice','createRecord',reading());
+ await f.call('alice','buySeed',{plantType:'tulip',price:0,coins:9999});assert.equal((await f.wallet('alice')).coinBalance,20);
+ for(let i=0;i<10;i++)await f.call('alice','water',{id:planted.id});
+ assert.equal((await f.db.doc('groups/A/gardenPlants/'+planted.id).get()).data().growthStage,5);
+ await assert.rejects(f.call('alice','water',{id:planted.id}),{code:'failed-precondition'});assert.equal((await f.wallet('alice')).waterBalance,10);
+});
+
+test('reward reservations, rejection, completion, replay and competing spending preserve points',async()=>{
+ const f=await setup();await f.call('parent','manualReward',{accountId:'alice',points:100,reason:'努力完成任務'});
+ const gift=await f.call('parent','saveReward',{name:'一起看電影',description:'',cost:80,status:'active'});
+ const rid=crypto.randomUUID(),payload={giftId:gift.id};const requested=await f.call('alice','requestReward',payload,rid);
+ assert.deepEqual(await f.call('alice','requestReward',payload,rid),requested);
+ await assert.rejects(f.call('alice','requestReward',payload),{code:'already-exists'});
+ await f.call('parent','changeRewardRequest',{id:requested.id,accountId:'alice',status:'rejected',reason:'改約下週'});assert.equal((await f.wallet('alice')).pointsBalance,100);
+ const cancelled=await f.call('alice','requestReward',payload);await f.call('alice','changeRewardRequest',{id:cancelled.id,accountId:'alice',status:'cancelled',reason:'想再考慮'});assert.equal((await f.wallet('alice')).pointsReserved,0);
+ const next=await f.call('alice','requestReward',payload);await f.call('parent','changeRewardRequest',{id:next.id,accountId:'alice',status:'completed'});
+ await f.call('parent','changeRewardRequest',{id:next.id,accountId:'alice',status:'completed'});
+ assert.equal((await f.wallet('alice')).pointsBalance,20);assert.equal((await f.wallet('alice')).pointsReserved,0);assert.equal((await f.wallet('alice')).redeemedPoints,80);
+});
+
+test('corrections and revocations produce compensating transactions; spent resources cannot go negative',async()=>{
+ const f=await setup();const r=await f.call('alice','createRecord',exam());await f.call('parent','reviewRecord',{id:r.id,accountId:'alice',status:'approved'});
+ await f.call('parent','correctRecord',{id:r.id,accountId:'alice',fields:{score:75},reason:'核對考卷後更正'});assert.equal((await f.wallet('alice')).pointsBalance,60);
+ await f.call('parent','correctRecord',{id:r.id,accountId:'alice',revoke:true,reason:'重複考卷'});assert.equal((await f.wallet('alice')).pointsBalance,0);
+ assert.equal((await f.db.collection('groups/A/growthRecordHistory').get()).size,2);
+ const next=await f.call('alice','createRecord',exam({subject:'英文'}));await f.call('parent','reviewRecord',{id:next.id,accountId:'alice',status:'approved'});
+ const plant=await f.call('alice','plant',{positionIndex:0,plantType:'sunflower'});await f.call('alice','water',{id:plant.id});
+ await assert.rejects(f.call('parent','correctRecord',{id:next.id,accountId:'alice',revoke:true,reason:'撤銷'}),{code:'failed-precondition'});
+});
+
+test('missing identity, spoofing, cross-group access and parent impersonation fail closed',async()=>{
+ const f=await setup();await assert.rejects(f.service.handle({data:{groupId:'A',action:'snapshot'}}),{code:'unauthenticated'});
+ await assert.rejects(f.service.handle(f.request('bob','snapshot',{accountId:'alice'},undefined,'A')),{code:'permission-denied'});
+ await assert.rejects(f.call('alice','saveSettings',{settings:D.DEFAULT_SETTINGS,role:'parent'}),{code:'permission-denied'});
+ await assert.rejects(f.call('alice','snapshot',{accountId:'parent'}),{code:'permission-denied'});
+ const r=await f.call('alice','createRecord',exam({accountId:'parent',rewardPoints:999999}));assert.equal((await f.db.doc('groups/A/growthRecords/'+r.id).get()).data().accountId,'alice');
+ await assert.rejects(f.call('alice','reviewRecord',{id:r.id,accountId:'alice',status:'approved'}),{code:'permission-denied'});
+ await f.db.doc('groups/A').set({members:['parent']});await assert.rejects(f.call('alice','snapshot'),{code:'permission-denied'});
+});
+
+test('rejected records never pay, approval-required reading waits, failed transactions can retry same receipt',async()=>{
+ const f=await setup();await f.call('parent','saveSettings',{settings:{...D.DEFAULT_SETTINGS,readingApproval:true}});
+ const r=await f.call('alice','createRecord',reading());assert.equal(r.status,'pending');
+ await f.call('parent','reviewRecord',{id:r.id,accountId:'alice',status:'rejected',reason:'請補充閱讀內容'});assert.equal((await f.wallet('alice')).pointsBalance,0);
+ const examRecord=await f.call('alice','createRecord',exam()),rid=crypto.randomUUID(),payload={id:examRecord.id,accountId:'alice',status:'approved'};
+ f.db.failAward=true;await assert.rejects(f.call('parent','reviewRecord',payload,rid));assert.equal((await f.wallet('alice')).pointsBalance,0);
+ await f.call('parent','reviewRecord',payload,rid);assert.equal((await f.wallet('alice')).pointsBalance,100);
+ await assert.rejects(f.call('parent','reviewRecord',{...payload,status:'rejected'},rid),{code:'already-exists'});
+});
+
+test('pending/rejected records can be edited and resubmitted without duplicate awards',async()=>{
+ const f=await setup(),r=await f.call('alice','createRecord',exam());
+ await f.call('parent','reviewRecord',{id:r.id,accountId:'alice',status:'rejected',reason:'請補充說明'});
+ await f.call('alice','editRecord',{id:r.id,fields:{note:'已核對考卷'}});
+ await f.call('parent','reviewRecord',{id:r.id,accountId:'alice',status:'approved'});
+ assert.equal((await f.wallet('alice')).pointsBalance,100);
+ await assert.rejects(f.call('alice','editRecord',{id:r.id,fields:{score:100}}),{code:'failed-precondition'});
+});
+
+test('historical valid exams are used as comparison without re-awarding old resources',async()=>{
+ const f=await setup();await f.db.doc('groups/A/scores/old-exam').set({accountId:'alice',category:'exam',subject:'數學',examType:'小考',score:87,date:'2026-11-04'});
+ const r=await f.call('alice','createRecord',exam());await f.call('parent','reviewRecord',{id:r.id,accountId:'alice',status:'approved'});
+ assert.equal((await f.wallet('alice')).pointsBalance,120);assert.equal((await f.wallet('alice')).waterBalance,25);
+});
+
+test('records paginate and filter without leaking another child, migration aborts negative legacy balances',async()=>{
+ const f=await setup();await f.call('alice','snapshot');
+ for(let i=0;i<25;i++)await f.db.doc('groups/A/growthRecords/test'+i).set({id:'test'+i,accountId:'alice',createdAt:i,eventDate:'2026-11-05',type:i%2?'reading':'exam'});
+ await f.db.doc('groups/A/growthRecords/private').set({accountId:'parent',createdAt:999,type:'exam'});
+ const a=await f.call('alice','list',{kind:'records'}),b=await f.call('alice','list',{kind:'records',cursor:a.cursor});assert.equal(a.rows.length,20);assert.equal(b.rows.length,5);assert.equal(new Set([...a.rows,...b.rows].map(r=>r.id)).size,25);
+ assert.ok(!(await f.call('alice','list',{kind:'records',type:'exam'})).rows.some(r=>r.accountId!=='alice'));
+ const bad=await setup();await bad.db.doc('groups/A/redeems/bad').set({accountId:'alice',status:'已完成',cost:100});await assert.rejects(bad.call('alice','snapshot'),{code:'failed-precondition'});assert.equal((await bad.db.doc('groups/A/growthProfiles/alice').get()).exists,false);
+});
+
+test('reading metadata correction preserves earned units after a later increase in daily cap',async()=>{
+ const f=await setup(),first=await f.call('alice','createRecord',reading());
+ await f.call('parent','saveSettings',{settings:{...D.DEFAULT_SETTINGS,reading:{...D.DEFAULT_SETTINGS.reading,dailyLimit:3}}});
+ await f.call('alice','createRecord',reading({bookName:'新的閱讀',readingMinutes:40}));
+ assert.equal((await f.wallet('alice')).pointsBalance,30);
+ await f.call('parent','correctRecord',{id:first.id,accountId:'alice',fields:{chapter:'補記第三章'},reason:'僅補章節'});
+ assert.equal((await f.wallet('alice')).pointsBalance,30);
+});
+
+test('two different simultaneous requests for the same affordable gift hold points only once',async()=>{
+ const f=await setup();await f.call('parent','manualReward',{accountId:'alice',points:100,reason:'測試原子保留'});const gift=await f.call('parent','saveReward',{name:'圖書',description:'',cost:10,status:'active'});
+ const results=await Promise.allSettled([f.call('alice','requestReward',{giftId:gift.id}),f.call('alice','requestReward',{giftId:gift.id})]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal((await f.wallet('alice')).pointsReserved,10);
+});
+
+test('malformed requests and foreign or nested exam-photo paths are rejected',async()=>{
+ const f=await setup();await assert.rejects(f.service.handle({auth:{uid:'alice'},data:null}),{code:'invalid-argument'});
+ for(const photoPath of ['growth-exams/B/alice/file.jpg','growth-exams/A/parent/file.jpg','growth-exams/A/alice/nested/file.jpg','growth-exams/A/alice/script.svg'])await assert.rejects(f.call('alice','createRecord',exam({photoPath})),{code:'permission-denied'});
+});

@@ -1,0 +1,9 @@
+// Merge into the existing legacy write predicates. Firestore allows are ORed:
+// another broad allow can bypass a deny, so remove/replace overlapping allows.
+function growthNotStarted(groupId) {
+ return !exists(/databases/$(database)/documents/groups/$(groupId)/settings/growthForestCutover);
+}
+// On existing scores, redeems, settings/wishWall and settings/wishWallRevision:
+// allow write: if EXISTING_AUTHORIZATION && growthNotStarted(groupId);
+// Additionally protect users.accountId/role and groups.members against self-
+// promotion. Never grant those fields based on client sessionStorage roles.

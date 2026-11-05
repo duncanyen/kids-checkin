@@ -19,7 +19,7 @@ class Query{
     count(){return{get:async()=>{const result=await this.get();return{data:()=>({count:result.size})};}};}
     async get(){
         let rows=[...this.db.data.entries()].filter(([path])=>path.startsWith(this.path+'/')&&path.split('/').length===this.path.split('/').length+1).map(([path])=>this.db.snapshot(path));
-        for(const [key,op,value]of this.filters)rows=rows.filter(row=>{const v=row.data()[key];return op==='=='?v===value:op==='in'?value.includes(v):op==='array-contains'?v?.includes(value):op==='array-contains-any'?value.some(x=>v?.includes(x)):op==='<='?v<=value:op==='>'?v>value:false;});
+        for(const [key,op,value]of this.filters)rows=rows.filter(row=>{const v=row.data()[key];return op==='=='?v===value:op==='in'?value.includes(v):op==='array-contains'?v?.includes(value):op==='array-contains-any'?value.some(x=>v?.includes(x)):op==='<='?v<=value:op==='>='?v>=value:op==='<'?v<value:op==='>'?v>value:false;});
         rows.sort((a,b)=>{for(const [field,direction]of this.sorts){const av=a.data()[field],bv=b.data()[field];if(av!==bv)return(av<bv?-1:1)*(direction==='desc'?-1:1);}return(a.id<b.id?-1:1)*(this.sorts.at(-1)?.[1]==='desc'?-1:1);});
         if(this.cursor){const index=rows.findIndex(r=>r.id===this.cursor.id);rows=rows.slice(index+1);}
         rows=rows.slice(0,this.size);return{docs:rows,size:rows.length,empty:!rows.length};

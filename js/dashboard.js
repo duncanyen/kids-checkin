@@ -168,7 +168,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
         calendar: `<div class="sidebar-item" onclick="window.navTo('calendar.html', '行事曆')"><span class="sidebar-icon">${icon('calendar')}</span>行事曆</div>`,
         photodump: `<div class="sidebar-item" onclick="window.navTo('gallery.html', 'Photo Dump')"><span class="sidebar-icon">${icon('photodump')}</span>Photo Dump <span id="sideGalleryBadge" style="margin-left:auto; background:var(--danger); color:white; font-size:calc(11px * var(--n-font-scale, 1)); padding:2px 8px; border-radius:10px; display:none;"></span></div>`,
         gamezone: `<div class="sidebar-item" onclick="window.navTo('games.html', '遊戲大廳')"><span class="sidebar-icon">${icon('gamezone')}</span>遊戲大廳</div>`,
-        wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '許願牆')"><span class="sidebar-icon">${icon('wishlist')}</span>許願牆</div>`,
+        wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '成長森林')"><span class="sidebar-icon">${icon('wishlist')}</span>成長森林</div>`,
         finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">${icon('finance')}</span>記帳本</div>`,
         todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">${icon('todo')}</span>待辦事項</div>`,
         food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">${icon('food')}</span>吃什麼？</div>`

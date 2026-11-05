@@ -9,6 +9,16 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role != 'removed'
         && request.auth.token.photoAccountId in firestore.get(/databases/(default)/documents/groups/$(groupId)).data.members;
     }
+    match /growth-exams/{groupId}/{accountId}/{fileName} {
+      allow read: if member(groupId) && (request.auth.token.photoAccountId == accountId
+        || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'parent']);
+      allow create: if member(groupId) && request.auth.token.photoAccountId == accountId
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
+        && fileName.matches('[a-zA-Z0-9_-]+[.](jpg|png|webp)');
+      allow delete: if member(groupId) && (request.auth.token.photoAccountId == accountId
+        || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'parent']);
+    }
     match /photo-dump/{groupId}/{ownerId}/{postId}/{fileName} {
       allow read: if member(groupId);
       allow create: if member(groupId) && request.auth.uid == ownerId

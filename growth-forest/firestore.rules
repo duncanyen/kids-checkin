@@ -1,0 +1,28 @@
+rules_version = '2';
+// Standalone Emulator policy. Merge its specific matches into the real deployed
+// rules after removing overlapping broad allows; do not replace Nexus rules.
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function member(g) {
+   return request.auth != null && request.auth.token.photoGroupId == g
+    && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountId == request.auth.token.photoAccountId
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != 'removed'
+    && request.auth.token.photoAccountId in get(/databases/$(database)/documents/groups/$(g)).data.members;
+  }
+  function parent(g) { return member(g) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin','parent']; }
+  function own(g,a) { return member(g) && request.auth.token.photoAccountId == a; }
+  match /users/{uid} { allow read: if request.auth != null && request.auth.uid == uid; allow write: if false; }
+  match /groups/{g} { allow read: if member(g); allow write: if false; }
+  match /groups/{g}/growthSettings/{id} { allow read: if member(g); allow write: if false; }
+  match /groups/{g}/growthRewards/{id} { allow read: if member(g); allow write: if false; }
+  match /groups/{g}/growthProfiles/{a} { allow read: if own(g,a) || parent(g); allow write: if false; }
+  match /groups/{g}/gardens/{a} { allow read: if own(g,a) || parent(g); allow write: if false; }
+  match /groups/{g}/{kind}/{id} {
+   allow read: if kind in ['gardenPlants','growthRecords','growthTransactions','growthRewardRequests']
+      && (parent(g) || own(g,resource.data.accountId));
+   allow read: if kind in ['growthAudit','growthMigrations','growthRecordHistory'] && parent(g);
+   allow write: if false;
+  }
+ }
+}
