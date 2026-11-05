@@ -1,5 +1,7 @@
 # 成長森林 Phase 1 測試報告
 
+> **後續調整（2026-11-05）：** 依擁有者要求，現行版本改用前端直連 Firestore 的暫行模式。下列保留 Phase 1 原始交付紀錄；目前行為、限制及測試請見[前端直連說明](growth-forest-direct-mode.md)。
+
 日期：2026-11-05（台灣）
 分支：`feature/growth-forest-phase1`
 環境：Node.js 22.23.4、Chromium／Playwright、Java 21、隔離記憶體 Firestore fixture。

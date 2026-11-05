@@ -12,7 +12,7 @@ let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMo
 let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
 $('powerMode').setAttribute('aria-pressed',String(lowPower));
 const status=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'success';};
-const message=error=>({'functions/unauthenticated':'登入已失效，請返回 Nexus 重新登入。','functions/not-found':'找不到紀錄或森林後端尚未部署。','functions/unavailable':'目前無法連線；請保留畫面後重試。','functions/internal':'後端暫時無法完成操作，請保留內容後重試。'}[error.code]||error.message||'操作失敗，請稍後重試。');
+const message=error=>({'unavailable':'Firestore 暫時無法連線，請保留內容後重試。','functions/unauthenticated':'登入已失效，請返回 Nexus 重新登入。','functions/not-found':'找不到紀錄或森林後端尚未部署。','functions/unavailable':'目前無法連線；請保留畫面後重試。','functions/internal':'後端暫時無法完成操作，請保留內容後重試。'}[error.code]||error.message||'操作失敗，請稍後重試。');
 function field(label,name,type='text',value='',attrs=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}" ${attrs}></label>`;}
 function select(label,name,options,value=''){return `<label>${esc(label)}<select name="${esc(name)}">${options.map(o=>{const v=typeof o==='string'?o:o.value,l=typeof o==='string'?o:o.label;return `<option value="${esc(v)}" ${v===value?'selected':''}>${esc(l)}</option>`;}).join('')}</select></label>`;}
 const note=(label='備註（選填）',name='note',value='')=>`<label class="full">${esc(label)}<textarea name="${name}" maxlength="1000">${esc(value)}</textarea></label>`;

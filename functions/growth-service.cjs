@@ -2,12 +2,13 @@ const D=require('./growth-domain.cjs');
 const zero=()=>({points:0,water:0,coins:0});
 const cleanMember=(row)=>({accountId:row.accountId,name:row.name||row.accountId,role:row.role||'member'});
 const legacyStatus={申請中:'requested',執行中:'processing',已完成:'completed',已取消:'cancelled',已駁回:'rejected'};
-function createGrowthService({db,now=Date.now}){
+function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=true}){
     const ref=(group,kind,id)=>db.doc(`groups/${group}/${kind}/${id}`);
     const collection=(group,kind)=>db.collection(`groups/${group}/${kind}`);
     const read=async(t,source)=>t?t.get(source):source.get();
     function checkPhoto(photo,groupId,accountId){if(!photo)return;const prefix=`growth-exams/${groupId}/${accountId}/`;if(!photo.startsWith(prefix)||!(/^[a-zA-Z0-9_-]+[.](jpg|png|webp)$/).test(photo.slice(prefix.length)))D.fail('permission-denied','照片路徑不屬於紀錄擁有人或格式不正確');}
     async function context(request,t){
+        if(resolveContext)return resolveContext(request,t);
         if(!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
         const groupId=D.id(request.data?.groupId),token=request.auth.token||{};
         const profile=await read(t,db.doc(`users/${D.id(request.auth.uid)}`));
@@ -50,16 +51,16 @@ function createGrowthService({db,now=Date.now}){
             const reserved=D.round(pending.reduce((sum,r)=>sum+Number(r.cost||0),0));
             if(legacyBalance<0||!Number.isFinite(reserved)||reserved<0)D.fail('failed-precondition','舊積分需先由家長核對，未變更任何歷史資料');
             const time=now(),wallet={schemaVersion:1,accountId,gardenLevel:1,pointsBalance:D.round(legacyBalance+reserved),pointsReserved:reserved,waterBalance:0,coinBalance:0,redeemedPoints:D.round(redeemRows.filter(r=>legacyStatus[r.status]==='completed').reduce((sum,r)=>sum+Number(r.cost||0),0)),createdAt:time,...stamp(c,time)};
-            const report={schemaVersion:1,accountId,legacyBalance,pointsReserved:reserved,scoreCount:scores.size,requestCount:redeems.size,sourceRevision:oldRevision.data()?.revision||0,sourceFingerprint:D.hash({scoreRows,redeemRows,oldRules}),sourcePaths:['scores','redeems','settings/wishWall'],createdAt:time,groupId:c.groupId};
+            const report={schemaVersion:1,accountId,legacyBalance,pointsReserved:reserved,scoreCount:scores.size,requestCount:redeems.size,sourceRevision:oldRevision.data()?.revision||0,sourceFingerprint:await D.hash({scoreRows,redeemRows,oldRules}),sourcePaths:['scores','redeems','settings/wishWall'],createdAt:time,groupId:c.groupId};
             t.create(walletRef,wallet);if(!garden.exists)t.create(ref(c.groupId,'gardens',accountId),{schemaVersion:1,accountId,slots:[null,null,null],seeds:{sunflower:1,tulip:0,sakura:0},createdAt:time,...stamp(c,time)});
             t.create(ref(c.groupId,'growthMigrations',accountId),report);
-            journal(t,c,'opening_'+D.hash(accountId),accountId,'legacy-opening',{points:wallet.pointsBalance,water:0,coins:0},zero(),balances(wallet),{kind:'migration',id:accountId},'依舊規則保留積分，歷史紀錄不再發水滴或金幣');
+            journal(t,c,'opening_'+await D.hash(accountId),accountId,'legacy-opening',{points:wallet.pointsBalance,water:0,coins:0},zero(),balances(wallet),{kind:'migration',id:accountId},'依舊規則保留積分，歷史紀錄不再發水滴或金幣');
             if(!settings.exists){
                 t.create(ref(c.groupId,'growthSettings','main'),{...D.DEFAULT_SETTINGS,revision:1,createdAt:time,...stamp(c,time)});
-                t.set(ref(c.groupId,'settings','growthForestCutover'),{schemaVersion:1,createdAt:time,groupId:c.groupId});
+                if(markCutover)t.set(ref(c.groupId,'settings','growthForestCutover'),{schemaVersion:1,createdAt:time,groupId:c.groupId});
                 for(const gift of oldRules.gifts){
                     if(!Number.isFinite(Number(gift.points))||Number(gift.points)<=0)continue;
-                    const giftId='legacy_'+D.hash(String(gift.id)).slice(0,32);
+                    const giftId='legacy_'+(await D.hash(String(gift.id))).slice(0,32);
                     t.create(ref(c.groupId,'growthRewards',giftId),{schemaVersion:1,id:giftId,name:String(gift.name||'歷史獎品'),description:'原有夢想獎勵',cost:Number(gift.points),status:'active',legacyId:String(gift.id),createdAt:time,...stamp(c,time)});
                 }
             }
@@ -77,7 +78,7 @@ function createGrowthService({db,now=Date.now}){
         record.rewardPoints=delta.points;record.rewardWater=delta.water;record.rewardCoins=delta.coins;record.rewardUnits=units;
         if(record.type==='exam')Object.assign(record,{percent:delta.percent,previousPercent:delta.previousPercent,improvement:delta.improvement,improvementBonus:delta.bonus});
         record.approvalStatus='approved';record.approvedAt=now();record.approvedBy=c.accountId;
-        if(record.type==='reading')t.set(ref(c.groupId,'growthReadingDays',D.hash(record.accountId+':'+record.eventDate)),{accountId:record.accountId,eventDate:record.eventDate,units:(daily?.units||0)+units,...stamp(c,now())});
+        if(record.type==='reading')t.set(ref(c.groupId,'growthReadingDays',await D.hash(record.accountId+':'+record.eventDate)),{accountId:record.accountId,eventDate:record.eventDate,units:(daily?.units||0)+units,...stamp(c,now())});
         journal(t,c,key,record.accountId,'record-award',delta,before,balances(wallet),{kind:'record',id:record.id});
     }
     async function mutation(request){
@@ -85,7 +86,7 @@ function createGrowthService({db,now=Date.now}){
         const init=await context(request);await ensureProfile(request,init.accountId);
         if(['reviewRecord','correctRecord','manualReward','changeRewardRequest'].includes(action)&&p.accountId)await ensureProfile(request,target(init,p.accountId));
         return db.runTransaction(async t=>{
-            const c=await context(request,t),key=D.hash(c.accountId+':'+rid),receiptRef=ref(c.groupId,'growthRequests',key),fingerprint=D.hash({action,p});
+            const c=await context(request,t),key=await D.hash(c.accountId+':'+rid),receiptRef=ref(c.groupId,'growthRequests',key),fingerprint=await D.hash({action,p});
             const receipt=await t.get(receiptRef);if(receipt.exists){if(receipt.data().fingerprint!==fingerprint)D.fail('already-exists','同一請求代碼不能用於不同操作');return receipt.data().result;}
             const settingsSnap=await t.get(ref(c.groupId,'growthSettings','main')),policy=settingsSnap.data();
             const walletRef=ref(c.groupId,'growthProfiles',c.accountId),gardenRef=ref(c.groupId,'gardens',c.accountId);
@@ -93,7 +94,7 @@ function createGrowthService({db,now=Date.now}){
             const wallet=walletSnap.data(),garden=gardenSnap.data();let result={ok:true},auditDiff=null;
             if(action==='createRecord'){
                 const record=D.validateRecord(p,time),canonical={...record};delete canonical.note;delete canonical.photoPath;
-                const duplicateRef=ref(c.groupId,'growthRecordKeys',D.hash({accountId:c.accountId,...canonical}));
+                const duplicateRef=ref(c.groupId,'growthRecordKeys',await D.hash({accountId:c.accountId,...canonical}));
                 const duplicate=await t.get(duplicateRef);if(duplicate.exists)D.fail('already-exists','這筆紀錄已提交，請查看成長紀錄');
                 checkPhoto(record.photoPath,c.groupId,c.accountId);
                 const recordId='r_'+key.slice(0,40);Object.assign(record,{id:recordId,accountId:c.accountId,groupId:c.groupId,schemaVersion:1,policy:structuredClone(policy),approvalStatus:'pending',rewardPoints:0,rewardWater:0,rewardCoins:0,createdAt:time,...stamp(c,time)});
@@ -101,7 +102,7 @@ function createGrowthService({db,now=Date.now}){
                 let previous=null,daily=null;
                 if(auto){
                     if(record.type==='exam')previous=await previousScore(t,c,record);
-                    else daily=(await t.get(ref(c.groupId,'growthReadingDays',D.hash(c.accountId+':'+record.eventDate)))).data();
+                    else daily=(await t.get(ref(c.groupId,'growthReadingDays',await D.hash(c.accountId+':'+record.eventDate)))).data();
                     await applyAward(t,c,record,wallet,key,previous,daily);
                 }
                 t.create(ref(c.groupId,'growthRecords',recordId),record);t.create(duplicateRef,{recordId,accountId:c.accountId,createdAt:time});
@@ -113,7 +114,7 @@ function createGrowthService({db,now=Date.now}){
                 if(!['pending','rejected'].includes(old.approvalStatus))D.fail('failed-precondition','已核准紀錄必須由家長使用更正交易');
                 const revised=D.validateRecord({...old,...p.fields,type:old.type},time),canonical={...revised};delete canonical.note;delete canonical.photoPath;
                 checkPhoto(revised.photoPath,c.groupId,old.accountId);
-                const duplicateRef=ref(c.groupId,'growthRecordKeys',D.hash({accountId:old.accountId,...canonical})),duplicate=await t.get(duplicateRef);
+                const duplicateRef=ref(c.groupId,'growthRecordKeys',await D.hash({accountId:old.accountId,...canonical})),duplicate=await t.get(duplicateRef);
                 if(duplicate.exists&&duplicate.data().recordId!==old.id)D.fail('already-exists','另一筆紀錄已使用相同內容');
                 const updated={...old,...revised,approvalStatus:'pending',reviewNote:'',...stamp(c,time)};
                 t.set(duplicateRef,{recordId:old.id,accountId:old.accountId,createdAt:time});
@@ -125,7 +126,7 @@ function createGrowthService({db,now=Date.now}){
                 if(p.accountId!==record.accountId)D.fail('invalid-argument','帳號與紀錄不一致');
                 const ownerRef=ref(c.groupId,'growthProfiles',record.accountId),owner=(await t.get(ownerRef)).data();
                 if(!owner)D.fail('failed-precondition','請先初始化孩子的森林');
-                const dailyRef=ref(c.groupId,'growthReadingDays',D.hash(record.accountId+':'+record.eventDate));
+                const dailyRef=ref(c.groupId,'growthReadingDays',await D.hash(record.accountId+':'+record.eventDate));
                 const daily=record.type==='reading'?(await t.get(dailyRef)).data():null;
                 if(action==='reviewRecord'){
                     if(!['approved','rejected'].includes(p.status))D.fail('invalid-argument','審核狀態不正確');
@@ -190,7 +191,7 @@ function createGrowthService({db,now=Date.now}){
                 auditDiff={before:old.data()||null,after:reward};t.set(giftRef,reward);result={id:giftId};
             }else if(action==='requestReward'){
                 const gift=(await t.get(ref(c.groupId,'growthRewards',D.id(p.giftId)))).data();if(!gift||gift.status!=='active')D.fail('failed-precondition','獎品已下架');
-                const lockRef=ref(c.groupId,'growthRewardLocks',D.hash(c.accountId+':'+gift.id)),lock=await t.get(lockRef);
+                const lockRef=ref(c.groupId,'growthRewardLocks',await D.hash(c.accountId+':'+gift.id)),lock=await t.get(lockRef);
                 if(lock.data()?.active)D.fail('already-exists','這項獎品已有進行中的申請，請先查看申請紀錄');
                 if(wallet.pointsBalance-wallet.pointsReserved<gift.cost)D.fail('failed-precondition','可用星星積分不足');
                 const before=balances(wallet);wallet.pointsReserved=D.round(wallet.pointsReserved+gift.cost);
@@ -211,7 +212,7 @@ function createGrowthService({db,now=Date.now}){
                 if(record.status!==p.status){
                     if(!D.transitions[record.status]?.includes(p.status))D.fail('failed-precondition','無法變更此兌換狀態');
                     const ownerRef=ref(c.groupId,'growthProfiles',record.accountId),owner=(await t.get(ownerRef)).data();if(!owner)D.fail('failed-precondition','請先初始化孩子森林');
-                    const lockRef=record.giftId?ref(c.groupId,'growthRewardLocks',D.hash(record.accountId+':'+record.giftId)):null,lock=lockRef?await t.get(lockRef):null;
+                    const lockRef=record.giftId?ref(c.groupId,'growthRewardLocks',await D.hash(record.accountId+':'+record.giftId)):null,lock=lockRef?await t.get(lockRef):null;
                     const before=balances(owner),reason=D.text(p.reason||'','狀態備註',500,['rejected','cancelled'].includes(p.status)?false:true);
                     if(['rejected','cancelled','completed'].includes(p.status))owner.pointsReserved=D.round(owner.pointsReserved-record.cost);
                     if(p.status==='completed'){owner.pointsBalance=D.round(owner.pointsBalance-record.cost);owner.redeemedPoints=D.round(owner.redeemedPoints+record.cost);}
@@ -276,7 +277,7 @@ function createGrowthService({db,now=Date.now}){
         return{month,examCount:exams.length,average:exams.length?D.round(exams.reduce((sum,r)=>sum+r.score/r.maxScore*100,0)/exams.length):null,readingMinutes:reading.reduce((sum,r)=>sum+r.readingMinutes,0),readingPages:reading.reduce((sum,r)=>sum+r.readingPages,0),points:wallet.pointsBalance,available:D.round(wallet.pointsBalance-wallet.pointsReserved),redeemed:wallet.redeemedPoints};
     }
     return{ensureProfile,context,async handle(request){
-        if(!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
+        if(!resolveContext&&!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
         if(!request.data||typeof request.data!=='object'||Array.isArray(request.data))D.fail('invalid-argument','請求格式不正確');
         const action=request.data.action;
         if(!['snapshot','list','legacyList','overview','createRecord','editRecord','reviewRecord','correctRecord','buySeed','plant','water','saveSettings','manualReward','saveReward','requestReward','changeRewardRequest'].includes(action))D.fail('invalid-argument','不支援的操作');

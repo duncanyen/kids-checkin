@@ -2,17 +2,41 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),{execFileSync}=require('node:child_process');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createGrowthService}=require('../functions/growth-service.cjs');
 require('../scripts/prepare-growth-forest.cjs');
+const direct=process.env.GROWTH_DIRECT_BROWSER==='1';
 const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
 (async()=>{
  const db=new MemoryDB(),now=Date.parse('2026-11-05T04:00:00Z');
  await db.doc('users/alice').set({accountId:'alice',name:'小森林',role:'child'});await db.doc('users/parent').set({accountId:'parent',name:'森林家長',role:'parent'});await db.doc('groups/A').set({name:'森林家庭',members:['alice','parent']});
  const service=createGrowthService({db,now:()=>now}),browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
- const errors=[];
+ const errors=[],network=[];
  try{
  const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Taipei'});
+ context.on('request',request=>network.push(request.url()));
  const phaser=fs.existsSync('/tmp/kids-phaser.js')?fs.readFileSync('/tmp/kids-phaser.js','utf8'):execFileSync('curl',['--fail','--silent','--show-error','--max-time','30','https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js'],{encoding:'utf8',maxBuffer:4*1024*1024});fs.writeFileSync('/tmp/kids-phaser.js',phaser);
  await context.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:phaser}));
+ if(!direct){
  await context.route('**/js/growth-forest/client.js',r=>r.fulfill({contentType:'text/javascript',body:`export async function connect(c){return{api:async(action,payload={},mutate=false)=>{const result=await window.__growthCall({accountId:c.accountId,groupId:c.groupId,action,payload,requestId:crypto.randomUUID()});if(result.error)throw Object.assign(Error(result.error.message),{code:result.error.code});return result.data;},subscribe:(_p,refresh)=>{window.__growthRefresh=refresh;return()=>window.__growthRefresh=null;},upload:async()=>{throw Error('No live uploads in isolated test');},close:()=>{}};}`}));
+ }else{
+  const versions=new Map();
+  await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const app={},db={};'}));
+  await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('tests/fixtures/growth-firestore-sdk.js','utf8')}));
+  await context.exposeFunction('__webDb',operation=>{
+   if(operation.op==='get')return{path:operation.path,data:db.data.has(operation.path)?structuredClone(db.data.get(operation.path)):null,version:versions.get(operation.path)||0};
+   if(operation.op==='query'){
+    let rows=[...db.data].filter(([path])=>path.startsWith(operation.path+'/')&&path.split('/').length===operation.path.split('/').length+1);
+    for(const filter of operation.constraints||[])if(filter.field)rows=rows.filter(([,value])=>filter.op==='in'?filter.value.includes(value[filter.field]):value[filter.field]===filter.value);
+    const cap=operation.constraints?.find(f=>f.maximum)?.maximum;rows.sort(([a],[b])=>a.localeCompare(b));if(cap)rows=rows.slice(0,cap);
+    return rows.map(([path,data])=>({path,data:structuredClone(data)}));
+   }
+   if(operation.op==='commit'){
+    for(const [path,version]of operation.expected)if((versions.get(path)||0)!==version)throw Error('ABORTED');
+    for(const write of operation.writes){if(write.delete)db.data.delete(write.path);else db.data.set(write.path,write.merge?{...db.data.get(write.path),...structuredClone(write.data)}:structuredClone(write.data));versions.set(write.path,(versions.get(write.path)||0)+1);}
+    if(operation.writes.length)for(const p of context.pages())p.evaluate(()=>setTimeout(()=>window.__webEmit?.(),0)).catch(()=>{});
+    return;
+   }
+   throw Error('Unexpected Web SDK request');
+  });
+ }
  await context.exposeFunction('__growthCall',async call=>{
   try{const data=await service.handle({auth:{uid:call.accountId,token:{photoAccountId:call.accountId,photoGroupId:call.groupId}},data:{groupId:call.groupId,action:call.action,payload:call.payload,requestId:call.requestId}});
    if(!['snapshot','list','legacyList','overview'].includes(call.action))for(const p of context.pages())p.evaluate(()=>{setTimeout(()=>window.__growthRefresh?.(),250);}).catch(()=>{});
@@ -22,8 +46,8 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
  async function open(accountId){const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.setDefaultTimeout(15000);const wait=p.waitForFunction.bind(p);p.waitForFunction=(fn,arg,opts)=>wait(fn,arg,{timeout:15000,...opts});await p.clock.setFixedTime(new Date(now));await p.addInitScript(accountId=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name:'舊顯示',role:'child',groupId:'B'}));localStorage.setItem('lastGroupId','A');},accountId);await p.goto(base+'/wishwall.html');await p.waitForFunction(()=>document.querySelector('#pointsBalance').textContent!=='—');return p;}
  const child=await open('alice');await child.waitForSelector('#forestGame canvas');assert.equal(await child.locator('#parentNav').isVisible(),false);assert.match(await child.title(),/成長森林/);assert.equal(await child.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await child.click('[data-plot="0"]');await child.click('[data-plant="sunflower"]');await child.waitForFunction(()=>!document.querySelector('#sheet').open);await child.screenshot({path:'/tmp/nexus-growth-forest-child.png',fullPage:true});
- await child.click('#openExam');await child.fill('[name=score]','95');await child.click('#examForm button[type=submit]');await child.waitForFunction(()=>document.querySelector('#status').textContent.includes('等待家長'));assert.equal(await child.locator('#pointsBalance').innerText(),'0');
- console.log('growth: pending exam created');const parent=await open('parent');await parent.click('#parentNav');await parent.locator('[data-record]').first().click();await parent.click('#approveRecord');await parent.waitForFunction(()=>!document.querySelector('#sheet').open);
+ await child.click('#openExam');await child.fill('[name=score]','95');if(direct)await child.setInputFiles('[name=photo]','Nexus.png');await child.click('#examForm button[type=submit]');await child.waitForFunction(()=>document.querySelector('#status').textContent.includes('等待家長'));assert.equal(await child.locator('#pointsBalance').innerText(),'0');
+ console.log('growth: pending exam created');const parent=await open('parent');await parent.click('#parentNav');await parent.locator('[data-record]').first().click();if(direct){await parent.click('#viewPhoto');await parent.waitForFunction(()=>document.querySelector('#photoContainer img')?.naturalWidth>0);assert.equal([...db.data.keys()].filter(path=>path.includes('/growthExamPhotos/')).length,1);}await parent.click('#approveRecord');await parent.waitForFunction(()=>!document.querySelector('#sheet').open);
  await child.waitForFunction(()=>document.querySelector('#pointsBalance').textContent==='100');await child.click('[data-plot="0"]');await child.click('#waterPlant');await child.waitForFunction(()=>document.querySelector('#sheetTitle').textContent==='向日葵'&&document.querySelector('#sheetBody').textContent.includes('10 / 100'));await child.click('#waterPlant');await child.waitForFunction(()=>document.querySelector('#sheetBody').textContent.includes('20 / 100'));await child.click('#closeSheet');
  console.log('growth: exam approved and plant watered');await child.click('#openReading');await child.fill('[name=bookName]','小王子 <img src=x onerror=alert(1)>');await child.fill('[name=readingMinutes]','20');await child.fill('[name=readingPages]','15');await child.click('#readingForm button[type=submit]');await child.waitForFunction(()=>document.querySelector('#pointsBalance').textContent==='110');assert.equal(await child.locator('#coinBalance').innerText(),'15');
  console.log('growth: reading rewarded');await parent.click('[data-parent=settings]');await parent.fill('[name=readingCoins]','100');await parent.click('#settingsForm button[type=submit]');await parent.waitForFunction(()=>!document.querySelector('#settingsForm button[type=submit]').disabled);assert.equal((await db.doc('groups/A/growthSettings/main').get()).data().reading.coins,100);await child.waitForTimeout(500);
@@ -36,6 +60,7 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
  await parent.setViewportSize({width:1440,height:1000});await parent.click('[data-parent=overview]');await parent.waitForSelector('.summary-grid');await parent.screenshot({path:'/tmp/nexus-growth-forest-parent.png',fullPage:true});
  assert.equal(await parent.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await child.bringToFront();await child.click('[data-view=forest]');await child.screenshot({path:'/tmp/nexus-growth-forest-progress.png',fullPage:true});
- assert.deepEqual(errors,[]);console.log('PASS Growth Forest: real Phaser, child/parent separation, initial planting, pending exam, parent approval, live balances, water/stage change, reading rewards, rule snapshots, seed purchase/plant/reload, XSS-safe history, transaction ledger, legacy reward request and completion, 390px mobile and 1440px desktop.');
+ if(direct){assert.ok(!network.some(url=>/cloudfunctions[.]net|firebase-functions[.]js|firebase-auth[.]js/.test(url)));assert.equal(db.data.has('groups/A/settings/growthForestCutover'),false);}
+ assert.deepEqual(errors,[]);console.log((direct?'PASS DIRECT FIRESTORE (no Auth/Functions calls): ':'PASS CLOUD SERVICE FIXTURE: ')+'Growth Forest: real Phaser, child/parent separation, initial planting, pending exam, parent approval, live balances, water/stage change, reading rewards, rule snapshots, seed purchase/plant/reload, XSS-safe history, transaction ledger, legacy reward request and completion, 390px mobile and 1440px desktop.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

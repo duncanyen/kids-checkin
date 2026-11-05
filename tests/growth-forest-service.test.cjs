@@ -7,7 +7,8 @@ async function setup(){
  const db=new MemoryDB();let now=Date.parse('2026-11-05T04:00:00Z');
  for(const [accountId,role]of [['parent','parent'],['alice','child'],['bob','child']])await db.doc('users/'+accountId).set({accountId,role,name:accountId==='alice'?'新的名字':accountId});
  await db.doc('groups/A').set({name:'森林家庭',members:['parent','alice']});await db.doc('groups/B').set({members:['bob']});
- const service=createGrowthService({db,now:()=>now});
+ const factory=process.env.GROWTH_TEST_DIRECT==='1'?(await import('../js/growth-forest/direct-service.js')).createGrowthService:createGrowthService;
+ const service=factory({db,now:()=>now});
  const request=(who,action,payload={},requestId=crypto.randomUUID(),groupId=who==='bob'?'B':'A')=>({auth:{uid:who,token:{photoAccountId:who,photoGroupId:groupId}},data:{groupId,action,payload,requestId}});
  const call=(who,action,payload={},rid)=>service.handle(request(who,action,payload,rid));
  const wallet=async who=>(await db.doc(`groups/A/growthProfiles/${who}`).get()).data();

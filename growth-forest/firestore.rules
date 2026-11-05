@@ -19,7 +19,7 @@ service cloud.firestore {
   match /groups/{g}/growthProfiles/{a} { allow read: if own(g,a) || parent(g); allow write: if false; }
   match /groups/{g}/gardens/{a} { allow read: if own(g,a) || parent(g); allow write: if false; }
   match /groups/{g}/{kind}/{id} {
-   allow read: if kind in ['gardenPlants','growthRecords','growthTransactions','growthRewardRequests']
+   allow read: if kind in ['growthExamPhotos','gardenPlants','growthRecords','growthTransactions','growthRewardRequests']
       && (parent(g) || own(g,resource.data.accountId));
    allow read: if kind in ['growthAudit','growthMigrations','growthRecordHistory'] && parent(g);
    allow write: if false;
