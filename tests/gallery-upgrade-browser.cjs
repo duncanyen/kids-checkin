@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const base = process.env.GALLERY_BASE_URL || 'http://127.0.0.1:8012';
 const image = require('node:fs').readFileSync('Nexus.png');
 const store = {
+ 'groups/A': {members:['alice','bob']},
+ 'users/b': {accountId:'bob',name:'Bob 現在',nameHistory:['Old Bob']},
  'users/a': { accountId: 'alice', name: 'New Alice', nameHistory: ['Old Alice', 'Older Alice'] },
  'photos/p': { groupId: 'A', uploader: 'Old Alice', uploaderAccountId: 'alice', timestamp: 1000, imageUrls: [base+'/test-photo.png', base+'/test-photo.png?second'], likes: ['Old Alice', 'Older Alice'], comments: [] },
  'photos/other': { groupId: 'B', uploader: 'Other', timestamp: 1, likes: [], comments: [] }
@@ -16,6 +18,7 @@ export const setPersistence=async()=>{},inMemoryPersistence={},signInWithCustomT
 export const collection=(_,path)=>({path}),doc=(ref,...parts)=>({path:parts.length?parts.join('/'):ref.path+'/new',id:parts.at(-1)||'new'});
 export const where=(field,op,value)=>({field,op,value}),orderBy=()=>({}),limit=n=>({limit:n}),startAfter=()=>({}),endAt=()=>({}),query=(ref,...filters)=>({...ref,filters}),serverTimestamp=()=>1000;
 function snap(row){return {id:row.id,exists:()=>!!row.value,data:()=>({...row.value,...(row.value.timestamp&&typeof row.value.timestamp==='number'?{timestamp:{toDate:()=>new Date(row.value.timestamp),toMillis:()=>row.value.timestamp}}:{})})};}
+export const getDoc=async ref=>{const value=await window.__db({op:'get',ref});return{exists:()=>!!value,data:()=>value};};
 export const getDocs=async ref=>{const rows=await window.__db({op:'query',ref});const docs=rows.map(snap);return{docs,empty:!docs.length,metadata:{fromCache:false},forEach:fn=>docs.forEach(fn)};};
 window.__listeners??=new Set();window.__emit=()=>Promise.all([...window.__listeners].map(fn=>fn()));
 export const onSnapshot=(ref,callback)=>{let active=true;const emit=async()=>{const result=await getDocs(ref);if(active)callback(result);};window.__listeners.add(emit);emit();return()=>{active=false;window.__listeners.delete(emit)};};
@@ -30,7 +33,7 @@ export const ref=(_,path)=>path,uploadString=async(path,data)=>window.__db({op:'
  await context.exposeBinding('__db',async({page:sourcePage},event)=>{
   if(event.op==='query'){
    let rows=Object.entries(store).filter(([path])=>path.startsWith(event.ref.path+'/'));
-   for(const f of event.ref.filters||[])if(f.field)rows=rows.filter(([,value])=>value[f.field]===f.value);
+   for(const f of event.ref.filters||[])if(f.field)rows=rows.filter(([,value])=>f.op==='in'?f.value.includes(value[f.field]):value[f.field]===f.value);
    const cap=event.ref.filters?.find(f=>f.limit)?.limit;if(cap)rows=rows.slice(0,cap);
    return rows.map(([path,value])=>({id:path.split('/').at(-1),value:structuredClone(value)}));
   }
@@ -105,9 +108,22 @@ export const ref=(_,path)=>path,uploadString=async(path,data)=>window.__db({op:'
  await page.evaluate(()=>submitComment('p'));assert.equal(store['photos/p'].comments.length,2);assert.equal(store['photos/p'].comments[1].text,'');
  // Deleting a photo comment also removes its file; rename retains ownership.
  await page.evaluate(()=>deleteComment('p',0));assert.equal(store['photos/p'].comments.length,1);assert.ok(deleted.includes(comment.storagePaths[0]));
+ // Live account profiles update old posts, comments and reply labels, without
+ // replacing the image/input or changing historical names in stored records.
+ store['photos/p'].comments.push({id:'old-bob',senderAccountId:'bob',sender:'Old Bob',text:'舊留言',timestamp:2000});
+ await page.evaluate(()=>window.__emit());await page.waitForFunction(()=>[...document.querySelectorAll('.comment-sender')].some(n=>n.textContent==='Bob 現在'));
+ await page.fill('#input-p','保留草稿');await page.evaluate(()=>{window.__savedPhoto=document.querySelector('.card-image');window.__savedInput=document.querySelector('#input-p');});
+ store['users/a'].name='Newest Alice';store['users/a'].nameHistory.push('New Alice');
+ await page.evaluate(()=>window.__emit());await page.waitForFunction(()=>document.querySelector('.uploader-name').textContent==='Newest Alice');
+ assert.equal(store['photos/p'].uploader,'Old Alice');assert.equal(await page.inputValue('#input-p'),'保留草稿');
+ assert.ok(await page.evaluate(()=>__savedPhoto===document.querySelector('.card-image')&&__savedInput===document.querySelector('#input-p')));
+ await page.locator('[data-reply-account=bob]').click();store['users/b'].nameHistory.push('Bob 現在');store['users/b'].name='Bob 最新';
+ await page.evaluate(()=>window.__emit());await page.waitForFunction(()=>document.querySelector('#reply-target-p').textContent==='Bob 最新');
+ await page.evaluate(()=>submitComment('p'));const latest=store['photos/p'].comments.at(-1);assert.equal(latest.sender,'Newest Alice');assert.equal(latest.senderAccountId,'alice');assert.equal(latest.replyToAccountId,'bob');
+ assert.equal(store['photos/p'].comments.find(c=>c.id==='old-bob').sender,'Old Bob');
  // Identity/group switch blocks late writes.
  await page.evaluate(()=>localStorage.setItem('lastGroupId','B'));await page.evaluate(()=>toggleLike('p',true));assert.deepEqual(store['photos/p'].likeAccountIds,['alice']);
  assert.deepEqual(errors,[]);
- console.log('PASS: real pinch/pan, image reset, file download and fallback, historical-name likes, concurrent tabs, account IDs, photo comments, retries/rollback, image-only comments, attachment limits, viewer integration, escaped text, cleanup and group guard.');
+ console.log('PASS: real pinch/pan, image reset, file download and fallback, live account-based author/comment/reply names, historical-name likes, concurrent tabs, account IDs, photo comments, retries/rollback, image-only comments, attachment limits, viewer integration, escaped text, cleanup and group guard.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -11,7 +11,7 @@ export function loadPhotoAliases(db, user) {
             return [...new Set([user.name, ...(user.nameHistory || []), profile.name, ...(profile.nameHistory || [])].filter(Boolean))];
         });
         cache.set(key, work);
-        work.catch(() => cache.delete(key));
+        work.then(() => cache.delete(key), () => cache.delete(key));
     }
     return cache.get(key);
 }

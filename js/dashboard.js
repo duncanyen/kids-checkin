@@ -1,3 +1,4 @@
+import { photoPerson, photoAvatar } from './gallery-profile-core.js';
 import { todoAssignedTo, todoAssigneeProfiles } from './todo-core.js';
 import { photoLikes, updatePhotoLike } from './gallery-core.js';
 import { loadPhotoAliases } from './gallery-identity.js';
@@ -12,6 +13,8 @@ import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, 
 let unreadUnsubscribe = null;
 let galleryUnsubscribe = null;
 let carouselUnsubscribe = null;
+let carouselProfilesUnsubscribe = null;
+let carouselProfilesRequest = 0;
 let dashboardGeneration = 0;
 let memberRefreshes = [];
 let cancelGroupLoad = null;
@@ -65,6 +68,7 @@ window.stopDashboardListeners = function() {
     cancelGroupLoad?.(); cancelGroupLoad = null;
     memberRefreshes = [];
     if (carouselUnsubscribe) { carouselUnsubscribe(); carouselUnsubscribe = null; }
+    carouselProfilesUnsubscribe?.(); carouselProfilesUnsubscribe = null;
     if (groupNameUnsubscribe) { groupNameUnsubscribe(); groupNameUnsubscribe = null; }
     if (unreadUnsubscribe) { unreadUnsubscribe(); unreadUnsubscribe = null; }
     if (galleryUnsubscribe) { galleryUnsubscribe(); galleryUnsubscribe = null; }
@@ -546,10 +550,12 @@ window.renderAgendaUI = function() {
 
 window.fetchAndRenderPhotoCarousel = function(user) {
     carouselUnsubscribe?.(); carouselUnsubscribe = null;
+    carouselProfilesUnsubscribe?.(); carouselProfilesUnsubscribe = null;
     if (!window.currentGroup) return;
     const q = query(collection(db, "photos"), where("groupId", "==", window.currentGroup.id), orderBy("timestamp", "desc"), limit(5));
-    const groupId = window.currentGroup.id, token = dashboardGeneration;
-    let aliases = [user.name, ...(user.nameHistory || [])], latest;
+    const groupId = window.currentGroup.id, token = dashboardGeneration, profileRequest = ++carouselProfilesRequest;
+    let aliases = [user.name, ...(user.nameHistory || [])], latest, profiles = null;
+    const escapePhoto = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const render = snapshot => {
         latest = snapshot;
         const section = document.getElementById('photoCarouselSection');
@@ -560,7 +566,8 @@ window.fetchAndRenderPhotoCarousel = function(user) {
             const photo = docSnap.data(); const photoId = docSnap.id;
             const dateObj = photo.timestamp ? photo.timestamp.toDate() : new Date();
             const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
-            const uploaderAvatar = window.userAvatarMap[photo.uploader] || `https://ui-avatars.com/api/?name=${photo.uploader}&background=e5e7eb`;
+            const author = photoPerson(photo.uploaderAccountId,photo.uploader,profiles || window.groupMembers || []);
+            const uploaderAvatar = photoAvatar(author, (author.accountId ? window.userAvatarMap[author.accountId] : null) || photo.uploaderAvatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=e5e7eb`;
             let displayImageUrl = '';
             if (photo.imageUrls && Array.isArray(photo.imageUrls) && photo.imageUrls.length > 0) displayImageUrl = photo.imageUrls[0]; 
             else displayImageUrl = photo.url || photo.imageUrl || photo.image || photo.photoUrl || '';
@@ -571,9 +578,9 @@ window.fetchAndRenderPhotoCarousel = function(user) {
                         <img class="carousel-img" src="${displayImageUrl}" onerror="this.style.display='none';" onclick="localStorage.setItem('target_photo_id', '${photoId}'); window.navTo('gallery.html', 'Photo Dump');">
                         <div class="carousel-info">
                             <div class="carousel-author">
-                                <img class="carousel-author-img" src="${uploaderAvatar}">
+                                <img class="carousel-author-img" src="${escapePhoto(uploaderAvatar)}" alt="${escapePhoto(author.name)}">
                                 <div>
-                                    <div class="carousel-author-name">${photo.uploader}</div>
+                                    <div class="carousel-author-name">${escapePhoto(author.name)}</div>
                                     <div class="carousel-date">${dateStr}</div>
                                 </div>
                             </div>
@@ -587,6 +594,13 @@ window.fetchAndRenderPhotoCarousel = function(user) {
         container.innerHTML = html;
     };
     carouselUnsubscribe = watchMemberWidget(q, render);
+    import('./gallery-profiles.js').then(({watchPhotoProfiles}) => {
+        if (token !== dashboardGeneration || profileRequest !== carouselProfilesRequest || window.currentGroup?.id !== groupId) return;
+        carouselProfilesUnsubscribe = watchPhotoProfiles(db,groupId,user.accountId,next => {
+            if (token !== dashboardGeneration || profileRequest !== carouselProfilesRequest || window.currentGroup?.id !== groupId) return;
+            profiles = next;if (latest) render(latest);
+        }, reason => console.warn('首頁相簿個人資料同步失敗',reason.code || reason.message));
+    }).catch(() => {});
     loadPhotoAliases(db, user).then(names => {
         if (token !== dashboardGeneration || window.currentGroup?.id !== groupId) return;
         aliases = names; if (latest) render(latest);

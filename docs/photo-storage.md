@@ -48,3 +48,13 @@ photoSession 在伺服器檢查既有密碼或 PIN、有效帳號和目前群組
 刪除留言會嘗試清理該留言附圖；刪除整篇貼文也會收集留言附圖一併清理。既有 Storage 規則僅允許檔案擁有者或群組 admin／parent 刪除：普通貼文擁有者刪掉其他人附圖的貼文時，部分檔案可能需由管理者清理；介面會明確提示，不會誤報所有檔案已刪除。
 
 本機驗證：`node --test tests/gallery-core.test.mjs`、`node tests/gallery-upgrade-browser.cjs`（真實雙指事件、下載、分享介面替身、跨分頁交易、留言圖片回滾）、既有相簿 Storage／分頁／互動回歸。未部署正式站或修改正式資料。
+
+## 發文／留言的最新名稱顯示
+
+主頁 Photo Dump 輪播與相簿使用 `uploaderAccountId`／`senderAccountId` 對應目前群組的 `users.accountId`，以最新 `users.name` 顯示；`uploader`／`sender` 保留為歷史快照，不批次改寫舊貼文或留言。新回覆另存 `replyToAccountId`，回覆標籤也能跟隨改名。
+
+僅有舊姓名的資料只在目前群組的 `name`／`nameHistory` 能唯一對應帳號時更新顯示；同名或無法對應時保留原名，不猜測擁有人。已知 accountId 卻未讀到個人資料時，也不以姓名轉配其他帳號。
+
+個人資料以每批最多十個 accountId 監聽，改名時只更新顯示，不替換貼文照片或留言輸入框、不清除草稿；頁面離開或群組切換會解除監聽。姓名別名查詢只共用進行中的請求，不永久快取舊個人資料。
+
+驗證：`node --test tests/gallery-profiles.test.mjs tests/gallery-core.test.mjs`；`GALLERY_BASE_URL=http://127.0.0.1:8030 node tests/gallery-upgrade-browser.cjs`，資料與 Storage transport 均為隔離 fixture。

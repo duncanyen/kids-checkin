@@ -1,3 +1,4 @@
+import { photoPerson, photoAvatar } from './gallery-profile-core.js';
 import {
     collection, addDoc, query, orderBy, onSnapshot, where, getDocs, limit, startAfter, endAt,
     serverTimestamp, doc, setDoc, deleteDoc, runTransaction
@@ -37,6 +38,26 @@ let currentSort = 'latest';
 window.viewerQueue = []; 
 let currentViewerIndex = 0; 
 window.replyState = {};
+window.replyAccountState = {};
+let photoProfiles = [], stopPhotoProfiles = null, profileGeneration = 0;
+const person = (accountId, name) => photoPerson(accountId, name, photoProfiles.length ? photoProfiles : [currentUser]);
+const ownProfile = () => person(currentUser.accountId, currentUser.name);
+function startPhotoProfiles() {
+    const version = ++profileGeneration;stopPhotoProfiles?.();stopPhotoProfiles = null;
+    import('./gallery-profiles.js').then(({watchPhotoProfiles}) => {
+        if (!active || version !== profileGeneration || !sameSession()) return;
+        stopPhotoProfiles = watchPhotoProfiles(db,currentGroupId,currentUser.accountId,profiles => {
+            if (!active || version !== profileGeneration || !sameSession()) return;
+            photoProfiles = profiles;const own = ownProfile();
+            likeAliases = new Set([...likeAliases, own.name, ...(own.nameHistory || [])].filter(Boolean));
+            for (const entry of cards.values()) entry.signature = null;
+            syncFeed();
+            for (const [id, accountId] of Object.entries(window.replyAccountState)) {
+                if (accountId && window.replyState[id]) {const name=person(accountId,window.replyState[id]).name;window.replyState[id]=name;const label=document.getElementById(`reply-target-${id}`);if(label)label.textContent=name;}
+            }
+        }, reason => console.warn('相簿個人資料同步失敗', reason.code || reason.message));
+    }).catch(() => {});
+}
 
 const commentDrafts = new Map(), likePending = new Set();
 let likeAliases = new Set([currentUser?.name, ...(currentUser?.nameHistory || [])].filter(Boolean));
@@ -45,7 +66,7 @@ function sameSession() {
     return JSON.parse(saved || 'null')?.accountId === currentUser.accountId && localStorage.getItem('lastGroupId') === currentGroupId;
 }
 async function loadLikeIdentity() {
-    likeAliases = new Set(await loadPhotoAliases(db, currentUser));
+    likeAliases = new Set([...(await loadPhotoAliases(db, currentUser)), ownProfile().name, ...(ownProfile().nameHistory || [])].filter(Boolean));
 }
 const feedContainer = document.getElementById('feedContainer');
 const unreadBadge = document.getElementById('unreadBadge');
@@ -152,6 +173,7 @@ async function loadNextPage() {
 }
 function pauseGallery() {
     active = false; generation++; loading = false;
+    profileGeneration++;stopPhotoProfiles?.();stopPhotoProfiles = null;
     subscriptions.splice(0).forEach(stop=>stop());
     observer?.disconnect(); observer = null;
 }
@@ -163,6 +185,7 @@ function resumeGallery() {
         window.location.replace('index.html'); return;
     }
     active = true; const token = ++generation;
+    startPhotoProfiles();
     ranges.forEach(range=>subscribeRange(range, token));
     if ('IntersectionObserver' in window) {
         observer = new IntersectionObserver(entries=>{
@@ -182,7 +205,7 @@ function updateUnreadBadge(photos) {
     let unreadCount = 0;
     photos.forEach(photo => {
         const photoTime = photo.timestamp?.toDate?.()?.getTime() || 0;
-        if (photoTime > lastReadTime && photo.uploader !== currentUser.name) {
+        if (photoTime > lastReadTime && (photo.uploaderAccountId ? photo.uploaderAccountId !== currentUser.accountId : !likeAliases.has(photo.uploader))) {
             unreadCount++;
         }
     });
@@ -211,7 +234,7 @@ function renderFeed() {
             -(a.timestamp?.toMillis?.() || a.timestamp?.toDate?.()?.getTime() || 0) || b.id.localeCompare(a.id);
     });
     if (!cards.size) feedContainer.replaceChildren();
-    for (const [id, entry] of cards) if (!posts.has(id)) { entry.card.remove(); cards.delete(id); delete window.replyState[id]; commentDrafts.delete(id); }
+    for (const [id, entry] of cards) if (!posts.has(id)) { entry.card.remove(); cards.delete(id); delete window.replyState[id]; delete window.replyAccountState[id]; commentDrafts.delete(id); }
     let previous = null;
     const viewedUrl = photoViewerModal?.style.display === 'flex' ? viewerImage.getAttribute('src') : null;
     for (const photo of sortedList) {
@@ -243,11 +266,11 @@ function renderFeed() {
             if (imagesChanged)
                 entry.card.querySelector('.photo-carousel').replaceWith(fresh.querySelector('.photo-carousel'));
             const name = entry.card.querySelector('.uploader-name'), time = entry.card.querySelector('.upload-time');
-            name.textContent = photo.uploader;
+            const author = person(photo.uploaderAccountId, photo.uploader);
+            name.textContent = author.name;
             time.textContent = fresh.querySelector('.upload-time').textContent;
             const avatar = entry.card.querySelector('.uploader-avatar');
-            const avatarUrl = photo.uploader === currentUser.name && currentUser.avatar ? currentUser.avatar
-                : photo.uploaderAvatar || `https://ui-avatars.com/api/?name=${photo.uploader}&background=10b981&color=fff`;
+            const avatarUrl = photoAvatar(author, photo.uploaderAvatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=10b981&color=fff`;
             if (avatar.getAttribute('src') !== avatarUrl) avatar.src = avatarUrl;
             entry.signature = signature;
         }
@@ -294,21 +317,23 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
     let commentsHtml = '';
     if (data.comments && data.comments.length > 0) {
         data.comments.forEach((c, cIndex) => {
+            const sender = person(c.senderAccountId,c.sender);
+            const replyTarget = person(c.replyToAccountId,c.replyTo);
             const cTime = new Date(c.timestamp);
             const cTimeStr = `${String(cTime.getMonth()+1).padStart(2,'0')}/${String(cTime.getDate()).padStart(2,'0')} ${String(cTime.getHours()).padStart(2,'0')}:${String(cTime.getMinutes()).padStart(2,'0')}`;
             const canDeleteComment = ((c.senderAccountId ? c.senderAccountId === currentUser.accountId : likeAliases.has(c.sender)) || currentUser.role === 'admin' || currentUser.role === 'parent');
             const delCommentBtn = canDeleteComment ? `<button class="btn-action-sm btn-del-comment" onclick="window.deleteComment('${photoId}', ${cIndex})">刪除</button>` : '';
-            const replyBtn = `<button class="btn-action-sm btn-reply" data-reply-photo="${html(photoId)}" data-reply-sender="${html(c.sender)}">回覆</button>`;
-            const replyTagHtml = c.replyTo ? `<span class="reply-tag">回覆 @${html(c.replyTo)}</span>` : '';
+            const replyBtn = `<button class="btn-action-sm btn-reply" data-reply-photo="${html(photoId)}" data-reply-sender="${html(sender.name)}" data-reply-account="${html(sender.accountId || '')}">回覆</button>`;
+            const replyTagHtml = (c.replyTo || c.replyToAccountId) ? `<span class="reply-tag">回覆 @${html(replyTarget.name)}</span>` : '';
 
             commentsHtml += `
                 <div class="comment-item">
                     <div class="comment-header-row">
-                        <span class="comment-sender">${html(c.sender)}</span><span class="comment-time">${cTimeStr}</span>
+                        <span class="comment-sender">${html(sender.name)}</span><span class="comment-time">${cTimeStr}</span>
                     </div>
                     <div class="comment-content-row">
                         <div class="comment-content">${replyTagHtml}${html(c.text)}
-                            <div class="comment-images">${(c.imageUrls || []).map(url => `<img class="comment-image" src="${html(url)}" alt="${html(c.sender)}的留言照片" loading="lazy" decoding="async">`).join('')}</div></div>
+                            <div class="comment-images">${(c.imageUrls || []).map(url => `<img class="comment-image" src="${html(url)}" alt="${html(sender.name)}的留言照片" loading="lazy" decoding="async">`).join('')}</div></div>
                         <div class="comment-actions">${replyBtn}${delCommentBtn}</div>
                     </div>
                 </div>`;
@@ -317,22 +342,15 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
         commentsHtml = '<div style="color:var(--text-sub); font-size:calc(13px * var(--n-font-scale, 1)); text-align:center; font-weight:600;">成為第一個留言的人吧！</div>';
     }
 
-    // 🚀 修正頭像顯示：判斷發文者如果是自己，且 localStorage 中有最新頭像，則優先載入最新的頭像
-    let displayAvatar = data.uploaderAvatar;
-    if (data.uploader === currentUser.name && currentUser.avatar) {
-        displayAvatar = currentUser.avatar; // 強制套用自己最新的頭像
-    }
-    // 如果還是沒有頭像，則套用預設的 UI Avatars
-    if (!displayAvatar) {
-        displayAvatar = `https://ui-avatars.com/api/?name=${data.uploader}&background=10b981&color=fff`;
-    }
+    const author = person(data.uploaderAccountId, data.uploader);
+    const displayAvatar = photoAvatar(author, data.uploaderAvatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(author.name)}&background=10b981&color=fff`;
 
     const card = document.createElement('div');
     card.className = 'photo-card';
     card.innerHTML = `
         <div class="card-header">
-            <img ${skipMedia ? '' : `src="${displayAvatar}"`} loading="lazy" decoding="async" width="40" height="40" class="uploader-avatar">
-            <div class="uploader-info"><div class="uploader-name">${data.uploader}</div><div class="upload-time">${timeStr}</div></div>
+            <img ${skipMedia ? '' : `src="${html(displayAvatar)}"`} loading="lazy" decoding="async" width="40" height="40" class="uploader-avatar">
+            <div class="uploader-info"><div class="uploader-name">${html(author.name)}</div><div class="upload-time">${timeStr}</div></div>
             ${delBtnHtml}
         </div>
         ${imagesHtml}
@@ -360,14 +378,15 @@ function renderPhotoCard(photoId, data, startGlobalIndex, skipMedia = false) {
     return card;
 }
 
-window.setupReply = function(photoId, targetName) {
+window.setupReply = function(photoId, targetName, targetAccountId = null) {
     window.replyState[photoId] = targetName;
+    window.replyAccountState[photoId] = targetAccountId;
     document.getElementById(`reply-target-${photoId}`).innerText = targetName;
     document.getElementById(`reply-indicator-${photoId}`).style.display = 'flex';
     document.getElementById(`input-${photoId}`).focus();
 };
 
-window.cancelReply = function(photoId) { window.replyState[photoId] = null; document.getElementById(`reply-indicator-${photoId}`).style.display = 'none'; };
+window.cancelReply = function(photoId) { window.replyState[photoId] = null; window.replyAccountState[photoId] = null; document.getElementById(`reply-indicator-${photoId}`).style.display = 'none'; };
 
 window.toggleLike = async function(photoId, hasLiked) {
     if (!currentUser.accountId || !sameSession() || posts.get(photoId)?.groupId !== currentGroupId || likePending.has(photoId)) return;
@@ -405,7 +424,7 @@ function paintDraft(photoId) {
 }
 feedContainer.addEventListener('click', event => {
     const reply = event.target.closest('[data-reply-photo]');
-    if (reply) window.setupReply(reply.dataset.replyPhoto, reply.dataset.replySender);
+    if (reply) window.setupReply(reply.dataset.replyPhoto, reply.dataset.replySender, reply.dataset.replyAccount || null);
     const attach = event.target.closest('[data-attach-photo]');
     if (attach) attach.closest('.photo-card').querySelector('.comment-file-input').click();
 });
@@ -434,7 +453,7 @@ window.submitComment = async function(photoId) {
     const draft = commentDrafts.get(photoId) || { images: [] };
     if (draft.busy || draft.processing || (!text && !draft.images.length)) return;
     commentDrafts.set(photoId, draft); draft.busy = true; draft.message = ''; paintDraft(photoId);
-    const comment = { id: crypto.randomUUID(), senderAccountId: currentUser.accountId, sender: currentUser.name, text, replyTo: window.replyState[photoId] || null, timestamp: Date.now() };
+    const comment = { id: crypto.randomUUID(), senderAccountId: currentUser.accountId, sender: ownProfile().name, text, replyTo: window.replyState[photoId] || null, replyToAccountId: window.replyAccountState[photoId] || null, timestamp: Date.now() };
     const save = async attachments => {
         await runTransaction(db, async transaction => {
             const ref = doc(db, 'photos', photoId), snapshot = await transaction.get(ref);
@@ -568,8 +587,8 @@ document.getElementById('btnConfirmUpload').addEventListener('click', async () =
                     ...uploaded,
                     groupId: currentGroupId,
                     caption,
-                    uploader: currentUser.name,
-                    uploaderAvatar: currentUser.avatar || null,
+                    uploader: ownProfile().name,
+                    uploaderAvatar: photoAvatar(ownProfile(), currentUser.avatar) || null,
                     timestamp: serverTimestamp(),
                     comments: [], likes: []
                 });
@@ -657,3 +676,4 @@ window.prevPhoto = event => { event?.stopPropagation(); photoViewer.previous(); 
 window.nextPhoto = event => { event?.stopPropagation(); photoViewer.next(); };
 loadLikeIdentity().then(() => { for (const entry of cards.values()) entry.signature = null; if (active && cards.size) syncFeed(); }).catch(() => {});
 listenToGallery();
+window.addEventListener('focus', () => { if (active && sameSession()) startPhotoProfiles(); });
