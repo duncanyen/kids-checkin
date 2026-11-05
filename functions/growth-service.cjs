@@ -243,22 +243,45 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
         if(rows.size===200&&!previous)D.fail('failed-precondition','此日期有過多後補成績，請家長核對進步比較');
         return previous?previous.score/previous.maxScore*100:null;
     }
-    async function snapshot(request){
-        const c=await context(request),accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
-        const [wallet,garden,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
-        const count=D.plotCount(garden.data()),totalPages=Math.ceil(count/D.PLOTS_PER_PAGE),requestedPage=D.number(request.data.payload?.page??0,'森林頁碼',0,Number.MAX_SAFE_INTEGER),page=Math.min(requestedPage,totalPages-1),start=page*D.PLOTS_PER_PAGE;
+    async function forestPage(c,accountId,gardenData,requestedPageNumber){
+        const count=D.plotCount(gardenData),totalPages=Math.ceil(count/D.PLOTS_PER_PAGE),requestedPage=D.number(requestedPageNumber??0,'森林頁碼',0,Number.MAX_SAFE_INTEGER),page=Math.min(requestedPage,totalPages-1),start=page*D.PLOTS_PER_PAGE;
         // Read only this page. Separate plot documents avoid an ever-growing
         // garden array and Firestore's one-document size limit.
         const plots=await Promise.all(Array.from({length:Math.min(D.PLOTS_PER_PAGE,count-start)},async(_,i)=>{
             const positionIndex=start+i,slot=(await ref(c.groupId,'gardenPlots',accountId+'_'+positionIndex).get()).data();
-            const plantId=slot?.plantId||garden.data().slots?.[positionIndex]||null;
+            const plantId=slot?.plantId||gardenData.slots?.[positionIndex]||null;
             const plant=plantId?(await ref(c.groupId,'gardenPlants',D.id(plantId)).get()).data():null;
             if(plant&&(plant.accountId!==accountId||plant.positionIndex!==positionIndex))D.fail('failed-precondition','土地與植物資料不一致，請由家長確認');
             return{positionIndex,plant:plant||null};
         }));
+        return{count,gardenPage:{page,totalPages,start,pageSize:D.PLOTS_PER_PAGE,plots:plots.map(p=>({positionIndex:p.positionIndex,plantId:p.plant?.id||null}))},plants:plots.map(p=>p.plant).filter(Boolean)};
+    }
+    async function publicProfiles(c,ids){
+        const rows=[];for(let start=0;start<ids.length;start+=10){const found=await db.collection('users').where('accountId','in',ids.slice(start,start+10)).get();rows.push(...found.docs.map(row=>row.data()));}
+        // Ambiguous account IDs never select an arbitrary person's profile.
+        return ids.map(accountId=>{const matches=rows.filter(row=>row.accountId===accountId);return matches.length===1&&matches[0].role!=='removed'?matches[0]:null;}).filter(Boolean);
+    }
+    const publicName=row=>typeof row.name==='string'&&row.name.trim()?row.name.slice(0,100):row.accountId;
+    async function memberList(request){
+        const c=await context(request),rows=await publicProfiles(c,[...new Set(c.group.members)]);
+        return{members:rows.map(row=>({accountId:row.accountId,name:publicName(row),avatar:row.avatar||row.photoURL||row.avatarUrl||null}))};
+    }
+    async function memberForest(request){
+        const c=await context(request),accountId=D.id(request.data.payload?.accountId);
+        if(!c.group.members.includes(accountId))D.fail('permission-denied','只能查看目前群組的成員森林');
+        const [owner]=await publicProfiles(c,[accountId]);if(!owner)D.fail('permission-denied','這位成員目前無法提供森林瀏覽');
+        const garden=(await ref(c.groupId,'gardens',accountId).get()).data();
+        // Viewing never creates wallets, migrates records or awards resources.
+        const forest=await forestPage(c,accountId,garden||{slots:[],plotCount:3},request.data.payload?.page);
+        return{owner:{accountId,name:publicName(owner)},garden:{plotCount:forest.count},gardenPage:forest.gardenPage,plants:forest.plants.map(p=>({id:p.id,plantType:p.plantType,growthStage:p.growthStage,positionIndex:p.positionIndex})),hasForest:Boolean(garden)};
+    }
+    async function snapshot(request){
+        const c=await context(request),accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
+        const [wallet,garden,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
+        const forest=await forestPage(c,accountId,garden.data(),request.data.payload?.page);
         const ids=c.parent?c.group.members:[c.accountId],members=[];
         for(let start=0;start<ids.length;start+=10){const batch=await db.collection('users').where('accountId','in',ids.slice(start,start+10)).get();members.push(...batch.docs.map(d=>cleanMember(d.data())).filter(m=>m.role!=='removed'));}
-        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:{...garden.data(),plotCount:count},gardenPage:{page,totalPages,start,pageSize:D.PLOTS_PER_PAGE,plots:plots.map(p=>({positionIndex:p.positionIndex,plantId:p.plant?.id||null}))},plants:plots.map(p=>p.plant).filter(Boolean),plotPrice:D.PLOT_PRICE,settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
+        return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:{...garden.data(),plotCount:forest.count},gardenPage:forest.gardenPage,plants:forest.plants,plotPrice:D.PLOT_PRICE,settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
     }
     async function list(request){
         const c=await context(request),p=request.data.payload||{},kind=D.text(p.kind||'records','清單',30);
@@ -296,9 +319,11 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
         if(!resolveContext&&!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
         if(!request.data||typeof request.data!=='object'||Array.isArray(request.data))D.fail('invalid-argument','請求格式不正確');
         const action=request.data.action;
-        if(!['snapshot','list','legacyList','overview','createRecord','editRecord','reviewRecord','correctRecord','buyPlot','buySeed','plant','water','saveSettings','manualReward','saveReward','requestReward','changeRewardRequest'].includes(action))D.fail('invalid-argument','不支援的操作');
+        if(!['snapshot','members','memberForest','list','legacyList','overview','createRecord','editRecord','reviewRecord','correctRecord','buyPlot','buySeed','plant','water','saveSettings','manualReward','saveReward','requestReward','changeRewardRequest'].includes(action))D.fail('invalid-argument','不支援的操作');
         if(request.data.payload&&(typeof request.data.payload!=='object'||Array.isArray(request.data.payload)||JSON.stringify(request.data.payload).length>50000))D.fail('invalid-argument','操作內容格式不正確或過大');
         if(action==='snapshot')return snapshot(request);
+        if(action==='members')return memberList(request);
+        if(action==='memberForest')return memberForest(request);
         if(action==='list')return list(request);
         if(action==='legacyList')return legacyList(request);
         if(action==='overview')return overview(request);

@@ -31,7 +31,7 @@ export async function connect(context){
   },
   subscribe(_parent,refresh,error){
    // The shared revision reacts to all forest writes without composite indexes.
-   const root=`groups/${context.groupId}`,sources=[sdk.doc(db,root,'growthSync','main'),sdk.doc(db,root,'growthProfiles',context.accountId),sdk.doc(db,root,'growthSettings','main')];
+   const root=`groups/${context.groupId}`,sources=[sdk.doc(db,root),sdk.doc(db,root,'growthSync','main'),sdk.doc(db,root,'growthProfiles',context.accountId),sdk.doc(db,root,'growthSettings','main')];
    const stops=sources.map(source=>sdk.onSnapshot(source,()=>{try{assertCurrent();refresh();}catch(e){error(e);}},error));return()=>stops.forEach(stop=>stop());
   },
   async upload(file){

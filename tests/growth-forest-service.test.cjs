@@ -238,3 +238,25 @@ test('bulk watering validates ten-drop units and tails, is atomic and cannot ove
  await plantRef.set({...((await plantRef.get()).data()),growthValue:0,growthStage:1});await walletRef.set({...await f.wallet('alice'),waterBalance:100});
  const raced=await Promise.allSettled([f.call('alice','water',{id:plant.id,amount:60}),f.call('alice','water',{id:plant.id,amount:60})]);assert.equal(raced.filter(r=>r.status==='fulfilled').length,1);assert.equal((await plantRef.get()).data().growthValue,60);assert.equal((await f.wallet('alice')).waterBalance,40);
 });
+
+test('group forest listing uses current account profiles and exposes only read-only forest visuals',async()=>{
+ const f=await setup();await f.db.doc('users/parent').set({accountId:'parent',role:'parent',name:'最新家長名稱',avatar:'data:image/jpeg;base64,example',email:'private@example.invalid',password:'never-return'});
+ const planted=await f.call('parent','plant',{positionIndex:0,plantType:'sunflower'});
+ const members=await f.call('alice','members');assert.deepEqual(members.members.map(row=>row.accountId),['parent','alice']);assert.equal(members.members[0].name,'最新家長名稱');assert.equal(members.members[0].avatar,'data:image/jpeg;base64,example');assert.deepEqual(Object.keys(members.members[0]).sort(),['accountId','avatar','name']);
+ const before=JSON.stringify([...f.db.data]),forest=await f.call('alice','memberForest',{accountId:'parent'});assert.equal(JSON.stringify([...f.db.data]),before);
+ assert.equal(forest.owner.name,'最新家長名稱');assert.equal(forest.plants[0].id,planted.id);assert.deepEqual(Object.keys(forest.plants[0]).sort(),['growthStage','id','plantType','positionIndex']);assert.deepEqual(Object.keys(forest.garden),['plotCount']);
+ for(const key of ['wallet','settings','rewards','migration','members','actor'])assert.equal(forest[key],undefined);
+ await assert.rejects(f.call('alice','snapshot',{accountId:'parent'}),{code:'permission-denied'});await assert.rejects(f.call('alice','list',{accountId:'parent',kind:'records'}),{code:'permission-denied'});
+ await assert.rejects(f.call('alice','water',{id:planted.id,amount:10,accountId:'parent'}),{code:'permission-denied'});
+ await assert.rejects(f.call('alice','memberForest',{accountId:'bob'}),{code:'permission-denied'});
+});
+
+test('visiting empty, removed, ambiguous or departed forests never migrates or awards resources',async()=>{
+ const f=await setup();await f.db.doc('users/newbie').set({accountId:'newbie',name:'新成員',role:'member',photoURL:'https://example.invalid/current.jpg'});await f.db.doc('groups/A').set({members:['parent','alice','newbie']});
+ const before=JSON.stringify([...f.db.data]),empty=await f.call('alice','memberForest',{accountId:'newbie'});assert.equal(empty.hasForest,false);assert.equal(empty.plants.length,0);assert.equal(empty.gardenPage.plots.length,3);assert.equal(JSON.stringify([...f.db.data]),before);
+ const members=await f.call('alice','members');assert.equal(members.members.find(row=>row.accountId==='newbie').avatar,'https://example.invalid/current.jpg');
+ await f.db.doc('users/newbie').set({accountId:'newbie',role:'removed'});await assert.rejects(f.call('alice','memberForest',{accountId:'newbie'}),{code:'permission-denied'});assert.ok(!(await f.call('alice','members')).members.some(row=>row.accountId==='newbie'));
+ await f.db.doc('users/newbie').set({accountId:'newbie',role:'member'});await f.db.doc('users/duplicate').set({accountId:'newbie',role:'member'});await assert.rejects(f.call('alice','memberForest',{accountId:'newbie'}),{code:'permission-denied'});
+ await f.db.doc('groups/A').set({members:['alice','parent']});await assert.rejects(f.call('alice','memberForest',{accountId:'newbie'}),{code:'permission-denied'});
+ await f.db.doc('groups/A').set({members:['parent']});await assert.rejects(f.call('alice','members'),{code:'permission-denied'});
+});

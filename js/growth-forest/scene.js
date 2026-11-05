@@ -6,7 +6,7 @@ function loadEngine(){
  if(!engine)engine=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js';const timeout=setTimeout(()=>{script.remove();engine=null;reject(Error('森林畫面載入逾時，請重新整理'));},30000);script.onload=()=>{clearTimeout(timeout);resolve();};script.onerror=()=>{clearTimeout(timeout);engine=null;reject(Error('森林畫面載入失敗，請檢查網路'));};document.head.append(script);});return engine;
 }
 export async function createForest(element,onPlot,lowPower=false){
- await loadEngine();let scene,latest,dead=false;
+ element.setAttribute('aria-busy','true');await loadEngine();let scene,latest,dead=false;
  const points=PLOT_POSITIONS;
  const activate=(index,pointer)=>{if(pointer.getDistance()>12)return;const slot=latest?.gardenPage.plots[index];if(slot)onPlot(slot.positionIndex);};
  class Forest extends Phaser.Scene{
@@ -15,7 +15,7 @@ export async function createForest(element,onPlot,lowPower=false){
    scene=this;this.add.image(390,500,'forest');this.sprites=[];this.hits=[];this.soils=[];
    points.forEach((p,i)=>{const soil=this.add.container(0,0,[this.add.ellipse(p.x,p.y+10,150,49,0x5a6944,.14),this.add.ellipse(p.x,p.y,142,47,0xa27d57).setStrokeStyle(3,0xceb68d),this.add.ellipse(p.x,p.y-2,120,32,0x816441)]);this.soils.push(soil);const hit=this.add.zone(p.x,p.y,160,62).setInteractive({cursor:'pointer'}).setDepth(2);this.hits.push(hit);hit.on('pointerup',pointer=>activate(i,pointer));});
    if(!lowPower){for(let i=0;i<7;i++){const mote=this.add.circle(85+i*97,280+(i%3)*130,3,0xfff6c9,.7);this.tweens.add({targets:mote,y:mote.y-60,alpha:.15,duration:3500+i*300,yoyo:true,repeat:-1});}}
-   this.render(latest);
+   this.render(latest);element.setAttribute('aria-busy','false');
   }
   render(data){
    if(!data)return;latest=data;

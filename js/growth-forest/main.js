@@ -7,12 +7,13 @@ const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&
 const dates=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}),today=()=>dates.format(new Date());
 const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revoked:'已撤銷',legacy:'歷史紀錄',requested:'申請中',processing:'準備中',completed:'已發放',cancelled:'已取消'};
 const context=readGameContext(),clock=new ReadingClock(localStorage,`nexus.growth.clock:${context.groupId}:${context.accountId}`);
-let initializedOnce=false,refreshGeneration=0,forestPage=0,pageLoading=false;
+let initializedOnce=false,refreshGeneration=0,forestPage=0,pageLoading=false,visitAccountId=null,visitPage=0,visitData=null,visitGame=null,visitPending=null,visitGeneration=0,noticeTimer;
 if(new URLSearchParams(location.search).get('nav')==='1'){const nav=document.querySelector('.forest-nav');nav.classList.add('inline');document.querySelector('main').before(nav);}
 let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},timer,refreshTimer,unsubscribe,photoUrls=[];
 let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
 $('powerMode').setAttribute('aria-pressed',String(lowPower));
-const status=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'success';};
+const status=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'success';$('status').hidden=!error;};
+function toast(text){clearTimeout(noticeTimer);$('operationNotice').textContent=text;$('operationNotice').hidden=false;noticeTimer=setTimeout(()=>{$('operationNotice').hidden=true;},4000);}
 const message=error=>({'unavailable':'Firestore 暫時無法連線，請保留內容後重試。','functions/unauthenticated':'登入已失效，請返回 Nexus 重新登入。','functions/not-found':'找不到紀錄或森林後端尚未部署。','functions/unavailable':'目前無法連線；請保留畫面後重試。','functions/internal':'後端暫時無法完成操作，請保留內容後重試。'}[error.code]||error.message||'操作失敗，請稍後重試。');
 function field(label,name,type='text',value='',attrs=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}" ${attrs}></label>`;}
 function select(label,name,options,value=''){return `<label>${esc(label)}<select name="${esc(name)}">${options.map(o=>{const v=typeof o==='string'?o:o.value,l=typeof o==='string'?o:o.label;return `<option value="${esc(v)}" ${v===value?'selected':''}>${esc(l)}</option>`;}).join('')}</select></label>`;}
@@ -24,40 +25,83 @@ function closeSheet(){if(busy)return;$('sheet').close();photoUrls.forEach(URL.re
 $('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{game?.setInputEnabled(!$('sheet').open);photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 async function action(action,payload,{close=true}={}){
  if(busy||!client)return null;busy=true;const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
- try{const result=await client.api(action,payload,true);try{await refresh();}catch(error){if(close)$('sheet').close();status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}if(close)$('sheet').close();status(result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result));return result;}
+ try{const result=await client.api(action,payload,true);try{await refresh();}catch(error){if(close)$('sheet').close();status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}if(close)$('sheet').close();const notice=result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result);status(notice);toast(notice);return result;}
  catch(error){status(message(error),true);const panel=$('sheetBody').querySelector('.form-error');if(panel)panel.textContent=message(error);return null;}
  finally{busy=false;controls.filter(c=>c.isConnected).forEach(c=>c.disabled=false);}
 }
-function rewardMessage(result){const r=result.rewards;if(r&&Object.values(r).some(n=>n>0))return `努力已化成養分：星星 +${r.points}、水滴 +${r.water}、金幣 +${r.coins}。`;return '已儲存，你的森林已同步。';}
+function rewardMessage(result){const r=result.rewards;if(r&&Object.values(r).some(n=>n>0))return `努力已化成養分：星星 +${r.points}、水滴 +${r.water}、金幣 +${r.coins}。`;return result.watered?`已澆水 ${result.watered} 滴。`:'操作已完成。';}
 async function refresh(){
  if(stopped||!client)return;const generation=++refreshGeneration,incoming=await client.api('snapshot',{page:forestPage});if(stopped||generation!==refreshGeneration)return;const previous=data;data=incoming;forestPage=data.gardenPage.page;if(previous&&!busy&&['pointsBalance','waterBalance','coinBalance'].some(key=>data.wallet[key]>previous.wallet[key]))status('你的努力有回報！森林資源已更新。');
- $('groupName').textContent=data.group.name+' · 成長森林';$('greeting').textContent=data.actor.name+'的成長森林';
+ updateHeader();
  $('pointsBalance').textContent=available().toLocaleString();$('waterBalance').textContent=data.wallet.waterBalance.toLocaleString();$('coinBalance').textContent=data.wallet.coinBalance.toLocaleString();$('parentNav').hidden=!data.parent;
  $('reservedNote').textContent=`可用 ${available()} 點 · 兌換保留 ${data.wallet.pointsReserved} 點。獎品發放時才會正式扣除保留積分。`;
  $('sceneMessage').textContent=data.gardenPage.plots.every(p=>!p.plantId)?(Object.values(data.garden.seeds).some(n=>n>0)?'選一塊土壤，種下背包裡的種子。':'這區還有空地，可以先到種子小舖購買種子。'):'每一株植物，都記得你的努力。';
  game?.set(data);
  const section=data.gardenPage;
- document.querySelector('.plot-access').innerHTML=section.plots.map(slot=>{const plant=data.plants.find(p=>p.id===slot.plantId);return `<button data-plot="${slot.positionIndex}">${plant?`${esc(data.plantCatalog[plant.plantType].name)} · Lv.${plant.growthStage}`:`位置 ${slot.positionIndex+1} · 種植`}</button>`;}).join('');
+
  $('forestPageLabel').textContent=`第 ${section.page+1} / ${section.totalPages} 區 · 共 ${data.garden.plotCount} 塊土地`;
  $('previousForest').disabled=section.page===0||pageLoading;$('nextForest').disabled=section.page===section.totalPages-1||pageLoading;
  $('forestGame').setAttribute('aria-label',`我的森林，第 ${section.page+1} 區，共 ${data.garden.plotCount} 塊土地`);
  $('buyPlot').textContent=`開墾新土地 · ${data.plotPrice.coins} 金幣＋${data.plotPrice.water} 水滴`;
- if(view==='rewards')renderRewards();if(view==='parent'&&!document.querySelector('#parentContent form:focus-within'))await renderParent();if(view==='records')await loadRecords(true);
+ if(view==='rewards')renderRewards();if(view==='parent'&&!document.querySelector('#parentContent form:focus-within'))await renderParent();if(view==='records')await loadRecords(true);if(view==='members')await renderMembers();if(view==='visit')await refreshVisit();
 }
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{if(stopped)return;if(busy){scheduleRefresh();return;}refresh().catch(error=>status(message(error),true));},220);}
 async function openView(next){
- if(!data||busy||next==='parent'&&!data.parent)return;view=next;
- for(const item of ['forest','records','rewards','parent'])$(item+'View').hidden=item!==view;
+ if(!data||busy||next==='parent'&&!data.parent)return;view=next;updateHeader();if(next!=='visit'){visitGame?.pause();visitGeneration++;}
+ for(const item of ['forest','records','rewards','parent','members','visit'])$(item+'View').hidden=item!==view;
  document.querySelectorAll('[data-view]').forEach(b=>{if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  if(view==='forest'){
   if(!game&&!gamePending){gamePending=import('./scene.js').then(m=>m.createForest($('forestGame'),index=>{if(!$('sheet').open)plot(index);},lowPower)).then(g=>{if(stopped){g.destroy();return;}game=g;g.set(data);g.setInputEnabled(!$('sheet').open);if(view!=='forest'||document.hidden)g.pause();}).catch(e=>status(message(e),true)).finally(()=>gamePending=null);}
   game?.resume();
  }else game?.pause();
+ if(view==='members')await renderMembers();
  if(view==='records'){renderFilters($('recordFilters'),false);await loadRecords(true);}if(view==='rewards')renderRewards();if(view==='parent')await renderParent();
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view).catch(e=>status(message(e),true)));
+function updateHeader(){
+ const visiting=view==='visit';if(visiting)$('operationNotice').hidden=true;document.body.classList.toggle('visiting-forest',visiting);
+ $('greeting').textContent=visiting?(visitData?visitData.owner.name+'的成長森林':'成員的成長森林'):(data?.actor.name?data.actor.name+'的成長森林':'我的成長森林');
+ document.querySelector('.resource-strip').hidden=visiting;document.querySelector('.forest-nav').hidden=visiting;$('resourceGuide').hidden=visiting;
+ $('forestBack').setAttribute('aria-label',visiting||view==='members'?'返回自己的成長森林':'返回 Nexus 主頁');
+}
+$('forestBack').onclick=event=>{if(view==='visit'||view==='members'){event.preventDefault();visitGeneration++;visitGame?.pause();openView('forest').catch(error=>status(message(error),true));}};
+function avatarURL(value){
+ if(typeof value!=='string')return null;if(/^data:image\/(png|jpeg|webp|gif);base64,/i.test(value))return value;
+ try{const url=new URL(value,location.href);if(value&&['https:','http:'].includes(url.protocol))return url.href;}catch{}return null;
+}
+let membersGeneration=0;
+async function renderMembers(){
+ const generation=++membersGeneration,result=await client.api('members');if(view!=='members'||generation!==membersGeneration)return;
+ const root=$('forestMembers');root.replaceChildren();
+ if(!result.members.length){root.textContent='目前沒有可瀏覽的群組成員。';return;}
+ for(const member of result.members){
+  const button=document.createElement('button');button.type='button';button.className='forest-member';button.dataset.memberAccount=member.accountId;button.setAttribute('aria-label','查看'+member.name+'的成長森林');
+  const avatar=document.createElement('span');avatar.className='forest-member-avatar';avatar.textContent=member.name.slice(0,1)||'?';
+  const src=avatarURL(member.avatar);if(src){const image=new Image();image.src=src;image.alt='';image.loading='lazy';image.onerror=()=>{image.remove();};avatar.append(image);}
+  const label=document.createElement('span');label.textContent=member.name+(member.accountId===context.accountId?'（自己）':'');button.append(avatar,label);
+  button.onclick=()=>{if(member.accountId===context.accountId)openView('forest').catch(error=>status(message(error),true));else openMemberForest(member.accountId).catch(error=>status(message(error),true));};root.append(button);
+ }
+}
+async function openMemberForest(accountId){
+ if(busy)return;visitAccountId=accountId;visitPage=0;visitData=null;visitGame?.pause();visitGame?.set({gardenPage:{start:0,plots:[]},plants:[]});$('visitGame').hidden=true;$('visitPagination').hidden=true;await openView('visit');await refreshVisit();
+}
+async function refreshVisit(){
+ if(view!=='visit'||!visitAccountId)return;const generation=++visitGeneration,accountId=visitAccountId;
+ let incoming;try{incoming=await client.api('memberForest',{accountId,page:visitPage});}catch(error){if(view==='visit'&&generation===visitGeneration){$('visitGame').hidden=true;$('visitPagination').hidden=true;visitGame?.pause();}throw error;}if(view!=='visit'||generation!==visitGeneration||accountId!==visitAccountId)return;
+ visitData=incoming;visitPage=incoming.gardenPage.page;updateHeader();$('visitGame').hidden=false;
+ $('visitGame').setAttribute('aria-label',incoming.owner.name+'的成長森林，第 '+(visitPage+1)+' 區');
+ $('visitPagination').hidden=incoming.gardenPage.totalPages<=1;$('visitPageLabel').textContent=`第 ${visitPage+1} / ${incoming.gardenPage.totalPages} 區`;
+ $('visitPrevious').disabled=visitPage===0;$('visitNext').disabled=visitPage===incoming.gardenPage.totalPages-1;
+ if(!visitGame&&!visitPending){visitPending=import('./scene.js').then(m=>m.createForest($('visitGame'),()=>{},lowPower)).then(game=>{if(stopped){game.destroy();return;}visitGame=game;if(visitData)game.set(visitData);game.setInputEnabled(false);if(view!=='visit'||document.hidden)game.pause();}).catch(error=>status(message(error),true)).finally(()=>visitPending=null);await visitPending;}
+ if(view==='visit'&&generation===visitGeneration){visitGame?.set(incoming);visitGame?.setInputEnabled(false);visitGame?.resume();}
+}
+async function changeVisitPage(delta){
+ if($('visitPrevious').disabled&&delta<0||$('visitNext').disabled&&delta>0)return;const previous=visitPage;visitPage+=delta;$('visitPrevious').disabled=true;$('visitNext').disabled=true;
+ try{await refreshVisit();}catch(error){visitPage=previous;status(message(error),true);$('visitPrevious').disabled=visitPage===0;$('visitNext').disabled=visitPage===(visitData?.gardenPage.totalPages||1)-1;}
+}
+$('visitPrevious').onclick=()=>changeVisitPage(-1);$('visitNext').onclick=()=>changeVisitPage(1);
 $('powerMode').onclick=async()=>{lowPower=!lowPower;localStorage.setItem('nexus.growth.lowPower',lowPower?'1':'0');$('powerMode').setAttribute('aria-pressed',String(lowPower));game?.destroy();game=null;if(view==='forest')await openView('forest');};
-document.querySelector('.plot-access').onclick=e=>{const button=e.target.closest('[data-plot]');if(button)plot(Number(button.dataset.plot));};
+
 function plot(index){
  if(!data||busy||!data.gardenPage.plots.some(slot=>slot.positionIndex===index))return;const plant=data.plants.find(p=>p.positionIndex===index);
  if(!plant){sheet('種下新的可能',`<p class="body-copy">位置 ${index+1} · 選一顆背包裡的種子；不足時可到種子小舖購買。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-2.svg" alt="${esc(c.name)}"><h3>${esc(c.name)}</h3><p>背包 ${data.garden.seeds[type]||0} 顆</p><button data-plant="${type}" ${!(data.garden.seeds[type]>0)?'disabled':''}>種下</button></article>`).join('')}</div><button class="text-link" id="shopFromPlant">前往種子小舖</button>`);
@@ -210,8 +254,8 @@ async function initialize(){
 }
 $('retry').onclick=initialize;
 function startTimer(){clearInterval(timer);if(!document.hidden)timer=setInterval(updateTimer,500);}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);game?.pause();}else{startTimer();if(view==='forest')game?.resume();checkContext();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);game?.pause();visitGame?.pause();}else{startTimer();if(view==='forest')game?.resume();if(view==='visit')visitGame?.resume();checkContext();}});
 function checkContext(){let user;try{user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{}if(user?.accountId!==context.accountId||getSelectedGameGroupId(user)!==context.groupId)location.replace('wishwall.html');}
 window.addEventListener('storage',checkContext);window.addEventListener('focus',checkContext);window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
-window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();photoUrls.forEach(URL.revokeObjectURL);});
+window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();visitGame?.destroy();clearTimeout(noticeTimer);photoUrls.forEach(URL.revokeObjectURL);});
 startTimer();initialize();
