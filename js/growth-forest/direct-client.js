@@ -29,6 +29,9 @@ export async function connect(context){
    const result=await service.handle({data:{groupId:context.groupId,action,payload,...(requestId?{requestId}:{})}});
    if(key)localStorage.removeItem(key);return result;
   },
+  watchAppearance(receive,error=()=>{}){
+   return sdk.onSnapshot(sdk.doc(db,'userSettings',context.accountId),snapshot=>{try{assertCurrent();receive(snapshot.data()?.appearance);}catch(e){error(e);}},error);
+  },
   subscribe(_parent,refresh,error){
    // The shared revision reacts to all forest writes without composite indexes.
    const root=`groups/${context.groupId}`,sources=[sdk.doc(db,root),sdk.doc(db,root,'growthSync','main'),sdk.doc(db,root,'growthProfiles',context.accountId),sdk.doc(db,root,'growthSettings','main')];

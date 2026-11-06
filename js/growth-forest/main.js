@@ -9,7 +9,7 @@ const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revo
 const context=readGameContext(),clock=new ReadingClock(localStorage,`nexus.growth.clock:${context.groupId}:${context.accountId}`);
 let initializedOnce=false,refreshGeneration=0,forestPage=0,pageLoading=false,visitAccountId=null,visitPage=0,visitData=null,visitGame=null,visitPending=null,visitGeneration=0,noticeTimer;
 if(new URLSearchParams(location.search).get('nav')==='1'){const nav=document.querySelector('.forest-nav');nav.classList.add('inline');document.querySelector('main').before(nav);}
-let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},timer,refreshTimer,unsubscribe,photoUrls=[];
+let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},timer,refreshTimer,unsubscribe,stopAppearance,photoUrls=[];
 let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
 $('powerMode').setAttribute('aria-pressed',String(lowPower));
 const status=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'success';$('status').hidden=!error;};
@@ -249,7 +249,7 @@ function settingsForm(root){
 }
 async function initialize(){
  $('retry').hidden=true;status('正在連接你的森林…');
- try{if(!client){const m=await import('./client.js');client=await m.connect(context);}await refresh();if(stopped)return;if(!initializedOnce&&data.parent)view='parent';initializedOnce=true;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,scheduleRefresh,e=>status('即時同步中斷：'+message(e),true));}
+ try{if(!client){const m=await import('./client.js');client=await m.connect(context);stopAppearance=client.watchAppearance?.(appearance=>window.NexusTheme?.hydrate(context.accountId,appearance));}await refresh();if(stopped)return;if(!initializedOnce&&data.parent)view='parent';initializedOnce=true;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,scheduleRefresh,e=>status('即時同步中斷：'+message(e),true));}
  catch(error){status(message(error),true);$('retry').hidden=false;}
 }
 $('retry').onclick=initialize;
@@ -257,5 +257,5 @@ function startTimer(){clearInterval(timer);if(!document.hidden)timer=setInterval
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);game?.pause();visitGame?.pause();}else{startTimer();if(view==='forest')game?.resume();if(view==='visit')visitGame?.resume();checkContext();}});
 function checkContext(){let user;try{user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{}if(user?.accountId!==context.accountId||getSelectedGameGroupId(user)!==context.groupId)location.replace('wishwall.html');}
 window.addEventListener('storage',checkContext);window.addEventListener('focus',checkContext);window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
-window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();visitGame?.destroy();clearTimeout(noticeTimer);photoUrls.forEach(URL.revokeObjectURL);});
+window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();stopAppearance?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();visitGame?.destroy();clearTimeout(noticeTimer);photoUrls.forEach(URL.revokeObjectURL);});
 startTimer();initialize();
