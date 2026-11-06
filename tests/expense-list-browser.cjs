@@ -58,7 +58,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
   window.__store={
    'users/alice':{...user,avatar:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='},
    'expenses/e1':{groupId:'A',accountId:'alice',operator:'Alice',date:'2026-11-01',category:'早餐',note:'早餐三明治',amount:50.25},
-   'expenses/e2':{groupId:'A',operator:'Bob',date:'2026-11-03',category:'交通',type:'expense',amount:100},
+   'expenses/e2':{groupId:'A',operator:'Bob',date:'2026-11-03',category:'交通',type:'expense',amount:100,note:null,name:'不應回填的舊名'},
    'expenses/i1':{groupId:'A',accountId:'alice',operator:'Alice',date:'2026-11-01',category:'薪資',note:'十一月薪資',type:'income',amount:30000},
    'expenses/other-group':{groupId:'B',date:'2026-11-01',type:'expense',amount:99999},
    'expenses/oct':{groupId:'A',date:'2026-10-01',category:'早餐',type:'expense',amount:20},
@@ -74,7 +74,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  assert.equal(await page.locator('#addListIncome').isVisible(),false);
  assert.ok(await page.evaluate(()=>window.__documentReads.every(r=>r.limit===10&&r.count<=10)));
  assert.equal(await page.locator('.ledger-row').count(),2);
- assert.match(await page.locator('.ledger-row').first().innerText(),/11\/3[\s\S]*未填寫名稱/);
+ assert.match(await page.locator('.ledger-row').first().innerText(),/11\/3/);assert.equal(await page.locator('.ledger-row-details strong').first().innerText(),'');
  await page.waitForSelector('.ledger-row-avatar img');
  await page.click('#listIncomeTab');
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
@@ -113,10 +113,10 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.fill('#expenseAmount','88');
  await page.click('#btnSaveExpense');
  await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent.includes('已儲存'));
- assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'');
- assert.match(await page.locator('#dayExpenseList').innerText(),/補上名稱/);
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'');await page.evaluate(()=>window.__store['expenses/new-2'].name='不應回填的舊名');
+ assert.equal(await page.locator('#dayExpenseList button.exp-note').first().innerText(),'');
  promptAnswer='補記薪資';
- await page.locator('#dayExpenseList button.exp-note').filter({hasText:'補上名稱'}).click();
+ await page.locator('#dayExpenseList button.exp-note').first().click();
  await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='名稱已更新。');
  assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'補記薪資');
  assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].amount),88);
@@ -186,6 +186,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   const fab=await page.locator('#addListExpense').boundingBox(),nav=await page.locator('#appNavigation').boundingBox();
   assert.ok(fab.y+fab.height<=nav.y,'add button clears bottom navigation');
+  await page.click('#listIncomeTab');await page.waitForSelector('#addListIncome',{state:'visible'});const incomeFab=await page.locator('#addListIncome').boundingBox();assert.ok(Math.abs(incomeFab.x-fab.x)<1&&Math.abs(incomeFab.y-fab.y)<1,'income and expense add buttons use the same right position');await page.click('#listExpenseTab');await page.waitForSelector('#addListExpense',{state:'visible'});
  }
  await page.evaluate(()=>sessionStorage.setItem('testRole','member'));
  await page.reload();await page.click('#tabList');

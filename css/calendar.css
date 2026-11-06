@@ -148,3 +148,17 @@
 .calendar-add-fab .nexus-icon { width:30px; height:30px; }
 :is(.has-app-navigation,[data-navigation-entry=nav]) .calendar-add-fab { bottom:calc(var(--app-nav-height) + 18px); }
 .calendar-add-fab:focus-visible { outline:3px solid var(--primary-dark); outline-offset:3px; }
+
+/* Keep native date/time controls compact, including Safari's intrinsic sizes. */
+#eventModal .modal-content{box-sizing:border-box;min-width:0;}
+#eventModal .modal-body,#eventModal .form-group{min-width:0;box-sizing:border-box;}
+#eventModal .modal-body{width:100%;}
+#eventModal .row-group{flex-wrap:wrap;align-items:flex-start;}
+#eventModal .row-group>.form-group{min-width:0;max-width:100%;}
+#eventModal input[type=date],#eventModal input[type=time]{min-width:0;min-inline-size:0;max-width:100%;max-inline-size:100%;min-height:44px;}
+#eventModal #evDate{width:calc(12ch + 3rem);inline-size:calc(12ch + 3rem);}
+#eventModal #evStartTime,#eventModal #evEndTime{width:calc(9ch + 3rem);inline-size:calc(9ch + 3rem);}
+#eventModal #timeInputsGroup{gap:12px 16px;}
+#eventModal #timeInputsGroup>.form-group{flex:0 1 auto;}
+#eventModal select{width:auto;max-width:100%;min-width:0;}
+#eventModal input[type=number]{width:7rem;max-width:100%;}

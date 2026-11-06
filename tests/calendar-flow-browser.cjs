@@ -58,6 +58,16 @@ export const deleteDoc=async ref=>{delete window.__events[ref.path];await emit()
   const fab=await page.locator('#btnAddCalendarEvent').boundingBox(),nav=await page.locator('#appNavigation').boundingBox();
   assert.ok(fab.y+fab.height<=nav.y);assert.ok(fab.x>=0&&fab.x+fab.width<=width);
  }
+ // Native date/time inputs remain compact and inside the modal at narrow widths.
+ for(const width of [320,390,768])for(const scale of [1,1.3]){
+  await page.setViewportSize({width,height:844});await page.evaluate(scale=>document.documentElement.style.setProperty('--n-font-scale',scale),scale);await page.click('#btnAddCalendarEvent');
+  const allDay=page.locator('#evIsAllDay');if(await allDay.isChecked())await allDay.uncheck();await page.fill('#evDate','2026-12-31');await page.fill('#evStartTime','23:00');await page.fill('#evEndTime','23:59');
+  await page.waitForTimeout(350);
+  const bounds=await page.evaluate(()=>{const body=document.querySelector('#eventModal .modal-body'),box=body.getBoundingClientRect();return{left:box.left,right:box.right,clientWidth:body.clientWidth,scrollWidth:body.scrollWidth,fields:['evDate','evStartTime','evEndTime','evCategory','evVisibility'].map(id=>{const el=document.getElementById(id),r=el.getBoundingClientRect();return{id,x:r.left,right:r.right,width:r.width,value:el.value};})};});
+  assert.ok(bounds.scrollWidth<=bounds.clientWidth+1,'form must not scroll horizontally');for(const field of bounds.fields){assert.ok(field.x>=bounds.left-1&&field.right<=bounds.right+1,field.id+' stays inside the modal');if(field.id==='evDate')assert.ok(field.width<240);if(field.id.includes('Time'))assert.ok(field.width<200);}
+  assert.equal(await page.inputValue('#evDate'),'2026-12-31');assert.equal(await page.inputValue('#evStartTime'),'23:00');assert.equal(await page.inputValue('#evEndTime'),'23:59');if(width===320&&scale===1.3)await page.screenshot({path:'/tmp/nexus-calendar-compact-fields.png',fullPage:true});await page.click('#btnCancelForm');
+ }
+ await page.evaluate(()=>document.documentElement.style.removeProperty('--n-font-scale'));
  // A populated agenda still opens the requested day's details and keeps that day.
  await page.evaluate(()=>sessionStorage.setItem('calendarSeed',JSON.stringify({'events/existing':{groupId:'A',date:'2026-11-18',title:'今日行程',operator:'Alice',visibility:'public',isAllDay:true}})));
  await page.reload();await page.waitForFunction(()=>window.__calendarReady);await page.waitForSelector('.event-item');

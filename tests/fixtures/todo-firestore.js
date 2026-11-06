@@ -1,5 +1,5 @@
 // Browser-only, in-memory Firestore fixture. Never connects to a real backend.
-const listeners = new Map();
+const listeners = new Set();
 export const doc = (db, ...parts) => ({ path: parts.join('/') });
 export const collection = doc;
 export const where = (field, op, value) => ({ field, op, value });
@@ -8,17 +8,24 @@ const snap = (path, store = window.__store) => ({
     exists: () => Object.hasOwn(store, path), data: () => structuredClone(store[path])
 });
 export const getDoc = async ref => snap(ref.path);
-export async function getDocs(q) {
-    window.__queries.push(structuredClone(q));
+function querySnapshot(q) {
     const values = Object.entries(window.__store).filter(([path]) => path.startsWith(q.path + '/'))
         .map(([, data]) => data).filter(data => q.filters.every(f => f.op === 'in' ? f.value.includes(data[f.field]) : data[f.field] === f.value));
     return { forEach: callback => values.forEach(data => callback({ data: () => structuredClone(data) })) };
 }
-export function onSnapshot(ref, callback) {
-    listeners.set(ref.path, callback);
-    queueMicrotask(() => callback(snap(ref.path)));
-    return () => listeners.delete(ref.path);
+export async function getDocs(q) {
+    window.__queries.push(structuredClone(q));
+    return querySnapshot(q);
 }
+export function onSnapshot(ref, callback) {
+    const listener = { ref, callback }; listeners.add(listener);
+    if (ref.filters) window.__queries.push(structuredClone(ref));
+    queueMicrotask(() => { if (listeners.has(listener)) callback(ref.filters ? querySnapshot(ref) : snap(ref.path)); });
+    return () => listeners.delete(listener);
+}
+window.__emitProfileSnapshots = () => {
+    for (const listener of listeners) if (listener.ref.path === 'users') listener.callback(querySnapshot(listener.ref));
+};
 export async function runTransaction(db, callback) {
     const store = structuredClone(window.__store), pending = [];
     const result = await callback({
@@ -30,6 +37,6 @@ export async function runTransaction(db, callback) {
         window.__store[write.path] = write.options?.merge ? { ...window.__store[write.path], ...write.data } : write.data;
         window.__writes.push(write);
     }
-    queueMicrotask(() => pending.forEach(write => listeners.get(write.path)?.(snap(write.path))));
+    queueMicrotask(() => pending.forEach(write => { for (const listener of listeners) if (listener.ref.path === write.path) listener.callback(snap(write.path)); }));
     return result;
 }

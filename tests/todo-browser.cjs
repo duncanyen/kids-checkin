@@ -24,7 +24,7 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
         photo.width = photo.height = 32;
         const photoContext = photo.getContext('2d');
         photoContext.fillStyle = '#b45309'; photoContext.fillRect(0, 0, 32, 32);
-        profiles[1].avatar = photo.toDataURL('image/jpeg', 0.8);
+        profiles[1].avatar = photo.toDataURL('image/jpeg', 0.8);profiles[1].nameHistory=['更早的名字'];
         profiles.push({ accountId: 'outsider', name: '同名成員', avatar: 'Nexus.png' });
         window.__store = {
             'groups/group-A': { members: profiles.slice(0, 12).map(p => p.accountId) },
@@ -33,6 +33,8 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
             'todos/group-A': {
                 categories: ['家務', '採買', '分類\'"<測試>'], serverOnly: 'preserve',
                 todos: [
+                    { id: 41, title: '帳號優先的舊指派', category:'採買', assigneeAccountIds:['u1'], assignees:['所有人員'], completed:false },
+                    { id: 40, title: '可確認的舊指派', category:'採買', assignees:['更早的名字'], completed:false },
                     { id: 1, title: '舊待辦', category: '採買', deadline: '今天', assignees: ['同名成員'], completed: false },
                     { id: 2, title: '今日既有完成', category: '家務', deadline: '2026-10-22', assignees: ['所有人員'], completed: true, completedAt: '2026-10-22T01:00:00Z' },
                     ...Array.from({ length: 12 }, (_, i) => ({ id: 10 + i, title: '歷史' + i, category: '家務', assignees: ['所有人員'], completed: true, completedAt: '2026-10-20T01:00:00Z' })),
@@ -61,7 +63,7 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
     assert.equal(await page.locator('#assigneeAvatarContainer [data-value="u1"] img').getAttribute('src'),
         await page.evaluate(() => window.__store['users/u1'].avatar));
     assert.match(await page.locator('#assigneeAvatarContainer [data-value="u1"] img').getAttribute('src'), /^data:image\/jpeg;base64,/);
-    assert.equal(await page.evaluate(() => window.__queries.every(q => q.filters[0].field === 'accountId')), true);
+    assert.equal(await page.evaluate(() => window.__queries.every(q => q.filters[0].field === 'accountId')), true);assert.equal(await page.locator('[data-todo-id="40"] img').getAttribute('src'),await page.evaluate(()=>window.__store['users/u1'].avatar));
 
     await page.locator('.fab-btn').click();
     await page.locator('#new-todo-title').fill('採買 & 整理 <測試>');
@@ -102,7 +104,10 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
             [...document.querySelectorAll('[data-todo-id="' + id + '"] img')].some(image => image.getAttribute('src') === photo);
     }, created.id);
 
-    await page.evaluate(() => { window.__store['users/u1'].name = '改名後'; });
+    await page.evaluate(() => {const user=window.__store['users/u1'];user.name='改名後';user.photoURL=user.avatar;delete user.avatar;window.__emitProfileSnapshots();});
+    await page.waitForFunction(id=>{const row=document.querySelector('[data-todo-id="'+id+'"]');return [...row.querySelectorAll('img')].some(image=>image.alt==='改名後'&&image.getAttribute('src')===window.__store['users/u1'].photoURL);},created.id);
+    assert.equal(await page.locator('#assigneeAvatarContainer [data-value="u1"] img').getAttribute('src'),await page.evaluate(()=>window.__store['users/u1'].photoURL));
+    await page.locator('[data-todo-id="40"] [data-action="edit"]').click();await page.waitForSelector('#addTodoModal',{state:'visible'});assert.equal(await page.locator('#assigneeAvatarContainer [data-value="u1"]').getAttribute('aria-pressed'),'true');await page.locator('#modal-submit-btn').click();await page.waitForSelector('#addTodoModal',{state:'hidden'});assert.deepEqual(await page.evaluate(()=>window.__store['todos/group-A'].todos.find(todo=>todo.id===40).assigneeAccountIds),['u1']);
     await page.locator('[data-todo-id="' + created.id + '"] [data-action="edit"]').click();
     await page.waitForSelector('#addTodoModal', { state: 'visible' });
     assert.equal(await page.locator('#assigneeAvatarContainer [data-value="u1"]').getAttribute('aria-pressed'), 'true');
@@ -110,6 +115,8 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
     await page.locator('#modal-submit-btn').click();
     await page.waitForSelector('#addTodoModal', { state: 'hidden' });
     assert.deepEqual(await page.evaluate(id => window.__store['todos/group-A'].todos.find(t => t.id === id).assigneeAccountIds, created.id), ['u1', 'u2']);
+
+    await page.locator('[data-todo-id="41"] [data-action="edit"]').click();await page.waitForSelector('#addTodoModal',{state:'visible'});assert.equal(await page.locator('#assigneeAvatarContainer [data-value="u1"]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('#assigneeAvatarContainer [data-action="assign-all"]').getAttribute('aria-pressed'),'false');await page.locator('#modal-submit-btn').click();await page.waitForSelector('#addTodoModal',{state:'hidden'});assert.deepEqual(await page.evaluate(()=>window.__store['todos/group-A'].todos.find(todo=>todo.id===41).assigneeAccountIds),['u1']);
 
     await page.locator('[data-todo-id="' + created.id + '"] input').click();
     await page.waitForFunction(id => window.__store['todos/group-A'].todos.find(t => t.id === id).completed, created.id);

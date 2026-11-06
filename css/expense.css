@@ -177,8 +177,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .ledger-row-amount { font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ledger-add-actions { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: max(20px, calc((100vw - 650px) / 2)); right: max(20px, calc((100vw - 650px) / 2)); display: flex; justify-content: space-between; pointer-events: none; z-index: 60; }
 :is(.has-app-navigation, [data-navigation-entry=nav]) .ledger-add-actions { bottom: calc(var(--app-nav-height) + 18px); }
-.ledger-fab { width: 64px; height: 64px; border: 0; border-radius: 50%; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 16px #0003; cursor: pointer; pointer-events: auto; }
-.ledger-fab.expense { background: var(--expense-color); margin-left: auto; }
+.ledger-fab { margin-left: auto; width: 64px; height: 64px; border: 0; border-radius: 50%; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 16px #0003; cursor: pointer; pointer-events: auto; }
+.ledger-fab.expense { background: var(--expense-color); }
 .ledger-fab.income { background: var(--income-color); }
 .ledger-fab > span { font-size: 30px; line-height: 28px; }
 .ledger-fab small { font-size: 11px; }
@@ -202,3 +202,5 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .ledger-pagination button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--n-border, #ddd); border-radius: 10px; background: var(--n-soft, #f3f4f6); color: var(--n-text); cursor: pointer; }
 .ledger-pagination button:disabled { opacity: .45; cursor: default; }
 .ledger-pagination span { font-size: 13px; color: var(--n-muted); }
+
+.exp-note{min-width:60px;min-height:24px;}

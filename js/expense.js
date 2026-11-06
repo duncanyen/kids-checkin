@@ -304,7 +304,7 @@ function renderLedgerList() {
         date.textContent = item.date.split('-').slice(1).map(Number).join('/');
         const details = document.createElement('span'); details.className = 'ledger-row-details';
         const category = document.createElement('span'); category.className = 'ledger-row-category'; category.textContent = item.category || '未分類';
-        const name = document.createElement('strong'); name.textContent = item.note || item.name || '未填寫名稱';
+        const name = document.createElement('strong'); name.textContent = expenseName(item);
         details.append(category, name);
         const avatar = document.createElement('span'); avatar.className = 'ledger-row-avatar';
         const operator = item.operator || '未知使用者';
@@ -1059,6 +1059,10 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
     }
 });
 
+function expenseName(item) {
+    return String(Object.hasOwn(item, 'note') ? (item.note ?? '') : (item.name ?? ''));
+}
+
 function ledgerText(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 }
@@ -1090,7 +1094,7 @@ function renderDayList() {
                 <div class="exp-icon-box" style="color: ${catObj.color}">${iconHtml}</div>
                 <div class="exp-details">
                     <span class="exp-cat-name">${ledgerText(item.category)}</span>
-                    <button type="button" class="exp-note" style="border:0;background:none;padding:0;text-align:left;cursor:pointer" aria-label="修改名稱" onclick="editExpenseName('${item.id}')">${item.note ? ledgerText(item.note) : '補上名稱（選填）'}</button>
+                    <button type="button" class="exp-note" style="border:0;background:none;padding:0;text-align:left;cursor:pointer" aria-label="修改名稱" onclick="editExpenseName('${item.id}')">${ledgerText(expenseName(item))}</button>
                 </div>
             </div>
             <div style="display:flex; align-items:center;">
@@ -1107,12 +1111,12 @@ window.editExpenseName = async function(docId) {
     if (savingEntry || !monthReady) return;
     const item = monthData.find(entry => entry.id === docId && entry.groupId === currentGroupId);
     if (!item) return;
-    const entered = window.prompt('名稱（選填，可留空）', item.note || '');
+    const entered = window.prompt('名稱（選填，可留空）', expenseName(item));
     if (entered === null) return;
     const note = entered.trim();
     const status = document.getElementById('entryStatus');
     if (note.length > 100) { status.textContent = '名稱最多 100 個字。'; return; }
-    if (note === (item.note || '')) return;
+    if (note === (expenseName(item))) return;
     savingEntry = true;
     const version = monthRequestVersion;
     document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = true);

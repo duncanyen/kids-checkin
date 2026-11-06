@@ -1,7 +1,7 @@
 import { icon } from './ui-icons.js';
 import { db } from './firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { TIME_ZONE, dateKey, validDate, normalizeState, completionDay, deadlineDate, occurrenceTodo, materializeRecurring } from './todo-core.js';
+import { TIME_ZONE, dateKey, validDate, normalizeState, completionDay, deadlineDate, occurrenceTodo, materializeRecurring, todoAssigneeProfiles } from './todo-core.js';
 
 const $ = id => document.getElementById(id);
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -16,7 +16,7 @@ function fallbackAvatar(name) {
 }
 function avatarURL(member) {
     // Personal uploads in js/main.js are persisted as users.avatar (JPEG data URL).
-    const value = member?.avatar || '';
+    const value = member?.avatar || member?.photoURL || member?.avatarUrl || '';
     if (/^data:image\/(png|jpeg|webp|gif);base64,/i.test(value)) return value;
     try {
         const url = new URL(value, location.href);
@@ -77,13 +77,20 @@ const NexusTodoApp = {
         if (!group.exists()) throw new Error('群組不存在，請返回主頁重新選擇。');
         const ids = [...new Set((group.data().members || []).filter(id => typeof id === 'string'))];
         if (!ids.includes(this.currentUser.accountId)) throw new Error('你目前不在這個群組內，請返回主頁重新選擇群組。');
-        const members = new Map();
+        const profiles = [];
         for (let index = 0; index < ids.length; index += 10) {
             const snapshot = await getDocs(query(collection(db, 'users'), where('accountId', 'in', ids.slice(index, index + 10))));
-            snapshot.forEach(profile => {
-                const member = profile.data();
-                if (ids.includes(member.accountId)) members.set(member.accountId, { ...member, name: member.name || member.accountId });
-            });
+            snapshot.forEach(profile => profiles.push(profile.data()));
+        }
+        this.applyMembers(ids, profiles);
+        this.watchMemberProfiles(ids);
+    },
+
+    applyMembers(ids, profiles) {
+        const members = new Map();
+        for (const id of ids) {
+            const matches = profiles.filter(profile => profile.accountId === id);
+            if (matches.length === 1 && matches[0].role !== 'removed') members.set(id, { ...matches[0], name: matches[0].name || id });
         }
         this.groupMembers = ids.map(id => members.get(id)).filter(Boolean);
         this.missingMembers = ids.filter(id => !members.has(id)).length;
@@ -91,6 +98,24 @@ const NexusTodoApp = {
         if (profile) this.currentUser = { ...this.currentUser, ...profile };
         this.renderAssigneeChips();
         if (this.ready) this.renderTodoList();
+    },
+
+    watchMemberProfiles(ids) {
+        const key = JSON.stringify([this.currentGroupId, ids]);
+        if (this.memberProfileKey === key) return;
+        (this.memberProfileStops || []).forEach(stop => stop());
+        this.memberProfileKey = key;
+        this.memberProfileStops = [];
+        const batches = new Map();
+        for (let index = 0; index < ids.length; index += 10) {
+            const subset = ids.slice(index, index + 10);
+            batches.set(index, this.groupMembers.filter(member => subset.includes(member.accountId)));
+            this.memberProfileStops.push(onSnapshot(query(collection(db, 'users'), where('accountId', 'in', subset)), snapshot => {
+                if (this.memberProfileKey !== key) return;
+                const profiles = []; snapshot.forEach(profile => profiles.push(profile.data()));
+                batches.set(index, profiles); this.applyMembers(ids, [...batches.values()].flat());
+            }, error => { console.error(error); $('todo-loading-status').textContent = '成員頭像暫時無法同步，請重新整理後再試。'; }));
+        }
     },
 
     applyState(data) {
@@ -208,17 +233,9 @@ const NexusTodoApp = {
     },
 
     assigneeHTML(item) {
-        let members = [];
-        const all = item.assigneeScope === 'all' || (!item.assigneeScope && (item.assignees || []).some(name => ['所有人員', '所有人'].includes(name)));
-        if (all) members = this.groupMembers;
-        else if (Array.isArray(item.assigneeAccountIds)) {
-            members = item.assigneeAccountIds.map((id, index) => this.groupMembers.find(member => member.accountId === id) || { accountId: id, name: item.assignees?.[index] || id });
-        } else {
-            members = (item.assignees || []).map(name => {
-                const matches = this.groupMembers.filter(member => member.name === name);
-                return matches.length === 1 ? matches[0] : { name };
-            });
-        }
+        const names = Array.isArray(item.assignees) ? item.assignees : [];
+        const all = item.assigneeScope === 'all' || (!item.assigneeScope && !Array.isArray(item.assigneeAccountIds) && names.some(name => ['所有人員', '所有人'].includes(name)));
+        const members = all ? this.groupMembers : todoAssigneeProfiles(item, this.groupMembers);
         return '<span class="todo-assignees" aria-label="負責人">' +
             (all ? '<span class="badge">所有人員</span>' : '') +
             members.slice(0, 4).map(member => avatar(member)).join('') +
@@ -318,12 +335,12 @@ const NexusTodoApp = {
         await this.refreshMembersForForm();
         this.editingTodoId = todo.id;
         const form = { scope: 'all', ids: [], category: todo.category, deadline: todo.deadline, unresolved: [] };
-        if (todo.assigneeScope === 'members' || (!todo.assigneeScope && !(todo.assignees || []).some(name => ['所有人', '所有人員'].includes(name)))) {
+        if (todo.assigneeScope === 'members' || (!todo.assigneeScope && (Array.isArray(todo.assigneeAccountIds) || !(todo.assignees || []).some(name => ['所有人', '所有人員'].includes(name))))) {
             form.scope = 'members';
             if (Array.isArray(todo.assigneeAccountIds)) form.ids = [...todo.assigneeAccountIds];
             else for (const name of todo.assignees || []) {
-                const matches = this.groupMembers.filter(member => member.name === name);
-                if (matches.length === 1) form.ids.push(matches[0].accountId);
+                const resolved = todoAssigneeProfiles({ assignees: [name] }, this.groupMembers)[0];
+                if (resolved?.accountId) form.ids.push(resolved.accountId);
                 else form.unresolved.push(name);
             }
         }
@@ -527,7 +544,7 @@ document.addEventListener('keydown', event => {
         $('recurringTodoModal').style.display = 'none';
     }
 });
-window.addEventListener('pagehide', () => { NexusTodoApp.unsubscribe?.(); clearInterval(NexusTodoApp.recurringTimer); });
+window.addEventListener('pagehide', () => { NexusTodoApp.unsubscribe?.(); (NexusTodoApp.memberProfileStops || []).forEach(stop => stop()); clearInterval(NexusTodoApp.recurringTimer); });
 const initialize = () => NexusTodoApp.init(new URLSearchParams(location.search).get('groupId'));
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize);
 else initialize();
