@@ -303,8 +303,8 @@ function renderLedgerList() {
         date.dateTime = item.date;
         date.textContent = item.date.split('-').slice(1).map(Number).join('/');
         const details = document.createElement('span'); details.className = 'ledger-row-details';
-        const category = document.createElement('span'); category.className = 'ledger-row-category'; category.textContent = item.category || '未分類';
-        const name = document.createElement('strong'); name.textContent = expenseName(item);
+        const category = document.createElement('strong'); category.className = 'ledger-row-category'; category.textContent = item.category || '未分類';
+        const name = document.createElement('span'); name.className = 'ledger-row-name'; name.textContent = expenseName(item);
         details.append(category, name);
         const avatar = document.createElement('span'); avatar.className = 'ledger-row-avatar';
         const operator = item.operator || '未知使用者';

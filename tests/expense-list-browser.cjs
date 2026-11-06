@@ -74,7 +74,8 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  assert.equal(await page.locator('#addListIncome').isVisible(),false);
  assert.ok(await page.evaluate(()=>window.__documentReads.every(r=>r.limit===10&&r.count<=10)));
  assert.equal(await page.locator('.ledger-row').count(),2);
- assert.match(await page.locator('.ledger-row').first().innerText(),/11\/3/);assert.equal(await page.locator('.ledger-row-details strong').first().innerText(),'');
+ assert.match(await page.locator('.ledger-row').first().innerText(),/11\/3/);assert.equal(await page.locator('.ledger-row-name').first().innerText(),'');
+ const hierarchy=await page.locator('.ledger-row').last().evaluate(row=>{const category=getComputedStyle(row.querySelector('.ledger-row-category')),name=getComputedStyle(row.querySelector('.ledger-row-name'));return{categorySize:parseFloat(category.fontSize),nameSize:parseFloat(name.fontSize),categoryWeight:Number(category.fontWeight),nameWeight:Number(name.fontWeight)};});assert.ok(hierarchy.categorySize>hierarchy.nameSize);assert.ok(hierarchy.categoryWeight>=700);assert.equal(hierarchy.nameWeight,400);
  await page.waitForSelector('.ledger-row-avatar img');
  await page.click('#listIncomeTab');
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
