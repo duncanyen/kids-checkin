@@ -9,13 +9,13 @@ const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revo
 const context=readGameContext(),clock=new ReadingClock(localStorage,`nexus.growth.clock:${context.groupId}:${context.accountId}`);
 let initializedOnce=false,refreshGeneration=0,forestPage=0,pageLoading=false,visitAccountId=null,visitPage=0,visitData=null,visitGame=null,visitPending=null,visitGeneration=0,noticeTimer;
 if(new URLSearchParams(location.search).get('nav')==='1'){const nav=document.querySelector('.forest-nav');nav.classList.add('inline');document.querySelector('main').before(nav);}
-let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},timer,refreshTimer,unsubscribe,stopAppearance,photoUrls=[];
+let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},recordGeneration=0,timer,refreshTimer,unsubscribe,stopAppearance,photoUrls=[];
 let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
 $('powerMode').setAttribute('aria-pressed',String(lowPower));
 const status=(message,error=false)=>{$('status').textContent=message;$('status').className=error?'error':'success';$('status').hidden=!error;};
 function toast(text){clearTimeout(noticeTimer);$('operationNotice').textContent=text;$('operationNotice').hidden=false;noticeTimer=setTimeout(()=>{$('operationNotice').hidden=true;},4000);}
 const message=error=>({'unavailable':'Firestore 暫時無法連線，請保留內容後重試。','functions/unauthenticated':'登入已失效，請返回 Nexus 重新登入。','functions/not-found':'找不到紀錄或森林後端尚未部署。','functions/unavailable':'目前無法連線；請保留畫面後重試。','functions/internal':'後端暫時無法完成操作，請保留內容後重試。'}[error.code]||error.message||'操作失敗，請稍後重試。');
-function field(label,name,type='text',value='',attrs=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}" ${attrs}></label>`;}
+function field(label,name,type='text',value='',attrs=''){return `<label${type==='date'?' class="date-field"':''}>${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}" ${attrs}></label>`;}
 function select(label,name,options,value=''){return `<label>${esc(label)}<select name="${esc(name)}">${options.map(o=>{const v=typeof o==='string'?o:o.value,l=typeof o==='string'?o:o.label;return `<option value="${esc(v)}" ${v===value?'selected':''}>${esc(l)}</option>`;}).join('')}</select></label>`;}
 const note=(label='備註（選填）',name='note',value='')=>`<label class="full">${esc(label)}<textarea name="${name}" maxlength="1000">${esc(value)}</textarea></label>`;
 const formEnd=(text='儲存')=>`<p class="form-error full" role="status"></p><footer class="full"><button type="button" data-close class="outline">取消</button><button type="submit">${esc(text)}</button></footer></form>`;
@@ -47,7 +47,7 @@ async function refresh(){
 }
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{if(stopped)return;if(busy){scheduleRefresh();return;}refresh().catch(error=>status(message(error),true));},220);}
 async function openView(next){
- if(!data||busy||next==='parent'&&!data.parent)return;view=next;updateHeader();if(next!=='visit'){visitGame?.pause();visitGeneration++;}
+ if(!data||busy||next==='parent'&&!data.parent)return;if(next==='parent'&&view!=='parent')$('parentRecordSection')?.removeAttribute('open');view=next;updateHeader();if(next!=='visit'){visitGame?.pause();visitGeneration++;}
  for(const item of ['forest','records','rewards','parent','members','visit'])$(item+'View').hidden=item!==view;
  document.querySelectorAll('[data-view]').forEach(b=>{if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  if(view==='forest'){
@@ -178,15 +178,17 @@ function updateTimer(){const out=$('readingTime');if(!out)return;const secs=Math
 function memberOptions(){return data.members.map(m=>({value:m.accountId,label:m.name}));}
 function childName(id){return data.members.find(m=>m.accountId===id)?.name||id;}
 function renderFilters(container,parent){
- container.innerHTML=`<form class="filters" data-forest-filters>${parent?select('孩子','accountId',[{value:'all',label:'全部成員'},...memberOptions()],recordFilters.accountId||'all'):''}${select('類型','type',[{value:'',label:'全部'},{value:'exam',label:'考試'},{value:'reading',label:'閱讀'}],recordFilters.type||'')}${select('狀態','status',[{value:'',label:'全部'},...['pending','approved','rejected','revoked'].map(v=>({value:v,label:labels[v]}))],recordFilters.status||'')}${field('開始日期','from','date',recordFilters.from||'')}${field('結束日期','to','date',recordFilters.to||'')}${field('科目','subject','text',recordFilters.subject||'')}${field('考試類型','examType','text',recordFilters.examType||'')}${field('書名包含','bookName','text',recordFilters.bookName||'')}<button>套用篩選</button></form>`;
+ container.innerHTML=`<form class="filters record-filters" data-forest-filters>${parent?`<div class="filter-member">${select('孩子','accountId',[{value:'all',label:'全部成員'},...memberOptions()],recordFilters.accountId||'all')}</div>`:''}${select('類型','type',[{value:'',label:'全部'},{value:'exam',label:'考試'},{value:'reading',label:'閱讀'}],recordFilters.type||'')}<div class="filter-status-pair">${select('狀態','status',[{value:'',label:'全部'},...['pending','approved','rejected','revoked'].map(v=>({value:v,label:labels[v]}))],recordFilters.status||'')}${field('考試類型','examType','text',recordFilters.examType||'')}</div><div class="filter-date-range">${field('開始日期','from','date',recordFilters.from||'')}${field('結束日期','to','date',recordFilters.to||'')}</div>${field('科目','subject','text',recordFilters.subject||'')}${field('書名包含','bookName','text',recordFilters.bookName||'')}<button>套用篩選</button></form>`;
  container.querySelector('form').onsubmit=async e=>{e.preventDefault();recordFilters=Object.fromEntries(new FormData(e.currentTarget));await loadRecords(true,parent);};
 }
 async function loadRecords(reset=false,parent=view==='parent'){
  if(!client)return;const container=parent?$('parentRecords'):$('recordList');if(!container)return;
- try{if(reset){recordCursor=null;recordRows=[];}const result=await client.api('list',{kind:'records',...recordFilters,accountId:parent?(recordFilters.accountId||'all'):context.accountId,cursor:recordCursor});recordRows.push(...result.rows);recordCursor=result.cursor;
+ const generation=++recordGeneration,rows=reset?[]:recordRows.slice(),cursor=reset?null:recordCursor,scroll=parent?$('parentRecordScroll'):null,scrollTop=!reset?scroll?.scrollTop||0:0;
+ try{const result=await client.api('list',{kind:'records',...recordFilters,accountId:parent?(recordFilters.accountId||'all'):context.accountId,cursor});if(generation!==recordGeneration||!container.isConnected||(parent?view!=='parent':view!=='records'))return;recordRows=[...rows,...result.rows];recordCursor=result.cursor;
   container.innerHTML=recordRows.length?recordRows.map(recordRow).join(''):'<p class="empty">這裡會記得你的每一份努力。<br>目前沒有符合條件的紀錄。</p>';
   container.querySelectorAll('[data-record]').forEach(b=>b.onclick=()=>recordDetail(recordRows.find(r=>r.id===b.dataset.record)));
   const open=recordRows.find(r=>r.id===$('sheet').dataset.recordId);if($('sheet').open&&open&&open.approvalStatus!==$('sheet').dataset.recordStatus)recordDetail(open);
+  if(parent){$('parentRecordCount').textContent=`已載入 ${recordRows.length} 筆`;if(scroll)scroll.scrollTop=scrollTop;}
   const more=parent?$('parentMore'):$('recordMore');more.hidden=!result.hasMore;more.onclick=()=>loadRecords(false,parent);
  }catch(error){status(message(error),true);}
 }
@@ -232,9 +234,13 @@ async function legacyRecords(cursor=null,append=false){
 }
 async function renderParent(){
  if(!data.parent)return;const root=$('parentContent');targetId=targetId&&data.members.some(m=>m.accountId===targetId)?targetId:(data.members.find(m=>!['parent','admin'].includes(m.role))?.accountId||context.accountId);
+ const previous=$('parentRecordSection'),expanded=parentMode==='records'&&previous?.dataset.accountId===targetId&&previous.open,scrollTop=expanded?$('parentRecordScroll')?.scrollTop||0:0;
  root.innerHTML=`<div class="filters">${select('查看成員','parentTarget',memberOptions(),targetId)}</div><div id="parentPanel"></div>`;root.querySelector('[name=parentTarget]').onchange=e=>{targetId=e.target.value;renderParent().catch(e=>status(message(e),true));};
  const panel=$('parentPanel');
- if(parentMode==='records'){panel.innerHTML='<div id="parentFilters"></div><div id="parentRecords" class="record-list"></div><button id="parentMore" class="outline" hidden>載入更多紀錄</button>';renderFilters($('parentFilters'),true);await loadRecords(true,true);}
+ if(parentMode==='records'){
+  panel.innerHTML=`<div id="parentFilters"></div><details id="parentRecordSection" class="parent-record-section" data-account-id="${esc(targetId)}" ${expanded?'open':''}><summary>成長紀錄與審核 <span id="parentRecordCount"></span></summary><div id="parentRecordScroll" class="parent-record-scroll" tabindex="0" role="region" aria-label="成長紀錄與審核清單"><div id="parentRecords" class="record-list"></div><button id="parentMore" class="outline" hidden>載入更多紀錄</button></div></details>`;
+  const section=$('parentRecordSection'),region=$('parentRecordScroll');renderFilters($('parentFilters'),true);await loadRecords(true,true);if(expanded&&section.isConnected)region.scrollTop=scrollTop;
+ }
  if(parentMode==='overview'){const r=await client.api('overview',{accountId:targetId});panel.innerHTML=`<p class="hint">${esc(r.month)} · 統計已核准紀錄與可確認歸屬的歷史考試；未審核不列入。</p><div class="summary-grid">${[['考試次數',r.examCount],['百分制平均',r.average==null?'尚無資料':r.average],['閱讀分鐘',r.readingMinutes],['閱讀頁數',r.readingPages],['可用星星',r.available],['已兌換積分',r.redeemed]].map(([l,n])=>`<div><small>${l}</small><strong>${n}</strong></div>`).join('')}</div><button id="manualReward" class="outline">手動調整星星積分</button>`;$('manualReward').onclick=()=>{sheet('調整星星積分',`<form id="manualForm" class="form-grid"><p class="full">對象：${esc(childName(targetId))}</p>${field('積分（可輸入負數扣除）','points','number','','required min="-100000" max="100000" step="0.01"')}${note('調整原因（必填）','reason')}${formEnd('確認調整')}`);$('manualForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget);action('manualReward',{accountId:targetId,points:Number(fd.get('points')),reason:fd.get('reason')});};};}
  if(parentMode==='settings')settingsForm(panel);
  if(parentMode==='rewards'){panel.innerHTML='<button id="newReward">新增夢想獎勵</button><div id="parentRewards" class="reward-grid"></div>';$('newReward').onclick=()=>rewardForm();renderRewards(true);}
