@@ -168,6 +168,7 @@
     <script type="module" src="js/ui-icons.js"></script>
     <link rel="stylesheet" href="css/app-navigation.css">
     <script type="module" src="js/app-navigation.js"></script>
+    <link rel="stylesheet" href="css/feature-header.css">
 </head>
 <body data-app-page="todo">
 
@@ -175,17 +176,15 @@
 
     <div class="todo-container">
         <!-- 頂端導覽 -->
-        <div class="top-nav">
-            <button class="back-btn" data-main-menu-back onclick="window.location.href='index.html'">返回主選單</button>
-            <span id="todo-loading-status" style="font-size:0.8rem; color:var(--text-sub);"></span>
+        <div class="top-nav feature-header">
+            <button class="back-btn feature-header-start" data-main-menu-back onclick="window.location.href='index.html'">返回主選單</button>
+            <div class="page-title feature-header-title"><span data-ui-icon="todo"></span>待辦事項</div>
+            <span class="feature-header-end" id="todo-loading-status" style="font-size:0.8rem; color:var(--text-sub);"></span>
         </div>
 
         <!-- 待辦事項主卡片 -->
         <div class="nexus-card" id="nexus-todo-container" data-group-id="">
-            <div class="todo-header">
-                <h2>待辦</h2>
-                <button type="button" class="recurring-trigger" data-action="open-recurring" data-write disabled>↻ 循環待辦</button>
-            </div>
+
 
             <div class="category-bar" id="category-container">
                 <button class="cat-btn active" data-category="all" onclick="NexusTodoApp.filterCategory('all')">全部</button>

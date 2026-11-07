@@ -20,17 +20,19 @@
     <script type="module" src="js/ui-icons.js"></script>
     <link rel="stylesheet" href="css/app-navigation.css">
     <script type="module" src="js/app-navigation.js"></script>
+    <link rel="stylesheet" href="css/feature-header.css">
 </head>
 <body data-app-page="gamezone">
-    <div class="top-nav">
-        <button class="btn-back" id="btnBack">返回主選單</button>
-        <div class="current-user-badge" id="btnLogout">
+    <div class="top-nav feature-header feature-header-always game-feature-header">
+        <button class="btn-back feature-header-start" id="btnBack">返回主選單</button>
+        <h2 class="page-title feature-header-title" id="gameZoneTitle"><span data-ui-icon="gamezone"></span><span id="gameZoneLabel">遊戲大廳</span></h2>
+        <div class="current-user-badge feature-header-end" id="btnLogout">
             <img id="gameUserAvatar" class="mini-avatar" src="" alt="">
             <span id="gameUserName">載入中...</span>
         </div>
     </div>
 
-    <h2 class="system-title" id="gameZoneTitle"><span data-ui-icon="gamezone"></span>遊戲大廳</h2>
+
 
     <!-- 遊戲選擇大廳 -->
     <div class="game-lobby" id="gameLobby">

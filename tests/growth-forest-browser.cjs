@@ -198,7 +198,7 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
    await page.reload();await page.waitForSelector('#forestGame canvas');assert.equal(await page.locator('#forestView').isVisible(),true);
    assert.equal(await page.locator('.forest-home').getAttribute('href'),'index.html?nav=1');
    await page.goto(base+'/wishwall.html');await page.waitForFunction(()=>document.querySelector('#pointsBalance').textContent!=='—');
-   assert.equal(await page.locator('#forestBack').innerText(),'返回主選單');assert.equal(await page.locator('.forest-heading').isVisible(),false);
+   assert.equal(await page.locator('#forestBack').innerText(),'返回主選單');assert.equal(await page.locator('.forest-feature-title').innerText(),'成長森林');
    await page.close();
   }
   console.log('PASS forest-owned bottom navigation, home and unnumbered tabs, role visibility, all roles default to forest, tab actions, member return, refresh, direct-entry return, shared forest SVG and 320/390/768/1440px.');

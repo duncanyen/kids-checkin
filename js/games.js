@@ -38,7 +38,7 @@ function listenMyPermissions() {
 }
 
 function setupView() {
-    const gameZoneTitle = document.getElementById('gameZoneTitle');
+    const gameZoneTitle = document.getElementById('gameZoneLabel');
     if (gameZoneTitle) gameZoneTitle.innerText = "遊戲大廳";
     
     // 所有成員（包含管理者）統一進入遊戲大廳
@@ -69,7 +69,7 @@ function selectGame(gameType) {
     document.getElementById('gameLobby').style.display = 'none';
     activeGame = gameType;
     document.getElementById('btnBack').textContent = '返回遊戲大廳';
-    const gameZoneTitle = document.getElementById('gameZoneTitle');
+    const gameZoneTitle = document.getElementById('gameZoneLabel');
 
     if (gameType === 'rps') {
         if (gameZoneTitle) gameZoneTitle.innerText = "剪刀石頭布對決";
@@ -88,7 +88,7 @@ function returnToLobby() {
     const kidGameContainer = document.getElementById('kidGameContainer');
     const g2048Container = document.getElementById('g2048Container');
     const gameLobby = document.getElementById('gameLobby');
-    const gameZoneTitle = document.getElementById('gameZoneTitle');
+    const gameZoneTitle = document.getElementById('gameZoneLabel');
 
     if (kidGameContainer) kidGameContainer.style.display = 'none';
     if (g2048Container) g2048Container.style.display = 'none';

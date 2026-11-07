@@ -1,0 +1,28 @@
+/* Consistent feature identity for direct/side-menu entry. */
+.feature-header{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;min-height:44px;}
+.feature-header .feature-header-start{grid-column:1;grid-row:1;justify-self:start;white-space:nowrap;}
+.feature-header .feature-header-title{grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;margin:0;font-family:inherit;font-size:calc(20px * var(--n-font-scale,1));font-weight:700;line-height:1.4;letter-spacing:normal;color:var(--n-text);text-align:center;}
+.feature-header .feature-header-title .nexus-icon{width:24px;height:24px;margin:0;vertical-align:middle;}
+.feature-header .feature-header-end{grid-column:3;grid-row:1;justify-self:end;min-width:0;max-width:100%;overflow-wrap:anywhere;}
+.feature-header #gameUserName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.feature-header .current-user-badge{max-width:100%;}
+/* Bottom-navigation entry keeps its compact left-aligned feature heading. */
+html[data-navigation-entry=nav] .feature-header:not(.feature-header-always){display:flex;justify-content:space-between;}
+html[data-navigation-entry=nav] .feature-header:not(.feature-header-always) .feature-header-title{justify-content:flex-start;text-align:left;}
+/* Narrow screens keep the title centered above the return/action controls. */
+@media(max-width:380px){
+ html:not([data-navigation-entry=nav]) .feature-header,.feature-header-always{grid-template-columns:minmax(0,1fr) minmax(0,1fr);row-gap:10px;}
+ html:not([data-navigation-entry=nav]) .feature-header .feature-header-title,.feature-header-always .feature-header-title{grid-column:1 / -1;grid-row:1;}
+ html:not([data-navigation-entry=nav]) .feature-header .feature-header-start,.feature-header-always .feature-header-start{grid-column:1;grid-row:2;}
+ html:not([data-navigation-entry=nav]) .feature-header .feature-header-end,.feature-header-always .feature-header-end{grid-column:2;grid-row:2;}
+}
+@media(max-width:600px){
+ .game-feature-header{grid-template-columns:minmax(0,1fr) minmax(0,1fr);row-gap:10px;}
+ .game-feature-header .feature-header-title{grid-column:1 / -1;grid-row:1;}
+ .game-feature-header .feature-header-start{grid-column:1;grid-row:2;}
+ .game-feature-header .feature-header-end{grid-column:2;grid-row:2;}
+}
+/* A member visit retains the forest's own back/name layout. */
+body.visiting-forest .forest-header.feature-header{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;}
+body.visiting-forest .forest-header.feature-header .feature-header-start{grid-column:1;grid-row:1;}
+body.visiting-forest .forest-header.feature-header .feature-header-title{grid-column:2;grid-row:1;justify-content:center;}

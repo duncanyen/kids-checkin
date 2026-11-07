@@ -13,7 +13,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8030';
    window.__seenThemes=[];
    addEventListener('nexus-theme-change',event=>window.__seenThemes.push(event.detail.id));
   });
-  await context.route(/\/js\/(expense\.js|calendar\.js|growth-forest\/main\.js)(\?.*)?$/,route=>route.fulfill({contentType:'text/javascript',body:''}));
+  await context.route(/\/js\/(expense\.js|calendar\.js|todo\.js|games\.js|admin\.js|growth-forest\/main\.js)(\?.*)?$/,route=>route.fulfill({contentType:'text/javascript',body:''}));
   let releaseCSS;
   const cssGate=new Promise(resolve=>releaseCSS=resolve);
   await context.route('**/css/growth-forest.css',async route=>{await cssGate;await route.continue();});
@@ -54,7 +54,29 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8030';
    await page.goto(base+'/'+file);
    assert.equal(await page.locator('[data-main-menu-back]').isVisible(),true);
   }
+  // Side-menu/direct entry: centered identity with usable return/action controls.
+  for(const [file,title]of [['calendar.html','行事曆'],['wishwall.html','成長森林'],['todo.html','待辦事項'],['games.html','遊戲大廳'],['admin.html','管理者後台']]){
+   await page.goto(base+'/'+file);
+   const heading=page.locator('.feature-header .feature-header-title');
+   await heading.locator('svg').waitFor();
+   assert.equal((await heading.innerText()).trim(),title);
+   if(file==='todo.html'){
+    assert.equal(await page.locator('.todo-header').count(),0);
+    assert.equal(await page.locator('[data-action="open-recurring"]').count(),0);
+   }
+   if(file==='games.html')assert.equal(await page.locator('#gameZoneTitle').count(),1);
+   for(const width of [320,390,768,1440]){
+    await page.setViewportSize({width,height:900});
+    const header=await page.locator('.feature-header').boundingBox(),name=await heading.boundingBox(),back=await page.locator('.feature-header-start').boundingBox();
+    assert.ok(Math.abs(name.x+name.width/2-(header.x+header.width/2))<2,file+' centered identity');
+    assert.ok(name.y>=header.y&&name.y+name.height<=header.y+header.height+1);
+    const overlaps=name.x<back.x+back.width&&name.x+name.width>back.x&&name.y<back.y+back.height&&name.y+name.height>back.y;
+    assert.equal(overlaps,false,file+' title clears return button');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,file+' overflow');
+    if(width===390)await page.screenshot({path:'/tmp/nexus-side-header-'+file+'.png'});
+   }
+  }
   assert.deepEqual(errors,[]);
-  console.log('PASS: three navigation headers, circular ledger settings, calendar right controls, forest member return, saved theme before delayed CSS, no default theme events, direct-entry return links, 320/390/1440px layout.');
+  console.log('PASS: five centered side-menu headers, removed todo heading/recurring trigger, three navigation headers, circular ledger settings, calendar right controls, forest member return, saved theme before delayed CSS, no default theme events, direct-entry return links, 320/390/1440px layout.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

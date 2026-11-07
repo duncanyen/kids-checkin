@@ -133,8 +133,9 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
     await page.locator('#completed-list-container [data-todo-id="' + created.id + '"] input').click();
     await page.waitForFunction(id => !window.__store['todos/group-A'].todos.find(t => t.id === id).completed, created.id);
 
+    // The unused header trigger is removed; retain recurring-engine coverage via its API.
     async function recurring(frequency, title, start, end, interval = '1') {
-        await page.locator('[data-action="open-recurring"]').click();
+        await page.evaluate(()=>window.NexusTodoApp.openRecurringModal());
         await page.locator('#recurring-title').fill(title);
         assert.deepEqual(await page.locator('#recurring-category-container [data-action="choose-category"]').allTextContents(), ['家務', '採買', '分類\'"<測試>']);
         await page.locator('#recurring-note').fill('循環備註');
@@ -176,7 +177,7 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
     }
 
     await recurring('daily', '可停止的循環', '2026-10-25', '');
-    await page.locator('[data-action="open-recurring"]').click();
+    await page.evaluate(()=>window.NexusTodoApp.openRecurringModal());
     const stoppedId = await page.evaluate(() => window.__store['todos/group-A'].recurringTemplates.find(t => t.title === '可停止的循環').id);
     await page.locator('[data-action="stop-recurring"][data-id="' + stoppedId + '"]').click();
     await page.waitForFunction(id => !window.__store['todos/group-A'].recurringTemplates.find(t => t.id === id).active, stoppedId);
@@ -185,7 +186,7 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
     assert.equal(await page.evaluate(() => window.__store['todos/group-A'].todos.filter(t => t.title === '可停止的循環').length), 1);
     await page.evaluate(async () => { window.__now = '2026-10-22T02:00:00Z'; await window.NexusTodoApp.refreshRecurring(); });
 
-    await page.locator('[data-action="open-recurring"]').click();
+    await page.evaluate(()=>window.NexusTodoApp.openRecurringModal());
     await page.locator('#recurring-title').fill('無效循環');
     await page.locator('#recurring-interval').fill('31');
     await page.locator('[data-action="save-recurring"]').click();
@@ -232,7 +233,7 @@ const baseURL = process.env.TODO_BASE_URL || 'http://127.0.0.1:8004';
         await page.waitForTimeout(450);
         await page.screenshot({ path: process.env.TODO_SCREENSHOTS + '/todo-assignees.png' });
         await page.locator('#addTodoModal .modal-btns button').first().click();
-        await page.locator('[data-action="open-recurring"]').click();
+        await page.evaluate(()=>window.NexusTodoApp.openRecurringModal());
         await page.locator('#recurring-title').fill('整理公共空間');
         await page.waitForTimeout(450);
         await page.screenshot({ path: process.env.TODO_SCREENSHOTS + '/todo-recurring.png' });

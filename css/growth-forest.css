@@ -48,7 +48,7 @@ html[data-color-mode=dark] .danger{background:#efb0a2;color:#30221f;}
 
 /* Navigation entry has a feature title; member visits retain their return path. */
 .forest-heading{min-width:0;}
-.forest-header .forest-feature-title{display:none;align-items:center;gap:7px;font-family:inherit;font-size:calc(20px * var(--n-font-scale,1));font-weight:700;letter-spacing:normal;}
+.forest-header .forest-feature-title{display:flex;align-items:center;gap:7px;font-family:inherit;font-size:calc(20px * var(--n-font-scale,1));font-weight:700;letter-spacing:normal;}
 html[data-navigation-entry=nav] body:not(.visiting-forest) .forest-header{grid-template-columns:minmax(0,1fr) 44px;}
 html[data-navigation-entry=nav] body:not(.visiting-forest) .forest-feature-title{display:flex;}
 html[data-navigation-entry=nav] body:not(.visiting-forest) #greeting{display:none;}
@@ -64,10 +64,13 @@ html[data-navigation-entry=nav] body.visiting-forest #forestBack{display:flex!im
 .forest-nav button[aria-current=page]{color:var(--n-primary);font-weight:800;border-bottom:0;}
 .forest-nav>:is(a,button):active{background:var(--n-soft);}
 .forest-header{grid-template-columns:minmax(0,1fr) 44px;}
-.forest-heading{display:none;}
+.forest-heading{display:block;}
 html[data-navigation-entry=nav] body:not(.visiting-forest) .forest-heading,.visiting-forest .forest-heading{display:block;}
 #forestBack{justify-content:center;width:max-content;max-width:100%;min-height:44px;padding:8px 16px;border:1px solid var(--n-border);border-radius:20px;background:var(--n-soft);color:var(--n-text);font-family:inherit;font-size:calc(14px * var(--n-font-scale,1));font-weight:600;line-height:1.4;}
 .visiting-forest .forest-header{grid-template-columns:44px minmax(0,1fr) 44px;}
 .visiting-forest #forestBack{width:44px;padding:0;border:0;background:transparent;font-size:34px;}
 
 html[data-navigation-entry=nav] body[data-app-page=wishlist]{padding-bottom:0!important;}
+
+body:not(.visiting-forest) #greeting{display:none;}
+.visiting-forest .forest-feature-title{display:none;}
