@@ -1,17 +1,19 @@
 import { farmView } from './viewport.js';
 import { BREEDS, poultryState } from './poultry.js';
-import { outdoorCounts, MIN_OUTDOOR_HENS, housingPatch } from './poultry-housing.js';
+import { outdoorCounts, outdoorHens, MIN_OUTDOOR_HENS, housingPatch } from './poultry-housing.js';
 const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 export function farmDialog(scene,title){
     scene.housingDialog?.close();
     const root=el('div');root.className='farm-mail-overlay';const panel=el('section');panel.className='farm-mail-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',title);
     const heading=el('h2',title),message=el('p');message.setAttribute('role','status');
-    const before=scene.game.input.enabled;scene.game.input.enabled=false;
+    // Keep the global manager active so touchend releases the canvas pointer.
+    // Only this scene is blocked while the DOM overlay owns interaction.
+    const input=scene.input,before=input.enabled;input.enabled=false;
     let closed=false;
-    const close=()=>{if(closed)return;closed=true;root.remove();scene.game.input.enabled=before;if(scene.housingDialog?.root===root)scene.housingDialog=null;scene.events.off('shutdown',close);scene.events.off('destroy',close);};
+    const close=()=>{if(closed)return;closed=true;root.remove();input.enabled=before;if(scene.housingDialog?.root===root)scene.housingDialog=null;scene.events.off('shutdown',close);scene.events.off('destroy',close);};
     const btn=(label,action)=>{const b=el('button',label);b.type='button';b.className='farm-mail-button';b.onclick=action;panel.append(b);return b;};
     panel.append(heading,message);root.append(panel);document.body.append(root);scene.events.once('shutdown',close);scene.events.once('destroy',close);
-    root.addEventListener('keydown',event=>{if(event.key==='Escape'&&!scene.housingDialog?.busy)close();if(event.key==='Tab'){const buttons=[...panel.querySelectorAll('button:not(:disabled)')];if(!buttons.length)return;const first=buttons[0],last=buttons.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}});
+    root.addEventListener('keydown',event=>{if(event.key==='Escape')close();if(event.key==='Tab'){const buttons=[...panel.querySelectorAll('button:not(:disabled)')];if(!buttons.length)return;const first=buttons[0],last=buttons.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}});
     scene.housingDialog={root,panel,message,close,button:btn};return scene.housingDialog;
 }
 export function openHousing(scene,save,breed){
@@ -60,13 +62,52 @@ export function openHousing(scene,save,breed){
     scene.events.once('shutdown',close);scene.events.once('destroy',close);
     scene.housingDialog={container,qty,message,minus,plus,max,confirm,cancel,close,setQuantity};refresh();
 }
-export function openCoopActions(scene){
-    const dialog=farmDialog(scene,'雞舍管理');
-    dialog.button('清理雞舍',()=>{dialog.close();scene.askCleanMyFarm(true);});
-    if(poultryState(scene.farmData).hens.some(h=>h.isSick)){
-        const treat=dialog.button('餵食咕咕活力飲',async()=>{treat.disabled=true;await scene.treatRandomSickHen();if(!scene.sys.isActive())return;if(poultryState(scene.farmData).hens.some(h=>h.isSick)){dialog.message.textContent=scene.treatmentMessage||'已處理';treat.disabled=false;}else{dialog.close();}});
-        treat.title='每次消耗現有治療藥品 1 個，隨機治療一隻病雞';
-        dialog.refresh=()=>{if(!poultryState(scene.farmData).hens.some(h=>h.isSick))treat.remove();};
-    }
-    dialog.button('關閉',dialog.close).focus();
+export function openCoopActions(scene) {
+    const dialog = farmDialog(scene, '雞舍管理');
+    const count = el('p');
+    count.dataset.coopSickCount = '';
+    count.setAttribute('aria-live', 'polite');
+    const medicines = el('p');
+    medicines.dataset.coopMedicineCount = '';
+    dialog.panel.insertBefore(count, dialog.message);
+    dialog.panel.insertBefore(medicines, dialog.message);
+    const clean = dialog.button('清理雞舍', () => {
+        dialog.close();
+        scene.askCleanMyFarm(true);
+    });
+    const treat = dialog.button('餵食咕咕活力飲', async () => {
+        if (dialog.busy) return;
+        dialog.busy = true;
+        treat.disabled = clean.disabled = true;
+        dialog.message.textContent = '治療中…';
+        try {
+            await scene.treatRandomSickHen();
+            if (dialog.root.isConnected) dialog.message.textContent = scene.treatmentMessage || '已處理';
+        } catch (error) {
+            if (dialog.root.isConnected) dialog.message.textContent = error.message || '治療失敗，請重試';
+        } finally {
+            dialog.busy = false;
+            if (dialog.root.isConnected) {
+                treat.disabled = clean.disabled = false;
+                dialog.refresh();
+            }
+        }
+    });
+    treat.title = '每次消耗現有治療藥品 1 個，隨機治療一隻病雞';
+    const close = dialog.button('關閉', dialog.close);
+    dialog.refresh = () => {
+        const farm = scene.farmData;
+        const sick = poultryState(farm).hens.filter(hen => hen.isSick);
+        const outside = new Set(outdoorHens(farm).map(hen => hen.id));
+        const outdoorSick = sick.filter(hen => outside.has(hen.id)).length;
+        count.textContent = `生病雞隻：共 ${sick.length} 隻（雞舍內 ${sick.length - outdoorSick} 隻、放風中 ${outdoorSick} 隻）`;
+        medicines.textContent = `可用藥品：${farm.medicines || 0} 份，每次治療 1 隻`;
+        if (sick.length) {
+            if (!treat.isConnected) close.before(treat);
+        } else {
+            treat.remove();
+        }
+    };
+    dialog.refresh();
+    close.focus();
 }
