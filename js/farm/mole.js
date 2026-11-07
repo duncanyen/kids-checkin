@@ -4,11 +4,11 @@ import { claimMoleEncounter, settleMoleEncounter } from './mole-store.js';
 import { ensureAssets } from './assets.js';
 
 export function otherMonsterActive(scene) {
-    return scene.preparingCobra || scene.preparingEncounter || (scene.sys.settings.key === 'VisitScene' && !scene.hasRolledEncounter) ||
-        ['cobraEncounter','eagleEncounter','dragonEncounter','gorillaEncounter'].some(key => scene[key] && !scene[key].destroyed && !scene[key].settled) ||
+    return scene.preparingGiant || scene.preparingCobra || scene.preparingEncounter || (scene.sys.settings.key === 'VisitScene' && !scene.hasRolledEncounter) ||
+        ['giantEncounter','cobraEncounter','eagleEncounter','dragonEncounter','gorillaEncounter'].some(key => scene[key] && !scene[key].destroyed && !scene[key].settled) ||
         ['wolf','tiger'].some(key => scene[key]?.active && !scene[key].getData('resolved'));
 }
-export const moleBlocksGarden = scene => scene.preparingMole || !!(scene.moleEncounter && !scene.moleEncounter.destroyed && !scene.moleEncounter.settled);
+export const moleBlocksGarden = scene => scene.preparingGiant || !!(scene.giantEncounter && !scene.giantEncounter.destroyed && !scene.giantEncounter.settled) || scene.preparingMole || !!(scene.moleEncounter && !scene.moleEncounter.destroyed && !scene.moleEncounter.settled);
 export async function maybeStartMole(scene) {
     if (moleBlocksGarden(scene)) return true;
     if (otherMonsterActive(scene) || !moleDue(scene.myFarmData || scene.farmData)) return false;

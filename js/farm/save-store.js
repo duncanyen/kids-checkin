@@ -14,7 +14,7 @@ export function isFarmSave(farm) {
     if (!farm || typeof farm !== 'object' || Array.isArray(farm)) return false;
     if (!Number.isFinite(farm.coins) || !Number.isInteger(farm.hens)) return false;
     const counts = ['coins', 'hens', 'inventoryEggs', 'silkieEggs', 'bresseEggs', 'onagadoriEggs', 'eggsReady', 'worms', 'earthworms',
-        'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'shortbow', 'huntingbow', 'paladinbow', 'eagleFeathers', 'sweetPotatoes', 'ironhammer', 'cobraFangs', 'gardenCatchCount', 'moleLastMilestone', 'cobraLastMilestone', 'warehouseLimit'];
+        'ancientStones', 'giantLastMilestone', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'shortbow', 'huntingbow', 'paladinbow', 'eagleFeathers', 'sweetPotatoes', 'ironhammer', 'cobraFangs', 'gardenCatchCount', 'moleLastMilestone', 'cobraLastMilestone', 'warehouseLimit'];
     if (counts.some(key => key in farm && (!Number.isFinite(farm[key]) || farm[key] < 0))) return false;
     if ('combatKills' in farm && (!farm.combatKills || typeof farm.combatKills !== 'object' || Array.isArray(farm.combatKills))) return false;
     if (farm.combatKills && ['wolf', 'tiger', 'eagle'].some(key => key in farm.combatKills && (!Number.isSafeInteger(farm.combatKills[key]) || farm.combatKills[key] < 0))) return false;
@@ -33,7 +33,7 @@ export function initialFarm(now = Date.now()) {
         coins: 0, inventoryEggs: 0, silkieEggs: 0, bresseEggs: 0, onagadoriEggs: 0, hens: 1, coopLevel: 1,
         eggsReady: 0, readyEggs: { hen: 0, silkie: 0, bresse: 0, onagadori: 0 }, poultryVersion: 2,
         lastLayTime: now, warehouseLimit: 10, worms: 0, earthworms: 0,
-        wolfFangs: 0, tigerPelts: 0, dragonScales: 0, gorillaFangs: 0,
+        ancientStones: 0, giantLastMilestone: 0, wolfFangs: 0, tigerPelts: 0, dragonScales: 0, gorillaFangs: 0,
         medicines: 0, cleanliness: 0, moral: 100, equippedWeapon: 'club',
         hensState: [{ id: crypto.randomUUID(), breed: 'hen', laidAt: now, isSick: false }]
     };

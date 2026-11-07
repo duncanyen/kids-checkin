@@ -48,6 +48,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'warehouseCapacity', name: '倉庫容量', icon: 'coop', type: 'warehouse' },
             { key: 'coins', name: '金幣', icon: 'coin' },
             ...Object.values(BREEDS).map(b => ({ key: b.eggKey, name: b.eggName, icon: b.eggIcon })),
+            { key: 'ancientStones', name: '遠古巨石', icon: 'ancient_stone' },
             { key: 'sweetPotatoes', name: '地瓜', icon: 'sweet_potato' },
             { key: 'worms', name: '菜蟲', icon: 'worm' },
             { key: 'earthworms', name: '蚯蚓', icon: 'earthworm' },
@@ -215,7 +216,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
-        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'cobraFangs' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
+        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'ancientStones' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'cobraFangs' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
                 this.showMsg('病雞可直接點選治療；雞舍內病雞請返回農場點選雞舍治療。', '#FFD54F');

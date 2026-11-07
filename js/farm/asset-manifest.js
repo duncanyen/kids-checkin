@@ -1,5 +1,7 @@
 // Public file descriptions; safe to inspect without Phaser or Firebase.
 export const ASSET_MANIFEST = {
+    giant: {type:'atlas',image:'giant-sheet.png',json:'giant-sheet.json'},
+    ancient_stone: {type:'image',image:'giant-sheet.png',crop:[1552,665,222,222]},
     mole: {type:'atlas',image:'mole-sheet.png',json:'mole-sheet.json'},
     sweet_potato: {type:'image',image:'mole-sheet.png',crop:[0,940,314,314]},
     ironhammer: {type:'image',image:'mole-sheet.png',crop:[314,940,313,314]},

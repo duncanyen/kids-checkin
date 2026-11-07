@@ -1,3 +1,4 @@
+import { maybeStartGiant } from './giant-trigger.js';
 import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
 import { openCoopActions } from './poultry-housing-ui.js';
@@ -34,6 +35,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.farmData = null;
         this.henAssetsPending = false;
         this.preparingEncounter = false;
+        this.giantEncounter = null; this.preparingGiant = false;
         this.pendingEncounter = null;
         this.preparingCobra = false;
         this.cobraEntryChecked = false;
@@ -93,7 +95,7 @@ export default class MyFarmScene extends Phaser.Scene {
         onSceneExit(this, () => {
             this.farmSceneToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
-            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy();
+            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
             this.farmInterval = null;
@@ -181,7 +183,11 @@ export default class MyFarmScene extends Phaser.Scene {
             this.startEggTimer();
             if (!this.cobraEntryChecked) {
                 this.cobraEntryChecked = true;
-                this.time.delayedCall(0, () => this.farmData?.moleChallenge ? maybeStartMole(this) : maybeStartCobra(this));
+                this.time.delayedCall(0, async () => {
+                    if(this.farmData?.giantChallenge){await maybeStartGiant(this);return;}
+                    if(this.farmData?.moleChallenge){await maybeStartMole(this);return;}
+                    if(!await maybeStartCobra(this))await maybeStartGiant(this);
+                });
             }
             if(!this.game.registry.get('farmInitialReady')){
                 this.game.registry.set('farmInitialReady',true);
@@ -213,7 +219,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     isSaveReady() {
-        return !this.henAssetsPending && !this.preparingEncounter && !!this.farmData && this.registry.get('farmLoadState')?.phase === 'ready';
+        return !this.preparingGiant && !this.henAssetsPending && !this.preparingEncounter && !!this.farmData && this.registry.get('farmLoadState')?.phase === 'ready';
     }
 
     updateUI() {
@@ -508,8 +514,8 @@ export default class MyFarmScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (!this.isSaveReady()) return;
-        if (this.isHarvesting || this.preparingMole || this.preparingCobra) return;
-        const activeBoss = [this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (this.isHarvesting || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
+        const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;
@@ -546,7 +552,7 @@ export default class MyFarmScene extends Phaser.Scene {
             return;
         }
 
-        const defended = [this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
+        const defended = [this.giantEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
         const encounter = this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
         if (encounter) {
             this.pendingEncounter = encounter;

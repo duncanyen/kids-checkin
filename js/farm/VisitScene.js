@@ -1,3 +1,4 @@
+import { maybeStartGiant, giantBlocksFarm } from './giant-trigger.js';
 import { outdoorHens } from './poultry-housing.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
 import { holidayClock } from './holiday-clock.js';
@@ -48,6 +49,7 @@ export default class VisitScene extends Phaser.Scene {
         this.visitToken = Symbol('visit');
         this.emptyClickCount = 0;
         this.hasRolledEncounter = false;
+        this.giantEncounter = null; this.preparingGiant = false;
         this.preparingCobra = false;
         this.moleEncounter = null; this.preparingMole = false; this.gardenSearching = false;
         this.cobraEncounter = null;
@@ -94,7 +96,7 @@ export default class VisitScene extends Phaser.Scene {
         onSceneExit(this, () => {
             this.visitToken = null;
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
-            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy();
+            this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             this.groupUnsubscribes?.forEach(unsubscribe => unsubscribe());
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
             this.registry.events.off('changedata-myFarmData', this.onMyFarmDataChanged, this);
@@ -170,6 +172,7 @@ export default class VisitScene extends Phaser.Scene {
         if (this.hasRolledEncounter || !this.myFarmData || !this.targetFarmData) return;
         this.hasRolledEncounter = true;
         const token = this.visitToken;
+        if (this.myFarmData.giantChallenge && await maybeStartGiant(this)) return;
         if (this.myFarmData.moleChallenge && await maybeStartMole(this)) return;
         if (await maybeStartCobra(this)) return;
         if (!this.sys.isActive() || this.visitToken !== token) return;
@@ -179,6 +182,7 @@ export default class VisitScene extends Phaser.Scene {
         else if (encounter === 'dragon') this.spawnDragonEvent();
         else if (encounter === 'tiger') this.spawnTigerEvent();
         else if (encounter === 'wolf') this.spawnWolfEvent();
+        else await maybeStartGiant(this);
     }
 
     assertVisitAccess(transaction) {
@@ -200,11 +204,13 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     spawnGorillaEvent() {
+        if(giantBlocksFarm(this))return;
         if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.gorillaEncounter = new GorillaEncounter(this);
     }
 
     spawnDragonEvent() {
+        if(giantBlocksFarm(this))return;
         if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.dragonEncounter = new DragonEncounter(this);
     }
@@ -375,6 +381,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     spawnTigerEvent() {
+        if(giantBlocksFarm(this))return;
         this.isTigerDefeated = false; this.tigerHitCount = 0;
         const weapon = equippedWeapon(this.myFarmData);
         const damage = weaponDamage(weapon, 'tiger');
@@ -457,6 +464,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     spawnWolfEvent() {
+        if(giantBlocksFarm(this))return;
         this.isWolfDefeated = false; this.wolfHitCount = 0;
         const weapon = equippedWeapon(this.myFarmData);
         const damage = weaponDamage(weapon, 'wolf');
@@ -583,8 +591,8 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal() {
-        if (this.isStealing || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.hasRolledEncounter) return;
-        const activeBoss = [this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        if (this.preparingGiant || this.isStealing || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.hasRolledEncounter) return;
+        const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;

@@ -63,7 +63,7 @@ export class ArcheryControls {
         const bow=this.getBow(),available=!!bow;
         if(!available&&this.selected){this.selected=false;this.cancel();}
         this.button.setVisible(available);this.label.setVisible(available);this.bow.setVisible(available&&this.selected);
-        this.help.setText(available?(this.selected?'按住弓往後拉，放開射箭\n虛線為預估彈道，請預判飛行方向':'切換弓箭後，拖曳瞄準射擊'):(this.encounter.spec.archery?'點擊蛇王可用近戰武器攻擊。':'飛行怪物需弓箭！請先到倉庫配備。'));
+        this.help.setText(available?(this.selected?'按住弓往後拉，放開射箭\n虛線為預估彈道，請預判飛行方向':'切換弓箭後，拖曳瞄準射擊'):(this.encounter.spec.archery?`點擊${this.encounter.spec.name}可用近戰武器攻擊。`:'飛行怪物需弓箭！請先到倉庫配備。'));
         this.label.setText(this.selected?`切換近戰\n${equippedWeapon(this.scene.myFarmData||this.scene.farmData).name}`:`切換弓箭\n${bow?.name||''}`);
         if(bow)this.bow.setTexture(bow.icon);
         this.encounter.rangedWeapon=this.selected?bow:null;

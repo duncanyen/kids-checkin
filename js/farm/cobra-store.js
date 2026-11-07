@@ -17,6 +17,7 @@ export function claimCobraEncounter(targetAccountId = CURRENT_ACCOUNT_ID, target
             transaction.update(myFarmRef, patch);
             return { expired: true, result };
         }
+        if(farm.giantChallenge)return null;
         const milestone = nextCobraMilestone(farm);
         if (milestone === null) return null;
         const challenge = {

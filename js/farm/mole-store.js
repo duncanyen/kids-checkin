@@ -17,7 +17,7 @@ export function claimMoleEncounter(targetAccountId = CURRENT_ACCOUNT_ID, targetG
             transaction.update(myFarmRef, patch);
             return { expired: true, result };
         }
-        if (farm.cobraChallenge) return null;
+        if (farm.cobraChallenge || farm.giantChallenge) return null;
         const milestone = nextMoleMilestone(farm);
         if (milestone === null) return null;
         const challenge = {

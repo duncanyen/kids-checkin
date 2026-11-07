@@ -3,6 +3,7 @@ import { registerPredatorAnimations } from './predators.js';
 import { registerDragonAnimations } from './dragon.js';
 import { registerGorillaAnimations } from './gorilla.js';
 import { registerEagleAnimations } from './eagle.js';
+import { registerGiantAnimations } from './giant.js';
 import { registerCobraAnimations } from './cobra.js';
 import { farmLoading } from './loading-ui.js';
 import { ASSET_MANIFEST as manifest, CORE_ASSETS, ALL_ASSETS } from './asset-manifest.js';
@@ -30,11 +31,11 @@ export function registerAvailableAnimations(scene) {
             if (!scene.anims.exists('mole_'+action)) scene.anims.create({key:'mole_'+action,frames:frames.map(frame=>({key:'mole',frame:String(frame)})),frameRate:10,repeat});
         }
     }
-    for (const key of ['hen','silkie','bresse','onagadori','wolf','tiger','dragon','gorilla','cobra','mole'])
+    for (const key of ['hen','silkie','bresse','onagadori','wolf','tiger','dragon','gorilla','cobra','mole','giant'])
         if (scene.textures.exists(key)) scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     registerPoultryAnimations(scene); registerPredatorAnimations(scene);
     registerDragonAnimations(scene); registerGorillaAnimations(scene); registerEagleAnimations(scene);
-    registerCobraAnimations(scene);
+    registerCobraAnimations(scene); registerGiantAnimations(scene);
 }
 export class FarmAssetScene extends Phaser.Scene {
     constructor() { super({key:'FarmAssetScene'}); this.jobs=[]; this.runningJob=false; this.closed=false; }
