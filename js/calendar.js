@@ -602,7 +602,6 @@ document.getElementById('btnAddCalendarEvent').addEventListener('click', () => {
     openEventModal(getFormattedDate(new Date()));
     directAdd = true;
     showFormView();
-    document.getElementById('evTitle').focus();
 });
 document.getElementById('evDate').addEventListener('change', event => {
     if (parseCalendarDate(event.target.value)) document.getElementById('modalDateTitle').innerText = `${event.target.value} 行程`;

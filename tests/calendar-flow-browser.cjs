@@ -36,6 +36,7 @@ export const deleteDoc=async ref=>{delete window.__events[ref.path];await emit()
  assert.equal(await page.locator('#calendarTitle').innerText(),'2026-11-25');
  await page.click('#btnAddCalendarEvent');
  assert.equal(await page.locator('#formView').isVisible(),true);
+ assert.equal(await page.evaluate(()=>document.activeElement?.matches('#formView input, #formView textarea, #formView select')),false,'opening the add form must not focus an input');
  assert.equal(await page.locator('#listView').isVisible(),false);
  assert.equal(await page.inputValue('#evDate'),'2026-11-18');
  assert.equal(await page.locator('#formView input').first().getAttribute('type'),'date');
