@@ -26,8 +26,8 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  await page.goto(base+'/settings.html');
  await page.waitForSelector('.theme-option',{state:'attached'});
  await page.locator('#appearanceSettings summary').click();
- assert.equal(await page.locator('.theme-option').count(),10);
- for(const id of ['honey','walnut','terracotta','aqua','wisteria','citrus','sea','lapis','grape','evergreen']){
+ assert.equal(await page.locator('.theme-option').count(),26);
+ for(const id of await page.evaluate(()=>window.NexusTheme.themes.map(t=>t.id))){
   await page.locator(`[data-theme-id=${id}]`).click();
   assert.equal(await page.locator('html').getAttribute('data-nexus-theme'),id);
   assert.equal(await page.locator(`[data-theme-id=${id}]`).getAttribute('aria-checked'),'true');
@@ -62,11 +62,28 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('#dashboardView').evaluate(el=>getComputedStyle(el).opacity),'1');
  await page.setViewportSize({width:1440,height:900});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ // Persist a newly added color and restore it on the next page load.
+ await page.goto(base+'/settings.html');
+ await page.waitForSelector('.theme-option',{state:'attached'});
+ await page.locator('#appearanceSettings summary').click();
+ for(const width of [320,390,1440]){
+  await page.setViewportSize({width,height:900});
+  await page.locator('[data-theme-id=lake-blue]').click();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ }
+ await page.locator('[data-theme-save]').click();
+ await page.waitForFunction(()=>document.querySelector('[data-theme-status]').textContent.includes('主題已儲存'));
+ assert.equal(await page.evaluate(()=>window.__docs['userSettings/alice'].appearance.theme),'lake-blue');
+ await page.reload();
+ await page.waitForSelector('.theme-option',{state:'attached'});
+ assert.equal(await page.locator('html').getAttribute('data-nexus-theme'),'lake-blue');
+ await page.locator('#appearanceSettings summary').click();
+ await page.screenshot({path:'/tmp/nexus-settings-new-colors.png',fullPage:true,animations:'disabled'});
  await page.evaluate(()=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'bob',name:'另一位',menus:['food']})));
  await page.goto(base+'/food-decision.html');assert.equal(await page.locator('html').getAttribute('data-nexus-theme'),'honey');
  await page.goto(base+'/settings.html');await page.waitForSelector('.theme-option',{state:'attached'});await page.locator('#appearanceSettings summary').click();
  await page.locator('[data-theme-id=honey]').focus();await page.keyboard.press('ArrowRight');assert.equal(await page.locator('html').getAttribute('data-nexus-theme'),'walnut');
  assert.deepEqual(errors,[]);
- console.log('PASS: ten previews, contrast palettes, cancel, failed/retried cloud save, layout preservation, cross-page persistence, account isolation, real home icons and keyboard choice.');
+ console.log('PASS: 26 previews, contrast palettes, cancel, failed/retried cloud save, layout preservation, cross-page persistence, account isolation, real home icons and keyboard choice.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

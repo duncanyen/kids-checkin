@@ -11,8 +11,8 @@ export function mountAppearanceSettings({ db, user, root }) {
     for(const t of theme.themes){
         const button=document.createElement('button');button.type='button';button.className='theme-option';button.dataset.themeId=t.id;
         button.setAttribute('role','radio');button.setAttribute('aria-label',`${t.name}，${t.dark?'深色':'淺色'}主題`);
-        for(const [name,value] of Object.entries({bg:t.bg,text:t.text,muted:t.muted,primary:t.primary,soft:t.soft,border:t.border}))button.style.setProperty(`--preview-${name}`,value);
-        button.innerHTML=`<span class="theme-option-check">${icon('check')}</span><span class="theme-swatches" aria-hidden="true"><i style="background:${t.primary}"></i><i style="background:${t.soft}"></i><i style="background:${t.text}"></i></span><strong>${t.name}</strong><small>${t.description}</small>`;
+        for(const [name,value] of Object.entries({bg:t.bg,text:t.text,muted:t.muted,primary:t.primary,soft:t.soft,border:t.border,onPrimary:t.onPrimary}))button.style.setProperty(`--preview-${name}`,value);
+        button.innerHTML=`<span class="theme-option-check">${icon('check')}</span><span class="theme-swatches" aria-hidden="true"><i style="background:${t.accent}"></i><i style="background:${t.soft}"></i><i style="background:${t.text}"></i></span><strong>${t.name}</strong><small>${t.description}</small>`;
         button.addEventListener('click',()=>choose(t.id));
         button.addEventListener('keydown',event=>{
             const index=theme.themes.findIndex(t=>t.id===selected),count=theme.themes.length;

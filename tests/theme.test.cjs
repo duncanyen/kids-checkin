@@ -9,8 +9,8 @@ function setup(){
 }
 const lum=hex=>{const rgb=hex.slice(1).match(/../g).map(x=>parseInt(x,16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};
 const ratio=(a,b)=>{const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
-test('all ten palettes have readable primary, secondary and action text',()=>{
- const {api}=setup();assert.equal(api.themes.length,10);
+test('all 26 palettes have readable primary, secondary and action text',()=>{
+ const {api}=setup();assert.equal(api.themes.length,26);
  for(const t of api.themes)for(const [fg,bg]of [[t.text,t.bg],[t.text,t.surface],[t.muted,t.bg],[t.muted,t.surface],[t.onPrimary,t.primary]])assert.ok(ratio(fg,bg)>=4.5,`${t.id} ${fg}/${bg} ratio ${ratio(fg,bg)}`);
 });
 test('preview is not persisted, account changes and server hydration are isolated',()=>{
@@ -25,4 +25,15 @@ test('preview is not persisted, account changes and server hydration are isolate
 test('corrupt or unavailable local storage never prevents rendering',()=>{
  const {api,context,local,session}=setup();session.set('familyCheckInUser',JSON.stringify({accountId:'alice'}));local.set('nexus.appearance.v1:alice','{invalid');api.refresh();assert.equal(api.current,'honey');
  context.localStorage.getItem=()=>{throw Error('blocked');};context.localStorage.setItem=()=>{throw Error('blocked');};api.refresh();assert.equal(api.current,'honey');api.hydrate('alice',{theme:'grape'});assert.equal(api.current,'grape');assert.equal(api.remember('alice','sea'),false);
+});
+
+test('reference swatches use exact HEX values and Traditional Chinese labels',()=>{
+ const {api}=setup();
+ const expected=[['柿橙色','#B85516'],['密金色','#EAAE35'],['淺松色','#FFC44F'],['艾草青','#5ECD8C'],['桃緋粉','#F35B83'],['薄荷青','#8AEED1'],['長春花藍','#7B8AD7'],['可可棕','#6D483B'],['裸桃粉','#FACBC6'],['苔青色','#465C47'],['霧堇紫','#615EDE'],['櫻粉色','#FF7EC1'],['漿果紅','#65020A'],['湖藍色','#18D5E7'],['胭脂粉','#FF7CA2'],['墨黑色','#000000']];
+ for(const [name,color]of expected){
+  const t=api.themes.find(t=>t.name===name);assert.ok(t,name);assert.equal(t.accent,color);
+  api.apply(t.id);assert.equal(api.current,t.id);
+  for(const bg of [t.bg,t.surface,t.soft,t.tint])assert.ok(ratio(t.primary,bg)>=4.5,`${name}: primary text on ${bg}`);
+  assert.ok(ratio(t.onPrimary,t.strong)>=4.5,`${name}: hovered action`);
+ }
 });

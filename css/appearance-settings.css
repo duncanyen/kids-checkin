@@ -18,7 +18,7 @@
 .theme-option[aria-checked=true] {outline:2px solid var(--n-primary);outline-offset:2px;}
 .theme-option strong {display:block;font-size:calc(16px * var(--n-font-scale, 1));line-height:1.5;}
 .theme-option small {display:block;font-size:calc(12px * var(--n-font-scale, 1));color:var(--preview-muted);line-height:1.6;margin-top:5px;}
-.theme-option-check {position:absolute;right:10px;top:9px;width:22px;height:22px;border-radius:50%;background:var(--preview-primary);color:var(--preview-bg);display:none;align-items:center;justify-content:center;}
+.theme-option-check {position:absolute;right:10px;top:9px;width:22px;height:22px;border-radius:50%;background:var(--preview-primary);color:var(--preview-onPrimary);display:none;align-items:center;justify-content:center;}
 .theme-option-check .nexus-icon {width:15px;height:15px;}
 .theme-option[aria-checked=true] .theme-option-check {display:flex;}
 .theme-swatches {display:flex;gap:8px;margin-bottom:20px;}
