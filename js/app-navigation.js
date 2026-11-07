@@ -12,7 +12,7 @@ window.addEventListener('pageshow',resetPendingNavigation);
 function currentUser(){try{return JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{return null;}}
 export function mountAppNavigation({user=currentUser(),settings,container}={}){
     const page=document.body.dataset.appPage;
-    if(!user?.accountId||page==='gamezone')return;
+    if(!user?.accountId||page==='gamezone'||document.body.dataset.appNavigation==='local')return;
     const items=settings?resolveNavigation(user,settings):resolveNavigation(user,{navigation:{items:cachedNavigation(user.accountId)}});
     if(settings)cacheNavigation(user.accountId,items);
     const nav=container||document.getElementById('appNavigation')||document.createElement('nav');

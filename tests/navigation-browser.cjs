@@ -51,9 +51,9 @@ export const runTransaction=()=>{};export const getCountFromServer=async()=>({da
  const paths={calendar:'calendar.html',chat:'chat.html',finance:'expense.html',photodump:'gallery.html',todo:'todo.html',wishlist:'wishwall.html',food:'food-decision.html'};
  for(const [id,path] of Object.entries(paths)){
   await page.goto(base+'/'+path+'?nav=1');
-  await page.waitForSelector('.app-bottom-navigation',{timeout:5000}).catch(()=>{throw Error(id+' '+page.url()+' '+JSON.stringify(errors));});
+  await page.waitForSelector(id==='wishlist'?'.forest-nav':'.app-bottom-navigation',{timeout:5000}).catch(()=>{throw Error(id+' '+page.url()+' '+JSON.stringify(errors));});
   assert.equal(await page.locator('[data-main-menu-back]').isVisible(),false,id+' return button should be hidden');
-  const bar=await page.locator('.app-bottom-navigation').boundingBox();assert.ok(Math.abs(bar.y+bar.height-844)<2,id+' bar must touch screen bottom');
+  const bar=await page.locator(id==='wishlist'?'.forest-nav':'.app-bottom-navigation').boundingBox();assert.ok(Math.abs(bar.y+bar.height-844)<2,id+' bar must touch screen bottom');
   if(!await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))throw Error(id+' horizontal overflow '+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>innerWidth+2).slice(0,10).map(el=>({tag:el.tagName,id:el.id,class:el.className,right:el.getBoundingClientRect().right})))));
   if(['calendar','chat','finance','photodump','todo'].includes(id))assert.equal(await page.locator('.app-nav-link[aria-current=page]').getAttribute('data-nav-feature'),id);
   if(id==='finance')assert.equal(await page.locator('.page-title').innerText(),'記帳本');

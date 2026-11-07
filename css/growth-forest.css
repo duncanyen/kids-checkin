@@ -2,7 +2,6 @@
 @media(max-width:700px){.forest-shell{padding:0 18px 105px}.forest-header{min-height:55px;font-size:11px}.forest-identity{padding:22px 0 17px}h1{font-size:25px}.forest-motto{font-size:10px;letter-spacing:1px}.resource-strip{padding:13px 0}.resource-strip>span{gap:7px}.resource-strip svg{width:24px;height:24px}.resource-strip small{font-size:10px}.resource-strip strong{font-size:19px}.forest-layout{display:block}.scene-wrap{border-radius:75px 75px 12px 12px;margin:0 -2px}.forest-side>.section-heading,.forest-side>.body-copy{display:none}.quick-actions{display:grid;grid-template-columns:repeat(3,1fr);margin:18px 0 8px;border:0;gap:10px}.quick-actions button{display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;border:0;background:var(--n-soft,#eeeee0);border-radius:6px;padding:14px 3px}.action-number{font-size:10px}.quick-actions strong{font-size:14px}.quick-actions button>span:last-child{font-size:10px}.plot-access{margin-top:14px}.forest-nav{gap:0;justify-content:space-around;padding-left:5px;padding-right:5px}.forest-nav button{flex-direction:column;gap:4px;padding:6px 8px;font-size:11px}.forest-nav button span{font-size:11px}.section-heading h2{font-size:22px}.reward-grid{grid-template-columns:1fr 1fr;gap:12px}.seed-grid{gap:6px}.seed{padding:10px 3px}.seed img{height:130px}.seed h3{font-size:14px}.seed button{font-size:12px;padding:10px}.form-grid{gap:12px}.form-grid label{font-size:12px}.record-row{gap:10px}.row-actions{max-width:145px}.summary-grid{grid-template-columns:repeat(2,1fr)}.settings-row{gap:7px}.settings-row input{font-size:14px;padding:9px 7px}.plant-info{grid-template-columns:115px 1fr}.plant-info img{width:115px}.filters label{min-width:115px}.forest-nav{padding-bottom:calc(8px + env(safe-area-inset-bottom))}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
 
-.forest-nav.inline{position:sticky;top:0;bottom:auto;left:auto;right:auto;gap:12px;justify-content:flex-start;backdrop-filter:blur(8px);padding:8px 0;z-index:30;margin:0 0 18px;border-top:0;border-bottom:1px solid var(--border)}
 
 .record-row>div:first-child,.forest-identity>div{min-width:0;overflow-wrap:anywhere}.record-row .row-actions{flex-shrink:0}.reward h3,#greeting,.body-copy,.sheet-heading h2{overflow-wrap:anywhere}
 
@@ -56,3 +55,19 @@ html[data-navigation-entry=nav] body:not(.visiting-forest) #greeting{display:non
 html[data-navigation-entry=nav] body.visiting-forest #forestBack{display:flex!important;}
 
 .forest-shell .forest-header{background:transparent!important;}
+
+/* The forest owns its bottom navigation instead of stacking the Nexus dock. */
+.forest-nav{height:var(--app-nav-height);z-index:50;padding:6px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px));gap:0;align-items:stretch;backdrop-filter:none;}
+.forest-nav>:is(a,button){display:flex;flex:1;min-width:0;max-width:120px;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px 2px;background:transparent;color:var(--n-muted);text-decoration:none;font-family:inherit;font-size:clamp(9px,2.4vw,11px);font-weight:600;line-height:1.25;border:0;border-radius:12px;}
+.forest-nav>:is(a,button)>span{font:inherit;white-space:nowrap;}
+.forest-nav .nexus-icon{display:block;width:23px;height:23px;}
+.forest-nav button[aria-current=page]{color:var(--n-primary);font-weight:800;border-bottom:0;}
+.forest-nav>:is(a,button):active{background:var(--n-soft);}
+.forest-header{grid-template-columns:minmax(0,1fr) 44px;}
+.forest-heading{display:none;}
+html[data-navigation-entry=nav] body:not(.visiting-forest) .forest-heading,.visiting-forest .forest-heading{display:block;}
+#forestBack{justify-content:center;width:max-content;max-width:100%;min-height:44px;padding:8px 16px;border:1px solid var(--n-border);border-radius:20px;background:var(--n-soft);color:var(--n-text);font-family:inherit;font-size:calc(14px * var(--n-font-scale,1));font-weight:600;line-height:1.4;}
+.visiting-forest .forest-header{grid-template-columns:44px minmax(0,1fr) 44px;}
+.visiting-forest #forestBack{width:44px;padding:0;border:0;background:transparent;font-size:34px;}
+
+html[data-navigation-entry=nav] body[data-app-page=wishlist]{padding-bottom:0!important;}

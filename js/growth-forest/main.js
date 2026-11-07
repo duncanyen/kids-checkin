@@ -7,8 +7,7 @@ const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&
 const dates=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}),today=()=>dates.format(new Date());
 const labels={pending:'待審核',approved:'已核准',rejected:'已退回',revoked:'已撤銷',legacy:'歷史紀錄',requested:'申請中',processing:'準備中',completed:'已發放',cancelled:'已取消'};
 const context=readGameContext(),clock=new ReadingClock(localStorage,`nexus.growth.clock:${context.groupId}:${context.accountId}`);
-let initializedOnce=false,refreshGeneration=0,forestPage=0,pageLoading=false,visitAccountId=null,visitPage=0,visitData=null,visitGame=null,visitPending=null,visitGeneration=0,noticeTimer;
-if(new URLSearchParams(location.search).get('nav')==='1'){const nav=document.querySelector('.forest-nav');nav.classList.add('inline');document.querySelector('main').before(nav);}
+let refreshGeneration=0,forestPage=0,pageLoading=false,visitAccountId=null,visitPage=0,visitData=null,visitGame=null,visitPending=null,visitGeneration=0,noticeTimer;
 let client,data,game,gamePending,stopped=false,busy=false,view='forest',parentMode='records',targetId=null,recordCursor=null,recordRows=[],recordFilters={},recordGeneration=0,timer,refreshTimer,unsubscribe,stopAppearance,photoUrls=[];
 let lowPower=localStorage.getItem('nexus.growth.lowPower')==='1'||matchMedia('(prefers-reduced-motion:reduce)').matches;
 $('powerMode').setAttribute('aria-pressed',String(lowPower));
@@ -62,7 +61,8 @@ function updateHeader(){
  const visiting=view==='visit';if(visiting)$('operationNotice').hidden=true;document.body.classList.toggle('visiting-forest',visiting);
  $('greeting').textContent=visiting?(visitData?visitData.owner.name+'的成長森林':'成員的成長森林'):(data?.actor.name?data.actor.name+'的成長森林':'我的成長森林');
  document.querySelector('.resource-strip').hidden=visiting;document.querySelector('.forest-nav').hidden=visiting;$('resourceGuide').hidden=visiting;
- $('forestBack').setAttribute('aria-label',visiting||view==='members'?'返回自己的成長森林':'返回 Nexus 主頁');
+ $('forestBack').textContent=visiting?'‹':view==='members'?'返回我的森林':'返回主選單';
+ $('forestBack').setAttribute('aria-label',visiting||view==='members'?'返回自己的成長森林':'返回主選單');
 }
 $('forestBack').onclick=event=>{if(view==='visit'||view==='members'){event.preventDefault();visitGeneration++;visitGame?.pause();openView('forest').catch(error=>status(message(error),true));}};
 function avatarURL(value){
@@ -255,7 +255,7 @@ function settingsForm(root){
 }
 async function initialize(){
  $('retry').hidden=true;status('正在連接你的森林…');
- try{if(!client){const m=await import('./client.js');client=await m.connect(context);stopAppearance=client.watchAppearance?.((appearance,metadata)=>window.NexusTheme?.hydrate(context.accountId,appearance,metadata));}await refresh();if(stopped)return;if(!initializedOnce&&data.parent)view='parent';initializedOnce=true;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,scheduleRefresh,e=>status('即時同步中斷：'+message(e),true));}
+ try{if(!client){const m=await import('./client.js');client=await m.connect(context);stopAppearance=client.watchAppearance?.((appearance,metadata)=>window.NexusTheme?.hydrate(context.accountId,appearance,metadata));}await refresh();if(stopped)return;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,scheduleRefresh,e=>status('即時同步中斷：'+message(e),true));}
  catch(error){status(message(error),true);$('retry').hidden=false;}
 }
 $('retry').onclick=initialize;

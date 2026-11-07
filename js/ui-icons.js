@@ -68,7 +68,7 @@ const paths = {
     warning:'<path d="m12 3 10 18H2Z"/><path d="M12 9v5m0 3h.01"/>'
 };
 export function icon(key, extra='') {
-    return `<svg class="nexus-icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[key]||paths.home}</svg>`;
+    return `<svg class="nexus-icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[key==='wishlist'?'forest':key]||paths.home}</svg>`;
 }
 export function mountIcons(root=document){root.querySelectorAll('[data-ui-icon]').forEach(el=>{el.innerHTML=icon(el.dataset.uiIcon);});}
 mountIcons();
