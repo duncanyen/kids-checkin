@@ -57,6 +57,8 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
   window.__writes=0; window.__documentReads=[];
   window.__store={
    'users/alice':{...user,avatar:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='},
+   'customCategories/legacy':{groupId:'A',type:'expense',name:'舊圖示',icon:'🥪',imgBase64:null},
+   'customCategories/upload':{groupId:'A',type:'expense',name:'自訂照片',icon:'✨',imgBase64:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='},
    'expenses/e1':{groupId:'A',accountId:'alice',operator:'Alice',date:'2026-11-01',category:'早餐',note:'早餐三明治',amount:50.25},
    'expenses/e2':{groupId:'A',operator:'Bob',date:'2026-11-03',category:'交通',type:'expense',amount:100,note:null,name:'不應回填的舊名'},
    'expenses/i1':{groupId:'A',accountId:'alice',operator:'Alice',date:'2026-11-01',category:'薪資',note:'十一月薪資',type:'income',amount:30000},
@@ -189,6 +191,55 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
   assert.ok(fab.y+fab.height<=nav.y,'add button clears bottom navigation');
   await page.click('#listIncomeTab');await page.waitForSelector('#addListIncome',{state:'visible'});const incomeFab=await page.locator('#addListIncome').boundingBox();assert.ok(Math.abs(incomeFab.x-fab.x)<1&&Math.abs(incomeFab.y-fab.y)<1,'income and expense add buttons use the same right position');await page.click('#listExpenseTab');await page.waitForSelector('#addListExpense',{state:'visible'});
  }
+ // Category SVG migration preserves uploaded pictures and existing category IDs.
+ await page.evaluate(()=>window.openModal('settingsModal'));
+ assert.equal(await page.locator('.managed-category svg').count(),5);
+ assert.equal(await page.locator('.managed-category img').count(),1);
+ await page.getByRole('button',{name:'編輯舊圖示',exact:true}).click();
+ assert.equal(await page.inputValue('#editCatId'),'legacy');
+ assert.equal(await page.inputValue('#newCatName'),'舊圖示');
+ assert.equal(await page.locator('[data-category-icon="sandwich"]').getAttribute('aria-checked'),'true');
+ await page.getByRole('radio',{name:'禮物',exact:true}).click();
+ await page.fill('#newCatName','自訂禮物');
+ await page.click('#btnSaveCustomCat');
+ await page.waitForSelector('#customCatModal',{state:'hidden'});
+ assert.equal(await page.evaluate(()=>window.__store['customCategories/legacy'].icon),'gift');
+ await page.getByRole('button',{name:'編輯自訂照片',exact:true}).click();
+ await page.fill('#newCatName','保留照片');
+ await page.click('#btnSaveCustomCat');
+ await page.waitForSelector('#customCatModal',{state:'hidden'});
+ assert.match(await page.evaluate(()=>window.__store['customCategories/upload'].imgBase64),/^data:image\/gif/);
+ await page.getByRole('button',{name:'編輯保留照片',exact:true}).click();
+ await page.getByRole('radio',{name:'金幣',exact:true}).click();
+ await page.evaluate(()=>window.__failSave=true);
+ await page.click('#btnSaveCustomCat');
+ await page.waitForFunction(()=>!document.querySelector('#btnSaveCustomCat').disabled);
+ assert.equal(await page.inputValue('#editCatId'),'upload');
+ await page.evaluate(()=>window.__failSave=false);
+ await page.click('#btnSaveCustomCat');
+ await page.waitForSelector('#customCatModal',{state:'hidden'});
+ assert.equal(await page.evaluate(()=>window.__store['customCategories/upload'].imgBase64),null);
+ assert.equal(await page.evaluate(()=>window.__store['customCategories/upload'].icon),'coins');
+ await page.evaluate(()=>window.openModal('customCatModal'));
+ await page.fill('#newCatName','測試書籍');
+ await page.getByRole('radio',{name:'書本',exact:true}).click();
+ for(const width of [320,390,768]){
+  await page.setViewportSize({width,height:844});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  const boxes=await page.locator('.category-svg-choice').evaluateAll(nodes=>nodes.map(node=>{const r=node.getBoundingClientRect();return{x:r.x,right:r.right,width:r.width,height:r.height};}));
+  assert.ok(boxes.every(box=>box.x>=0&&box.right<=width&&box.width>=40&&box.height>=44));
+ }
+ await page.screenshot({path:'/tmp/nexus-expense-category-svg.png'});
+ await page.click('#btnSaveCustomCat');
+ await page.waitForSelector('#customCatModal',{state:'hidden'});
+ assert.equal(await page.evaluate(()=>Object.values(window.__store).find(row=>row.name==='測試書籍').icon),'book');
+ await page.getByRole('button',{name:'刪除測試書籍',exact:true}).click();
+ await page.waitForFunction(()=>!Object.values(window.__store).some(row=>row.name==='測試書籍'));
+ await page.evaluate(()=>window.closeModal('settingsModal'));
+ await page.click('#addListExpense');
+ assert.equal(await page.locator('#categoryGrid .cat-icon svg').count(),10);
+ assert.equal(await page.locator('#categoryGrid .cat-icon img').count(),0);
+ await page.click('#expenseModal .btn-close');
  await page.evaluate(()=>sessionStorage.setItem('testRole','member'));
  await page.reload();await page.click('#tabList');
  await page.waitForFunction(()=>!document.querySelector('#addListExpense').disabled);

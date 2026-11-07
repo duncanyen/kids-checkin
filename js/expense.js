@@ -1,3 +1,5 @@
+import { icon } from './ui-icons.js';
+import { CATEGORY_ICON_OPTIONS, categoryIconKey, categoryIconHTML } from './expense-category-icons.js';
 import { loadChart } from './chart-loader.js';
 import { loadScopedProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -78,18 +80,19 @@ let allUsersMap = {}; // 存放所有使用者的頭像對應表
 
 // 預設分類
 const defaultExpenseCategories = [
-    { id: '早餐', icon: '🥪', color: '#FFB74D' }, { id: '午餐', icon: '🍱', color: '#FF8A65' },
-    { id: '晚餐', icon: '🍲', color: '#E57373' }, { id: '日用品', icon: '🛒', color: '#4DB6AC' },
-    { id: '交通', icon: '⛽', color: '#90A4AE' }, { id: '水電瓦斯', icon: '⚡', color: '#4FC3F7' },
-    { id: '學習娛樂', icon: '📚', color: '#9575CD' }, { id: '其他支出', icon: '📦', color: '#A1887F' }
+    { id: '早餐', icon: 'sandwich', color: '#FFB74D' }, { id: '午餐', icon: 'lunchbox', color: '#FF8A65' },
+    { id: '晚餐', icon: 'soup', color: '#E57373' }, { id: '日用品', icon: 'cart', color: '#4DB6AC' },
+    { id: '交通', icon: 'bus', color: '#90A4AE' }, { id: '水電瓦斯', icon: 'bolt', color: '#4FC3F7' },
+    { id: '學習娛樂', icon: 'book', color: '#9575CD' }, { id: '其他支出', icon: 'package', color: '#A1887F' }
 ];
 const defaultIncomeCategories = [
-    { id: '薪資', icon: '💼', color: '#4CAF50' }, { id: '獎金', icon: '🎊', color: '#66BB6A' },
-    { id: '投資', icon: '📈', color: '#81C784' }, { id: '兼職', icon: '🧑‍💻', color: '#2E7D32' },
-    { id: '零用錢', icon: '💰', color: '#FBC02D' }, { id: '其他收入', icon: '📥', color: '#B0BEC5' }
+    { id: '薪資', icon: 'briefcase', color: '#4CAF50' }, { id: '獎金', icon: 'gift', color: '#66BB6A' },
+    { id: '投資', icon: 'chart', color: '#81C784' }, { id: '兼職', icon: 'laptop', color: '#2E7D32' },
+    { id: '零用錢', icon: 'coins', color: '#FBC02D' }, { id: '其他收入', icon: 'inbox', color: '#B0BEC5' }
 ];
 let customCategories = []; 
 let currentCatModalType = 'expense';
+let useSvgCategoryIcon = false;
 
 function formatK(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -792,7 +795,8 @@ window.openModal = function(modalId, dateStr = null) {
     if(modalId === 'customCatModal') {
         document.getElementById('editCatId').value = '';
         document.getElementById('newCatName').value = '';
-        document.getElementById('newCatEmoji').value = '';
+        renderCategoryIconPicker('package');
+        useSvgCategoryIcon = false;
         document.getElementById('newCatImage').value = '';
         document.getElementById('catModalTitle').innerText = '新增自訂類別';
         switchCatModalType('expense');
@@ -844,12 +848,8 @@ function renderCategoryGrid() {
         btn.id = `cat-${cat.name || cat.id}`; 
         btn.onclick = () => selectCategory(cat.name || cat.id);
         
-        let iconHtml = `<span class="cat-icon">${cat.icon}</span>`;
-        if(cat.imgBase64) {
-            iconHtml = `<span class="cat-icon"><img src="${cat.imgBase64}"></span>`;
-        }
-
-        btn.innerHTML = `${iconHtml}<span class="cat-name">${cat.name || cat.id}</span>`;
+        const iconHtml = `<span class="cat-icon">${categoryIconHTML(cat)}</span>`;
+        btn.innerHTML = `${iconHtml}<span class="cat-name">${ledgerText(cat.name || cat.id)}</span>`;
         grid.appendChild(btn);
     });
 
@@ -865,42 +865,89 @@ function selectCategory(catName) {
 }
 
 // ================= 設定: 管理類別 =================
+function renderCategoryIconPicker(value) {
+    const key = categoryIconKey(value);
+    const picker = document.getElementById('newCatIconPicker');
+    document.getElementById('newCatIcon').value = key;
+    picker.replaceChildren(...CATEGORY_ICON_OPTIONS.map((option, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'category-svg-choice';
+        button.dataset.categoryIcon = option.key;
+        button.setAttribute('role', 'radio');
+        button.setAttribute('aria-label', option.label);
+        button.setAttribute('aria-checked', String(option.key === key));
+        button.tabIndex = option.key === key ? 0 : -1;
+        button.title = option.label;
+        button.innerHTML = icon(option.key);
+        button.onclick = () => {
+            useSvgCategoryIcon = true;
+            document.getElementById('newCatImage').value = '';
+            renderCategoryIconPicker(option.key);
+            picker.querySelector(`[data-category-icon="${option.key}"]`).focus();
+        };
+        button.onkeydown = event => {
+            const columns = getComputedStyle(picker).gridTemplateColumns.split(' ').length;
+            const steps = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns };
+            if (!(event.key in steps) && !['Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? CATEGORY_ICON_OPTIONS.length - 1
+                : (index + steps[event.key] + CATEGORY_ICON_OPTIONS.length) % CATEGORY_ICON_OPTIONS.length;
+            picker.querySelector(`[data-category-icon="${CATEGORY_ICON_OPTIONS[next].key}"]`).click();
+        };
+        return button;
+    }));
+    document.getElementById('newCatIconPreview').innerHTML = categoryIconHTML({ icon: key });
+}
+
 function renderManageCategories() {
     const container = document.getElementById('manageCategoryList');
-    container.innerHTML = '';
-    if(customCategories.length === 0) {
-        container.innerHTML = '<div style="color:#999; font-size:calc(13px * var(--n-font-scale, 1)); text-align:center; padding:10px;">尚未新增任何自訂類別</div>';
+    container.replaceChildren();
+    if (!customCategories.length) {
+        container.textContent = '尚未新增任何自訂類別';
         return;
     }
-    
-    customCategories.forEach(cat => {
-        const div = document.createElement('div');
-        div.style = "display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:10px; border-radius:8px;";
-        let iconHtml = cat.imgBase64 ? `<img src="${cat.imgBase64}" style="width:24px;border-radius:4px;">` : `<span style="font-size:calc(20px * var(--n-font-scale, 1));">${cat.icon}</span>`;
-        
-        div.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px;">
-                ${iconHtml}
-                <span style="font-weight:bold;">${cat.name} <span style="font-size:calc(11px * var(--n-font-scale, 1)); color:#888;">(${cat.type==='income'?'收入':'支出'})</span></span>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button onclick="editCategory('${cat.id}')" style="background:none; border:none; color:var(--primary-color); cursor:pointer;">✏️</button>
-                <button onclick="deleteCategory('${cat.id}')" style="background:none; border:none; color:var(--expense-color); cursor:pointer;">✕</button>
-            </div>
-        `;
-        container.appendChild(div);
-    });
+    for (const cat of customCategories) {
+        const row = document.createElement('div');
+        row.className = 'managed-category';
+        const info = document.createElement('div');
+        info.className = 'managed-category-info';
+        const image = document.createElement('span');
+        image.className = 'managed-category-icon';
+        image.innerHTML = categoryIconHTML(cat);
+        const label = document.createElement('strong');
+        label.textContent = cat.name + '（' + (cat.type === 'income' ? '收入' : '支出') + '）';
+        info.append(image, label);
+        const actions = document.createElement('div');
+        actions.className = 'managed-category-actions';
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.innerHTML = icon('edit');
+        edit.setAttribute('aria-label', '編輯' + cat.name);
+        edit.onclick = () => editCategory(cat.id);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.innerHTML = icon('trash');
+        remove.setAttribute('aria-label', '刪除' + cat.name);
+        remove.onclick = () => deleteCategory(cat.id);
+        actions.append(edit, remove);
+        row.append(info, actions);
+        container.append(row);
+    }
 }
 
 window.editCategory = function(catId) {
     const cat = customCategories.find(c => c.id === catId);
-    if(!cat) return;
+    if (!cat) return;
+    // Open first: the new-category initialization must not erase the saved fields.
+    openModal('customCatModal');
     document.getElementById('editCatId').value = cat.id;
     document.getElementById('newCatName').value = cat.name;
-    document.getElementById('newCatEmoji').value = cat.icon || '';
+    renderCategoryIconPicker(cat.icon);
+    useSvgCategoryIcon = false;
+    document.getElementById('newCatIconPreview').innerHTML = categoryIconHTML(cat);
     document.getElementById('catModalTitle').innerText = '修改自訂類別';
     switchCatModalType(cat.type);
-    openModal('customCatModal');
 }
 
 window.deleteCategory = async function(catId) {
@@ -920,12 +967,12 @@ window.deleteCategory = async function(catId) {
 // ================= 自訂類別儲存邏輯 =================
 document.getElementById('btnSaveCustomCat').addEventListener('click', async () => {
     const nameInput = document.getElementById('newCatName').value.trim();
-    const emojiInput = document.getElementById('newCatEmoji').value.trim();
+    const iconKey = categoryIconKey(document.getElementById('newCatIcon').value);
     const fileInput = document.getElementById('newCatImage').files[0];
     const editCatId = document.getElementById('editCatId').value;
 
     if(!nameInput) { alert("請輸入類別名稱！"); return; }
-    if(!emojiInput && !fileInput && !editCatId) { alert("請輸入 Emoji 或選擇一張圖片！"); return; }
+
 
     const btn = document.getElementById('btnSaveCustomCat');
     btn.disabled = true;
@@ -935,7 +982,7 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
         let imgBase64 = null;
         if(fileInput) {
             imgBase64 = await resizeImageToBase64(fileInput);
-        } else if (editCatId) {
+        } else if (editCatId && !useSvgCategoryIcon) {
             const existing = customCategories.find(c => c.id === editCatId);
             if(existing) imgBase64 = existing.imgBase64;
         }
@@ -944,7 +991,7 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
             groupId: currentGroupId,
             type: currentCatModalType,
             name: nameInput,
-            icon: emojiInput || '✨',
+            icon: iconKey,
             imgBase64: imgBase64,
             color: currentCatModalType === 'expense' ? '#e53935' : '#43a047'
         };
@@ -959,7 +1006,8 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
         }
         
         document.getElementById('newCatName').value = '';
-        document.getElementById('newCatEmoji').value = '';
+        renderCategoryIconPicker('package');
+        useSvgCategoryIcon = false;
         document.getElementById('newCatImage').value = '';
         closeModal('customCatModal');
         
@@ -993,6 +1041,7 @@ function resizeImageToBase64(file) {
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/webp', 0.8)); 
             };
+            img.onerror = () => reject(new Error('無法讀取分類圖片'));
             img.src = e.target.result;
         };
         reader.onerror = reject;
@@ -1083,9 +1132,9 @@ function renderDayList() {
         const baseList = isIncome ? defaultIncomeCategories : defaultExpenseCategories;
         const fullList = [...baseList, ...customCategories.filter(c => c.type === item.type)];
         
-        const catObj = fullList.find(c => (c.name || c.id) === item.category) || { icon: '📦', color: '#999' };
+        const catObj = fullList.find(c => (c.name || c.id) === item.category) || { icon: 'package', color: '#999' };
         
-        let iconHtml = catObj.imgBase64 ? `<img src="${catObj.imgBase64}" style="width:24px;border-radius:4px;">` : catObj.icon;
+        const iconHtml = categoryIconHTML(catObj);
 
         const div = document.createElement('div');
         div.className = 'expense-item';

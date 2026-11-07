@@ -1,5 +1,14 @@
 // Local, consistent 24px outline icons. No font/CDN dependency; never alter user content.
 const paths = {
+    sandwich:'<path d="m3 16 9-12 9 12H3Zm0 0v4h18v-4M7 11l3 2 3-1 4 2"/>',
+    lunchbox:'<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M8 6V3h8v3M3 12h18M12 12v9"/>',
+    soup:'<path d="M3 12h18a9 9 0 0 1-18 0ZM7 21h10M8 3c-3 2 3 4 0 6m5-6c-3 2 3 4 0 6m5-6c-3 2 3 4 0 6"/>',
+    bus:'<rect x="5" y="3" width="14" height="17" rx="3"/><path d="M5 11h14M8 20v2m8-2v2M9 6h6"/><circle cx="8.5" cy="16" r=".8"/><circle cx="15.5" cy="16" r=".8"/>',
+    bolt:'<path d="m13 2-9 12h7l-1 8 10-13h-7l1-7Z"/>',
+    package:'<path d="m3 7 9-5 9 5v10l-9 5-9-5V7Zm0 0 9 5 9-5M12 12v10M7 4.8l10 5.4v4"/>',
+    laptop:'<rect x="5" y="3" width="14" height="12" rx="2"/><path d="m5 15-3 5h20l-3-5M9 20h6M10 7l-2 2 2 2m4-4 2 2-2 2"/>',
+    inbox:'<path d="M8 3h8M12 3v9m-4-4 4 4 4-4M4 12l-2 8h20l-2-8M3 16h5l2 3h4l2-3h5"/>',
+    sparkles:'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3ZM4 2v4M2 4h4m14 14v4m-2-2h4"/>',
     download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',
     users:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v2"/>',
     camera:'<path d="M8 6l2-3h4l2 3h4a2 2 0 0 1 2 2v12H2V8a2 2 0 0 1 2-2h4Z"/><circle cx="12" cy="13" r="4"/>',

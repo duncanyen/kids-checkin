@@ -226,7 +226,7 @@
     <div class="modal" id="settingsModal" style="z-index: 3000;">
         <div class="modal-content" style="max-height: 80vh;">
             <div class="modal-header">
-                <div class="modal-date">⚙️ 分類設定</div>
+                <div class="modal-date"><span data-ui-icon="settings" aria-hidden="true"></span> 分類設定</div>
                 <button class="btn-close" onclick="closeModal('settingsModal')">✕</button>
             </div>
             <div class="settings-content">
@@ -258,8 +258,10 @@
                 <input type="text" id="newCatName" class="note-input" placeholder="例如：寵物、咖啡...">
             </div>
             <div class="input-group">
-                <label class="cat-form-label">自訂圖示 (選填 Emoji)</label>
-                <input type="text" id="newCatEmoji" class="note-input" placeholder="例如：🐶、☕" maxlength="2">
+                <label class="cat-form-label" id="categoryIconLabel">分類圖示</label>
+                <input type="hidden" id="newCatIcon" value="package">
+                <div id="newCatIconPicker" class="category-icon-picker" role="radiogroup" aria-labelledby="categoryIconLabel"></div>
+                <span id="newCatIconPreview" class="category-icon-preview" aria-label="目前圖示"></span>
             </div>
             <div class="input-group" style="text-align: center; margin: 15px 0;">
                 <span style="font-size:calc(13px * var(--n-font-scale, 1)); color:#888;">--- 或 ---</span>
