@@ -30,7 +30,7 @@ export async function connect(context){
    if(key)localStorage.removeItem(key);return result;
   },
   watchAppearance(receive,error=()=>{}){
-   return sdk.onSnapshot(sdk.doc(db,'userSettings',context.accountId),snapshot=>{try{assertCurrent();receive(snapshot.data()?.appearance);}catch(e){error(e);}},error);
+   return sdk.onSnapshot(sdk.doc(db,'userSettings',context.accountId),{includeMetadataChanges:true},snapshot=>{try{assertCurrent();receive(snapshot.data()?.appearance,snapshot.metadata);}catch(e){error(e);}},error);
   },
   subscribe(_parent,refresh,error){
    // The shared revision reacts to all forest writes without composite indexes.

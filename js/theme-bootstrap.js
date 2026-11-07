@@ -59,10 +59,23 @@
     const user=()=>{try{return JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{return null;}};
     const key=id=>`nexus.appearance.v1:${id}`;
     const valid=id=>themes.some(theme=>theme.id===id);
-    function cached(accountId){try{const value=JSON.parse(localStorage.getItem(key(accountId))||'null');return valid(value?.theme)?value.theme:null;}catch{return null;}}
+    function cached(accountId) {
+        // Session backup preserves the saved theme during same-tab navigation,
+        // including browsers that block persistent storage.
+        for (const name of ['localStorage', 'sessionStorage']) {
+            try {
+                const storage = globalThis[name];
+                const value = JSON.parse(storage.getItem(key(accountId)) || 'null');
+                if (valid(value?.theme)) return value.theme;
+            } catch {}
+        }
+        return null;
+    }
     function apply(id){
         const t=themes.find(theme=>theme.id===id)||themes[0];current=t.id;
         root.dataset.nexusTheme=t.id;root.dataset.colorMode=t.dark?'dark':'light';root.style.colorScheme=t.dark?'dark':'light';
+        // Paint the correct canvas even before the page stylesheets arrive.
+        root.style.backgroundColor=t.bg;root.style.color=t.text;
         const tokens={
             '--n-bg':t.bg,'--n-surface':t.surface,'--n-soft':t.soft,'--n-text':t.text,'--n-muted':t.muted,'--n-primary':t.primary,'--n-strong':t.strong,'--n-tint':t.tint,'--n-border':t.border,'--n-accent':t.accent,'--n-on-primary':t.onPrimary,
             '--primary':t.primary,'--primary-color':t.primary,'--primary-dark':t.strong,'--primary-hover':t.strong,'--primary-light':t.tint,'--accent':t.accent,'--accent-color':t.primary,
@@ -74,9 +87,16 @@
         window.dispatchEvent(new CustomEvent('nexus-theme-change',{detail:{id:t.id,theme:t}}));return t;
     }
     function refresh(){window.NexusFontSize?.refresh();const next=user()?.accountId||null;owner=next;return apply(next?cached(next)||'honey':'honey');}
-    function remember(accountId,id){if(!accountId||!valid(id))return false;try{localStorage.setItem(key(accountId),JSON.stringify({theme:id}));return true;}catch{return false;}}
-    function hydrate(accountId,appearance){
+    function remember(accountId,id) {
+        if (!accountId || !valid(id)) return false;
+        const value = JSON.stringify({theme:id});
+        try { sessionStorage.setItem(key(accountId),value); } catch {}
+        try { localStorage.setItem(key(accountId),value); return true; } catch { return false; }
+    }
+    function hydrate(accountId,appearance,metadata){
         if(user()?.accountId!==accountId)return;owner=accountId;
+        // Firestore may emit an older disk snapshot before the server response.
+        if(metadata?.fromCache && cached(accountId))return;
         if(valid(appearance?.theme)){remember(accountId,appearance.theme);apply(appearance.theme);}
         else apply(cached(accountId)||'honey');
     }

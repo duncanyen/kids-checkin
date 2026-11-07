@@ -8,7 +8,7 @@ const snap=row=>({id:row.path.split('/').at(-1),exists:()=>row.data!==null,data:
 export const getDocFromServer=async ref=>snap(await window.__webDb({op:'get',path:ref.path}));
 export const getDocsFromServer=async ref=>{const rows=await window.__webDb({op:'query',path:ref.path,constraints:ref.constraints});const docs=rows.map(snap);return{docs,size:docs.length,empty:!docs.length};};
 const listeners=new Set();window.__webEmit=()=>Promise.all([...listeners].map(fn=>fn()));
-export const onSnapshot=(ref,next,error)=>{let active=true;const emit=async()=>{try{const row=await getDocFromServer(ref);if(active)next(row);}catch(e){if(active)error?.(e);}};listeners.add(emit);emit();return()=>{active=false;listeners.delete(emit);};};
+export const onSnapshot=(ref,options,next,error)=>{if(typeof options==='function'){error=next;next=options;}let active=true;const emit=async()=>{try{const row=await getDocFromServer(ref);if(active)next(row);}catch(e){if(active)error?.(e);}};listeners.add(emit);emit();return()=>{active=false;listeners.delete(emit);};};
 export const setDoc=async(ref,data)=>window.__webDb({op:'commit',expected:[],writes:[{path:ref.path,data}]});
 export const deleteDoc=async ref=>window.__webDb({op:'commit',expected:[],writes:[{path:ref.path,delete:true}]});
 export async function runTransaction(_,callback){

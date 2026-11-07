@@ -46,3 +46,13 @@ html[data-color-mode=dark] .danger{background:#efb0a2;color:#30221f;}
 #parentRecordCount{font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;}
 .parent-record-scroll{max-height:min(55vh,480px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:0 12px 12px;scrollbar-width:thin;scrollbar-color:var(--muted) var(--n-soft,#eee);}
 @media(max-width:700px){.parent-tabs{grid-template-columns:repeat(2,minmax(0,1fr));}.record-filters>label{max-width:none;}.parent-record-scroll{max-height:55dvh;}}
+
+/* Navigation entry has a feature title; member visits retain their return path. */
+.forest-heading{min-width:0;}
+.forest-header .forest-feature-title{display:none;align-items:center;gap:7px;font-family:inherit;font-size:calc(20px * var(--n-font-scale,1));font-weight:700;letter-spacing:normal;}
+html[data-navigation-entry=nav] body:not(.visiting-forest) .forest-header{grid-template-columns:minmax(0,1fr) 44px;}
+html[data-navigation-entry=nav] body:not(.visiting-forest) .forest-feature-title{display:flex;}
+html[data-navigation-entry=nav] body:not(.visiting-forest) #greeting{display:none;}
+html[data-navigation-entry=nav] body.visiting-forest #forestBack{display:flex!important;}
+
+.forest-shell .forest-header{background:transparent!important;}

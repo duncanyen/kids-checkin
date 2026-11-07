@@ -1,5 +1,6 @@
 // Local, consistent 24px outline icons. No font/CDN dependency; never alter user content.
 const paths = {
+    forest:'<path d="M12 21V11M12 14C5 14 3 10 3 4c6 0 9 3 9 8m0-2c0-5 3-7 9-7 0 6-3 9-9 9M8 21h8"/>',
     sandwich:'<path d="m3 16 9-12 9 12H3Zm0 0v4h18v-4M7 11l3 2 3-1 4 2"/>',
     lunchbox:'<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M8 6V3h8v3M3 12h18M12 12v9"/>',
     soup:'<path d="M3 12h18a9 9 0 0 1-18 0ZM7 21h10M8 3c-3 2 3 4 0 6m5-6c-3 2 3 4 0 6m5-6c-3 2 3 4 0 6"/>',

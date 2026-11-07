@@ -37,3 +37,15 @@ test('reference swatches use exact HEX values and Traditional Chinese labels',()
   assert.ok(ratio(t.onPrimary,t.strong)>=4.5,`${name}: hovered action`);
  }
 });
+
+test('saved themes paint before CSS and stale Firestore cache cannot reset them',()=>{
+ const {api,root,session,context}=setup();session.set('familyCheckInUser',JSON.stringify({accountId:'alice'}));
+ api.hydrate('alice',{theme:'lake-blue'});
+ assert.equal(root.style.backgroundColor,api.themes.find(t=>t.id==='lake-blue').bg);
+ api.hydrate('alice',{theme:'honey'},{fromCache:true});assert.equal(api.current,'lake-blue');
+ api.hydrate('alice',{theme:'grape'},{fromCache:false});assert.equal(api.current,'grape');
+ context.localStorage.getItem=()=>{throw Error('blocked');};context.localStorage.setItem=()=>{throw Error('blocked');};
+ vm.runInNewContext(source,context);assert.equal(context.window.NexusTheme.current,'grape');
+ assert.equal(root.style.backgroundColor,'#181421');
+ session.set('familyCheckInUser',JSON.stringify({accountId:'bob'}));context.window.NexusTheme.refresh();assert.equal(context.window.NexusTheme.current,'honey');
+});

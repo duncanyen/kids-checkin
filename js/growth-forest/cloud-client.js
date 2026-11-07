@@ -17,7 +17,7 @@ export async function connect(context){
    if(key)localStorage.removeItem(key);return result;
   },
   watchAppearance(receive,error=()=>{}){
-   return onSnapshot(doc(db,'userSettings',context.accountId),snapshot=>{try{assertContext();receive(snapshot.data()?.appearance);}catch(e){error(e);}},error);
+   return onSnapshot(doc(db,'userSettings',context.accountId),{includeMetadataChanges:true},snapshot=>{try{assertContext();receive(snapshot.data()?.appearance,snapshot.metadata);}catch(e){error(e);}},error);
   },
   subscribe(parent,refresh,error){
    const root=`groups/${context.groupId}`,sources=[doc(db,root,'growthProfiles',context.accountId),doc(db,root,'growthSettings','main'),query(collection(db,root,'growthRecords'),...(parent?[]:[where('accountId','==',context.accountId)]),orderBy('updatedAt','desc'),limit(1)),query(collection(db,root,'growthRewards'),limit(100))];
