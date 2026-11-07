@@ -84,15 +84,15 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await clock(epoch+13500);await page.evaluate(()=>{const b=__farmGame.scene.getScene('MyFarmScene').giantEncounter;b.patrol();if(b.sprite.anims.currentAnim.key!=='giant_throw')throw Error('Missing boulder throw');b.arrivalTimer.remove();b.flight.stop();b.phase='test';b.sprite.setPosition(195,400);});
  const target=await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),r=s.giant.getBounds(),p=s.cameras.main.matrix.transformPoint(r.centerX-s.cameras.main.scrollX,r.centerY-s.cameras.main.scrollY),c=s.game.canvas.getBoundingClientRect();return{x:c.x+p.x/s.scale.width*c.width,y:c.y+p.y/s.scale.height*c.height};});
  await page.mouse.click(target.x,target.y);
- assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter.health),62930);
+ assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter.health),35964);
  await page.evaluate(()=>{const b=__farmGame.scene.getScene('MyFarmScene').giantEncounter;b.sprite.setPosition(b.archery.bow.x,350);b.archery.button.emit('pointerdown');});
  const bow=await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),a=s.giantEncounter.archery,p=s.cameras.main.matrix.transformPoint(a.bow.x-s.cameras.main.scrollX,a.bow.y-s.cameras.main.scrollY),c=s.game.canvas.getBoundingClientRect();return{x:c.x+p.x/s.scale.width*c.width,y:c.y+p.y/s.scale.height*c.height};});
  await page.mouse.move(bow.x,bow.y);await page.mouse.down();await page.mouse.move(bow.x,bow.y+100,{steps:6});await page.mouse.up();
- await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter.health===62615);
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter.health===35724);
 
  const hens=structuredClone(own().hensState),eggs=own().eggsReady;
  // Shared health supports all seven exact hit counts without affecting other enemies.
- for(const [weapon,hits]of Object.entries({club:900,mace:700,battleaxe:500,ironhammer:300,shortbow:500,huntingbow:300,paladinbow:200})){
+ for(const [weapon,hits]of Object.entries({club:1000,mace:800,battleaxe:900,ironhammer:400,shortbow:300,huntingbow:200,paladinbow:150})){
   await page.evaluate(async({weapon,hits})=>{
    const s=__farmGame.scene.getScene('MyFarmScene'),b=s.giantEncounter,{WEAPONS_CONFIG:W}=await import('/js/farm/combat-rules.js');
    b.health=b.config.health;b.weapon=W[weapon];b.damage=W[weapon].damageByEnemy.giant;
