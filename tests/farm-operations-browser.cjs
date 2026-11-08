@@ -41,7 +41,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await ops.db.doc('users/self').set({accountId:'self',role:'child'});
         await ops.db.doc('groups/A').set({members:['self','neighbor']});
         const until=Date.now()+3600000;
-        const original=await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'營運公告',endAt:until,showPopup:false}));
+        const original=await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'營運公告',activityCode:'test-２０２６',endAt:until,showPopup:false}));
         await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'給其他玩家',endAt:until,targetType:'accounts',targetAccountIds:['neighbor']}));
         await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'過期公告',startAt:Date.now()-10000,endAt:Date.now()-1}));
         await ops.admin('saveNotification',ops.announcement({status:'published',title:'全體系統訊息',endAt:until,showPopup:false}));
@@ -86,14 +86,15 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         });
         await page.exposeFunction('__announcementFixture',async({cursor,channel})=>{ops.clock(Date.now());const request=ops.request('self');Object.assign(request.data,{cursor,channel});return ops.service.announcements(request);});
         await page.addInitScript(() => {
+            Object.defineProperty(navigator,'clipboard',{value:{writeText:async code=>{if(window.__clipboardDenied)throw Error('denied');window.__copiedCode=code;}}});
             const schedule=window.setInterval;window.setInterval=(fn,ms,...args)=>{if(ms===60000&&String(fn).includes('loadOperations'))window.__pollOperations=fn;return schedule(fn,ms,...args);};
             sessionStorage.setItem('familyCheckInUser', JSON.stringify({ accountId: 'self', name: '測試玩家', groupId: 'A' }));
             if (!localStorage.getItem('lastGroupId')) localStorage.setItem('lastGroupId', 'A');
         });
         let calls=0,finishRedeem;
-        await page.exposeFunction('__redeemFixture',async()=>{calls++;await new Promise(resolve=>finishRedeem=resolve);return ops.service.redeem(ops.request('self','TEST2026'));});
+        await page.exposeFunction('__redeemFixture',async code=>{calls++;if(calls===1)await new Promise(resolve=>finishRedeem=resolve);const result=await ops.service.redeem(ops.request('self',code));docs[owner].farm=(await ops.db.doc('groups/A/users/self').get()).data().farm;return result;});
         await page.exposeFunction('__finishRedeem',()=>finishRedeem());
-        await page.route('**/js/farm/operations-client.js*',route=>route.fulfill({contentType:'text/javascript',body:`export {GAME_ANNOUNCEMENTS_ENABLED,GAME_REDEMPTION_ENABLED} from './operations-config.js';export function createGameOperationsClient(){return{announcements:async(cursor,channel)=>window.__announcementFixture({cursor,channel}),redeem:async()=>window.__redeemFixture()};}`}));
+        await page.route('**/js/farm/operations-client.js*',route=>route.fulfill({contentType:'text/javascript',body:`export {GAME_ANNOUNCEMENTS_ENABLED,GAME_REDEMPTION_ENABLED} from './operations-config.js';export function createGameOperationsClient(){return{announcements:async(cursor,channel)=>window.__announcementFixture({cursor,channel}),redeem:async(code)=>window.__redeemFixture(code)};}`}));
         await page.goto(base+'/farmgame.html');await page.waitForSelector('.farm-mail-launcher');await page.click('.farm-mail-launcher');
         await page.getByRole('tab',{name:'公告',exact:true}).click();await page.getByText('營運公告',{exact:true}).waitFor();
         assert.equal(await page.locator('.farm-mail-row').count(),1,'announcements use the same framed inbox rows');
@@ -104,6 +105,14 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(Number(await page.locator('.farm-mail-badge').innerText()),unreadBefore-1,'reading an announcement reduces the unread badge');
         assert.ok((await page.locator('.farm-mail-body').innerText()).includes('<img'));assert.equal(await page.locator('.farm-mail-content img').count(),0);
         assert.equal(await page.getByText('給其他玩家',{exact:true}).count(),0);assert.equal(await page.getByText('過期公告',{exact:true}).count(),0);
+        assert.equal(await page.getByLabel('活動碼',{exact:true}).inputValue(),'TEST2026');
+        await page.screenshot({path:'/tmp/farm-activity-code.png'});
+        await page.getByRole('button',{name:'複製活動碼',exact:true}).click();await page.getByText('活動碼已複製',{exact:true}).waitFor();
+        assert.equal(await page.evaluate(()=>window.__copiedCode),'TEST2026');
+        await page.evaluate(()=>{window.__clipboardDenied=true;document.execCommand=()=>false;});
+        await page.getByRole('button',{name:'複製活動碼',exact:true}).click();await page.getByText('已選取活動碼，請長按或使用複製功能',{exact:true}).waitFor();
+        await page.getByRole('button',{name:'前往兌換',exact:true}).click();assert.equal(await page.getByLabel('禮包兌換碼').inputValue(),'TEST2026');assert.equal(calls,0,'prefill does not redeem automatically');
+        await page.getByRole('tab',{name:'公告',exact:true}).click();await page.getByText('營運公告',{exact:true}).click();
         await page.getByRole('button',{name:'‹ 返回列表',exact:true}).click();
         await page.getByRole('button',{name:'刪除',exact:true}).click();
         await page.getByText('目前沒有有效公告',{exact:true}).waitFor();
@@ -133,12 +142,27 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         // Verify the production-enabled gift form against the real backend service fixture.
         await page.reload();await page.waitForSelector('.farm-mail-launcher');await page.click('.farm-mail-launcher');
         await page.getByRole('tab',{name:'禮包兌換',exact:true}).click();await page.getByLabel('禮包兌換碼').fill('TEST2026');await page.getByRole('button',{name:'兌換禮包',exact:true}).click();
-        assert.equal(await page.getByRole('button',{name:'關閉',exact:true}).isDisabled(),true);
-        assert.equal(await page.getByRole('tab',{name:'公告',exact:true}).isDisabled(),true);
-        assert.equal(await page.getByRole('button',{name:'兌換禮包',exact:true}).isDisabled(),true);
+        assert.equal(await page.getByRole('button',{name:'關閉',exact:true}).isDisabled(),false);
+        assert.equal(await page.getByRole('tab',{name:'公告',exact:true}).isDisabled(),false);
+        assert.equal(await page.getByRole('button',{name:'正在兌換…',exact:true}).isDisabled(),true);
+        await page.getByRole('button',{name:'返回村落',exact:true}).click();
+        assert.equal(await page.locator('.farm-mail-overlay').isVisible(),false,'pending redemption can leave the page');
+        assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').input.enabled),true,'scene input restored while request is pending');
+        await page.click('.farm-mail-launcher');await page.getByRole('button',{name:'正在兌換…',exact:true}).waitFor();assert.equal(calls,1);
         await page.evaluate(()=>window.__finishRedeem());
-        await page.getByText('兌換成功！ 金幣 × 100',{exact:true}).waitFor();assert.equal(calls,1);assert.equal((await ops.db.doc('groups/A/users/self').get()).data().farm.coins,150);
+        await page.getByRole('heading',{name:'禮包兌換成功',exact:true}).waitFor();await page.getByText('金幣 × 100',{exact:true}).waitFor();
+        assert.equal(calls,1);assert.equal((await ops.db.doc('groups/A/users/self').get()).data().farm.coins,150);
+        await page.screenshot({path:'/tmp/farm-gift-success.png'});
+        await page.waitForFunction(()=>__farmGame.registry.get('myFarmData').coins===150);
+        await page.getByRole('button',{name:'完成，返回村落',exact:true}).click();assert.equal(await page.locator('.farm-mail-overlay').isVisible(),false);
+        await page.click('.farm-mail-launcher');assert.equal(await page.getByLabel('禮包兌換碼').inputValue(),'');
+        assert.equal(await page.getByRole('heading',{name:'禮包兌換成功',exact:true}).count(),0,'completed result does not remain after leaving');
+        await page.getByLabel('禮包兌換碼').fill('NOTREAL2026');await page.getByLabel('禮包兌換碼').press('Enter');
+        await page.getByText('找不到此禮包，請確認兌換碼',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'兌換禮包',exact:true}).isEnabled(),true);
+        assert.equal(await page.getByLabel('禮包兌換碼').inputValue(),'NOTREAL2026');
+        await page.getByRole('tab',{name:'訪客',exact:true}).click();assert.equal(await page.getByText('找不到此禮包，請確認兌換碼',{exact:true}).count(),0,'errors do not leak into other tabs');
+        await page.getByRole('button',{name:'關閉',exact:true}).click();assert.equal(await page.evaluate(()=>__farmGame.input.enabled),true);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        assert.deepEqual(errors,[]);console.log('PASS player operations UI: published announcements, server audience/expiry filtering, initial/read notices, newly-published popup after combat, no repeated popup, system notification delivery, shared inbox rows, personal and bulk deletion, production redemption enabled, safe text, transactional gift redemption, result feedback and mobile layout; transport mocked');
+        assert.deepEqual(errors,[]);console.log('PASS player operations UI: published announcements, server audience/expiry filtering, initial/read notices, newly-published popup after combat, no repeated popup, system notification delivery, shared inbox rows, personal and bulk deletion, production redemption enabled, safe text, transactional gift redemption, one-click code copy and fallback, prefilled redemption, pending exit/reopen, authoritative reward sync, explicit completion, recoverable errors and mobile layout; transport mocked');
     }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -82,7 +82,7 @@ function field(key,label,type,value,full=false,options){
     if(type!=='textarea'&&type!=='select')input.type=type;
     if(options)fillSelect(input,options);
     if(type==='checkbox')input.checked=!!value;else input.value=value??'';
-    input.required=!['code','description','targetAccountIds','showPopup','maxRedemptions'].includes(key);if(type==='number')input.min=key==='priority'?'0':'1';
+    input.required=!['code','activityCode','description','targetAccountIds','showPopup','maxRedemptions'].includes(key);if(type==='number')input.min=key==='priority'?'0':'1';
     if(key==='priority')input.max='100';if(type==='datetime-local')input.step='60';
     wrap.append(input);$('editorFields').append(wrap);return input;
 }
@@ -112,6 +112,7 @@ async function openEditor(record){
     field('startAt','開始時間（台灣 UTC+8）','datetime-local',wallTime(record?.startAt||stamp));field('endAt','結束時間（台灣 UTC+8）','datetime-local',wallTime(record?.endAt||stamp+7*86400000));
     field('targetAccountIds','指定 accountId（逗號或換行分隔，最多 100 位）','textarea',record?.targetAccountIds?.join('\n')||'',true);
     field(isGift?'description':'content',isGift?'禮包說明':view==='notifications'?'通知內容（純文字）':'公告內容（純文字）','textarea',record?.[isGift?'description':'content']||'',true);
+    if(!isGift){const code=field('activityCode','活動碼（選填，玩家可直接複製或帶入兌換）','text',record?.activityCode||'',true);code.maxLength=160;code.autocomplete='off';}
     if(isGift){
         if(!record)field('code','自訂活動碼（留白則安全隨機產生，建立後僅顯示一次）','text','',true);
         field('maxRedemptions','全服總上限（通用／指定禮包留白為不限）','number',record?.maxRedemptions??'');field('maxRedemptionsPerUser','每位玩家上限','number',record?.maxRedemptionsPerUser||1);
@@ -129,7 +130,18 @@ function editorPayload(statusOverride){
     else{payload.priority=Number(payload.priority);payload.showPopup=form.has('showPopup');if(payload.status==='published')payload.startAt=Math.min(payload.startAt,Date.now());}
     return payload;
 }
-function previewAnnouncement(value){$('previewContent').replaceChildren(node('h2',value.title||'未命名公告'),node('p',value.content||''));$('preview').showModal();}
+function previewAnnouncement(value){
+    $('previewContent').replaceChildren(node('h2',value.title||'未命名公告'),node('p',value.content||''));
+    if(value.activityCode){
+        const code=node('input');code.readOnly=true;code.value=value.activityCode;code.setAttribute('aria-label','活動碼');
+        const copy=button('複製活動碼',async()=>{
+            try{await navigator.clipboard.writeText(code.value);copy.textContent='已複製';}
+            catch{code.focus();code.select();code.setSelectionRange(0,code.value.length);copy.textContent='已選取，請複製';}
+        });
+        $('previewContent').append(code,copy);
+    }
+    $('preview').showModal();
+}
 function showCode(code){
     let dialog=$('codeDialog');if(!dialog){dialog=node('dialog');dialog.id='codeDialog';document.body.append(dialog);}
     dialog.replaceChildren(node('h2','禮包已建立'),node('p','請立即複製並安全保存兌換碼；伺服器只保留雜湊，無法再次顯示。'),node('output',code),button('複製兌換碼',async()=>{try{await navigator.clipboard.writeText(code);}catch{status('無法自動複製，請手動選取兌換碼。',true);}}),button('已保存，關閉',()=>{dialog.close();dialog.replaceChildren();}));dialog.showModal();

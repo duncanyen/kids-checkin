@@ -1,4 +1,5 @@
-import { createGameOperationsClient, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-client.js?v=20261108-messages-optional';
+import {activityCodes,activityCodeCard} from './activity-code.js?v=20261108-codes';
+import { createGameOperationsClient, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-client.js?v=20261108-codes';
 import { rewardLabel } from './operations-rewards.js';
 import { db } from '../firebase-config.js';
 import { createFarmMailStore, formatMailTime, WELCOME_ID } from './mail-store.js';
@@ -22,6 +23,7 @@ export function mountFarmMail(game, context) {
     const feeds={announcements:{rows:[],cursor:null,loading:false},notifications:{rows:[],cursor:null,loading:false}};
     let operationsTimer=null,pendingPopupId=null,nextPopupCheck=0;
     const categories=['visitor','system','operations','redeem'];
+    const redemption={phase:'idle',code:'',result:null,error:''};
     let ensured = false, initializing, unsubscribe, notices = [], category = 'visitor', detailId = null, busy = false;
     let disposed = false, openVersion = 0;
     let starting, loaded = false;
@@ -47,7 +49,7 @@ export function mountFarmMail(game, context) {
     const tabs = el('div', 'farm-mail-tabs');
     tabs.setAttribute('role', 'tablist');
     const tabButtons = categories.map((type, i) => {
-        const tab = button(['訪客','系統','公告','禮包兌換'][i], () => { category = type; detailId = null; selected.clear(); render(); if(type==='operations'||type==='system') loadOperations(false,false,type==='system'?'notifications':'announcements'); }, 'farm-mail-tab');
+        const tab = button(['訪客','系統','公告','禮包兌換'][i], () => { category = type; detailId = null; selected.clear(); message.textContent='';render(); if(type==='operations'||type==='system') loadOperations(false,false,type==='system'?'notifications':'announcements'); }, 'farm-mail-tab');
         tab.setAttribute('role', 'tab');
         tab.setAttribute('aria-controls', 'farm-mail-content');
         tab.id = `farm-mail-tab-${type}`;
@@ -181,6 +183,8 @@ export function mountFarmMail(game, context) {
         if (overlay.hidden || busy) return;
         openVersion++;
         overlay.hidden = true;
+        message.textContent='';
+        if(redemption.phase==='success')Object.assign(redemption,{phase:'idle',code:'',result:null,error:''});
         game.events.off('step',lockSceneInputs);
         unlockSceneInputs();
         launcher.focus();
@@ -251,6 +255,11 @@ export function mountFarmMail(game, context) {
             markRead([current]);
             const back = button('‹ 返回列表', () => { detailId = null; render(); }); back.disabled = busy;
             content.append(back, el('h3', '', current.title), el('time', 'farm-mail-time', formatMailTime(current.createdAt)), el('p', 'farm-mail-body', current.body || ''));
+            for(const code of activityCodes(current))content.append(activityCodeCard(code,value=>{
+                category='redeem';detailId=null;message.textContent='';
+                if(redemption.phase!=='pending')Object.assign(redemption,{phase:'idle',code:value,result:null,error:''});
+                render();
+            }));
             if (current.reward) {
                 const rewards = el('section', 'farm-mail-rewards');
                 rewards.append(el('h4', '', '獎勵'), el('p', '', `金幣 × ${current.reward.coins || 0}`), el('p', '', `菜蟲 × ${current.reward.worms || 0}`), el('p', '', `蚯蚓 × ${current.reward.earthworms || 0}`));
@@ -332,16 +341,36 @@ export function mountFarmMail(game, context) {
         finally{feed.loading=false;}
     }
     function renderRedeem(){
+        message.textContent='';
+        if(redemption.phase==='success'){
+            const result=redemption.result,card=el('section','farm-mail-rewards farm-redeem-result');card.setAttribute('role','status');
+            card.append(el('h3','',result.replayed?'這份禮包已完成兌換':'禮包兌換成功'),el('p','','獎勵已收入金幣與倉庫。'));
+            const rewards=el('ul');for(const reward of result.rewards)rewards.append(el('li','',rewardLabel(reward)));card.append(rewards);
+            if(result.replayed)card.append(el('p','','已確認先前的兌換結果，沒有重複發放。'));
+            content.append(card,button('完成，返回村落',close),button('兌換其他禮包',()=>{Object.assign(redemption,{phase:'idle',code:'',result:null,error:''});render();}));return;
+        }
+        const pending=redemption.phase==='pending';
         const form=el('form','farm-redeem-form'),label=el('label','','輸入禮包兌換碼'),input=el('input');
-        input.type='text';input.name='giftCode';input.autocomplete='off';input.maxLength=160;input.required=true;input.setAttribute('aria-label','禮包兌換碼');
-        const submit=button('兌換禮包',()=>{});submit.type='submit';submit.disabled=busy||!GAME_REDEMPTION_ENABLED;input.disabled=busy||!GAME_REDEMPTION_ENABLED;
-        label.append(input);form.append(label,submit);content.append(form,el('p','farm-mail-empty',GAME_REDEMPTION_ENABLED?'兌換成功後獎勵會直接收入目前農場。請先確認雞舍與倉庫空間。':'禮包服務尚未啟用。'));
+        input.type='text';input.name='giftCode';input.autocomplete='off';input.autocapitalize='characters';input.spellcheck=false;input.maxLength=160;input.required=true;input.value=redemption.code;input.setAttribute('aria-label','禮包兌換碼');
+        input.oninput=()=>{redemption.code=input.value;};
+        const submit=button(pending?'正在兌換…':'兌換禮包',()=>{});submit.type='submit';submit.disabled=pending||!GAME_REDEMPTION_ENABLED;input.disabled=pending||!GAME_REDEMPTION_ENABLED;
+        label.append(input);form.append(label,submit);content.append(form);
+        const feedback=el('p','farm-mail-body',pending?'正在確認兌換結果，可先返回村落。請勿重複送出。':redemption.error||'');feedback.setAttribute('role','status');content.append(feedback);
+        content.append(el('p','farm-mail-empty',GAME_REDEMPTION_ENABLED?'獎勵會直接收入目前農場；空間不足時不會部分發放。':'禮包服務尚未啟用。'),button('返回村落',close));
         form.onsubmit=async event=>{
-            event.preventDefault();if(busy||!input.value.trim())return;
-            const code=input.value;busy=true;closeButton.disabled=true;tabButtons.forEach(tab=>tab.disabled=true);submit.disabled=true;input.disabled=true;message.textContent='正在兌換，請勿重複操作…';
-            try{const result=await operations.redeem(code);if(!disposed){message.textContent=`${result.replayed?'此請求已兌換成功，未重複發放。':'兌換成功！'} ${result.rewards.map(rewardLabel).join('、')}`;input.value='';}}
-            catch(error){if(!disposed)message.textContent=error.message||'兌換失敗，請稍後使用同一組兌換碼重試';}
-            finally{busy=false;if(!disposed){submit.disabled=false;input.disabled=false;closeButton.disabled=false;tabButtons.forEach(tab=>tab.disabled=false);if(category==='redeem'&&!form.isConnected)render();}}
+            event.preventDefault();if(redemption.phase==='pending'||!GAME_REDEMPTION_ENABLED||!input.value.trim())return;
+            redemption.code=input.value;redemption.phase='pending';redemption.error='';input.blur();render();
+            try{
+                const result=await operations.redeem(redemption.code);
+                if(!Array.isArray(result?.rewards))throw Error('未能確認獎勵明細，請使用同一活動碼重試。');
+                redemption.phase='success';redemption.result=result;redemption.code='';
+                // Refresh from the authoritative save, including when the RTDB mirror is delayed.
+                if(!disposed)Promise.resolve().then(()=>game.retryFarmSave?.()).catch(()=>{});
+            }catch(error){
+                redemption.phase='error';redemption.error=error.message||'兌換失敗，請稍後使用同一組兌換碼重試';
+            }finally{
+                if(!disposed&&category==='redeem'&&!overlay.hidden)render();
+            }
         };
     }
     overlay.addEventListener('click', event => { if (event.target === overlay) close(); });

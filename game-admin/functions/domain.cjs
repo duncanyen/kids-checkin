@@ -20,7 +20,7 @@ function windowFields(input){
 const tokens=value=>{const chars=[...value.normalize('NFKC').toLowerCase()];return chars.slice(0,80).map((_,i)=>chars.slice(0,i+1).join(''));};
 const search=value=>typeof value==='string'?value.normalize('NFKC').trim().toLowerCase().slice(0,80):'';
 function announcement(input){
-    const value={title:text(input.title,120),content:text(input.content,10000),type:enumValue(input.type,['general','maintenance','event','update']),priority:integer(input.priority,0,100),targetType:enumValue(input.targetType,['all','accounts']),targetAccountIds:targets(input.targetAccountIds||[]),...windowFields(input),showPopup:!!input.showPopup,status:enumValue(input.status,['draft','scheduled','published','archived'])};
+    const value={title:text(input.title,120),content:text(input.content,10000),type:enumValue(input.type,['general','maintenance','event','update']),priority:integer(input.priority,0,100),targetType:enumValue(input.targetType,['all','accounts']),targetAccountIds:targets(input.targetAccountIds||[]),...windowFields(input),activityCode:input.activityCode?normalizeCode(input.activityCode):'',showPopup:!!input.showPopup,status:enumValue(input.status,['draft','scheduled','published','archived'])};
     if(value.targetType==='accounts'&&!value.targetAccountIds.length)fail('invalid-argument','請指定至少一位玩家');
     if(value.targetType==='all')value.targetAccountIds=[];
     return{...value,searchTokens:tokens(value.title),audienceKeys:value.targetType==='all'?['all']:value.targetAccountIds.map(v=>'account:'+v)};
