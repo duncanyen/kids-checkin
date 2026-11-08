@@ -192,8 +192,8 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore - 1);
         assert.deepEqual(Object.keys(visits[0][1]).sort(), ['createdAt', 'note', 'readAt', 'title', 'type']);
         assert.equal(docs[owner].farm.stolenEggsTotal,undefined);
-        const during=Date.now()>=Date.parse('2026-11-02T00:00:00+08:00')&&Date.now()<Date.parse('2026-11-09T01:00:00+08:00');
-        assert.equal(docs[owner].farm.stolenEggs20261102,during?2:undefined);
+        const during=Date.now()>=Date.parse('2026-11-09T00:00:00+08:00')&&Date.now()<Date.parse('2026-11-15T00:00:00+08:00');
+        assert.equal(docs[owner].farm.stolenEggs20261109,during?2:undefined);
         assert.equal(Object.keys(docs).some(path=>path.startsWith('farm_theft_events/')),false);
         // Visit records show no detail button, include Taiwan timestamps and can be deleted.
         await page.evaluate(async notice => {
@@ -248,13 +248,18 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.getByRole('button',{name:'關閉',exact:true}).click();
         // Global ranking includes only public villages, separates the same account in different groups and caps at ten.
         docs['users/self']={accountId:'self',name:'測試玩家'};
-        docs[owner].farm.stolenEggs20261102=50;
+        docs[owner].farm.stolenEggs20261102=9999;delete docs[owner].farm.stolenEggs20261109;
+        await page.getByRole('button',{name:'開啟排行榜',exact:true}).click();
+        await page.locator('.farm-ranking-panel [role=status]').filter({hasText:'尚無本期成功偷蛋紀錄'}).waitFor();
+        assert.equal(await page.locator('.farm-ranking-row').count(),0,'old scores must not appear in the new contest');
+        await page.getByRole('button',{name:'關閉',exact:true}).click();
+        docs[owner].farm.stolenEggs20261109=50;
         docs['groups/Public']={name:'排行榜村',members:['self',...Array.from({length:12},(_,i)=>'r'+i)],farmVillageVisibility:'public'};
-        docs['groups/Public/users/self']={farm:{stolenEggs20261102:100}};
-        docs['groups/B/users/self'].farm.stolenEggs20261102=9999; // B remains private.
+        docs['groups/Public/users/self']={farm:{stolenEggs20261109:100}};
+        docs['groups/B/users/self'].farm.stolenEggs20261109=9999; // B remains private.
         for(let i=0;i<12;i++){
             docs['users/r'+i]={accountId:'r'+i,name:'排行玩家'+i};
-            docs['groups/Public/users/r'+i]={farm:{stolenEggs20261102:i+1}};
+            docs['groups/Public/users/r'+i]={farm:{stolenEggs20261109:i+1}};
         }
         await page.getByRole('button',{name:'開啟排行榜',exact:true}).click();
         await page.waitForSelector('.farm-ranking-row');
@@ -264,7 +269,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(await page.locator('.farm-ranking-row').nth(1).locator('.farm-ranking-person small').innerText(),'測試村落');
         assert.match(await page.locator('.farm-ranking-row').nth(2).textContent(),/排行玩家11.*12 顆/);
         assert.equal(await page.evaluate(()=>__farmGame.input.enabled),false);
-        assert.match(await page.locator('.farm-ranking-period').innerText(),/2026\/11\/9 01:00:00/);
+        assert.match(await page.locator('.farm-ranking-period').innerText(),/2026\/11\/15 00:00:00/);
         assert.equal(await page.locator('.farm-ranking-row').first().locator('.farm-ranking-person small').innerText(),'排行榜村');
         assert.equal(await page.locator('.farm-ranking-note').innerText(),'截止後依排名發放獎勵，這次除金幣外還會有額外驚喜獎品，請大家繼續努力偷蛋，爭取好成績');
         const positions=await page.evaluate(()=>({ranking:document.querySelector('.farm-ranking-launcher').getBoundingClientRect().bottom,mail:document.querySelector('.farm-mail-launcher').getBoundingClientRect().top}));

@@ -1,6 +1,6 @@
-export const THEFT_RANKING_START = Date.parse('2026-11-02T00:00:00+08:00');
-export const THEFT_RANKING_END = Date.parse('2026-11-09T01:00:00+08:00');
-export const THEFT_RANKING_FIELD = 'stolenEggs20261102';
+export const THEFT_RANKING_START = Date.parse('2026-11-09T00:00:00+08:00');
+export const THEFT_RANKING_END = Date.parse('2026-11-15T00:00:00+08:00');
+export const THEFT_RANKING_FIELD = 'stolenEggs20261109';
 export function theftRankingPatch(farm, { now = Date.now(), publicVillage = false } = {}) {
     if (!publicVillage || now < THEFT_RANKING_START || now >= THEFT_RANKING_END || !Number.isFinite(now)) return {};
     const count = Math.max(0, Math.floor(Number(farm?.[THEFT_RANKING_FIELD]) || 0));
@@ -13,7 +13,7 @@ export function theftRankingStatus(now = Date.now()) {
 // Add future rankings here without changing the launcher or dialog.
 export const FARM_RANKINGS = Object.freeze({
     stolenEggs: { label: '偷蛋王', field: THEFT_RANKING_FIELD, unit: '顆',
-        period: '記錄期間：2026/11/2 00:00:00～2026/11/9 01:00:00（台灣時間）',
+        period: '記錄期間：2026/11/9 00:00:00～2026/11/15 00:00:00（台灣時間）',
         note: '截止後依排名發放獎勵，這次除金幣外還會有額外驚喜獎品，請大家繼續努力偷蛋，爭取好成績' },
 });
 
