@@ -113,7 +113,8 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.getByRole('tab', { name: '系統', exact: true }).click();
         await page.waitForSelector('.farm-mail-gift');
         assert.ok(docs[welcome]);
-        assert.equal(await page.evaluate(() => window.__farmGame.input.enabled), false);
+        assert.equal(await page.evaluate(() => window.__farmGame.input.enabled), true);
+        assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').input.enabled), false);
         await page.locator('.farm-mail-summary').click();
         assert.match(await page.locator('.farm-mail-body').textContent(), /歡迎加入咕咕村落/);
         await page.waitForSelector('.farm-mail-badge[hidden]',{state:'attached'});

@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { chromium } = require('playwright');
+const {fixture}=require('../game-admin/tests/fixture.cjs');
 const base = process.env.FARM_BASE_URL || 'http://127.0.0.1:8012';
 const farm = { coins: 50, worms: 0, earthworms: 0, warehouseLimit: 10, hens: 1, hensState: [{}], coopLevel: 1, eggsReady: 3, lastLayTime: Date.now(), moral: 100, equippedWeapon: 'club' };
 const docs = {
@@ -36,6 +37,14 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
 (async () => {
     const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
     try {
+        const ops=await fixture();ops.clock(Date.now());
+        await ops.db.doc('users/self').set({accountId:'self',role:'child'});
+        await ops.db.doc('groups/A').set({members:['self','neighbor']});
+        const until=Date.now()+3600000;
+        const original=await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'營運公告',endAt:until,showPopup:false}));
+        await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'給其他玩家',endAt:until,targetType:'accounts',targetAccountIds:['neighbor']}));
+        await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'過期公告',startAt:Date.now()-10000,endAt:Date.now()-1}));
+        let redemptionEnabled=false;
         const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
         const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error('PAGE', error.message); });
         const confirmations=[]; page.on('dialog', dialog => { confirmations.push(dialog.message()); dialog.accept(); });
@@ -71,19 +80,38 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
             const response = await route.fetch();
             await route.fulfill({ response, body: (await response.text()).replace('const game =', 'const game = window.__farmGame =') });
         });
+        await page.exposeFunction('__announcementFixture',async()=>{ops.clock(Date.now());return ops.service.announcements(ops.request('self'));});
         await page.addInitScript(() => {
+            const schedule=window.setInterval;window.setInterval=(fn,ms,...args)=>{if(ms===60000&&String(fn).includes('loadOperations'))window.__pollOperations=fn;return schedule(fn,ms,...args);};
             sessionStorage.setItem('familyCheckInUser', JSON.stringify({ accountId: 'self', name: '測試玩家', groupId: 'A' }));
             if (!localStorage.getItem('lastGroupId')) localStorage.setItem('lastGroupId', 'A');
         });
         let calls=0;
         await page.exposeFunction('__redeemFixture',async()=>{calls++;return{rewards:[{kind:'coins',amount:100}],replayed:calls>1};});
-        await page.route('**/js/farm/operations-client.js',route=>route.fulfill({contentType:'text/javascript',body:`export const GAME_OPERATIONS_ENABLED=true;export function createGameOperationsClient(){return{announcements:async()=>({rows:[{id:'ops-test',title:'營運公告',content:'<img src=x onerror=alert(1)>',startAt:Date.now()-1000,endAt:Date.now()+60000,updatedAt:1,showPopup:false}],nextCursor:null}),redeem:async()=>window.__redeemFixture()};}`}));
+        await page.route('**/js/farm/operations-client.js*',route=>route.fulfill({contentType:'text/javascript',body:`export const GAME_ANNOUNCEMENTS_ENABLED=true,GAME_REDEMPTION_ENABLED=${redemptionEnabled};export function createGameOperationsClient(){return{announcements:async()=>window.__announcementFixture(),redeem:async()=>window.__redeemFixture()};}`}));
         await page.goto(base+'/farmgame.html');await page.waitForSelector('.farm-mail-launcher');await page.click('.farm-mail-launcher');
-        await page.getByRole('tab',{name:'公告',exact:true}).click();await page.getByText('營運公告',{exact:true}).click();
+        await page.getByRole('tab',{name:'公告',exact:true}).click();await page.getByText('營運公告',{exact:true}).waitFor();
+        const unreadBefore=Number(await page.locator('.farm-mail-badge').innerText());
+        await page.getByText('營運公告',{exact:true}).click();
+        assert.equal(Number(await page.locator('.farm-mail-badge').innerText()),unreadBefore-1,'reading an announcement reduces the unread badge');
         assert.ok((await page.locator('.farm-mail-body').innerText()).includes('<img'));assert.equal(await page.locator('.farm-mail-content img').count(),0);
+        assert.equal(await page.getByText('給其他玩家',{exact:true}).count(),0);assert.equal(await page.getByText('過期公告',{exact:true}).count(),0);
+        await page.getByRole('tab',{name:'禮包兌換',exact:true}).click();assert.equal(await page.getByLabel('禮包兌換碼').isDisabled(),true);
+        await page.getByRole('button',{name:'關閉',exact:true}).click();
+        const published=await ops.admin('saveAnnouncement',ops.announcement({status:'published',title:'新公告即時通知',endAt:until,showPopup:true}));
+        await page.evaluate(()=>{__farmGame.scene.getScene('MyFarmScene').giantEncounter={destroyed:false,settled:false,destroy(){}};window.__pollOperations();});
+        await page.waitForTimeout(600);assert.equal(await page.locator('.farm-mail-overlay').isVisible(),false,'announcement does not interrupt combat');
+        await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter=null);
+        await page.getByRole('heading',{name:'新公告即時通知',exact:true}).waitFor();
+        assert.equal(await page.evaluate(()=>__farmGame.input.enabled),true,'notification does not disable global touch handling');
+        await page.getByRole('button',{name:'關閉',exact:true}).click();
+        await page.evaluate(()=>window.__pollOperations());await page.waitForTimeout(600);assert.equal(await page.locator('.farm-mail-overlay').isVisible(),false,'read popup is not repeated');
+        assert.ok(await page.evaluate(id=>Object.keys(localStorage).some(key=>key.includes('nexus.ops.read:self:'+id)&&localStorage.getItem(key)==='1'),published.id));
+        // Keep existing redemption UI regression behind an isolated test-only flag.
+        redemptionEnabled=true;await page.reload();await page.waitForSelector('.farm-mail-launcher');await page.click('.farm-mail-launcher');
         await page.getByRole('tab',{name:'禮包兌換',exact:true}).click();await page.getByLabel('禮包兌換碼').fill('TEST2026');await page.getByRole('button',{name:'兌換禮包',exact:true}).click();
         await page.getByText('兌換成功！ 金幣 × 100',{exact:true}).waitFor();assert.equal(calls,1);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        assert.deepEqual(errors,[]);console.log('PASS player operations UI: announcements use safe text, gift redemption, result feedback and mobile layout; transport mocked');
+        assert.deepEqual(errors,[]);console.log('PASS player operations UI: published announcements, server audience/expiry filtering, initial/read notices, newly-published popup after combat, no repeated popup, production redemption disabled, safe text, gift redemption, result feedback and mobile layout; transport mocked');
     }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

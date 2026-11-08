@@ -1,4 +1,4 @@
-import { createGameOperationsClient, GAME_OPERATIONS_ENABLED } from './operations-client.js';
+import { createGameOperationsClient, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-client.js?v=20261108-announcements';
 import { rewardLabel } from './operations-rewards.js';
 import { db } from '../firebase-config.js';
 import { createFarmMailStore, formatMailTime, WELCOME_ID } from './mail-store.js';
@@ -19,10 +19,10 @@ const button = (label, action, className = 'farm-mail-button') => {
 export function mountFarmMail(game, context) {
     const store = createFarmMailStore(db, context);
     const operations = createGameOperationsClient(context);
-    let operationsRows=[],operationsCursor=null,operationsLoading=false,operationsTimer=null,popupChecked=false;
+    let operationsRows=[],operationsCursor=null,operationsLoading=false,operationsTimer=null,pendingPopupId=null,nextPopupCheck=0;
     const categories=['visitor','system','operations','redeem'];
     let ensured = false, initializing, unsubscribe, notices = [], category = 'visitor', detailId = null, busy = false;
-    let inputEnabled, disposed = false, openVersion = 0;
+    let disposed = false, openVersion = 0;
     let starting, loaded = false;
     const reading = new Set(), selected = new Set();
     const launcher = button('', open, 'farm-mail-launcher');
@@ -76,13 +76,35 @@ export function mountFarmMail(game, context) {
         if (disposed || !game.registry.get('myFarmData')) return;
         launcher.hidden = false;
         start().catch(() => { launcher.title = '通知準備失敗，點擊重試'; });
-        if(GAME_OPERATIONS_ENABLED&&!operationsTimer){
+        if(GAME_ANNOUNCEMENTS_ENABLED&&!operationsTimer){
             loadOperations(true);
             operationsTimer=setInterval(()=>loadOperations(true),60000);
         }
     }
+    const inputLocks=new Map();
+    function lockSceneInputs(){
+        for(const scene of game.scene.getScenes(true)){
+            if(!scene.input||inputLocks.has(scene.input))continue;
+            inputLocks.set(scene.input,scene.input.enabled);scene.input.enabled=false;
+        }
+    }
+    function unlockSceneInputs(){for(const [input,enabled]of inputLocks)input.enabled=enabled;inputLocks.clear();}
+    function maybeShowAnnouncement(){
+        if(!pendingPopupId||disposed||!overlay.hidden||Date.now()<nextPopupCheck)return;
+        nextPopupCheck=Date.now()+500;
+        if(!game.registry.get('farmInitialReady'))return;
+        const scenes=game.scene.getScenes(true);
+        const occupied=scenes.some(scene=>scene.preparingGiant||scene.preparingCobra||scene.preparingMole||scene.preparingEncounter||scene.housingDialog||scene.dialogContainer?.visible||scene.isProcessing||scene.isTreating||
+            ['giantEncounter','cobraEncounter','moleEncounter','dragonEncounter','gorillaEncounter','eagleEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled)||
+            ['wolf','tiger'].some(key=>scene[key]?.active&&!scene[key].getData('resolved')));
+        if(occupied||document.querySelector('[data-farm-loading]:not([hidden])')||[...document.querySelectorAll('[role=dialog][aria-modal=true]')].some(dialog=>dialog!==panel&&dialog.getClientRects().length))return;
+        const popup=operationsRows.find(a=>a.id===pendingPopupId&&a.endAt>Date.now()&&!localStorage.getItem(`nexus.ops.read:${context.accountId}:${a.id}:${a.updatedAt}`));
+        pendingPopupId=null;
+        if(popup){category='operations';detailId=popup.id;open();}
+    }
+    game.events.on('step',maybeShowAnnouncement);
     function updateBadge() {
-        const unread = notices.filter(row => !row.readAt).length;
+        const unread = notices.filter(row => !row.readAt).length + operationsRows.filter(row=>!localStorage.getItem(`nexus.ops.read:${context.accountId}:${row.id}:${row.updatedAt}`)).length;
         badge.hidden = unread === 0;
         badge.textContent = unread > 99 ? '99+' : String(unread);
         launcher.setAttribute('aria-label', unread ? `開啟通知，${unread} 則未讀` : '開啟通知');
@@ -127,8 +149,8 @@ export function mountFarmMail(game, context) {
         if (!overlay.hidden || disposed) return;
         const version = ++openVersion;
         overlay.hidden = false;
-        inputEnabled = game.input.enabled;
-        game.input.enabled = false;
+        lockSceneInputs();
+        game.events.on('step',lockSceneInputs);
         closeButton.focus();
         message.textContent = '正在載入通知…';
         try {
@@ -146,7 +168,8 @@ export function mountFarmMail(game, context) {
         if (overlay.hidden || busy) return;
         openVersion++;
         overlay.hidden = true;
-        game.input.enabled = inputEnabled;
+        game.events.off('step',lockSceneInputs);
+        unlockSceneInputs();
         launcher.focus();
     }
     async function remove(notice) {
@@ -274,21 +297,20 @@ export function mountFarmMail(game, context) {
         try{
             const result=await operations.announcements(more?operationsCursor:null);
             if(disposed)return;
-            operationsRows=more?[...operationsRows,...result.rows]:result.rows;operationsCursor=result.nextCursor;
+            operationsRows=(more?[...operationsRows,...result.rows]:result.rows).filter(a=>a.startAt<=Date.now()&&a.endAt>Date.now());operationsCursor=result.nextCursor;updateBadge();
             if(category==='operations'&&!overlay.hidden){message.textContent='';render();}
-            if(background&&!popupChecked){
-                popupChecked=true;
+            if(background){
                 const popup=operationsRows.find(a=>a.showPopup&&!localStorage.getItem(`nexus.ops.read:${context.accountId}:${a.id}:${a.updatedAt}`));
-                if(popup&&overlay.hidden){category='operations';detailId=popup.id;await open();}
+                if(popup){pendingPopupId=popup.id;maybeShowAnnouncement();}
             }
         }catch(error){if(!disposed&&category==='operations'&&!overlay.hidden)message.textContent=error.message||'公告載入失敗，請重試';}
         finally{operationsLoading=false;}
     }
     function renderOperations(){
-        if(!GAME_OPERATIONS_ENABLED){content.append(el('p','farm-mail-empty','公告服務尚未啟用。'));return;}
+        if(!GAME_ANNOUNCEMENTS_ENABLED){content.append(el('p','farm-mail-empty','公告服務尚未啟用。'));return;}
         const detail=operationsRows.find(a=>a.id===detailId);
         if(detail){
-            localStorage.setItem(`nexus.ops.read:${context.accountId}:${detail.id}:${detail.updatedAt}`,'1');
+            localStorage.setItem(`nexus.ops.read:${context.accountId}:${detail.id}:${detail.updatedAt}`,'1');updateBadge();
             content.append(button('‹ 返回公告列表',()=>{detailId=null;render();}),el('h3','',detail.title),el('time','farm-mail-time',formatMailTime(detail.startAt)),el('p','farm-mail-body',detail.content));
         }else{
             if(!operationsRows.length)content.append(el('p','farm-mail-empty',operationsLoading?'正在載入公告…':'目前沒有有效公告'));
@@ -303,8 +325,8 @@ export function mountFarmMail(game, context) {
     function renderRedeem(){
         const form=el('form','farm-redeem-form'),label=el('label','','輸入禮包兌換碼'),input=el('input');
         input.type='text';input.name='giftCode';input.autocomplete='off';input.maxLength=160;input.required=true;input.setAttribute('aria-label','禮包兌換碼');
-        const submit=button('兌換禮包',()=>{});submit.type='submit';submit.disabled=busy||!GAME_OPERATIONS_ENABLED;input.disabled=busy||!GAME_OPERATIONS_ENABLED;
-        label.append(input);form.append(label,submit);content.append(form,el('p','farm-mail-empty',GAME_OPERATIONS_ENABLED?'兌換成功後獎勵會直接收入目前農場。請先確認雞舍與倉庫空間。':'禮包服務尚未啟用。'));
+        const submit=button('兌換禮包',()=>{});submit.type='submit';submit.disabled=busy||!GAME_REDEMPTION_ENABLED;input.disabled=busy||!GAME_REDEMPTION_ENABLED;
+        label.append(input);form.append(label,submit);content.append(form,el('p','farm-mail-empty',GAME_REDEMPTION_ENABLED?'兌換成功後獎勵會直接收入目前農場。請先確認雞舍與倉庫空間。':'禮包服務尚未啟用。'));
         form.onsubmit=async event=>{
             event.preventDefault();if(busy||!input.value.trim())return;
             const code=input.value;busy=true;submit.disabled=true;input.disabled=true;message.textContent='正在兌換，請勿重複操作…';
@@ -326,6 +348,7 @@ export function mountFarmMail(game, context) {
         disposed = true;
         unsubscribe?.();
         clearInterval(operationsTimer);
+        game.events.off('step',lockSceneInputs);game.events.off('step',maybeShowAnnouncement);unlockSceneInputs();
         game.registry.events.off('setdata', onSetData);
         game.registry.events.off('changedata-myFarmData', farmReady);
         launcher.remove(); overlay.remove();

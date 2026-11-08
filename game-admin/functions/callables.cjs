@@ -14,7 +14,8 @@ function createCallables(service,{adminAppCheckRequired=false,emulator=process.e
     });
     return {
         gameOpsAdmin:wrap(service.adminAPI,{enforceAppCheck:!emulator&&adminAppCheckRequired}),
-        gameOpsAnnouncements:wrap(service.announcements),
+        // Read-only feed still checks Auth, current membership, account status and audience.
+        gameOpsAnnouncements:wrap(service.announcements,{enforceAppCheck:false}),
         gameOpsRedeem:wrap(service.redeem)
     };
 }
