@@ -46,6 +46,7 @@ export function openGuardDogRental(scene, breedId) {
     const breed=GUARD_DOG_BREEDS[breedId];if(!breed)return;
     const dialog=modal(scene,`租用${breed.name}`);
     dialog.body(node('p',`攔截小偷 ${Math.round(breed.biteChance*100)}% · 對該雞舍禁偷 ${breed.blockMs/3600000} 小時`));
+    if(breed.herding)dialog.body(node('p','活潑的牧羊犬，約 60% 時間在雞群旁奔跑巡邏；雞群會自動避讓。'));
     const label=node('label','租用天數');label.htmlFor='guard-rental-days';
     const input=node('input');input.id='guard-rental-days';input.type='number';input.min='1';input.step='1';input.inputMode='numeric';input.value='1';
     dialog.body(label);dialog.body(input);

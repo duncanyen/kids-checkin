@@ -22,7 +22,7 @@ export class LayingVisit {
         // Keep animating the last confirmed farm through that acknowledgement;
         // only the production/collection transaction requires a writable save.
         if (!scene.farmData || scene.henAssetsPending || scene.preparingEncounter ||
-            scene.registry?.get('farmLoadState')?.phase === 'error' || document.hidden || getThreatZones(scene).length ||
+            scene.registry?.get('farmLoadState')?.phase === 'error' || document.hidden || getThreatZones(scene).some(zone=>!zone.friendlyGuard) ||
             [scene.moleEncounter, scene.cobraEncounter, scene.eagleEncounter, scene.dragonEncounter, scene.gorillaEncounter]
                 .some(boss => boss && !boss.destroyed && !boss.settled)) {
             this.cancel();

@@ -124,7 +124,8 @@ export default class MyFarmScene extends Phaser.Scene {
         const zones = getThreatZones(this);
         if (!zones.length) return;
         for (const hen of this.hensGroup || []) {
-            if (!hen.active || henRouteIsSafe(this, hen, zones)) continue;
+            const obstacles=hen.nesting?zones.filter(zone=>!zone.friendlyGuard):zones;
+            if (!hen.active || henRouteIsSafe(this, hen, obstacles)) continue;
             this.tweens.killTweensOf(hen);
             hen.walkTimer?.remove();
             this.wanderSingleHen(hen, true);

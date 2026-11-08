@@ -162,6 +162,50 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),dog=s.guardDog.getBounds();for(const hen of s.hensGroup)if(dog.bottom>hen.getBounds().top)throw Error('Nesting hen overlaps dog');});
   await page.screenshot({path:'/tmp/farm-dog-spacing-'+viewport.width+'.png',fullPage:true});
  }
- assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing');
+ // Collie uses the same real rental and activation flow, with its own price/art/chance.
+ await page.setViewportSize({width:390,height:900});await rent(1,'collie');
+ await page.getByText('1 天 · 200000 金幣',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.getByRole('alert').filter({hasText:'金幣不足'}).waitFor();
+ await page.getByRole('button',{name:'取消',exact:true}).click();
+ await page.evaluate(async()=>{const {updateDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await updateDoc(doc({},'groups','A','users','owner'),{'farm.coins':200000});});
+ await rent(1,'collie');await page.screenshot({path:'/tmp/collie-rental.png',fullPage:true});
+ await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ assert.equal(docs['groups/A/users/owner'].farm.coins,0);let collie=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='collie');assert.equal(collie.startedAt,null);
+ await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:collie','邊境牧羊犬'));
+ assert.equal(await page.getByRole('button',{name:'開始護衛',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'取消',exact:true}).click();
+ await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:collie','邊境牧羊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ collie=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='collie');assert.equal(collie.expiresAt,collie.startedAt+DAY);
+ await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_collie');
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='run');
+ await page.waitForTimeout(1800);await page.screenshot({path:'/tmp/collie-flock-patrol.png',fullPage:true});
+ await page.evaluate(async()=>{
+  const s=__farmGame.scene.getScene('MyFarmScene'),dog=s.guardDog;
+  const {getThreatZones,pointIsSafe}=await import('/js/farm/hen-navigation.js');
+  const zones=getThreatZones(s);if(!zones.some(z=>z.friendlyGuard)||pointIsSafe({x:dog.x,y:dog.y-30},zones))throw Error('Collie must be a friendly hen obstacle');
+  for(const hen of s.hensGroup){s.tweens.killTweensOf(hen);hen.walkTimer?.remove();hen.walkPath=[];hen.setPosition(dog.x,dog.y-30);}
+  s.avoidPredators();if(s.hensGroup.some(h=>!h.isEvading))throw Error('Hens must evade the roaming collie');
+  dog.setData('guardPatrolStartedAt',s.time.now-19000);s.events.emit('farm-viewport-resize');
+  if(dog.getData('guardActivity')!=='rest')throw Error('Collie should return/rest in its 40 percent phase');
+  dog.setData('guardPatrolStartedAt',s.time.now);s.events.emit('farm-viewport-resize');
+  if(dog.getData('guardActivity')!=='run')throw Error('Collie should run in its 60 percent phase');
+ });
+ // The new dog must not disable the existing timed egg-laying visit.
+ await page.evaluate(async()=>{
+  const s=__farmGame.scene.getScene('MyFarmScene'),{BREEDS}=await import('/js/farm/poultry.js');
+  s.farmData.hensState.forEach(h=>{h.laidAt=Date.now()-BREEDS.hen.interval+5000;});s.layingVisit.update();
+  if(!s.layingVisit.task)throw Error('Friendly collie must not suppress coop-door laying');
+ });
+ await identity('thief','小偷');await clock(collie.startedAt+5*3600000);await scene('VisitScene',{targetAccountId:'owner',targetName:'主人',targetGroupId:'A'});
+ await page.waitForFunction(()=>__farmGame.scene.getScene('VisitScene').guardDog?.texture.key==='guard_collie');
+ const collieEggs=docs['groups/A/users/owner'].farm.eggsReady;
+ await page.evaluate(async()=>{Math.random=()=>.79999;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
+ assert.equal(docs['groups/A/users/owner'].farm.eggsReady,collieEggs);assert.ok(docs[notices().at(-1)].text.includes('邊境牧羊犬'));
+ const collieBlock=Math.max(...Object.values(docs['groups/A/users/thief'].farm.villageStealBlockedUntil));assert.equal(collieBlock,collie.startedAt+9*3600000);
+ const {settlePoultry}=await import('../js/farm/poultry.js');
+ const readyAtRelease=Object.values(settlePoultry(docs['groups/A/users/owner'].farm,collieBlock).ready).reduce((sum,count)=>sum+count,0);
+ await clock(collieBlock);await page.evaluate(async()=>{Math.random=()=>.8;await __farmGame.scene.getScene('VisitScene').attemptSteal();});assert.equal(docs['groups/A/users/owner'].farm.eggsReady,readyAtRelease-1);
+ await clock(collie.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
+ assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie 200000/day, 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -186,7 +186,7 @@ export function getHenWalkArea(scene) {
 export function getHenWanderArea(scene) {
     const area = getHenWalkArea(scene);
     // Rain encourages shelter, but predators always retain the full escape area.
-    if (scene.farmAtmosphere?.state.weights.rain > .5 && !getThreatZones(scene).length) {
+    if (scene.farmAtmosphere?.state.weights.rain > .5 && !getThreatZones(scene).some(zone=>!zone.friendlyGuard)) {
         return { ...area, bottom: Math.round(area.top + (area.bottom - area.top) * .55) };
     }
     return area;

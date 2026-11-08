@@ -116,3 +116,11 @@ test('pending-write loading does not cancel the approach or the crouch at the eg
     visit.update(dueAt + 100);
     assert.equal(visit.task.id, 'next');
 });
+
+
+test('friendly roaming collie does not cancel the timed laying visit, while predators still do',()=>{
+    const {scene,visit}=fixture();
+    const animal={active:true,visible:true,alpha:1,displayWidth:96,displayHeight:96,getBounds:()=>({left:50,right:146,top:400,bottom:496}),getData:()=>true};
+    scene.guardDog=animal;visit.update(dueAt-1500);assert.equal(visit.task.id,'next');
+    scene.wolf={...animal};visit.update(dueAt-500);assert.equal(visit.task,null);
+});

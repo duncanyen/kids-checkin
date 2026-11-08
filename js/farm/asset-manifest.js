@@ -8,6 +8,7 @@ export const ASSET_MANIFEST = {
     halloween_2026: {type:'atlas',image:'halloween-2026.png',json:'halloween-2026.json'},
     guard_dog: {type:'atlas',image:'guard-dog-sheet.png',json:'guard-dog-sheet.json'},
     guard_beagle: {type:'atlas',image:'guard-beagle-sheet.png',json:'guard-beagle-sheet.json'},
+    guard_collie: {type:'atlas',image:'guard-collie-sheet.png',json:'guard-collie-sheet.json'},
     ...Object.fromEntries(['hen','silkie','bresse','onagadori','eagle','gorilla','tiger','wolf','cobra'].map(key => [key,{type:'atlas',image:`${key}-sheet.png`,json:`${key}-sheet.json`}])),
     cobra_fang: {type:'image',image:'cobra-fang.png'},
     dragon: {type:'sheet',image:'dragon-sheet.webp'},

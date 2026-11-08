@@ -2,7 +2,8 @@ const CLEARANCE = 40; // Half a hen plus a little room around the visible body.
 const EPSILON = 1;
 
 export function getThreatZones(scene) {
-    return [scene.wolf, scene.tiger, scene.dragon, scene.gorilla, scene.eagle, scene.cobra, scene.giant]
+    return [scene.wolf, scene.tiger, scene.dragon, scene.gorilla, scene.eagle, scene.cobra, scene.giant,
+        scene.guardDog?.getData?.('henObstacle') ? scene.guardDog : null]
         .filter(animal => animal?.active && animal.visible && animal.alpha > 0.05)
         .map(animal => {
             // Exclude the sheet's transparent margins, include the whole body.
@@ -10,6 +11,7 @@ export function getThreatZones(scene) {
             const insetX = animal.displayWidth * 0.12;
             const insetY = animal.displayHeight * 0.1;
             return {
+                ...(animal===scene.guardDog?{friendlyGuard:true}:{}),
                 left: bounds.left + insetX - CLEARANCE,
                 right: bounds.right - insetX + CLEARANCE,
                 top: bounds.top + insetY - CLEARANCE,

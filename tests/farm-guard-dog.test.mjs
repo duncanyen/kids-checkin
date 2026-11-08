@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DAY_MS, GUARD_DOG_BREEDS, rentalPrice, rentGuardDog, activateGuardDog, releaseGuardDog, guardDogLeases, activeGuardDog, guardDogInterception, stealBlockedUntil } from '../js/farm/guard-dog-core.js';
+import { DAY_MS, GUARD_DOG_BREEDS, rentalPrice, rentGuardDog, activateGuardDog, releaseGuardDog, guardDogLeases, activeGuardDog, guardDogInterception, stealBlockedUntil, colliePatrolPhase } from '../js/farm/guard-dog-core.js';
 const now = 1000000;
 const apply = (farm,patch) => ({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
 const rented = (days=7) => apply({coins:2000},rentGuardDog({coins:2000},'pyrenees',days,'dog-1',now));
@@ -72,4 +72,23 @@ test('pyrenees and beagle can both be rented, but cannot guard at the same time'
     farm=apply(farm,releaseGuardDog(farm,'dog-1',now+1));
     farm=apply(farm,activateGuardDog(farm,'beagle-1',now+2));
     assert.equal(activeGuardDog(farm,now+2).breedId,'beagle');assert.equal(farm.guardDogs[0].expiresAt,now+2+DAY_MS);
+});
+
+
+test('collie rents for 200000 daily, follows weekly discounts and enforces 80 percent interception',()=>{
+    assert.equal(rentalPrice('collie',1),200000);assert.equal(rentalPrice('collie',7),1000000);assert.equal(rentalPrice('collie',8),1200000);
+    assert.throws(()=>rentGuardDog({coins:199999},'collie',1,'collie',now),/金幣不足/);
+    let farm=apply({coins:200000},rentGuardDog({coins:200000},'collie',1,'collie',now));assert.equal(farm.coins,0);
+    assert.equal(activeGuardDog(farm,now),null);farm=apply(farm,activateGuardDog(farm,'collie',now+500));
+    assert.equal(Array.from({length:1000},(_,i)=>guardDogInterception(farm,i/1000,now+500)).filter(Boolean).length,800);
+    assert.equal(guardDogInterception(farm,.8,now+500),null);assert.equal(guardDogInterception(farm,.79999,now+500).breed.blockMs,4*3600000);
+    assert.equal(activeGuardDog(farm,now+500+DAY_MS),null);
+});
+test('collie spends exactly 60 percent of each full patrol cycle running',()=>{
+    for(let cycle=0;cycle<3;cycle++){
+        const phases=Array.from({length:30},(_,i)=>colliePatrolPhase(cycle*30000+i*1000));
+        assert.equal(phases.filter(p=>p.running).length,18);assert.equal(phases.filter(p=>!p.running).length,12);
+    }
+    assert.deepEqual(colliePatrolPhase(18000),{running:false,remaining:12000});
+    assert.deepEqual(colliePatrolPhase(30000),{running:true,remaining:18000});
 });

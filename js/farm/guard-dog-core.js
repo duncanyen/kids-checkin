@@ -2,7 +2,16 @@ export const DAY_MS = 86400000;
 export const GUARD_DOG_BREEDS = {
     pyrenees: { name: '大白熊犬', texture: 'guard_dog', biteChance: 0.7, blockMs: 4 * 3600000, dayPrice: 80, weekPrice: 400 },
     beagle: { name: '米格魯', texture: 'guard_beagle', biteChance: 0.33, blockMs: 2 * 3600000, dayPrice: 20, weekPrice: 100 },
+    collie: { name: '邊境牧羊犬', texture: 'guard_collie', biteChance: 0.8, blockMs: 4 * 3600000, dayPrice: 200000, weekPrice: 1000000, herding: true },
 };
+
+// Running occupies 18 seconds of each 30-second cycle. Return/rest share 12 seconds.
+export const COLLIE_CYCLE_MS = 30000;
+export const COLLIE_RUN_MS = 18000;
+export function colliePatrolPhase(elapsedMs) {
+    const position = Math.max(0, elapsedMs) % COLLIE_CYCLE_MS;
+    return {running:position<COLLIE_RUN_MS,remaining:(position<COLLIE_RUN_MS?COLLIE_RUN_MS:COLLIE_CYCLE_MS)-position};
+}
 
 export function rentalPrice(breedId, days) {
     const breed = GUARD_DOG_BREEDS[breedId];
