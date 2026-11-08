@@ -27,14 +27,14 @@ test('GitHub Pages preflight reaches each callable and anonymous POST stays deni
             assert.equal(denied.headers.get('access-control-allow-origin'),origin);
             assert.equal((await denied.json()).error.status,'UNAUTHENTICATED');
         }
-        // Even valid Firebase admin authentication is rejected when App Check is missing.
+        // Player APIs still reject valid Firebase authentication without App Check.
         const auth=backend('firebase-admin/auth').getAuth();
         const verify=auth.verifyIdToken,getUser=auth.getUser;
         let accountLookups=0;
-        auth.verifyIdToken=async()=>({uid:'isolated-admin',role:'admin'});
+        auth.verifyIdToken=async()=>({uid:'isolated-player',photoAccountId:'player',photoGroupId:'A'});
         auth.getUser=async()=>{accountLookups++;throw Error('App Check must reject before the handler');};
         try{
-            const response=await fetch(`http://127.0.0.1:${server.address().port}/gameOpsAdmin`,{method:'POST',headers:{Origin:'https://duncanyen.github.io','Content-Type':'application/json',Authorization:'Bearer isolated-test-token'},body:JSON.stringify({data:{action:'dashboard'}})});
+            const response=await fetch(`http://127.0.0.1:${server.address().port}/gameOpsRedeem`,{method:'POST',headers:{Origin:'https://duncanyen.github.io','Content-Type':'application/json',Authorization:'Bearer isolated-test-token'},body:JSON.stringify({data:{action:'dashboard'}})});
             assert.equal(response.status,401);
             assert.equal((await response.json()).error.status,'UNAUTHENTICATED');
             assert.equal(accountLookups,0,'missing App Check is rejected before admin/database access');

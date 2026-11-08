@@ -19,7 +19,7 @@ export async function api(action,payload={},requestId){const response=await wind
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
-  await context.route('**/game-admin/site/runtime.js',route=>route.fulfill({contentType:'text/javascript',body:mockRuntime}));
+  await context.route('**/game-admin/site/runtime.js*',route=>route.fulfill({contentType:'text/javascript',body:mockRuntime}));
   await context.exposeFunction('__ops',async op=>{
    if(op.action.startsWith('save'))writes++;
    f.clock(Date.now());

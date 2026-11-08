@@ -1,4 +1,4 @@
-import * as runtime from './runtime.js';
+import * as runtime from './runtime.js?v=20261108-admin-auth';
 const $=id=>document.getElementById(id),status=$('status');
 const dashboardUrl=new URL('index.html'+location.search,location.href);
 dashboardUrl.searchParams.delete('setupMfa');

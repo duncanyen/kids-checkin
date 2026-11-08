@@ -2,13 +2,15 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase
 import {getAuth,setPersistence,browserSessionPersistence,onAuthStateChanged,signInWithEmailAndPassword,signOut,getIdTokenResult,getMultiFactorResolver,TotpMultiFactorGenerator,multiFactor} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
 import {connectAuthEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import {initializeAppCheck,ReCaptchaEnterpriseProvider} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js';
-import {config} from './config.js';
+import {initializeAppCheck,ReCaptchaEnterpriseProvider,getToken} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js';
+import {config} from './config.js?v=20261108-admin-auth';
+const adminAppCheckRequired=config.adminAppCheckRequired===true;
 const localEmulator=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).get('emulators')==='1';
 const app=initializeApp({...config,...(localEmulator?{projectId:'demo-nexus-ops'}:{})},'nexus-game-admin'),auth=getAuth(app),functions=getFunctions(app,config.region);
+let appCheck;
 if(localEmulator){
     connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});connectFunctionsEmulator(functions,'127.0.0.1',5001);
-}else if(config.appCheckSiteKey){initializeAppCheck(app,{provider:new ReCaptchaEnterpriseProvider(config.appCheckSiteKey),isTokenAutoRefreshEnabled:true});}
+}else if(adminAppCheckRequired&&config.appCheckSiteKey){appCheck=initializeAppCheck(app,{provider:new ReCaptchaEnterpriseProvider(config.appCheckSiteKey),isTokenAutoRefreshEnabled:true});}
 await setPersistence(auth,browserSessionPersistence);
 let resolver,totpSecret;
 export const observe=callback=>onAuthStateChanged(auth,callback);
@@ -35,5 +37,13 @@ export async function finishEnrollment(code){
     await multiFactor(auth.currentUser).enroll(TotpMultiFactorGenerator.assertionForEnrollment(totpSecret,code),'管理員驗證器');totpSecret=null;await logout();
 }
 export async function api(action,payload={},requestId){
+    if(!localEmulator&&adminAppCheckRequired){
+        if(!appCheck)throw Object.assign(Error('管理站尚未設定 App Check 網站金鑰，請先完成設定並發布前端。'),{code:'ops/app-check-not-configured'});
+        try{await getToken(appCheck,false);}
+        catch(error){
+            const throttled=['appCheck/initial-throttle','appCheck/throttled'].includes(error.code);
+            throw Object.assign(Error('網站驗證（App Check）未通過，請核對 Firebase App Check 的 Web App、reCAPTCHA Enterprise 金鑰與允許網域。'+(throttled?'目前已暫停重試，請完成設定後再重新整理。':'')),{code:'ops/app-check-failed',cause:error});
+        }
+    }
     const result=await httpsCallable(functions,'gameOpsAdmin')({action,payload,...(requestId?{requestId}:{})});return result.data;
 }

@@ -1,3 +1,25 @@
+## 本次程式設定策略（2026-11-08，前後端發布後生效）
+
+依專案擁有者選擇，管理端 App Check 改為選用，預設關閉；管理站不初始化 reCAPTCHA，`gameOpsAdmin` 不要求 App Check Token，但仍以 Firebase Auth、token 的 admin 角色及 Auth 使用者目前的 admin claim／停用狀態驗證每次操作。一般玩家和未登入者不能管理公告。
+
+玩家的 `gameOpsAnnouncements` 與 `gameOpsRedeem` 仍維持正式 App Check 驗證。這不是前端直接寫公告，也沒有修改資料庫權限或移除操作稽核。
+
+**這次需要前端更新與後端重新部署一起生效。** GitHub Pages 發布前端後，在 Cloud Shell 執行：
+
+```sh
+cd ~/kids-checkin
+git pull --ff-only origin main
+npm --prefix game-admin/functions ci
+cd game-admin
+npx firebase-tools deploy --only functions:nexus-ops --project homebasedb
+```
+
+部署成功後關閉舊管理分頁，重新開啟登入。前端入口、runtime 與 config 已增加版本標記，避免沿用舊 reCAPTCHA 初始化程式。舊版後端仍會要求 App Check，單獨更新前端不足以解除 401。
+
+若未來要恢復管理端強制 App Check，需先完成 provider／網域／金鑰註冊，再同步將前端 `adminAppCheckRequired` 與後端 `createCallables(service,{adminAppCheckRequired:true})` 啟用並部署；不能只更改前端旗標。
+
+以下為先前的部署與故障排查紀錄；其中管理端強制 App Check 的敘述以本節目前策略為準。
+
 # 正式部署狀態
 
 使用者已授權正式部署及推送 GitHub。本次先提交原始碼；正式部署因以下實測阻擋未執行，營運開關維持關閉。
@@ -101,3 +123,22 @@ gcloud functions logs read gameOpsAdmin --gen2 \
 本機 HTTP 測試以假的有效管理員 Auth 驗證結果重現「沒有 App Check 即回 401」，並確認沒有呼叫帳號查詢或資料庫 handler；沒有使用正式登入 Token 或修改正式資料。
 
 2026-11-08 更新：已依專案擁有者提供的公開網站金鑰填入管理站 App Check 設定，語法檢查通過。前端發布後會初始化 reCAPTCHA Enterprise provider 並自動更新 Token；尚未由此環境驗證正式 Firebase provider 註冊與線上公告寫入。
+
+## App Check Token 交換回傳 400／initial-throttle
+
+`exchangeRecaptchaEnterpriseToken` 回 400 表示前端已嘗試向 App Check 換 Token，但驗證未成功；不能只憑瀏覽器的狀態碼判定是未註冊、provider／金鑰不符、網域或其他驗證失敗。`initial-throttle`／`throttled` 是 SDK 針對先前錯誤的退避，不代表等待後即可解決設定問題。
+
+需核對 homebasedb 中 appId `1:476832900272:web:443bacb7cbc3113e9f8775` 對應的 Web App，是否已註冊 reCAPTCHA Enterprise provider、使用前端相同 site key，以及金鑰是否允許 `duncanyen.github.io`。傳統 reCAPTCHA v3 與 Enterprise 不可僅以 key 字串格式猜測或互換 provider。
+
+定位時僅取得 Network 中該交換請求 Response 的 `error.code`、`error.message`、`error.status`，不要收集請求的 Token、Authorization 或 Request Payload。
+
+管理站 `runtime.api` 現在會先等待 `getToken(appCheck, false)`；取不到有效 Token 時在畫面顯示網站驗證錯誤，不再繼續呼叫營運 API 形成額外 401。這不會自動更改 Firebase 註冊設定或關閉後端驗證。已有有效 Token 時沿用 SDK 快取，不強制重新產生，並保留原本 requestId。
+
+驗證：`node game-admin/tests/app-check-runtime.browser.cjs` 使用實際 runtime 與隔離 SDK transport，涵蓋 400／退避時封鎖管理呼叫、成功路徑、缺少設定、穩定請求 ID，以及 Emulator 路徑。
+
+
+目前策略驗證：
+
+- `node --test game-admin/tests/admin-app-check.test.cjs game-admin/tests/callable-http.test.cjs game-admin/tests/service.test.cjs`：實際 callable HTTP middleware、有效管理員新增公告、未登入／玩家／停用／撤銷角色被拒絕、操作稽核，以及玩家 API 仍強制 App Check。
+- `node game-admin/tests/app-check-runtime.browser.cjs`：管理端選用模式不初始化 reCAPTCHA、不換取 App Check Token；另驗證強制模式與 Emulator 路徑。
+- `node game-admin/tests/ui.browser.cjs`：登入、公告發布、禮包及管理介面回歸。

@@ -70,7 +70,7 @@ TOTP 實際註冊及第二因素登入仍須在擁有者設定好的 Firebase �
    工具只修改既有 Auth 使用者 Custom Claims 的 `role: admin`，保留其他 claims，不接受或輸出密碼／憑證。沒有從前端設定管理員權限的功能。
 4. 以電子郵件及密碼登入即可進入管理站。後端驗證 token 的 `role`，以及 Auth 使用者當前未停用且仍有 admin claim；不強制要求 MFA。管理員可由頂部「雙重驗證（選用）」自行設定 TOTP，未啟用專案 TOTP 不影響一般登入。已綁定 MFA 的帳號仍須完成 Firebase 原生第二因素挑戰，不會繞過既有 MFA；本次不自動解除任何帳號的綁定。
 5. 撤銷管理權限時，在可信任後端移除 role claim 並撤銷 refresh tokens；管理 API 每次重新讀取 Auth claims，角色撤銷立即生效。登出使用 Firebase signOut 清除該管理工作階段。
-6. 設定 App Check reCAPTCHA Enterprise；管理站 `site/config.js` 與玩家 `operations-config.js` 填入公開 site key。正式 callable 強制 App Check，只有 Functions Emulator 關閉此檢查。所有 key／Auth provider／授權網域設定須先在測試環境驗證。
+6. 管理端 App Check 為選用，`site/config.js` 的 `adminAppCheckRequired:false` 預設不初始化 reCAPTCHA，`gameOpsAdmin` 仍強制 Firebase Auth 與伺服器端當前 admin claim。玩家 `gameOpsAnnouncements`／`gameOpsRedeem` 保留正式 App Check 要求；玩家使用的 `operations-config.js` 須設定對應公開 site key。Functions Emulator 保留原本的隔離測試設定。
 7. 建立獨立 Firebase Hosting site，不可部署到玩家既有 site。以 `firebase target:apply hosting nexus-game-admin SITE_ID --project homebasedb` 綁定本地 target；`firebase.json` 的 hosting target 已明確指定 `nexus-game-admin`。站台只發布 `site/`，不含 Admin SDK、測試或後端檔案。`firebase.json` 也包含 CSP 與防嵌入標頭。
 8. 取得並審查現有 Firestore 規則，處理上述舊經濟寫入問題，合併新增集合保護與 `rules/firestore.indexes.json` 索引。不要以新索引檔覆蓋既有整份索引；應保留原索引後合併。
 9. 只有經使用者另行確認，才部署 `nexus-ops` codebase／管理站 target／合併後的規則與索引。既有 `nexus-live` codebase 不必由此配置重新部署。

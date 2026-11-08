@@ -1,4 +1,4 @@
-import * as runtime from './runtime.js';
+import * as runtime from './runtime.js?v=20261108-admin-auth';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
 const labels={dashboard:'營運總覽',announcements:'使用者公告',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄'};

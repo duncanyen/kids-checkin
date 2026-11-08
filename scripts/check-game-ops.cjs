@@ -39,7 +39,7 @@ function main(args){
     let ok=true;
     for(const name of NAMES){const url=new URL(name,base.href.endsWith('/')?base.href:base.href+'/').href,result=probe(url);ok&&=result.ok;console.log(`${name}：HTTP ${result.status||'無回應'} / ${result.code}\n${url}\n${result.message}\n`);}
     const config=fs.readFileSync(path.resolve(__dirname,'../game-admin/site/config.js'),'utf8');
-    if(/appCheckSiteKey\s*:\s*(['"])\1/.test(config))console.log('管理站 appCheckSiteKey 目前為空。正式後端要求 App Check，預檢通過後仍須設定 reCAPTCHA Enterprise site key。');
+    if(/adminAppCheckRequired\s*:\s*true/.test(config)&&/appCheckSiteKey\s*:\s*(['"])\1/.test(config))console.log('管理站 appCheckSiteKey 目前為空。管理端已選擇強制 App Check，預檢通過後仍須設定 reCAPTCHA Enterprise site key。');
     if(!ok)process.exitCode=1;
 }
 module.exports={diagnose,headerValues};
