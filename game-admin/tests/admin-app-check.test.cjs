@@ -7,10 +7,12 @@ const {createCallables}=require('../functions/callables.cjs');
 const {initializeApp}=backend('firebase-admin/app'),{getAuth}=backend('firebase-admin/auth');
 const express=backend('express');
 initializeApp({projectId:'demo-nexus-ops'});
-test('optional admin App Check preserves server authorization and enables announcement writes; read-only announcements authenticate players and redemption remains enforced',async()=>{
+test('optional admin App Check preserves server authorization and enables announcement writes; read-only announcements authenticate players and optional redemption preserves authenticated transactional awards',async()=>{
  const f=await fixture(),app=express();app.use(express.json());
  const handlers=createCallables(f.service,{emulator:false});
  for(const [name,handler]of Object.entries(handlers))app.all('/'+name,handler);
+ app.all('/strictRedeem',createCallables(f.service,{redemptionAppCheckRequired:true,emulator:false}).gameOpsRedeem);
+ app.all('/disabledRedeem',createCallables(createService({db:f.db,auth:{getUser:async()=>({disabled:true})}}),{emulator:false}).gameOpsRedeem);
  app.all('/strictAdmin',createCallables(f.service,{adminAppCheckRequired:true,emulator:false}).gameOpsAdmin);
  app.all('/disabledAdmin',createCallables(createService({db:f.db,auth:{getUser:async()=>({disabled:true,customClaims:{role:'admin'}})}}),{emulator:false}).gameOpsAdmin);
  app.all('/disabledAnnouncements',createCallables(createService({db:f.db,auth:{getUser:async()=>({disabled:true})}}),{emulator:false}).gameOpsAnnouncements);
@@ -36,7 +38,18 @@ test('optional admin App Check preserves server authorization and enables announ
   const privateFeed=await call('gameOpsAnnouncements','player',{groupId:'A',accountId:'bob'});
   assert.equal(privateFeed.status,200);assert.equal(privateFeed.body.result.rows.length,1,'forged accountId cannot read another player announcement');
   assert.equal((await call('gameOpsAnnouncements','player',{groupId:'not-a-member'})).status,403);
-  assert.equal((await call('gameOpsRedeem','player')).status,401,'redemption still requires App Check');
+  assert.equal((await call('gameOpsRedeem',null)).status,401,'anonymous redemption is denied');
+  assert.equal((await call('strictRedeem','player')).status,401,'strict mode can be enabled explicitly');
+  await f.admin('saveGift',f.gift());
+  const redemption={groupId:'A',code:'SUMMER2026',requestId:uid(),accountId:'bob',rewards:[{kind:'coins',amount:999999}]};
+  assert.equal((await call('gameOpsRedeem','player',redemption)).status,200,'authenticated player redeems without App Check');
+  assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,600);
+  assert.equal((await f.db.doc('groups/A/users/bob').get()).data().farm.coins,100,'payload identity cannot redirect awards');
+  const replay=await call('gameOpsRedeem','player',redemption);assert.equal(replay.status,200);assert.equal(replay.body.result.replayed,true);
+  assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,600,'response retry never duplicates awards');
+  assert.equal((await call('gameOpsRedeem','player',{...redemption,requestId:uid()})).body.error.status,'ALREADY_EXISTS');
+  assert.equal((await call('gameOpsRedeem','player',{...redemption,groupId:'not-a-member'})).status,403);
+  assert.equal((await call('disabledRedeem','player',redemption)).status,403);
   assert.equal((await call('disabledAdmin','admin')).status,403);
   assert.equal((await call('disabledAnnouncements','player',{groupId:'A'})).status,403);
   f.revoke();assert.equal((await call('gameOpsAdmin','admin')).status,403,'revoked current admin claim is denied');

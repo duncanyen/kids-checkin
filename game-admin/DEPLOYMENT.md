@@ -2,7 +2,7 @@
 
 依專案擁有者選擇，管理端 App Check 改為選用，預設關閉；管理站不初始化 reCAPTCHA，`gameOpsAdmin` 不要求 App Check Token，但仍以 Firebase Auth、token 的 admin 角色及 Auth 使用者目前的 admin claim／停用狀態驗證每次操作。一般玩家和未登入者不能管理公告。
 
-玩家唯讀 `gameOpsAnnouncements` 依擁有者選擇改為 Firebase Auth、目前群組資格、停用帳號、公告對象與有效期間驗證，不要求 App Check。`gameOpsRedeem` 仍維持正式 App Check 驗證，且玩家前端兌換仍停用。公告前端開關已開啟，詳見 [公告啟用說明](../docs/farm-announcements.md)。這不是前端直接寫公告，也沒有修改資料庫權限或移除操作稽核。
+玩家唯讀 `gameOpsAnnouncements` 依擁有者選擇改為 Firebase Auth、目前群組資格、停用帳號、公告對象與有效期間驗證，不要求 App Check。`gameOpsRedeem` 依專案擁有者選擇改為選用 App Check，前端 `REDEMPTION_APP_CHECK_REQUIRED=false`，後端 `redemptionAppCheckRequired=false`。玩家前端兌換已開啟，仍須通過 Firebase Auth、目前群組資格、停用檢查、限額、速率限制與原子交易。公告前端開關已開啟，詳見 [公告啟用說明](../docs/farm-announcements.md)。這不是前端直接寫公告，也沒有修改資料庫權限或移除操作稽核。
 
 **這次需要前端更新與後端重新部署一起生效。** GitHub Pages 發布前端後，在 Cloud Shell 執行：
 
@@ -10,18 +10,18 @@
 cd ~/kids-checkin
 git pull --ff-only origin main
 npm --prefix game-admin/functions ci
-node scripts/ensure-announcement-index.cjs --project homebasedb
+node scripts/ensure-announcement-index.cjs --project homebasedb --notifications
 cd game-admin
 npx firebase-tools deploy --only functions:nexus-ops --project homebasedb
 ```
 
-部署成功後關閉舊管理分頁，重新開啟登入。前端入口、runtime 與 config 已增加版本標記，避免沿用舊 reCAPTCHA 初始化程式。舊版後端仍會要求 App Check，單獨更新前端不足以解除 401。
+部署成功後關閉舊管理分頁，重新開啟登入。前端入口、runtime 與 config 已增加版本標記，避免沿用舊 reCAPTCHA 初始化程式。舊版後端的禮包兌換仍會要求 App Check，單獨更新前端不足以解除兌換的 401；必須重新部署 nexus-ops。
 
 若未來要恢復管理端強制 App Check，需先完成 provider／網域／金鑰註冊，再同步將前端 `adminAppCheckRequired` 與後端 `createCallables(service,{adminAppCheckRequired:true})` 啟用並部署；不能只更改前端旗標。
 
-公告索引須為 READY；可再次執行索引腳本查看狀態。完成部署後強制重新整理咕咕村落，檢查通知中的「營運公告」。公告須為 published 或已到開始時間的 scheduled，並符合玩家對象及有效期間；showPopup=true 才自動彈出。
+公告與系統通知索引須為 READY；可再次執行索引腳本查看狀態。完成部署後強制重新整理咕咕村落，檢查通知中的「營運公告」。公告須為 published 或已到開始時間的 scheduled，並符合玩家對象及有效期間；showPopup=true 才自動彈出。
 
-以下為先前的部署與故障排查紀錄；舊開關、管理端與公告強制 App Check 的敘述以本節目前策略為準。
+以下為先前的部署與故障排查紀錄；舊開關及管理端、公告、禮包強制 App Check 的敘述以本節目前策略為準。
 
 # 正式部署狀態
 

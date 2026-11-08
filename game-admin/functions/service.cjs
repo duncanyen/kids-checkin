@@ -1,6 +1,6 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
-const COLLECTIONS={announcements:'ops_announcements',gifts:'ops_gifts',redemptions:'ops_redemptions',audit:'ops_audit'};
+const COLLECTIONS={announcements:'ops_announcements',notifications:'ops_notifications',gifts:'ops_gifts',redemptions:'ops_redemptions',audit:'ops_audit'};
 const cleanAudit=value=>{
     if(!value)return null;
     const {codeHash,searchTokens,audienceKeys,...safe}=value;return safe;
@@ -43,9 +43,9 @@ function createService({db,auth,now=Date.now}) {
     async function list(kind,payload={}){
         const collection=Object.hasOwn(COLLECTIONS,kind)?COLLECTIONS[kind]:null;if(!collection)D.fail('invalid-argument','未知列表');
         let query=db.collection(collection);
-        const filters=kind==='announcements'?['status','type']:kind==='gifts'?['status','type']:kind==='redemptions'?['giftCodeId','accountId','result']:['action','result'];
+        const filters=['announcements','notifications'].includes(kind)?['status','type']:kind==='gifts'?['status','type']:kind==='redemptions'?['giftCodeId','accountId','result']:['action','result'];
         for(const field of filters)if(payload[field])query=query.where(field,'==',D.text(payload[field],160));
-        if(['announcements','gifts'].includes(kind)&&D.search(payload.search))query=query.where('searchTokens','array-contains',D.search(payload.search));
+        if(['announcements','notifications','gifts'].includes(kind)&&D.search(payload.search))query=query.where('searchTokens','array-contains',D.search(payload.search));
         query=query.orderBy('createdAt','desc');
         if(payload.cursor){
             const cursor=await db.doc(`${collection}/${D.id(payload.cursor)}`).get();
@@ -66,7 +66,7 @@ function createService({db,auth,now=Date.now}) {
         return{players,announcementCount,activeAnnouncements,giftCount,activeGifts,redemptionCount,recent:recent.rows,asOf:stamp,playerCountDefinition:'users 文件總數（含已停用帳號）'};
     }
     async function save(uid,action,payload,requestId){
-        const kind=action==='saveAnnouncement'?'announcements':'gifts',collection=COLLECTIONS[kind];
+        const kind=action==='saveAnnouncement'?'announcements':action==='saveNotification'?'notifications':'gifts',collection=COLLECTIONS[kind];
         const isGift=kind==='gifts',recordId=payload.id?D.id(payload.id):crypto.randomUUID();
         const value=isGift?D.gift(payload):D.announcement(payload);
         if(!isGift&&value.status==='published'&&value.startAt>now())D.fail('invalid-argument','立即發布的開始時間不能在未來');
@@ -88,7 +88,7 @@ function createService({db,auth,now=Date.now}) {
                 for(const field of ['type','rewards','targetAccountIds'])if(D.fingerprint(before[field])!==D.fingerprint(value[field]))D.fail('failed-precondition','已有兌換紀錄，不可變更獎勵、模式或指定對象');
                 if(value.maxRedemptions!==null&&value.maxRedemptions<before.redeemedCount)D.fail('failed-precondition','總上限不得低於已兌換次數');
             }
-            const stamp=now(),after={...value,[isGift?'giftCodeId':'announcementId']:recordId,createdBy:before?.createdBy||uid,createdAt:before?.createdAt||stamp,updatedAt:stamp};
+            const stamp=now(),after={...value,[isGift?'giftCodeId':kind==='notifications'?'notificationId':'announcementId']:recordId,createdBy:before?.createdBy||uid,createdAt:before?.createdAt||stamp,updatedAt:stamp};
             if(isGift)Object.assign(after,{codeHash:codeHash||before.codeHash,redeemedCount:before?.redeemedCount||0});
             const response={id:recordId,record:isGift?D.safeGift(after):after};
             t.set(ref,after);
@@ -107,7 +107,7 @@ function createService({db,auth,now=Date.now}) {
         if(action==='catalog')return rewardCatalog();
         const requestId=D.requestId(request.data.requestId);
         try{
-            if(['saveAnnouncement','saveGift'].includes(action))return await save(uid,action,payload,requestId);
+            if(['saveAnnouncement','saveNotification','saveGift'].includes(action))return await save(uid,action,payload,requestId);
             D.fail('invalid-argument','尚未提供此管理操作');
         }catch(error){
             await db.collection(COLLECTIONS.audit).add({adminUid:uid,createdAt:now(),action:typeof action==='string'?action.slice(0,80):'invalid',target:payload.id?String(payload.id).slice(0,160):null,result:'failed',errorCode:error.code||'internal',requestId});
@@ -120,8 +120,9 @@ function createService({db,auth,now=Date.now}) {
     }
     async function announcements(request){
         const identity=await playerSession(request);await throttle('announcements:'+identity.uid,30,60000);
-        let query=db.collection(COLLECTIONS.announcements).where('status','in',['published','scheduled']).where('audienceKeys','array-contains-any',['all','account:'+identity.accountId]).orderBy('priority','desc').orderBy('createdAt','desc');
-        if(request.data.cursor){const cursor=await db.doc(`${COLLECTIONS.announcements}/${D.id(request.data.cursor)}`).get();if(!cursor.exists)D.fail('failed-precondition','公告分頁已變更');query=query.startAfter(cursor);}
+        const kind=D.enumValue(request.data.channel||'announcements',['announcements','notifications']),collection=COLLECTIONS[kind];
+        let query=db.collection(collection).where('status','in',['published','scheduled']).where('audienceKeys','array-contains-any',['all','account:'+identity.accountId]).orderBy('priority','desc').orderBy('createdAt','desc');
+        if(request.data.cursor){const cursor=await db.doc(`${collection}/${D.id(request.data.cursor)}`).get();if(!cursor.exists)D.fail('failed-precondition','公告分頁已變更');query=query.startAfter(cursor);}
         // Filter time on the server; never return an out-of-window or other-player body.
         const result=await query.limit(101).get(),scanned=result.docs.slice(0,100),stamp=now();
         return{rows:scanned.map(doc=>({...doc.data(),id:doc.id})).filter(a=>D.activeAnnouncement(a,identity.accountId,stamp)).map(({searchTokens,audienceKeys,...a})=>a),nextCursor:result.size>100?scanned.at(-1).id:null,asOf:stamp};

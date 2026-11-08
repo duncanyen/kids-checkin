@@ -15,3 +15,12 @@ test('missing feed index creates only the required index in the default database
  assert.ok(calls[1].includes('--database=(default)'));assert.equal(calls[1].filter(a=>a.startsWith('--field-config=')).length,4);
  assert.ok(calls.every(args=>!args.includes('delete')));
 });
+test('notification rollout creates its management and audience indexes without deleting others',()=>{
+ const definitions=require('../firestore.indexes.json').indexes.filter(i=>i.collectionGroup==='ops_notifications');
+ assert.equal(definitions.length,9);
+ const calls=[];ensure({project:'p',definitions,log:()=>{},run:(_command,args)=>{calls.push(args);return args.includes('list')?JSON.stringify([existing]):'';}});
+ assert.equal(calls.length,10);
+ assert.ok(calls.slice(1).every(args=>args.includes('--collection-group=ops_notifications')&&!args.includes('delete')));
+ const definition=definitions.find(i=>i.fields.some(f=>f.fieldPath==='audienceKeys'));
+ assert.equal(matches({...existing,name:existing.name.replace('ops_announcements','ops_notifications')},definition),true);
+});

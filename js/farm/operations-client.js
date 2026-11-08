@@ -1,10 +1,10 @@
-import { GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED, ANNOUNCEMENTS_APP_CHECK_REQUIRED, OPERATIONS_APP_CHECK_SITE_KEY } from './operations-config.js?v=20261108-announcements';
-export { GAME_OPERATIONS_ENABLED, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-config.js?v=20261108-announcements';
+import { GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED, ANNOUNCEMENTS_APP_CHECK_REQUIRED, REDEMPTION_APP_CHECK_REQUIRED, OPERATIONS_APP_CHECK_SITE_KEY } from './operations-config.js?v=20261108-messages-optional';
+export { GAME_OPERATIONS_ENABLED, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-config.js?v=20261108-messages-optional';
 export function createGameOperationsClient(context) {
     const connections=new Map();
     async function connect(mode){
         if(!(mode==='redeem'?GAME_REDEMPTION_ENABLED:GAME_ANNOUNCEMENTS_ENABLED))throw Error(mode==='redeem'?'禮包服務尚未啟用。':'公告服務尚未啟用。');
-        const requiresCheck=mode==='redeem'||ANNOUNCEMENTS_APP_CHECK_REQUIRED;
+        const requiresCheck=mode==='redeem'?REDEMPTION_APP_CHECK_REQUIRED:ANNOUNCEMENTS_APP_CHECK_REQUIRED;
         if(requiresCheck&&!OPERATIONS_APP_CHECK_SITE_KEY)throw Error('玩家 App Check 尚未設定，請稍後再試。');
         if(!connections.has(mode))connections.set(mode,(async()=>{
             const [appSDK,authSDK,functionSDK,config]=await Promise.all([
@@ -30,7 +30,7 @@ export function createGameOperationsClient(context) {
         return connections.get(mode);
     }
     return{
-        async announcements(cursor){return(await connect('announcements'))('gameOpsAnnouncements',{cursor:cursor||null});},
+        async announcements(cursor,channel='announcements'){return(await connect('announcements'))('gameOpsAnnouncements',{cursor:cursor||null,channel});},
         async redeem(code){
             if(!GAME_REDEMPTION_ENABLED)throw Error('禮包服務尚未啟用。');
             const normalized=String(code).normalize('NFKC').toUpperCase().replace(/[\s-]/g,'');

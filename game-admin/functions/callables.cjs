@@ -1,7 +1,7 @@
 const {onCall,HttpsError}=require('firebase-functions/v2/https');
-// Website attestation is optional for the admin endpoint. Authentication and
-// current admin claims are always checked by service.adminAPI on the backend.
-function createCallables(service,{adminAppCheckRequired=false,emulator=process.env.FUNCTIONS_EMULATOR==='true'}={}) {
+// Website attestation is optional for management and redemption. Authentication,
+// current roles, player eligibility and award limits are always checked by the service.
+function createCallables(service,{adminAppCheckRequired=false,redemptionAppCheckRequired=false,emulator=process.env.FUNCTIONS_EMULATOR==='true'}={}) {
     const options={region:'asia-southeast1',cors:true,maxInstances:10,enforceAppCheck:!emulator};
     const wrap=(handler,overrides={})=>onCall({...options,...overrides},async request=>{
         try{return await handler(request);}
@@ -16,7 +16,7 @@ function createCallables(service,{adminAppCheckRequired=false,emulator=process.e
         gameOpsAdmin:wrap(service.adminAPI,{enforceAppCheck:!emulator&&adminAppCheckRequired}),
         // Read-only feed still checks Auth, current membership, account status and audience.
         gameOpsAnnouncements:wrap(service.announcements,{enforceAppCheck:false}),
-        gameOpsRedeem:wrap(service.redeem)
+        gameOpsRedeem:wrap(service.redeem,{enforceAppCheck:!emulator&&redemptionAppCheckRequired})
     };
 }
 module.exports={createCallables};

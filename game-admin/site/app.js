@@ -1,9 +1,12 @@
 import * as runtime from './runtime.js?v=20261108-admin-auth';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
-const labels={dashboard:'營運總覽',announcements:'使用者公告',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄'};
+const labels={dashboard:'營運總覽',announcements:'使用者公告',notifications:'系統通知',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄'};
 const statusNames={draft:'草稿',scheduled:'排程發布',published:'已發布',archived:'已下架',active:'已啟用',inactive:'已停用',success:'成功',failed:'失敗'};
 const types={announcements:{general:'一般公告',maintenance:'維護公告',event:'活動公告',update:'更新公告'},gifts:{universal:'通用禮包',limited:'限量禮包',single:'單次兌換',targeted:'指定玩家'}};
+types.notifications=types.announcements;
+const isMessage=()=>['announcements','notifications'].includes(view);
+const saveAction=()=>view==='gifts'?'saveGift':view==='notifications'?'saveNotification':'saveAnnouncement';
 const formatTime=value=>value?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short',hour12:false}).format(new Date(value)):'—';
 const wallTime=value=>new Date(value+8*3600000).toISOString().slice(0,16);
 const utc=value=>new Date(value+':00+08:00').getTime();
@@ -21,10 +24,10 @@ function auditRows(values){return values.map(r=>{const detail=button('查看差�
 function showDetails(record){$('previewContent').replaceChildren(node('pre',JSON.stringify(record,null,2),'audit-diff'));$('preview').showModal();}
 function fillSelect(select,values){select.replaceChildren();for(const [value,label]of Object.entries(values)){const option=node('option',label);option.value=value;select.append(option);}}
 function configureFilters(){
-    const nameBased=['announcements','gifts'].includes(view);
+    const nameBased=['announcements','notifications','gifts'].includes(view);
     $('searchLabel').firstChild.textContent=nameBased?'名稱前綴':view==='redemptions'?'玩家 accountId（完整）':'操作類型（完整）';
     $('search').placeholder=nameBased?'輸入標題或名稱開頭':view==='redemptions'?'例如：alice':'例如：saveGift';
-    fillSelect($('statusFilter'),{'':'全部狀態',...(view==='announcements'?{draft:'草稿',scheduled:'排程發布',published:'已發布',archived:'已下架'}:view==='gifts'?{draft:'草稿',active:'已啟用',inactive:'已停用'}:{success:'成功',failed:'失敗'})});
+    fillSelect($('statusFilter'),{'':'全部狀態',...(isMessage()?{draft:'草稿',scheduled:'排程發布',published:'已發布',archived:'已下架'}:view==='gifts'?{draft:'草稿',active:'已啟用',inactive:'已停用'}:{success:'成功',failed:'失敗'})});
     $('typeLabel').hidden=!nameBased;$('giftIdLabel').hidden=view!=='redemptions';
     fillSelect($('typeFilter'),{'':'全部類型',...(types[view]||{})});
 }
@@ -52,13 +55,13 @@ async function load(){
 }
 function renderList(){
     let headers,values;
-    if(['announcements','gifts'].includes(view)){
-        headers=view==='announcements'?['標題','類型','狀態','有效期間（台灣）','對象','操作']:['禮包名稱','模式','狀態','已兌換／總上限','有效期間（台灣）','操作'];
+    if(['announcements','notifications','gifts'].includes(view)){
+        headers=isMessage()?['標題','類型','狀態','有效期間（台灣）','對象','操作']:['禮包名稱','模式','狀態','已兌換／總上限','有效期間（台灣）','操作'];
         values=rows.map(r=>{
             const actions=node('div');actions.append(button('編輯',()=>openEditor(r)));
-            if(view==='announcements')actions.append(button('預覽',()=>previewAnnouncement(r)),button('立即發布',()=>changeStatus(r,'published')),button('下架',()=>changeStatus(r,'archived'),'danger'));
+            if(isMessage())actions.append(button('預覽',()=>previewAnnouncement(r)),button('立即發布',()=>changeStatus(r,'published')),button('下架',()=>changeStatus(r,'archived'),'danger'));
             else actions.append(button(r.status==='active'?'停用':'啟用',()=>changeStatus(r,r.status==='active'?'inactive':'active'),r.status==='active'?'danger':''));
-            return view==='announcements'?[r.title,types.announcements[r.type],pill(r.status),formatTime(r.startAt)+' ～ '+formatTime(r.endAt),r.targetType==='all'?'所有玩家':r.targetAccountIds.join('、'),actions]:[r.name,types.gifts[r.type],pill(r.status),`${r.redeemedCount} / ${r.maxRedemptions??'不限'}`,formatTime(r.startAt)+' ～ '+formatTime(r.endAt),actions];
+            return isMessage()?[r.title,types.announcements[r.type],pill(r.status),formatTime(r.startAt)+' ～ '+formatTime(r.endAt),r.targetType==='all'?'所有玩家':r.targetAccountIds.join('、'),actions]:[r.name,types.gifts[r.type],pill(r.status),`${r.redeemedCount} / ${r.maxRedemptions??'不限'}`,formatTime(r.startAt)+' ～ '+formatTime(r.endAt),actions];
         });
     }else if(view==='redemptions'){
         headers=['禮包名稱／ID','玩家 accountId','兌換時間（台灣）','結果','失敗原因','明細'];
@@ -69,8 +72,8 @@ function renderList(){
 async function selectView(value){
     view=value;pages=[null];page=0;nextCursor=null;
     $('pageTitle').textContent=labels[view];$('breadcrumb').textContent=labels[view];document.title=labels[view]+' · Nexus Game Admin';
-    $('pageDescription').textContent=view==='dashboard'?'掌握公告、禮包與最近營運動態。':view==='announcements'?'管理玩家公告與排程，時間以台灣時區顯示。':view==='gifts'?'管理兌換資格、限額與獎勵，兌換碼只在建立時顯示。':view==='redemptions'?'追查成功與失敗的兌換請求。':'由伺服器保留的重要管理操作與前後差異。';
-    $('dashboard').hidden=view!=='dashboard';$('listView').hidden=view==='dashboard';$('createButton').hidden=!['announcements','gifts'].includes(view);$('createButton').textContent=view==='gifts'?'＋ 建立禮包':'＋ 新增公告';
+    $('pageDescription').textContent=view==='dashboard'?'掌握公告、禮包與最近營運動態。':isMessage()?(view==='notifications'?'發送給所有帳號或指定 accountId；可排程、預覽與下架。':'管理玩家公告與排程，時間以台灣時區顯示。'):view==='gifts'?'管理兌換資格、限額與獎勵，兌換碼只在建立時顯示。':view==='redemptions'?'追查成功與失敗的兌換請求。':'由伺服器保留的重要管理操作與前後差異。';
+    $('dashboard').hidden=view!=='dashboard';$('listView').hidden=view==='dashboard';$('createButton').hidden=!['announcements','notifications','gifts'].includes(view);$('createButton').textContent=view==='gifts'?'＋ 建立禮包':view==='notifications'?'＋ 新增系統通知':'＋ 新增公告';
     document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===view));
     $('search').value='';$('giftIdFilter').value='';configureFilters();document.body.classList.remove('menu-open');$('menuButton').setAttribute('aria-expanded','false');await load();
 }
@@ -101,14 +104,14 @@ async function openEditor(record){
     if(busy)return;
     try{if(!catalog)catalog=await runtime.api('catalog');}catch(error){status(errorText(error),true);return;}
     editing=record||null;writeId=crypto.randomUUID();$('editorFields').replaceChildren();$('editorError').textContent='';
-    const stamp=Date.now(),isGift=view==='gifts';$('editorTitle').textContent=(record?'編輯':'新增')+(isGift?'禮包':'公告');$('previewButton').hidden=isGift;$('publishButton').textContent='儲存並套用狀態';
-    field(isGift?'name':'title',isGift?'禮包名稱':'公告標題','text',record?.[isGift?'name':'title']);
+    const stamp=Date.now(),isGift=view==='gifts';$('editorTitle').textContent=(record?'編輯':'新增')+(isGift?'禮包':view==='notifications'?'系統通知':'公告');$('previewButton').hidden=isGift;$('publishButton').textContent='儲存並套用狀態';
+    field(isGift?'name':'title',isGift?'禮包名稱':view==='notifications'?'通知標題':'公告標題','text',record?.[isGift?'name':'title']);
     field('type','類型','select',record?.type||(isGift?'universal':'general'),false,types[view]);
     field('status','狀態','select',record?.status||'draft',false,isGift?{draft:'草稿',active:'啟用',inactive:'停用'}:{draft:'草稿',scheduled:'排程發布',published:'立即發布',archived:'下架'});
-    if(!isGift){field('priority','優先順序（0–100）','number',record?.priority??0);field('targetType','發布對象','select',record?.targetType||'all',false,{all:'所有玩家',accounts:'指定帳號'});field('showPopup','首次讀取時彈出公告','checkbox',record?.showPopup);}
+    if(!isGift){field('priority','優先順序（0–100）','number',record?.priority??0);field('targetType','發布對象','select',record?.targetType||'all',false,{all:'所有玩家',accounts:'指定帳號'});field('showPopup',view==='notifications'?'新系統通知自動彈出':'新公告自動彈出','checkbox',record?.showPopup);}
     field('startAt','開始時間（台灣 UTC+8）','datetime-local',wallTime(record?.startAt||stamp));field('endAt','結束時間（台灣 UTC+8）','datetime-local',wallTime(record?.endAt||stamp+7*86400000));
     field('targetAccountIds','指定 accountId（逗號或換行分隔，最多 100 位）','textarea',record?.targetAccountIds?.join('\n')||'',true);
-    field(isGift?'description':'content',isGift?'禮包說明':'公告內容（純文字）','textarea',record?.[isGift?'description':'content']||'',true);
+    field(isGift?'description':'content',isGift?'禮包說明':view==='notifications'?'通知內容（純文字）':'公告內容（純文字）','textarea',record?.[isGift?'description':'content']||'',true);
     if(isGift){
         if(!record)field('code','自訂活動碼（留白則安全隨機產生，建立後僅顯示一次）','text','',true);
         field('maxRedemptions','全服總上限（通用／指定禮包留白為不限）','number',record?.maxRedemptions??'');field('maxRedemptionsPerUser','每位玩家上限','number',record?.maxRedemptionsPerUser||1);
@@ -135,14 +138,14 @@ async function save(statusOverride){
     if(busy||!$('editorForm').reportValidity())return;busy=true;$('editorError').textContent='';document.querySelectorAll('#editor button').forEach(b=>b.disabled=true);
     try{
         const payload=editorPayload(statusOverride);if(!payload.rewards?.length&&view==='gifts')throw Error('請至少新增一項獎勵');
-        const response=await runtime.api(view==='gifts'?'saveGift':'saveAnnouncement',payload,writeId);
+        const response=await runtime.api(saveAction(),payload,writeId);
         $('editor').close();await load();status(response.codeUnavailable?'資料已建立。此請求為重試，兌換碼無法重取；若未保存，請停用後建立新禮包。':'設定已儲存');if(response.code)showCode(response.code);
     }catch(error){$('editorError').textContent=errorText(error);}
     finally{busy=false;document.querySelectorAll('#editor button').forEach(b=>b.disabled=false);}
 }
 async function changeStatus(record,statusValue){
     if(busy||!confirm(`確定將「${record.title||record.name}」設為${statusNames[statusValue]}？`))return;
-    busy=true;try{const payload={...record,status:statusValue};if(statusValue==='published')payload.startAt=Date.now();await runtime.api(view==='gifts'?'saveGift':'saveAnnouncement',payload,crypto.randomUUID());await load();status('狀態已更新');}catch(error){status(errorText(error),true);}finally{busy=false;}
+    busy=true;try{const payload={...record,status:statusValue};if(statusValue==='published')payload.startAt=Date.now();await runtime.api(saveAction(),payload,crypto.randomUUID());await load();status('狀態已更新');}catch(error){status(errorText(error),true);}finally{busy=false;}
 }
 $('navigation').onclick=event=>{const target=event.target.closest('[data-view]');if(target&&!busy)selectView(target.dataset.view);};
 $('filters').onsubmit=event=>{event.preventDefault();pages=[null];page=0;load();};$('resetFilters').onclick=()=>{$('filters').reset();pages=[null];page=0;load();};
