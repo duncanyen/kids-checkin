@@ -1,8 +1,8 @@
 export const DAY_MS = 86400000;
 export const GUARD_DOG_BREEDS = {
-    pyrenees: { name: '大白熊犬', texture: 'guard_dog', biteChance: 0.7, blockMs: 4 * 3600000, dayPrice: 80, weekPrice: 400 },
-    beagle: { name: '米格魯', texture: 'guard_beagle', biteChance: 0.33, blockMs: 2 * 3600000, dayPrice: 20, weekPrice: 100 },
-    collie: { name: '邊境牧羊犬', texture: 'guard_collie', biteChance: 0.8, blockMs: 4 * 3600000, dayPrice: 200000, weekPrice: 1000000, herding: true },
+    pyrenees: { rentable: true, name: '大白熊犬', texture: 'guard_dog', biteChance: 0.7, blockMs: 4 * 3600000, dayPrice: 80, weekPrice: 400 },
+    beagle: { rentable: true, name: '米格魯', texture: 'guard_beagle', biteChance: 0.33, blockMs: 2 * 3600000, dayPrice: 20, weekPrice: 100 },
+    collie: { rentable: false, name: '邊境牧羊犬', texture: 'guard_collie', biteChance: 0.8, blockMs: 4 * 3600000, dayPrice: 200, weekPrice: 1000, herding: true },
 };
 
 // Running occupies 18 seconds of each 30-second cycle. Return/rest share 12 seconds.
@@ -27,6 +27,8 @@ export function guardDogLeases(farm, now = Date.now()) {
 export const activeGuardDog = (farm, now = Date.now()) => guardDogLeases(farm, now).find(dog => Number.isFinite(dog.startedAt) && dog.expiresAt > now) || null;
 
 export function rentGuardDog(farm, breedId, days, id, now = Date.now()) {
+    if(!Object.hasOwn(GUARD_DOG_BREEDS,breedId))throw new Error('找不到此護衛犬');
+    if(GUARD_DOG_BREEDS[breedId].rentable===false)throw new Error(`${GUARD_DOG_BREEDS[breedId].name}尚未開放租用`);
     const price = rentalPrice(breedId, days), dogs = guardDogLeases(farm, now);
     if (dogs.some(dog => dog.breedId === breedId)) throw new Error('同一品種同時只能租用一隻');
     if (!Number.isFinite(farm.coins) || farm.coins < price) throw new Error('金幣不足');

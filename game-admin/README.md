@@ -91,6 +91,7 @@ TOTP 實際註冊及第二因素登入仍須在擁有者設定好的 Firebase �
 | ops_redemptions | 成功／失敗紀錄、玩家、原因及獎勵明細；成功紀錄與發獎同筆交易 |
 | ops_audit | 後端寫入管理員 UID、時間、對象、前後內容與結果；不含完整碼或 token |
 | ops_admin_requests | 管理寫入冪等紀錄，不保存明文兌換碼 |
+| ops_guard_requests | 後端護衛犬操作冪等收據，禁止玩家直接存取 |
 | ops_limits | 每使用者／IP 雜湊的限流桶，不保存明文 IP |
 
 API 為 `gameOpsAdmin`、`gameOpsAnnouncements`、`gameOpsRedeem`，區域 asia-southeast1。管理操作包含 dashboard、list、catalog、saveAnnouncement、saveGift；不同資源由 handler 分流，便於之後加入玩家管理、數值、活動與設定。尚未實作的功能在側欄標示即將推出，沒有假資料或假操作。
@@ -114,3 +115,7 @@ API 為 `gameOpsAdmin`、`gameOpsAnnouncements`、`gameOpsRedeem`，區域 asia-
 請保留操作／兌換紀錄；ops_limits 可由未來可信任排程清理過期桶，但收據、個人次數及稽核不可隨意清理，以免重複發獎。限制／紀錄保留排程目前沒有部署。
 
 登入政策更新（2026-11-05）：管理員 MFA 改為選用。此變更須同時更新管理站前端及 `nexus-ops` 的 `gameOpsAdmin` 後端；只推送前端無法解除舊後端的強制 MFA 檢查。
+
+## 2026-11-09 商店狀態與護衛犬 API
+
+新增 gameOpsGuardDog，由 Firebase Auth 與後端資格驗證處理租用、啟用、解除及到期。邊牧設定為 200／1,000 金幣且停止新租用；日本長尾雞開賣。正式 Security Rules 尚需取得並合併，不能僅靠 callable 阻止直接 Firestore 寫入。發布順序及驗證見 [商店狀態說明](../docs/farm-shop-availability.md)。

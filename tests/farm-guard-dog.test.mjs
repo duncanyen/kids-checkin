@@ -75,10 +75,10 @@ test('pyrenees and beagle can both be rented, but cannot guard at the same time'
 });
 
 
-test('collie rents for 200000 daily, follows weekly discounts and enforces 80 percent interception',()=>{
-    assert.equal(rentalPrice('collie',1),200000);assert.equal(rentalPrice('collie',7),1000000);assert.equal(rentalPrice('collie',8),1200000);
-    assert.throws(()=>rentGuardDog({coins:199999},'collie',1,'collie',now),/金幣不足/);
-    let farm=apply({coins:200000},rentGuardDog({coins:200000},'collie',1,'collie',now));assert.equal(farm.coins,0);
+test('collie is displayed at 200/1000 but closed to new rentals; existing leases retain 80 percent interception',()=>{
+    assert.equal(rentalPrice('collie',1),200);assert.equal(rentalPrice('collie',7),1000);assert.equal(rentalPrice('collie',8),1200);
+    assert.throws(()=>rentGuardDog({coins:999999},'collie',1,'collie',now),/尚未開放/);
+    let farm={coins:50,guardDogs:[{id:'collie',breedId:'collie',days:1,paid:200000,startedAt:null,expiresAt:null}]};
     assert.equal(activeGuardDog(farm,now),null);farm=apply(farm,activateGuardDog(farm,'collie',now+500));
     assert.equal(Array.from({length:1000},(_,i)=>guardDogInterception(farm,i/1000,now+500)).filter(Boolean).length,800);
     assert.equal(guardDogInterception(farm,.8,now+500),null);assert.equal(guardDogInterception(farm,.79999,now+500).breed.blockMs,4*3600000);

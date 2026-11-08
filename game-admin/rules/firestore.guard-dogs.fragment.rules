@@ -1,0 +1,11 @@
+// Place this function inside match /databases/{database}/documents.
+// On EVERY client allow create/update covering groups/{groupId}/users/{accountId},
+// combine the existing permission with: && guardDogsPreserved().
+// A separate deny match cannot override another broad allow. Keep the existing
+// membership/ownership conditions; this fragment is not a production ruleset.
+// Admin SDK in gameOpsGuardDog bypasses client rules after validating the player.
+function guardDogsPreserved() {
+    let before = resource == null ? [] : resource.data.get('farm', {}).get('guardDogs', []);
+    let after = request.resource.data.get('farm', {}).get('guardDogs', []);
+    return after == before;
+}

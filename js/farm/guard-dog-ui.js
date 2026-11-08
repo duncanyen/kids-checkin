@@ -8,6 +8,7 @@ function node(tag, text, className) {
     if (className) element.className = className;
     return element;
 }
+function refreshFarm(scene){Promise.resolve().then(()=>scene.game.retryFarmSave?.()).catch(()=>{});}
 function modal(scene, title) {
     scene.guardDogDialog?.close();
     const previous = document.activeElement;
@@ -51,13 +52,13 @@ export function openGuardDogRental(scene, breedId) {
     const input=node('input');input.id='guard-rental-days';input.type='number';input.min='1';input.step='1';input.inputMode='numeric';input.value='1';
     dialog.body(label);dialog.body(input);
     const presets=node('div',null,'guard-dog-presets');
-    for(const days of [1,7]){const button=node('button',`${days} 天`);button.type='button';button.addEventListener('click',()=>{input.value=String(days);update();});presets.append(button);}
+    for(const days of [1,7]){const button=node('button',breed.rentable===false?'尚未開放':`${days} 天`);button.type='button';button.disabled=breed.rentable===false;if(breed.rentable===false)button.setAttribute('aria-label',`${days===1?'日租':'週租'}尚未開放`);button.addEventListener('click',()=>{input.value=String(days);update();});presets.append(button);}
     dialog.body(presets);const price=node('p','','guard-dog-price');dialog.body(price);
     dialog.body(node('p',`自動採最省組合：${breed.dayPrice} 金幣／天、${breed.weekPrice} 金幣／週。先放入倉庫，第一次開始護衛才計時。每品種最多一隻，且同時只能一隻護衛。`));
     dialog.body(node('p','攔截成功會通知村落已設定的廣播頻道，並保留主人農場通知。'));
-    const submit=dialog.submit('確認租用',async()=>{await rentDog(breedId,Number(input.value));if(scene.sys.isActive())scene.showMsg('租用成功！請到倉庫「護衛犬」開始護衛。','#4CAF50');});
-    function update(){try{const amount=rentalPrice(breedId,Number(input.value));price.textContent=`${input.value} 天 · ${amount} 金幣`;submit.disabled=false;dialog.error.textContent='';}catch(error){price.textContent='';dialog.error.textContent=error.message;submit.disabled=true;}}
-    input.addEventListener('input',update);update();input.focus();
+    const submit=dialog.submit(breed.rentable===false?'尚未開放':'確認租用',async()=>{await rentDog(breedId,Number(input.value));refreshFarm(scene);if(scene.sys.isActive())scene.showMsg('租用成功！請到倉庫「護衛犬」開始護衛。','#4CAF50');});
+    function update(){try{const amount=rentalPrice(breedId,Number(input.value));price.textContent=`${input.value} 天 · ${amount} 金幣`;submit.disabled=breed.rentable===false;dialog.error.textContent=breed.rentable===false?'尚未開放租用，目前僅供展示。':'';}catch(error){price.textContent='';dialog.error.textContent=error.message;submit.disabled=true;}}
+    input.disabled=breed.rentable===false;input.addEventListener('input',update);update();if(!input.disabled)input.focus();
 }
 
 export function openGuardDogAction(scene, breedId) {
@@ -67,11 +68,11 @@ export function openGuardDogAction(scene, breedId) {
     dialog.body(node('p',guardDogStatus(dog)));
     if(Number.isFinite(dog.startedAt)) {
         dialog.body(node('p','解除後本犬會立即離開倉庫，剩餘租期作廢且不退還金幣，無法暫停或存回倉庫。確定要解除嗎？'));
-        dialog.submit('解除護衛並放棄租期',async()=>{await releaseDog(dog.id);if(scene.sys.isActive())scene.showMsg('已解除護衛，本犬已離開。','#FFD54F');});
+        dialog.submit('解除護衛並放棄租期',async()=>{await releaseDog(dog.id);refreshFarm(scene);if(scene.sys.isActive())scene.showMsg('已解除護衛，本犬已離開。','#FFD54F');});
     }else{
         dialog.body(node('p',`開始後會連續護衛 ${dog.days} 天，離線仍計時，不能暫停；到期會自動離開倉庫。`));
         const occupied=activeGuardDog(scene.farmData);
-        const button=dialog.submit('開始護衛',async()=>{await activateDog(dog.id);if(scene.sys.isActive())scene.showMsg(`${breed.name}開始護衛雞舍！`,'#4CAF50');});
+        const button=dialog.submit('開始護衛',async()=>{await activateDog(dog.id);refreshFarm(scene);if(scene.sys.isActive())scene.showMsg(`${breed.name}開始護衛雞舍！`,'#4CAF50');});
         if(occupied){button.disabled=true;dialog.error.textContent='請先解除目前護衛中的犬隻；解除會放棄該犬剩餘租期。';}
     }
     dialog.actions.querySelector('button')?.focus();

@@ -1,6 +1,7 @@
 // Real UI, scenes and transactions against an isolated persistent database.
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const {chromium}=require('playwright');
+const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
 const epoch=Date.now(),DAY=86400000;
 const seed=()=>({coins:5000,hens:0,hensState:[],coopLevel:1,eggsReady:3,readyEggs:{hen:3,silkie:0,bresse:0},poultryVersion:2,lastLayTime:0,inventoryEggs:0,warehouseLimit:100,cleanliness:0,moral:100});
@@ -16,7 +17,7 @@ export const getDoc=async ref=>snap(ref.path,await window.__dogDB({kind:'get',pa
 export const getDocs=async()=>({docs:[],empty:true,forEach:()=>{}});
 const listeners=new Set();
 export function onSnapshot(ref,callback){const item={ref,callback};listeners.add(item);getDoc(ref).then(callback);return()=>listeners.delete(item);}
-async function notify(){for(const {ref,callback}of [...listeners])callback(await getDoc(ref));}
+export async function notify(){for(const {ref,callback}of [...listeners])callback(await getDoc(ref));}
 let queue=Promise.resolve();
 export function runTransaction(_,callback){const result=queue.then(async()=>{
  const attempt=async()=>{const writes=[];const value=await callback({get:ref=>{if(writes.length)throw Error('Read after write');return getDoc(ref);},set:(ref,data)=>writes.push({path:ref.path,data,merge:false}),update:(ref,data)=>writes.push({path:ref.path,data,merge:true})});return {value,writes};};
@@ -36,6 +37,21 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   if(op.kind!=='commit')throw Error('Unknown operation');
   for(const write of op.writes){const value=write.merge?clone(docs[write.path]||{}):{};for(const [key,data]of Object.entries(write.data)){let target=value;const bits=key.split('.');for(const bit of bits.slice(0,-1))target=target[bit]??={};target[bits.at(-1)]=clone(data);}docs[write.path]=value;}
  });
+ const backendDB=new MemoryDB();let backendNow=epoch,rpcQueue=Promise.resolve();
+ const backendService=createService({db:backendDB,auth:{getUser:async()=>({disabled:false})},now:()=>backendNow});
+ await page.exposeFunction('__guardDogAPI',op=>{
+  const call=rpcQueue.then(async()=>{
+   backendNow=op.now;backendDB.data=new Map(Object.entries(docs).map(([path,data])=>[path,clone(data)]));
+   for(const id of ['owner','thief','friend','neighbor'])backendDB.data.set('users/'+id,{accountId:id,role:'member'});
+   try{return await backendService.guardDog({auth:{uid:op.accountId,token:{photoAccountId:op.accountId,photoGroupId:op.groupId}},data:{action:op.action,...op.payload,groupId:op.groupId,requestId:op.requestId}});}
+   finally{for(const [path,data]of backendDB.data)docs[path]=clone(data);}
+  });rpcQueue=call.catch(()=>{});return call;
+ });
+ await page.route('**/js/farm/operations-client.js*',r=>r.fulfill({contentType:'text/javascript',body:`
+ import {notify} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+ export function createGameOperationsClient(context){return{guardDog:async(action,payload={})=>{
+ const user=JSON.parse(sessionStorage.getItem('familyCheckInUser'));const result=await window.__guardDogAPI({action,payload,accountId:user.accountId,groupId:context.groupId,now:Date.now(),requestId:crypto.randomUUID()});await notify();return result;}};}
+ `}));
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('/tmp/kids-phaser.js','utf8')}));
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:sdk}));
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
@@ -49,7 +65,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const scene=async(key,data)=>{await page.evaluate(({key,data})=>new Promise(resolve=>{const current=__farmGame.scene.getScenes(true).find(s=>['MyFarmScene','ShopScene','WarehouseScene','VisitScene'].includes(s.sys.settings.key));if(current.sys.settings.key===key&&key!=='VisitScene'){resolve(true);return;}__farmGame.scene.getScene(key).events.once('create',()=>resolve(true));current.scene.start(key,data);}),{key,data});await page.waitForFunction(key=>{const s=__farmGame.scene.getScene(key);return s.sys.isActive()&&(key==='ShopScene'?s.buyContainer?.scene===s:key==='VisitScene'?!!s.targetFarmData:!!s.farmData);},key);};
  const clock=async now=>page.evaluate(now=>{window.__dogNow=now;sessionStorage.setItem('guard-clock',String(now));},now);
  const identity=async(accountId,name)=>{await page.evaluate(({accountId,name})=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name})),{accountId,name});await page.reload();await ready();};
- const rent=async(days,breedId='pyrenees')=>{await scene('ShopScene');await page.evaluate(breedId=>{const s=__farmGame.scene.getScene('ShopScene');s.selectShopCategory('dogs');s.catalog.buy.find(row=>row[0]===`guard:${breedId}`)[3]();},breedId);await page.getByLabel('租用天數').fill(String(days));};
+ const rent=async(days,breedId='pyrenees')=>{await scene('ShopScene');await page.evaluate(breedId=>{const s=__farmGame.scene.getScene('ShopScene');s.selectShopCategory('dogs');s.catalog.buy.find(row=>row[0]===`guard:${breedId}`)[3]();},breedId);if(await page.getByLabel('租用天數').isEnabled())await page.getByLabel('租用天數').fill(String(days));};
  await page.goto(base+'/farmgame.html');await ready();
  await scene('WarehouseScene');assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').categoryTabs.tabs.get('dogs').background.visible),false);
  await rent(8);await page.getByText('8 天 · 480 金幣',{exact:true}).waitFor();await page.screenshot({path:'/tmp/guard-dog-rental.png',fullPage:true});await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
@@ -97,7 +113,8 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   const rents=await Promise.allSettled([store.rentDog('pyrenees',1),store.rentDog('pyrenees',1)]);
   core.GUARD_DOG_BREEDS.future={...core.GUARD_DOG_BREEDS.pyrenees,name:'未來犬種'};
   try{
-   await store.rentDog('future',1);
+   try{await store.rentDog('future',1);throw Error('Untrusted breed accepted');}catch(error){if(!error.message.includes('找不到此護衛犬'))throw error;}
+   await store.rentDog('beagle',1);
    const {getDoc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'),{myFarmRef}=await import('/js/farm/constants.js');
    const dogs=(await getDoc(myFarmRef)).data().farm.guardDogs;
    const activations=await Promise.allSettled(dogs.map(d=>store.activateDog(d.id)));
@@ -108,7 +125,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   }finally{delete core.GUARD_DOG_BREEDS.future;}
  });
  assert.equal(concurrency.rent.filter(s=>s==='fulfilled').length,1);assert.equal(concurrency.activate.filter(s=>s==='fulfilled').length,1);
- assert.equal(docs['groups/A/users/owner'].farm.coins,coins-160);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,0);
+ assert.equal(docs['groups/A/users/owner'].farm.coins,coins-100);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,0);
  // The real second breed uses its own quote, art, interception and notification.
  await rent(8,'beagle');await page.getByRole('heading',{name:'租用米格魯',exact:true}).waitFor();
  await page.getByText('8 天 · 120 金幣',{exact:true}).waitFor();
@@ -117,7 +134,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.screenshot({path:'/tmp/beagle-rental.png',fullPage:true});
  await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await rent(1);await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
- assert.equal(docs['groups/A/users/owner'].farm.coins,coins-360);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,2);
+ assert.equal(docs['groups/A/users/owner'].farm.coins,coins-300);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,2);
  await scene('WarehouseScene');await page.evaluate(()=>{const s=__farmGame.scene.getScene('WarehouseScene');s.selectWarehouseCategory('dogs');s.handleItemClick('guard:beagle','米格魯');});
  await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  const beagle=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='beagle');assert.equal(beagle.expiresAt,beagle.startedAt+8*DAY);
@@ -140,7 +157,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_dog');
- assert.equal(docs['groups/A/users/owner'].farm.coins,coins-360);
+ assert.equal(docs['groups/A/users/owner'].farm.coins,coins-300);
  // Dense mixed flock: dog rest, walking/running, returning and nesting stay separated.
  await page.evaluate(async()=>{
   const {updateDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
@@ -162,15 +179,28 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   await page.evaluate(()=>{const s=__farmGame.scene.getScene('MyFarmScene'),dog=s.guardDog.getBounds();for(const hen of s.hensGroup)if(dog.bottom>hen.getBounds().top)throw Error('Nesting hen overlaps dog');});
   await page.screenshot({path:'/tmp/farm-dog-spacing-'+viewport.width+'.png',fullPage:true});
  }
- // Collie uses the same real rental and activation flow, with its own price/art/chance.
+ // Closed collie is still visible with correct prices; UI and trusted API reject new rentals.
  await page.setViewportSize({width:390,height:900});await rent(1,'collie');
- await page.getByText('1 天 · 200000 金幣',{exact:true}).waitFor();
- await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.getByRole('alert').filter({hasText:'金幣不足'}).waitFor();
+ await page.getByText('1 天 · 200 金幣',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'日租尚未開放',exact:true}).isDisabled(),true);
+ assert.equal(await page.getByRole('button',{name:'週租尚未開放',exact:true}).isDisabled(),true);
+ assert.equal(await page.getByRole('button',{name:'尚未開放',exact:true}).isDisabled(),true);
+ await page.screenshot({path:'/tmp/collie-closed-rental.png',fullPage:true});
+ for(const size of [{width:390,height:900},{width:1440,height:900}]){await page.setViewportSize(size);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.getByRole('button',{name:'日租尚未開放',exact:true}).isDisabled(),true);}
+ await page.screenshot({path:'/tmp/collie-closed-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:900});
  await page.getByRole('button',{name:'取消',exact:true}).click();
- await page.evaluate(async()=>{const {updateDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await updateDoc(doc({},'groups','A','users','owner'),{'farm.coins':200000});});
- await rent(1,'collie');await page.screenshot({path:'/tmp/collie-rental.png',fullPage:true});
- await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
- assert.equal(docs['groups/A/users/owner'].farm.coins,0);let collie=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='collie');assert.equal(collie.startedAt,null);
+ await page.evaluate(()=>{const s=__farmGame.scene.getScene('ShopScene'),card=s.buyContainer.list.find(o=>o.catalogKey==='guard:collie'&&o.input);if(!card.visible||!card.getData('rentalDisabled'))throw Error('Closed collie card must remain visible');});
+ const beforeClosed=JSON.stringify(docs['groups/A/users/owner'].farm);
+ const rejected=await page.evaluate(async()=>{
+  const {GUARD_DOG_BREEDS}=await import('/js/farm/guard-dog-core.js'),{rentDog}=await import('/js/farm/guard-dog-store.js');
+  GUARD_DOG_BREEDS.collie.rentable=true;
+  try{await rentDog('collie',1);return 'unexpected success';}catch(error){return error.message;}finally{GUARD_DOG_BREEDS.collie.rentable=false;}
+ });
+ assert.match(rejected,/尚未開放/);assert.equal(JSON.stringify(docs['groups/A/users/owner'].farm),beforeClosed);
+ // Existing leases remain usable; this fixture represents an earlier legitimate rental.
+ docs['groups/A/users/owner'].farm.guardDogs.push({id:'legacy-collie',breedId:'collie',days:1,paid:200000,rentedAt:epoch,startedAt:null,expiresAt:null});
+ let collie=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='collie');
+ await page.evaluate(async()=>{const {notify}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await notify();});
  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:collie','邊境牧羊犬'));
  assert.equal(await page.getByRole('button',{name:'開始護衛',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'取消',exact:true}).click();
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
@@ -206,6 +236,6 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const readyAtRelease=Object.values(settlePoultry(docs['groups/A/users/owner'].farm,collieBlock).ready).reduce((sum,count)=>sum+count,0);
  await clock(collieBlock);await page.evaluate(async()=>{Math.random=()=>.8;await __farmGame.scene.getScene('VisitScene').attemptSteal();});assert.equal(docs['groups/A/users/owner'].farm.eggsReady,readyAtRelease-1);
  await clock(collie.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
- assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie 200000/day, 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying');
+ assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

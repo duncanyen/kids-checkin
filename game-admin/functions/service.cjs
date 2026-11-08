@@ -127,6 +127,36 @@ function createService({db,auth,now=Date.now}) {
         const result=await query.limit(101).get(),scanned=result.docs.slice(0,100),stamp=now();
         return{rows:scanned.map(doc=>({...doc.data(),id:doc.id})).filter(a=>D.activeAnnouncement(a,identity.accountId,stamp)).map(({searchTokens,audienceKeys,...a})=>a),nextCursor:result.size>100?scanned.at(-1).id:null,asOf:stamp};
     }
+    async function guardDog(request){
+        const identity=await playerSession(request),input=request.data||{};
+        const action=D.enumValue(input.action,['rent','activate','release','expire']);
+        const requestId=D.requestId(input.requestId);
+        await throttle('guard-dog:'+identity.uid,30,60000);
+        const G=await import('./game/guard-dog-core.js');
+        const payload={action};
+        if(action==='rent'){
+            payload.breedId=D.id(input.breedId);payload.days=D.integer(input.days,1,Number.MAX_SAFE_INTEGER);
+            if(!Object.hasOwn(G.GUARD_DOG_BREEDS,payload.breedId))D.fail('invalid-argument','找不到此護衛犬');
+            // The deployed server configuration is authoritative; never trust client flags/prices.
+            if(G.GUARD_DOG_BREEDS[payload.breedId].rentable===false)D.fail('failed-precondition',`${G.GUARD_DOG_BREEDS[payload.breedId].name}尚未開放租用`);
+        }else if(action!=='expire')payload.id=D.id(input.id);
+        const fingerprint=D.fingerprint({groupId:identity.groupId,...payload}),receipt=db.doc(`ops_guard_requests/${D.hash(identity.uid+':'+requestId)}`);
+        return db.runTransaction(async t=>{
+            const current=await player(request,t),prior=await t.get(receipt);
+            if(prior.exists){if(prior.data().fingerprint!==fingerprint)D.fail('invalid-argument','此請求識別碼已用於其他操作');return{...prior.data().response,replayed:true};}
+            const ref=db.doc(`groups/${current.groupId}/users/${current.accountId}`),snapshot=await t.get(ref),farm=snapshot.data()?.farm,stamp=now();
+            if(!farm)D.fail('failed-precondition','找不到農場存檔');
+            let patch;
+            try{
+                patch=action==='rent'?G.rentGuardDog(farm,payload.breedId,payload.days,requestId,stamp):action==='activate'?G.activateGuardDog(farm,payload.id,stamp):action==='release'?G.releaseGuardDog(farm,payload.id,stamp):{'farm.guardDogs':G.guardDogLeases(farm,stamp)};
+            }catch(error){D.fail('failed-precondition',error.message||'護衛犬操作失敗');}
+            const next={...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))};
+            const response={action,dogId:action==='rent'?requestId:payload.id||null,paid:action==='rent'?farm.coins-next.coins:0};
+            if(D.fingerprint(next)!==D.fingerprint(farm))t.update(ref,{farm:next});
+            t.create(receipt,{uid:current.uid,groupId:current.groupId,fingerprint,response,createdAt:stamp});
+            return response;
+        });
+    }
     async function redeem(request){
         const identity=await playerSession(request),requestId=D.requestId(request.data.requestId);
         // Invalid-format attempts are rate limited too, before parsing the code.
@@ -165,6 +195,6 @@ function createService({db,auth,now=Date.now}) {
             throw error;
         }
     }
-    return{adminAPI,announcements,redeem,rewardCatalog};
+    return{adminAPI,announcements,redeem,rewardCatalog,guardDog};
 }
 module.exports={createService,COLLECTIONS};

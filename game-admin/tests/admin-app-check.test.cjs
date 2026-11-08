@@ -50,6 +50,10 @@ test('optional admin App Check preserves server authorization and enables announ
   assert.equal((await call('gameOpsRedeem','player',{...redemption,requestId:uid()})).body.error.status,'ALREADY_EXISTS');
   assert.equal((await call('gameOpsRedeem','player',{...redemption,groupId:'not-a-member'})).status,403);
   assert.equal((await call('disabledRedeem','player',redemption)).status,403);
+  assert.equal((await call('gameOpsGuardDog',null,{action:'rent',breedId:'collie',days:1,groupId:'A',requestId:uid()})).status,401);
+  const closed=await call('gameOpsGuardDog','player',{action:'rent',breedId:'collie',days:1,groupId:'A',requestId:uid(),rentable:true,price:0});
+  assert.equal(closed.status,400);assert.equal(closed.body.error.status,'FAILED_PRECONDITION');
+  assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,600);
   assert.equal((await call('disabledAdmin','admin')).status,403);
   assert.equal((await call('disabledAnnouncements','player',{groupId:'A'})).status,403);
   f.revoke();assert.equal((await call('gameOpsAdmin','admin')).status,403,'revoked current admin claim is denied');

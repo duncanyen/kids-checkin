@@ -4,10 +4,14 @@ import { BREEDS,HOUR,settlePoultry,poultryPatch,collectPoultry,tradePoultry,feed
 import { getUsedSpace } from '../js/farm/inventory-core.js';
 const apply=(farm,patch)=>({...farm,...Object.fromEntries(Object.entries(patch).map(([k,v])=>[k.slice(5),v]))});
 const seed=()=>({poultryVersion:2,hens:1,hensState:[{id:'long',breed:'onagadori',laidAt:0}],readyEggs:{hen:0,silkie:0,bresse:0,onagadori:0},eggsReady:0,coins:20000,warehouseLimit:10,coopLevel:2,worms:1,earthworms:1});
-test('onagadori is listed at 6000/3000, but purchase is rejected regardless of money or capacity',()=>{
+test('onagadori is sold at 6000/3000 with funds/capacity checks and unchanged egg value',()=>{
     assert.equal(BREEDS.onagadori.buy,6000);assert.equal(BREEDS.onagadori.sell,3000);assert.equal(BREEDS.onagadori.eggPrice,120);
     const farm=seed(),copy=structuredClone(farm);
-    assert.throws(()=>tradePoultry(farm,'onagadori',1,'buy',0),/尚未開賣/);assert.deepEqual(farm,copy);
+    assert.equal(BREEDS.onagadori.purchasable,true);
+    const bought=apply(farm,tradePoultry(farm,'onagadori',1,'buy',0,['new-long']));
+    assert.equal(bought.coins,14000);assert.equal(bought.hens,2);assert.equal(bought.hensState[1].breed,'onagadori');assert.equal(bought.hensState[1].id,'new-long');
+    assert.throws(()=>tradePoultry({...farm,coins:5999},'onagadori',1,'buy',0),/金幣不足/);
+    assert.throws(()=>tradePoultry(farm,'onagadori',10,'buy',0),/雞舍空間不足/);assert.deepEqual(farm,copy);
     assert.equal(tradePoultry(farm,'onagadori',1,'sell',0)['farm.coins'],23000);
 });
 test('onagadori produces every 6 hours, caps at 4 eggs per bird, sickness and full storage follow poultry rules',()=>{

@@ -74,7 +74,7 @@ export default class ShopScene extends Phaser.Scene {
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
         const buy = this.catalog.buy, sell = this.catalog.sell;
-        for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,`${breed.name}\n${breed.dayPrice}／天\n${breed.weekPrice}／週`,()=>openGuardDogRental(this,breedId)]);
+        for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,`${breed.name}${breed.rentable===false?`\n防偷蛋 ${Math.round(breed.biteChance*100)}%`:''}\n${breed.dayPrice}／天\n${breed.weekPrice}／週${breed.rentable===false?'\n🔒 即將開放':''}`,()=>openGuardDogRental(this,breedId)]);
         for (const [key, breed] of Object.entries(BREEDS)) {
             buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣${breed.purchasable === false ? '\n尚未開賣' : ''}`, () => breed.purchasable === false ? this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F') : this.openTradeModal('buy', key, breed.name, breed.buy)]);
             sell.push([`bird:${key}`, breed.texture, `${breed.name}\n${breed.sell}金幣`, () => this.openTradeModal('sell', `bird:${key}`, breed.name, breed.sell)]);
@@ -108,6 +108,7 @@ export default class ShopScene extends Phaser.Scene {
                     objects[0].setFillStyle(0x635a50,.9);
                     objects[0].setData('purchaseDisabled',true);
                 }
+                if(mode==='buy'&&key.startsWith('guard:')){const dog=GUARD_DOG_BREEDS[key.slice(6)];objects[0].setData('rentalDisabled',dog.rentable===false);if(dog.rentable===false)objects[2].setFontSize(11);}
                 for (const object of objects) { object.catalogPage = Math.floor(index / 6); object.catalogCategory = category; object.catalogKey = key; }
             });
         }

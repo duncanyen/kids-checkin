@@ -11,3 +11,4 @@ match /ops_audit/{path=**} { allow read, write: if false; }
 match /ops_admin_requests/{path=**} { allow read, write: if false; }
 match /ops_limits/{path=**} { allow read, write: if false; }
 match /ops_admins/{path=**} { allow read, write: if false; }
+match /ops_guard_requests/{path=**} { allow read, write: if false; }
