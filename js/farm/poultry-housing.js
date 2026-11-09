@@ -12,6 +12,13 @@ export function outdoorHens(farm) {
     return selected;
 }
 export function outdoorCounts(farm){const counts=Object.fromEntries(Object.keys(BREEDS).map(key=>[key,0]));for(const h of outdoorHens(farm))counts[h.breed]++;return counts;}
+/**
+ * 驗證各品種放風數並產生更新欄位，不改總飼養數與產蛋時鐘。
+ * @param {Object} farm - 最新農場資料，hensState 為完整雞隻來源。
+ * @param {Object} counts - 每品種的放風數，未指定品種預設全部放風。
+ * @returns {Object} farm.outdoorHensByBreed 更新內容，須由呼叫端交易提交。
+ * @throws {Error} 數量超出持有隻數，或外面少於六隻；總數不足六隻時需全數放風。
+ */
 export function housingPatch(farm,counts){
     const hens=poultryState(farm).hens,total=hens.length,patch={};let selected=0;
     for(const key of Object.keys(BREEDS)){

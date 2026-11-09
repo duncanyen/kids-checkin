@@ -18,6 +18,13 @@ export function formatMailTime(value) {
     return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
+/**
+ * 建立單一玩家的農場通知存取與歡迎禮交易。
+ * @param {Object} db - Firestore 實例。
+ * @param {{groupId: string, accountId: string}} context - 通知子集合的擁有者。
+ * @returns {Object} 通知訂閱、刪除及歡迎禮操作介面。
+ * @description 建檔／領取收據與可刪除通知分開，刪信不可造成重複領取。
+ */
 export function createFarmMailStore(db, { groupId, accountId }) {
     const owner = doc(db, 'groups', groupId, 'users', accountId);
     const notices = collection(db, 'groups', groupId, 'users', accountId, 'farm_notifications');
@@ -37,7 +44,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
             const now = Date.now();
             return runTransaction(db, async transaction => {
                 const data = await readOwner(transaction);
-                // This receipt is intentionally outside the deletable notification.
+                // 領取收據刻意與可刪除通知分開保存。
                 if (data.farmMail?.welcomeCreatedAt || data.farmMail?.welcomeClaimedAt) return;
                 transaction.set(noticeRef(WELCOME_ID), { type: 'system', title: '系統通知', body: WELCOME_BODY, reward: WELCOME_REWARD, createdAt: now, claimedAt: null, readAt: null });
                 transaction.update(owner, { 'farmMail.welcomeCreatedAt': now });

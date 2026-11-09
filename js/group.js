@@ -1,3 +1,8 @@
+/**
+ * 群組建立、邀請、申請及切換流程，依賴 auth.js 與 dashboard.js 的 window 介面。
+ * 選定群組同步保存 lastGroupId 與 nexus_active_group_id；members 使用 accountId。
+ * @module
+ */
 import { db } from "./firebase-config.js";
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -145,6 +150,11 @@ window.showGroupSelectionList = function(userGroups) {
     document.getElementById('groupSelectionSection').classList.add('active');
 };
 
+/**
+ * 保存選定群組、記錄進入足跡，再重新建立首頁內容及訂閱。
+ * @param {Object} groupObj - 含 id 與 name 的群組資料。
+ * @returns {Promise<void>} 等待足跡與首頁初始化完成。
+ */
 window.enterGroup = async function(groupObj) {
     window.currentGroup = groupObj;
     localStorage.setItem('lastGroupId', groupObj.id);

@@ -1,3 +1,8 @@
+/**
+ * 聊天室頁面狀態、訊息訂閱與分頁入口，依賴群組成員識別及 live-reads 適配層。
+ * 房間成員優先使用 accountId；歷史訊息以 ChatHistory 合併，不以一天作為保留期限。
+ * @module
+ */
 import { ChatHistory, MESSAGE_PAGE_SIZE } from './chat-history.js';
 import * as messageStore from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { loadChatProfiles, watchMemberRooms, mutateRoomIdentity } from './chat-membership.js';
@@ -45,7 +50,7 @@ let selectedMsgForAction = null;
 let isFirstLoad = true; 
 window._isChatJustLoaded = false; 
 
-// groups.members is authoritative. Do not reuse the former global user cache.
+// 以 groups.members 為成員依據，不重用過去的全域 users 快取。
 export async function refreshChatGroupMembers() {
     const members = await loadChatProfiles(currentGroupId, currentUser.accountId);
     let latestUser;
@@ -191,17 +196,27 @@ document.getElementById('btnBackToList').addEventListener('click', () => {
     document.getElementById('viewRoomList').style.display = 'flex';
 });
 
+/**
+ * 建立單一房間的訊息游標查詢；每頁 30 筆，以 timestamp 倒序取得。
+ * @param {string} roomId - 已確認可進入的房間 ID。
+ * @param {Object} [cursor] - 原始 Firestore 文件快照，保留同時間文件的排序精度。
+ * @returns {Object} Firestore Query；此查詢本身僅篩 roomId，資格由房間流程及 Rules 負責。
+ */
 function messageQuery(roomId, cursor) {
     return query(collection(db, "messages"), where("roomId", "==", roomId),
         orderBy("timestamp", "desc"), ...(cursor ? [messageStore.startAfter(cursor)] : []), limit(MESSAGE_PAGE_SIZE));
 }
 
+/**
+ * 取代目前訊息監聽，合併即時最新頁與手動載入的歷史頁。
+ * @param {string} roomId - 目前房間 ID。
+ * @returns {void} 停止函式保存在 messagesUnsubscribe，切換房間時先解除。
+ * @description RTDB 顯示資料不可直接當 Firestore 游標，需回讀錨點文件。
+ */
 function listenToMessages(roomId) {
     messagesUnsubscribe?.();
     const history = messageHistory = new ChatHistory(roomId, async (cursor, oldest) => {
-        // RTDB timestamps are decoded values, not Firestore cursor snapshots.
-        // Resolve the oldest displayed document to preserve nanosecond precision
-        // and the document-ID tie breaker, even when timestamps are identical.
+        // RTDB 時間值不是 Firestore 文件游標；回讀最舊可見文件作錨點，保留奈秒精度及同時間的文件鍵次序。
         if (!cursor && oldest) {
             const anchor = await messageStore.getDoc(doc(db, "messages", oldest.id));
             if (anchor.exists()) {
@@ -244,7 +259,7 @@ async function loadOlderMessages() {
         const oldTop=container.scrollTop, oldHeight=container.scrollHeight;
         chatState.currentMessagesList=history.list;
         renderAllMessages(true);
-        // Keep the message at the top of the reader's viewport in place.
+        // 載入歷史時保留使用者目前閱讀位置上方的訊息。
         container.scrollTop=oldTop+container.scrollHeight-oldHeight;
     } catch(error) {
         if (messageHistory !== history) return;
@@ -425,7 +440,7 @@ chatInput.addEventListener('input', function() {
     mentionDropdown.style.display = 'none';
 });
 
-// Enter (including mobile return) inserts a line; only an explicit shortcut sends.
+// Enter（含手機換行）只換行；送出需使用明確的快捷操作。
 chatInput.addEventListener('keydown', (e) => { 
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault(); 
@@ -517,7 +532,7 @@ async function sendPhotoBatch() {
             const message = { groupId: currentGroupId, roomId: batch.roomId, senderAccountId: currentUser.accountId, sender: currentUser.name, text: '傳送了圖片', imageUrl, timestamp: serverTimestamp() };
             if (!batch.sent && batch.replyData) message.replyTo = batch.replyData;
             await addDoc(collection(db, 'messages'), message);
-            // Remove only after the message commit, before the separate room summary.
+            // 訊息提交成功後才清除暫存；房間摘要屬於後續的獨立操作。
             batch.files.shift(); batch.sent++;
             if (batch.sent === 1 && batch.replyId && pendingReplyMsgId === batch.replyId) cancelReply();
             try {

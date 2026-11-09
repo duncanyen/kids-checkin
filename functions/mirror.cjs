@@ -1,4 +1,11 @@
 const { key, epochMicros, node, newer } = require('./live-model.cjs');
+/**
+ * 建立 Firestore 主資料至 nexus/* RTDB 讀取鏡像的更新器。
+ * @param {Object} firestore - Firebase Admin Firestore。
+ * @param {Object} database - Firebase Admin Realtime Database。
+ * @returns {Object} account、group、farm、room、message 等鏡像操作。
+ * @description 每個節點以版本交易拒絕過期事件；不是 Firestore／RTDB 跨庫原子交易。
+ */
 module.exports = function makeMirror(firestore, database) {
     const root = database.ref('nexus');
     const write = (path, value) => root.child(path).transaction(current => newer(current, value), undefined, false);
@@ -36,7 +43,7 @@ module.exports = function makeMirror(firestore, database) {
     async function room(roomId, snapshot, before, time, forceRecipients = false) {
         const data = snapshot?.exists ? snapshot.data() : null, old = before?.exists ? before.data() : null;
         const version = epochMicros(snapshot?.updateTime || time);
-        // Union old recipients and current group members so removals get tombstones.
+        // 合併舊收件者與目前成員，讓已移除的收件者也能收到刪除標記。
         const oldAccess = (await root.child(`access/rooms/${key(roomId)}`).get()).val();
         const reuse = !forceRecipients && oldAccess?.groupKey === key(data?.groupId) && old?.groupId === data?.groupId && JSON.stringify(old?.participants) === JSON.stringify(data?.participants) && JSON.stringify(old?.participantIds) === JSON.stringify(data?.participantIds);
         const recipients = reuse ? Object.keys(oldAccess.participants || {}).map(decodeURIComponent) : await participantIds(data);
@@ -47,7 +54,7 @@ module.exports = function makeMirror(firestore, database) {
         if (data?.groupId) for (const id of recipients) paths.add(`${key(data.groupId)}/${key(id)}`);
         const valid = new Set(recipients.map(id => `${key(data.groupId)}/${key(id)}`));
         const sortTime = data?.lastMessageTime?.toMillis?.() || 0;
-        // Publish access first: revoked readers cannot keep listening to an old inbox.
+        // 先更新存取資格，避免已撤權的帳號繼續監聽舊收件匣。
         await write(`access/rooms/${key(roomId)}`, access);
         await Promise.all([...paths].map(path => write(`inboxes/${path}/${key(roomId)}`, node(valid.has(path) ? data : null, version, sortTime))));
         if (old?.groupId && old.groupId !== data?.groupId) await write(`rooms/${key(old.groupId)}/${key(roomId)}`, node(null, version));
@@ -61,7 +68,7 @@ module.exports = function makeMirror(firestore, database) {
             if (!value?.roomId) return null;
             const room = await firestore.doc(`rooms/${value.roomId}`).get();
             const groupId = room.data()?.groupId;
-            // Some older system messages lack groupId. Resolve only via their room.
+            // 舊系統訊息可能缺 groupId，只透過所屬房間確認群組。
             if (!groupId || (value.groupId && value.groupId !== groupId)) return null;
             return `${key(groupId)}/${key(value.roomId)}/${key(messageId)}`;
         };

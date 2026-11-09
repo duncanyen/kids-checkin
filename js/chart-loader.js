@@ -1,7 +1,11 @@
-// Chart.js is needed only by the ledger charts. Keep one in-flight load and a
-// versioned URL; an unavailable chart must never block amounts or navigation.
+// 圖表共用載入中的 Promise 及固定版本 URL；載入失敗不應阻塞金額或導覽。
 export const CHART_URL = 'https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js';
 let pending;
+/**
+ * 按需載入固定版本 Chart.js；並行呼叫共用同一個載入中的 Promise。
+ * @returns {Promise<Function>} window.Chart 建構式；逾時或失敗清除 pending 以供重試。
+ * @description 圖表載入不得成為金額與導覽的必要前提。
+ */
 export function loadChart() {
     if (window.Chart) return Promise.resolve(window.Chart);
     if (pending) return pending;

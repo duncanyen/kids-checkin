@@ -1,3 +1,8 @@
+/**
+ * 既有 Nexus 帳號登入、群組選擇及操作足跡入口。
+ * 此登入使用 users 的舊制驗證資料，不等同營運中心的 Firebase Auth 管理員登入。
+ * @module
+ */
 import { normalizeAccountId, findAccountsById, newAccountRef, assertAccountAvailable, ACCOUNT_ID_TAKEN } from './account-identity.js';
 import { db } from "./firebase-config.js";
 import { collection, query, where, getDocs, addDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -91,6 +96,12 @@ window.toggleAuth = function(type) {
     }
 };
 
+/**
+ * 依固定帳號查詢 groups.members，決定加入群組或進入選擇流程。
+ * @param {Object} userObj - 登入使用者；優先採 accountId，相容舊 name。
+ * @param {Object} [options] - forceSelection 為 true 時一定顯示群組選擇。
+ * @returns {Promise<void>} 更新目前登入流程的畫面。
+ */
 window.evaluateUserGroups = async function(userObj, { forceSelection = false } = {}) {
     document.getElementById('loadingView').style.display = 'flex';
     try {
@@ -126,6 +137,11 @@ window.evaluateUserGroups = async function(userObj, { forceSelection = false } =
     }
 };
 
+/**
+ * 以表單登入資料查詢既有帳號，並在成功後進行群組選擇。
+ * @returns {Promise<void>} 結果由畫面提示及既有工作階段儲存反映。
+ * @see findAccountsById 帳號大小寫與歷史文件相容；此流程不是 Auth Token 驗證。
+ */
 window.processLogin = async function() {
     const loginId = document.getElementById('loginId').value.trim();
     const loginPwd = document.getElementById('loginPassword').value.trim();

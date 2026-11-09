@@ -1,5 +1,12 @@
 import { GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED, ANNOUNCEMENTS_APP_CHECK_REQUIRED, REDEMPTION_APP_CHECK_REQUIRED, OPERATIONS_APP_CHECK_SITE_KEY } from './operations-config.js?v=20261108-messages-optional';
 export { GAME_OPERATIONS_ENABLED, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-config.js?v=20261108-messages-optional';
+/**
+ * 建立公告、護衛犬與兌換客戶端；各模式使用獨立 Firebase App 工作階段。
+ * @param {{groupId: string, accountId: string}} context - 固定玩家與群組識別。
+ * @param {Object} [options] - timeoutMs 預設 20000 毫秒。
+ * @returns {Object} announcements、guardDog 及 redeem 非同步操作。
+ * @description photoSession 橋接取得 Auth；逾時保留請求識別碼，不把未知結果當成失敗重發。
+ */
 export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
     const connections=new Map();
     const redemptions=new Map(),guardChanges=new Map();
@@ -26,7 +33,7 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
             const app=appSDK.getApps().find(a=>a.name===appName)||appSDK.initializeApp(config.firebaseConfig,appName);
             if(requiresCheck){const check=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js');check.initializeAppCheck(app,{provider:new check.ReCaptchaEnterpriseProvider(OPERATIONS_APP_CHECK_SITE_KEY),isTokenAutoRefreshEnabled:true});}
             const functions=functionSDK.getFunctions(app,'asia-southeast1'),auth=authSDK.getAuth(app);
-            // Reuse the existing server-validated player-to-Firebase Auth bridge.
+            // 沿用既有後端驗證的玩家至 Firebase Auth 橋接。
             const session=await functionSDK.httpsCallable(functions,'photoSession',{timeout:timeoutMs})({accountId:context.accountId,groupId:context.groupId,secret:user.password||user.pin||''});
             await authSDK.setPersistence(auth,authSDK.inMemoryPersistence);await authSDK.signInWithCustomToken(auth,session.data.token);
             return async(name,payload)=>{
@@ -66,7 +73,7 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
                 return api('gameOpsRedeem',{code:normalized,requestId});
             }).then(response=>{
                 if(!Array.isArray(response?.rewards))throw Error('未能確認獎勵明細，請使用同一活動碼重試。');
-                // A late response after the deadline must not clear the retry receipt.
+                // 超過期限才到的回應不能清除供重試使用的收據識別。
                 sessionStorage.removeItem(key);return response;
             }).catch(error=>{
                 if(['ops/timeout','functions/unauthenticated'].includes(error.code))connections.delete('redeem');

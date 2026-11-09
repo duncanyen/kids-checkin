@@ -5,6 +5,14 @@ function loadEngine(){
  if(window.Phaser)return Promise.resolve();
  if(!engine)engine=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js';const timeout=setTimeout(()=>{script.remove();engine=null;reject(Error('森林畫面載入逾時，請重新整理'));},30000);script.onload=()=>{clearTimeout(timeout);resolve();};script.onerror=()=>{clearTimeout(timeout);engine=null;reject(Error('森林畫面載入失敗，請檢查網路'));};document.head.append(script);});return engine;
 }
+/**
+ * 按需載入 Phaser，建立單區九塊土地的森林視覺與點擊介面。
+ * @param {HTMLElement} element - Canvas 掛載容器。
+ * @param {Function} onPlot - 接收全森林 positionIndex，不是本區索引。
+ * @param {boolean} [lowPower=false] - 減少動畫及目標影格率；目前未提供使用者切換欄位。
+ * @returns {Promise<Object>} set、effect、setInputEnabled、pause、resume、destroy。
+ * @description 換植物只替換紋理／必要精靈；擁有者須在離頁時呼叫 destroy。
+ */
 export async function createForest(element,onPlot,lowPower=false){
  element.setAttribute('aria-busy','true');await loadEngine();let scene,latest,dead=false;
  const points=PLOT_POSITIONS;

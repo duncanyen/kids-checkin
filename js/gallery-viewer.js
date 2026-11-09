@@ -1,4 +1,10 @@
-// Photo gestures and saving stay independent of the feed and Firebase SDKs.
+// 照片手勢及保存邏輯獨立於相簿資料與 Firebase SDK。
+/**
+ * 建立相簿檢視器，管理縮放、切圖、下載及行動裝置分享的暫存狀態。
+ * @param {Object} options - modal、image、wrapper、counter、getQueue 與索引回呼。
+ * @returns {Object} open、close、previous、next、setIndex 操作介面。
+ * @description 以請求版本捨棄過期下載；分享另需使用者點擊以保留 Safari 啟用資格。
+ */
 export function createPhotoViewer({ modal, image, wrapper, counter, getQueue, onIndexChange = () => {} }) {
     let index = 0, scale = 1, x = 0, y = 0, gesture = null, hadPinch = false;
     let lastTap = 0, suppressTapUntil = 0, savedOverflow = '', file = null, revision = 0;
@@ -119,7 +125,7 @@ export function createPhotoViewer({ modal, image, wrapper, counter, getQueue, on
     });
     share.addEventListener('click', () => {
         if (!file || !navigator.share) return;
-        // A separate tap preserves the user activation required by mobile Safari.
+        // 另外一次點擊可保留行動 Safari 分享所需的使用者啟用資格。
         navigator.share({ files: [file] }).catch(error => {
             if (error.name !== 'AbortError') status.textContent = '無法開啟分享，請改用下載或開啟原圖。';
         });

@@ -1,6 +1,13 @@
-// Adapter for the temporary browser transport. Firebase Web transactions cannot
-// read queries: discover bounded candidates, reread their documents in the
-// transaction, and serialize every forest write through a group revision.
+// Web 交易不能讀 Query：先找有界候選，再於交易重讀文件，並以群組修訂鎖協調森林寫入。
+/**
+ * 將共用服務需要的 db 介面轉接至 Firebase Web SDK，延後所有寫入直到讀取完成。
+ * @param {Object} sdk - Firebase Firestore Web SDK。
+ * @param {Object} firebaseDb - Firestore 實例。
+ * @param {string} groupId - growthSync/main 修訂鎖的群組範圍。
+ * @param {Function} [assertCurrent] - 每次讀寫前確認帳號與群組未切換。
+ * @returns {Object} doc、collection 與 runTransaction 相容介面。
+ * @description Web 交易不能讀 Query；先取候選再逐份重讀，最多 2000 筆，超限拒絕。
+ */
 export function createFirestoreStore(sdk, firebaseDb, groupId, assertCurrent = () => {}) {
     const MAX_ROWS=2000;
     const wrap=snap=>({id:snap.id,exists:snap.exists(),data:()=>snap.data()});
@@ -26,9 +33,7 @@ export function createFirestoreStore(sdk, firebaseDb, groupId, assertCurrent = (
         }
         async candidates(){
             assertCurrent();
-            // Use only a single account equality/in filter, so this interim path
-            // does not require undeployed composite indexes. Other filters and
-            // ordering are applied locally, with an explicit safety bound.
+            // 暫行模式只將 accountId 的等值／in 條件送往伺服器，避免依賴未部署的複合索引；其餘篩選排序本機處理並設上限。
             const scope=this.filters.find(([key,op])=>key==='accountId'&&['==','in'].includes(op));
             const source=sdk.query(sdk.collection(firebaseDb,...this.path.split('/')),...(scope?[sdk.where(...scope)]:[]),sdk.limit(MAX_ROWS+1));
             const result=await sdk.getDocsFromServer(source);
@@ -54,7 +59,7 @@ export function createFirestoreStore(sdk, firebaseDb, groupId, assertCurrent = (
             };
             const result=await callback(transaction);
             assertCurrent();
-            // All reads precede Web SDK writes, including checks for create().
+            // 包含 create 存在檢查在內，所有讀取必須先於 Web SDK 寫入。
             for(const write of writes.filter(w=>w.kind==='create'))if((await readDoc(write.ref)).exists())throw Object.assign(Error('此紀錄已存在，請重新整理。'),{code:'already-exists'});
             assertCurrent();
             for(const write of writes){if(write.kind==='update')native.update(write.ref.native,write.data);else if(write.options)native.set(write.ref.native,write.data,write.options);else native.set(write.ref.native,write.data);}

@@ -1,3 +1,8 @@
+/**
+ * 遊戲大廳入口：群組遊戲權限、猜拳與 2048 紀錄及排行。
+ * 咕咕村落是獨立 Phaser 頁面；此模組的舊遊戲紀錄仍保留各自文件相容格式。
+ * @module
+ */
 import { icon } from './ui-icons.js';
 import { requireGameMembership } from './game-members.js';
 import { readGameContext, watchGameContext } from './game-context.js';
@@ -18,10 +23,14 @@ watchGameContext(context);
 await requireGameMembership(context);
 const currentUser = context.user;
 const userGroupId = context.groupId;
-// Keep existing, already group-scoped record IDs and permission settings.
+// 保留既有按群組區分的紀錄鍵及權限格式。
 const userDocId = `${userGroupId}_${currentUser.name}`;
 let myPermissions = { rps: true, g2048: true, farm: true };
 
+/**
+ * 訂閱以群組及目前姓名組成文件鍵的舊制遊戲權限。
+ * @returns {void} 以既有權限狀態更新大廳按鈕；不等同後端安全授權。
+ */
 function listenMyPermissions() {
     onSnapshot(doc(db, "game_permissions", userDocId), (docSnap) => {
         if (docSnap.exists()) {
@@ -518,8 +527,7 @@ function is2048Visible() {
     return document.getElementById('g2048Container')?.style.display === 'block';
 }
 if (boardEl) {
-    // touch-action on the board prevents Android from taking the gesture for
-    // scrolling/pull-to-refresh. Capture the board, not a tile replaced on render.
+    // 棋盤的 touch-action 避免 Android 將手勢當捲動或下拉重整；捕捉棋盤而非會被重繪的方塊。
     boardEl.addEventListener('pointerdown', event => {
         if (!event.isPrimary) { reset2048Gesture(); return; }
         if (!is2048Visible() || (event.pointerType === 'mouse' && event.button !== 0)) return;
@@ -573,7 +581,7 @@ if (btnLogout) {
     });
 }
 
-// Initialize after score variables are declared, including fast cached snapshots.
+// 分數變數宣告完成後才初始化，避免快取快照提早回呼。
 const avatarEl = document.getElementById('gameUserAvatar');
 if (avatarEl) avatarEl.src = currentUser.avatar || 'homebase_icon.jpg';
 const nameEl = document.getElementById('gameUserName');

@@ -1,3 +1,8 @@
+/**
+ * 吃什麼頁面：群組餐廳、餐別投票、轉盤與結果分享。
+ * createFoodStore 負責交易及相容舊投票；日期／餐別切換使用 loadVersion 並解除舊監聽。
+ * @module
+ */
 import { db } from './firebase-config.js';
 import { collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { getSelectedGameGroupId, watchGameContext } from './game-context.js';
@@ -174,8 +179,7 @@ window.foodApp.renderRestaurantList = function(type = restaurantFilter) {
     });
 };
 
-// Legacy restaurants may store one meal (or a delimited list) as text.
-// Normalize at the read boundary so every renderer/filter receives an array.
+// 舊餐廳可能以文字儲存單餐別或分隔清單；讀取時統一為陣列供篩選與呈現。
 function normalizeRestaurantMeals(value) {
     const entries = Array.isArray(value) ? value : typeof value === 'string' ? value.split(/[,，、;；|/\s]+/) : [];
     return [...new Set(entries.filter(item => typeof item === 'string').map(item => item.trim()).filter(item => item === '不限' || MEALS.includes(item)))];
@@ -438,6 +442,11 @@ window.foodApp.switchStatsTab = function(meal, btn) {
     loadVotes(meal);
 };
 
+/**
+ * 切換餐別投票訂閱，延遲完成的舊訂閱也必須立即解除。
+ * @param {string} meal - 早餐、午餐、晚餐或宵夜。
+ * @returns {Promise<void>} 更新目前投票；只呈現有效群組成員的票與最新頭像。
+ */
 async function loadVotes(meal) {
     const version = ++loadVersion;
     if (unsubscribe) unsubscribe();

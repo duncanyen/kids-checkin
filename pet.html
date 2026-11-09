@@ -288,6 +288,11 @@
             localStorage.setItem(`shared_FamilyPetDB`, JSON.stringify(petData));
         }
 
+        /**
+         * 依上次保存時間補算寵物狀態衰減。
+         * @returns {void} 有需補算的衰減時，更新記憶體並保存至本機。
+         * @description 此寵物是 localStorage 小遊戲，不是 Firestore 群組農場。
+         */
         function calculateTimeDecay() {
             if (isSleeping) return;
             const now = Date.now();

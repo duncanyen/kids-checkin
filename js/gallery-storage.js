@@ -35,6 +35,12 @@ export async function removePhotoFiles(paths, user, groupId) {
     }));
 }
 
+/**
+ * 先上傳 JPEG 至群組／Auth UID／貼文路徑，再交由 save 寫入貼文中繼資料。
+ * @param {Object} options - images、user、groupId、postId、save 與可選 progress。
+ * @returns {Promise<void>} 上傳與 save 都完成才成功；失敗嘗試刪除已上傳檔案。
+ * @description Storage 與 Firestore 沒有跨服務交易；補償刪除亦可能失敗，不能宣稱完全原子。
+ */
 export async function uploadPhotoPost({ images, user, groupId, postId, save, progress = () => {} }) {
     if (!images.length || images.length > 5) throw new Error('請選擇 1 至 5 張照片。');
     const owner = await authenticate(user, groupId);
@@ -50,7 +56,7 @@ export async function uploadPhotoPost({ images, user, groupId, postId, save, pro
         }
         await save({ imageUrls, storagePaths, storageProvider: 'firebase', uploaderAccountId: user.accountId, uploaderUid: owner.uid });
     } catch (error) {
-        // Remove already uploaded files when another upload or the post write fails.
+        // 後續上傳或貼文寫入失敗時，嘗試移除已上傳的檔案。
         try {
             const results = await removePhotoFiles(storagePaths, user, groupId);
             if (results.some(result => result.status === 'rejected')) console.warn('部分未發佈照片尚未清理。');

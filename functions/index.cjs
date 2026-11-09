@@ -1,3 +1,8 @@
+/**
+ * nexus-live 後端入口：Firestore→RTDB 鏡像、既有登入橋接與成長森林 callable。
+ * 以 Admin SDK 存取資料；來源事件可能重送，鏡像須遵守版本比較，勿將前端快取視為授權。
+ * @module
+ */
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getDatabase } = require('firebase-admin/database');
@@ -36,6 +41,13 @@ exports.liveProfileMirror = onDocumentWritten(trigger('users/{profileId}'), asyn
     }
 });
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+/**
+ * 驗證舊制帳號憑證與目前群組資格，供 custom-token 橋接使用。
+ * @param {Object} request - callable request；data 含 accountId、groupId、secret。
+ * @returns {Promise<Object>} 帳號、群組與查核後文件，供建立最小必要 claims。
+ * @throws {HttpsError} 帳號不唯一、已停用、憑證不符或已不在群組。
+ * @description 不記錄輸入憑證或完整回傳 Token；這是舊登入相容流程。
+ */
 async function validateSession(request) {
     const { accountId, groupId, secret } = request.data || {};
     if (typeof accountId !== 'string' || typeof groupId !== 'string' || typeof secret !== 'string' || !secret || !groupId || groupId.includes('/') || accountId.length > 500 || groupId.length > 500 || secret.length > 1000) throw new HttpsError('unauthenticated', '請重新登入。');
@@ -60,7 +72,7 @@ exports.liveSession = onCall({ region, cors: true, maxInstances: 5 }, async requ
     return { token };
 });
 
-// Growth Forest shares the existing verified Nexus custom-token identity.
+// 成長森林沿用既有伺服器驗證的 Nexus custom-token 身分。
 let growthService;
 exports.growthForest=onCall({region,cors:true,maxInstances:10},async request=>{
     try{growthService ||= require('./growth-service.cjs').createGrowthService({db:firestore});return await growthService.handle(request);}

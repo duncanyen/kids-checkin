@@ -1,7 +1,11 @@
+/**
+ * 咕咕村落漸進入口：引擎下載與成員確認平行，之後才匯入遊戲主模組。
+ * 公開素材可先載入；私人農場訂閱由 BootScene 等待 membershipReady 後建立。
+ * @module
+ */
 import { farmLoading } from './loading-ui.js';
 farmLoading.begin();
-// Start membership verification while fetching the engine. Constants no longer
-// block module evaluation; Boot gates every private scene on membershipReady.
+// 下載引擎時同步確認成員；constants 不阻塞模組載入，Boot 等 membershipReady 才開放私人場景。
 import('./constants.js').catch(() => farmLoading.error('無法確認群組，請返回重試。'));
 const engine = window.Phaser ? Promise.resolve() : new Promise((resolve, reject) => {
     const script = document.createElement('script');

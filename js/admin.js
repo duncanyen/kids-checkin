@@ -1,3 +1,8 @@
+/**
+ * Nexus 玩家站內管理頁：群組成員、功能開放、遊戲權限、通知目標及足跡。
+ * 此處 admin／parent 是 users 的舊角色，不是獨立營運站的 Auth Custom Claims。
+ * @module
+ */
 import { icon } from './ui-icons.js';
 const adminMenuLabel = value => String(value ?? '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
 import { normalizeAccountId, findAccountsById, newAccountRef, assertAccountAvailable, ACCOUNT_ID_TAKEN } from './account-identity.js';
@@ -47,7 +52,7 @@ async function loadSystemMenus() {
             systemMenuOptions = DEFAULT_MENUS.map(menu => ({ ...menu }));
         } else {
             if (!menus.some(menu => menu.id === 'food')) {
-                // Backfill only the missing feature; preserve existing defaults/order.
+                // 只補缺少的功能，保留既有預設值及排序。
                 const existing = await getDoc(doc(db, 'system_menus', 'food'));
                 if (!existing.exists()) await setDoc(doc(db, 'system_menus', 'food'), FOOD_MENU);
                 menus.push(existing.exists() ? { ...FOOD_MENU, ...existing.data(), id: 'food' } : { ...FOOD_MENU });
@@ -76,7 +81,7 @@ async function initAdminPage() {
     setupToggle('btnToggleUserList', 'userListContainer', 'toggleIconUserList', loadUsersFromFirebase);
     setupToggle('btnToggleLogs', 'logsSection', 'toggleIconLogs');
 
-    // Bind expand/collapse before any remote request can delay the page.
+    // 先綁定收合操作，避免遠端讀取延遲讓本機按鈕無法操作。
     await loadSystemMenus();
     renderMenuCheckboxes('newMenusContainer', false);
     renderMenuCheckboxes('editMenusContainer', true);
@@ -518,6 +523,11 @@ async function loadUsersFromFirebase() {
     }
 }
 
+/**
+ * 在成員管理交易內重新確認目前帳號仍屬於所選群組。
+ * @param {Object} transaction - Firestore Transaction。
+ * @returns {Promise<Object>} 含 ref、members 的群組資訊；不存在或已離開時拒絕操作。
+ */
 async function readManagedGroup(transaction) {
     const ref = doc(db, 'groups', groupId);
     const snapshot = await transaction.get(ref);

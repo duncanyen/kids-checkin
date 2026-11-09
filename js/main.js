@@ -1,3 +1,8 @@
+/**
+ * Nexus 首頁入口：載入登入、群組及 dashboard 模組，註冊共用 window 操作。
+ * 動態功能依 menus 與 userSettings 建立；首頁訂閱清理由 dashboard.js 管理。
+ * @module
+ */
 import { loadGroupProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { mountAppNavigation } from './app-navigation.js';
 import { icon, enhanceNavigation } from './ui-icons.js';
@@ -60,7 +65,13 @@ document.getElementById('avatarUploadInput').addEventListener('change', function
     reader.readAsDataURL(file);
 });
 
-// Member profiles are secondary content; never let an old group paint the new one.
+// 成員頭像屬於次要內容，舊群組回應不能覆蓋新畫面。
+/**
+ * 讀取目前群組成員並更新頭像；成員資料不阻塞主要首頁內容。
+ * @param {Function} [isCurrent] - 首頁世代仍有效的檢查函式。
+ * @param {Object} [group] - 含 id、members 的目前群組。
+ * @returns {Promise<void>} 讀取失敗時記錄錯誤；不讓舊群組結果覆蓋新畫面。
+ */
 window.fetchAndRenderGroupMembers = async function(isCurrent = () => true, group = window.currentGroup) {
     if (!group?.id) return;
     try {
@@ -293,7 +304,7 @@ if (document.readyState === 'loading') {
     initializeAppFlow(); 
 }
 
-// A cached document must release dashboard work on leave and resume once on Back.
+// 離頁清理首頁工作；bfcache 返回時只恢復一次。
 window.addEventListener('pagehide', () => window.stopDashboardListeners?.());
 window.addEventListener('pageshow', event => {
     if (event.persisted && document.getElementById('dashboardView').style.display === 'block') {

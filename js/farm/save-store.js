@@ -1,7 +1,6 @@
 import { doc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-// Clone mutable records without breaking SDK Timestamp objects or RTDB wire
-// timestamps that expose toMillis/toDate functions.
+// 複製可變記錄時保留 SDK Timestamp 與具 toMillis／toDate 的 RTDB 時間物件。
 export function copyFarmSave(value) {
     if (Array.isArray(value)) return value.map(copyFarmSave);
     if (value && typeof value === 'object' && [Object.prototype, null].includes(Object.getPrototypeOf(value))) {
@@ -39,8 +38,15 @@ export function initialFarm(now = Date.now()) {
     };
 }
 
-// Firestore transactions read the server and fail offline; unlike setDoc they
-// cannot enqueue a default farm based on an empty local-cache snapshot.
+// 交易需連線讀取伺服器；不能像 setDoc 一樣因空快取而排入預設農場覆寫。
+/**
+ * 在伺服器交易中確認存檔；僅不存在且沒有建立收據時才允許首次建檔。
+ * @param {Object} db - Firestore 實例。
+ * @param {{groupId: string, accountId: string}} context - 農場路徑與成員識別。
+ * @param {Object} [options] - canCreate、active 回呼避免離頁或既有存檔誤重建。
+ * @returns {Promise<Object>} 完整農場；不替既有但不完整的農場填預設值。
+ * @throws {Error} 快取未確認、群組失效、存檔損壞或禁止重新建檔。
+ */
 export function ensureFarmSave(db, { groupId, accountId }, { canCreate = () => true, active = () => true } = {}) {
     const owner = doc(db, 'groups', groupId, 'users', accountId);
     const receipt = doc(db, 'groups', groupId, 'users', accountId, 'farm_meta', 'creation');
@@ -65,7 +71,13 @@ export function ensureFarmSave(db, { groupId, accountId }, { canCreate = () => t
     });
 }
 
-// A single session owns initialization and the last good snapshot across scenes.
+// 單一 session 跨場景管理初始化與最後一次有效存檔。
+/**
+ * 跨 Phaser 場景持有最後一次有效存檔，協調訂閱與單一驗證請求。
+ * @param {Object} options - watch、verify、receive、status 的注入介面。
+ * @returns {{retry: Function, stop: Function}} 重試及解除資料訂閱的控制介面。
+ * @description 未確認快取不能授權建檔；較新的伺服器快照優先於延遲驗證。
+ */
 export function startFarmSaveSession({ watch, verify, receive, status }) {
     let stopped = false, pending, latest, revision = 0, seenFarm = false;
     const state = (phase, message) => { if (!stopped) status({ phase, message }); };
@@ -83,7 +95,7 @@ export function startFarmSaveSession({ watch, verify, receive, status }) {
             if (stopped) return;
             if (!isFarmSave(farm)) throw new Error('未能確認完整存檔');
             if (revision > startRevision && !latest) { state('error', '尚未能確認最新存檔，保留上次資料；點此重試'); return; }
-            // A newer authoritative update wins over a delayed verification.
+            // 較新的權威快照優先於延遲完成的驗證結果。
             publish(revision > startRevision && latest?.confirmed ? latest.farm : farm);
         }).catch(error => {
             if (revision > startRevision && latest?.confirmed) return;
@@ -101,14 +113,11 @@ export function startFarmSaveSession({ watch, verify, receive, status }) {
             latest = { farm: copyFarmSave(farm), confirmed: !snapshot.metadata?.fromCache };
             if (latest.confirmed) publish(farm);
             else {
-                // Keep the last confirmed display. Cached balances cannot
-                // authorize a new farm or replace newer server balances.
+                // 保留上次已確認畫面；快取餘額不能授權新建農場或覆蓋更新的伺服器資料。
                 retry();
             }
         } else {
-            // A pending create can be acknowledged by the transaction without a
-            // second snapshot (metadata-only changes are not always emitted).
-            // An empty cache likewise cannot overrule a server verification.
+            // 待確認的建檔可能由交易回應確認，不一定另發純 metadata 快照；空快取也不能推翻伺服器驗證。
             latest = snapshot.metadata?.fromCache || (isFarmSave(farm) && snapshot.metadata?.hasPendingWrites) ? { confirmed: false } : null;
             retry();
         }

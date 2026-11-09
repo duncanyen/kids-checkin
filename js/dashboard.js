@@ -1,3 +1,8 @@
+/**
+ * 首頁資料協調器：依功能權限建立群組小工具，管理快照、成員補載與輪播。
+ * 每次重建提升 dashboardGeneration；切換群組及 pagehide 應走集中清理入口。
+ * @module
+ */
 import { photoPerson, photoAvatar } from './gallery-profile-core.js';
 import { todoAssignedTo, todoAssigneeProfiles } from './todo-core.js';
 import { photoLikes, updatePhotoLike } from './gallery-core.js';
@@ -19,8 +24,7 @@ let dashboardGeneration = 0;
 let memberRefreshes = [];
 let cancelGroupLoad = null;
 
-// Retain the latest snapshot only for the current dashboard lifetime, so late
-// avatars can update existing widgets without opening another database query.
+// 只在目前首頁生命週期保存最近快照，頭像晚到時重繪小工具，不重開資料查詢。
 function watchMemberWidget(source, next, error) {
     const generation = dashboardGeneration;
     let latest;
@@ -63,6 +67,10 @@ window.switchGroup = async function() {
     finally { switchingGroup = false; }
 };
 
+/**
+ * 使舊非同步結果失效，解除首頁資料監聽與計時器。
+ * @returns {void} 同時清除快照重繪回呼，避免換群組後殘留舊成員與資料。
+ */
 window.stopDashboardListeners = function() {
     dashboardGeneration++;
     cancelGroupLoad?.(); cancelGroupLoad = null;
@@ -79,6 +87,11 @@ window.stopDashboardListeners = function() {
 
 };
 
+/**
+ * 重建目前群組的首頁；偏好設定決定小工具，頭像可稍後補上。
+ * @returns {Promise<void>} 主要首頁完成初始化；次要成員讀取可能仍在進行。
+ * @description 以世代檢查保護所有延遲結果，不能移除後改為無條件重繪。
+ */
 window.showDashboard = async function() {
     window.hideAllSections();
     const user = JSON.parse(sessionStorage.getItem('familyCheckInUser'));
@@ -122,7 +135,7 @@ window.showDashboard = async function() {
     document.getElementById('todayAgendaContainer').innerHTML = '';
     cachedCalendarEvents = [];
     document.getElementById('photoCarouselSection').style.display = 'none';
-    // Preferences control which widgets exist. Member avatars do not block them.
+    // 個人偏好決定建立哪些小工具，成員頭像不阻塞它們。
     const membersReady = groupReady.then(group => {
         if (isCurrent() && group) return window.fetchAndRenderGroupMembers(isCurrent, group);
     }).catch(error => console.error('載入群組成員失敗', error));

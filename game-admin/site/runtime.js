@@ -36,6 +36,13 @@ export async function finishEnrollment(code){
     if(!totpSecret)throw Error('設定已失效，請重新開始');
     await multiFactor(auth.currentUser).enroll(TotpMultiFactorGenerator.assertionForEnrollment(totpSecret,code),'管理員驗證器');totpSecret=null;await logout();
 }
+/**
+ * 使用 Firebase callable 呼叫營運 API，傳遞操作及固定請求識別碼。
+ * @param {string} action - 後端管理 action。
+ * @param {Object} [payload] - 操作內容。
+ * @param {string} [requestId] - 寫入操作的重送識別。
+ * @returns {Promise<Object>} 由後端驗證及處理後的結果。
+ */
 export async function api(action,payload={},requestId){
     if(!localEmulator&&adminAppCheckRequired){
         if(!appCheck)throw Object.assign(Error('管理站尚未設定 App Check 網站金鑰，請先完成設定並發布前端。'),{code:'ops/app-check-not-configured'});

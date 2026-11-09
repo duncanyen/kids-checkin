@@ -1,3 +1,8 @@
+/**
+ * 行事曆頁面：訂閱群組 events，依視圖與可見性呈現並直接寫入 Firestore。
+ * 目前私密可見性仍比對 operator 姓名；listenToEvents 未保存 unsubscribe，詳見文件問題清單。
+ * @module
+ */
 import { icon as uiIcon } from './ui-icons.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
@@ -65,6 +70,11 @@ async function recordLog(actionType, detailsText) {
 }
 window.onload = async function() { await recordLog('功能瀏覽', '進入〈家庭行事曆〉'); };
 
+/**
+ * 訂閱目前群組的 events，再於前端篩選 public 或本人 operator 的行程。
+ * @returns {void} 此版本未回傳停止函式；不可將前端可見性篩選視為資料庫授權。
+ * @description calendar_target_date 僅控制進入日期，不自動打開新增表單。
+ */
 function listenToEvents() {
     const q = query(
         collection(db, "events"), 
@@ -92,7 +102,7 @@ function listenToEvents() {
             }
         }
         renderCurrentView();
-        // Empty dates only navigate; opening an add form always requires a tap.
+        // 空日期只切換日期；新增表單必須由使用者另外點選。
         if (targetHasEvents) openEventModal(targetDate);
 
         if (document.getElementById('eventModal').style.display === 'flex' && !editingEventId) {
@@ -617,6 +627,11 @@ window.addEventListener('click', (e) => {
 const btnCloseModal = document.getElementById('btnCloseModal');
 if(btnCloseModal) btnCloseModal.addEventListener('click', () => { document.getElementById('eventModal').style.display = 'none'; });
 
+/**
+ * 驗證日期、標題與起訖時間後，新增或更新行程並回到當日清單。
+ * @returns {Promise<void>} 按鈕鎖在 finally 解除；儲存失敗顯示提示。
+ * @description 沿用既有 accountId 相容順序及 serverTimestamp，不在此遷移舊識別。
+ */
 async function saveEvent() {
     if (document.getElementById('btnSaveEvent').disabled) return;
     const eventDate = document.getElementById('evDate').value;

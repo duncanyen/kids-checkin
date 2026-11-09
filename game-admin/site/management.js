@@ -1,4 +1,10 @@
-// The management workspace uses the same authenticated API and table/form styles.
+// 管理工作區沿用已驗證的 API 及共用表格／表單樣式。
+/**
+ * 掛載四個管理頁，沿用共用表格與表單元件，所有資料經受保護的 API。
+ * @param {Object} options - root、api、DOM／時間工具、status 及目前管理員 UID。
+ * @returns {Object} has、isBusy、open、deactivate 的頁面生命週期介面。
+ * @description 操作識別碼按管理員與內容雜湊保存至 sessionStorage，確認成功才移除。
+ */
 export function createManagementUI({root,api,node,button,table,formatTime,wallTime,utc,status,getAdminUid}){
     const views=['players','balance','events','settings'];
     const names={draft:'草稿',scheduled:'排程',active:'進行中',ended:'已結束',cancelled:'已取消'};

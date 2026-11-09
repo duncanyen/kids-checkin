@@ -1,3 +1,8 @@
+/**
+ * 成長森林頁面協調器：森林、紀錄、夢想獎勵、家長管理與成員唯讀森林。
+ * client.js 選取資料傳輸；pagehide 解除資料／外觀監聽、計時器、Object URL 及 Phaser。
+ * @module
+ */
 import '../app-navigation.js';
 import {readGameContext,getSelectedGameGroupId} from '../game-context.js';
 import {ReadingClock} from './reading-clock.js';
@@ -22,6 +27,13 @@ const available=()=>Math.round((data.wallet.pointsBalance-data.wallet.pointsRese
 function sheet(title,html){delete $('sheet').dataset.recordId;delete $('sheet').dataset.recordStatus;photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];game?.setInputEnabled(false);$('sheetTitle').textContent=title;$('sheetBody').innerHTML=html;if(!$('sheet').open)$('sheet').showModal();$('sheetBody').querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeSheet());updateTimer();}
 function closeSheet(){if(busy)return;$('sheet').close();photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];}
 $('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{game?.setInputEnabled(!$('sheet').open);photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+/**
+ * 鎖定表單、送出變更並重讀畫面；資源計算由 service 的交易處理。
+ * @param {string} action - 成長森林服務操作名稱。
+ * @param {Object} payload - 經各表單整理的操作內容。
+ * @param {Object} [options] - close 控制成功後是否關閉表單。
+ * @returns {Promise<void>} 結果以提示與最新畫面呈現；失敗保留錯誤資訊。
+ */
 async function action(action,payload,{close=true}={}){
  if(busy||!client)return null;busy=true;const controls=[...document.querySelectorAll('button,input,select,textarea')].filter(c=>!c.disabled);controls.forEach(c=>c.disabled=true);
  try{const result=await client.api(action,payload,true);try{await refresh();}catch(error){if(close)$('sheet').close();status('操作已儲存，但畫面同步延遲。請重新連線後再操作。',true);$('retry').hidden=false;return result;}if(close)$('sheet').close();const notice=result.status==='pending'?'紀錄成功！等待家長確認後，就能獲得成長獎勵。':rewardMessage(result);status(notice);toast(notice);return result;}
@@ -253,6 +265,11 @@ function settingsForm(root){
  const s=data.settings;root.innerHTML=`<form id="settingsForm"><p class="body-copy">新規則只套用於之後提交的紀錄；已提交紀錄使用當時的規則快照。</p><section class="settings-section"><h3>考試獎勵</h3>${s.examBands.map((b,i)=>`<div class="settings-row">${field('最低百分比',`examMin${i}`,'number',b.min,'required min="0" max="100" step="0.01"')}${field('星星',`examPoints${i}`,'number',b.points,'required min="0" step="0.01"')}${field('水滴',`examWater${i}`,'number',b.water,'required min="0" step="1"')}${field('金幣',`examCoins${i}`,'number',b.coins,'required min="0" step="1"')}</div>`).join('')}<label><input name="examApproval" type="checkbox" ${s.examApproval?'checked':''}> 考試需要家長審核</label></section><section class="settings-section"><h3>進步獎勵</h3>${s.improvementBands.map((b,i)=>`<div class="settings-row">${field('進步百分點',`improvementMin${i}`,'number',b.min,'required min="0.01" step="0.01"')}${field('額外星星',`improvementPoints${i}`,'number',b.points,'required min="0" step="0.01"')}</div>`).join('')}</section><section class="settings-section"><h3>閱讀獎勵與每日上限</h3><div class="form-grid">${field('每份需閱讀分鐘','readingMinutes','number',s.reading.minutes,'required min="1" max="1440" step="1"')}${field('每日最多獎勵份數','readingDaily','number',s.reading.dailyLimit,'required min="0" max="20" step="1"')}${field('每份星星','readingPoints','number',s.reading.points,'required min="0" step="0.01"')}${field('每份水滴','readingWater','number',s.reading.water,'required min="0" step="1"')}${field('每份金幣','readingCoins','number',s.reading.coins,'required min="0" step="1"')}</div><label><input name="readingApproval" type="checkbox" ${s.readingApproval?'checked':''}> 閱讀需要家長審核</label></section><p class="form-error"></p><button type="submit">儲存未來適用規則</button></form>`;
  $('settingsForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget),n=name=>Number(fd.get(name));action('saveSettings',{settings:{examApproval:fd.has('examApproval'),readingApproval:fd.has('readingApproval'),examBands:s.examBands.map((_,i)=>({min:n('examMin'+i),points:n('examPoints'+i),water:n('examWater'+i),coins:n('examCoins'+i)})),improvementBands:s.improvementBands.map((_,i)=>({min:n('improvementMin'+i),points:n('improvementPoints'+i)})),reading:{minutes:n('readingMinutes'),dailyLimit:n('readingDaily'),points:n('readingPoints'),water:n('readingWater'),coins:n('readingCoins')}}},{close:false});};
 }
+/**
+ * 連接所選傳輸、載入目前視圖，再建立資料及帳號外觀訂閱。
+ * @returns {Promise<void>} 失敗顯示重試；重建前會解除原資料訂閱。
+ * @description 預設從我的森林開始，管理角色不改變首次視圖。
+ */
 async function initialize(){
  $('retry').hidden=true;status('正在連接你的森林…');
  try{if(!client){const m=await import('./client.js');client=await m.connect(context);stopAppearance=client.watchAppearance?.((appearance,metadata)=>window.NexusTheme?.hydrate(context.accountId,appearance,metadata));}await refresh();if(stopped)return;await openView(view);status('你的森林已同步。');unsubscribe?.();unsubscribe=client.subscribe(data.parent,scheduleRefresh,e=>status('即時同步中斷：'+message(e),true));}

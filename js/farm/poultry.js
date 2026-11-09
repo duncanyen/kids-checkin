@@ -1,5 +1,5 @@
 import { getUsedSpace } from './inventory-core.js';
-// Pure breed/production rules, shared by home, visits, shop, feeding and boss loss.
+// 純雞種及產蛋規則由自家、拜訪、商店、餵食與戰鬥損失共用。
 export const HOUR = 3600000;
 export const BREEDS = Object.freeze({
     hen: { name: '母雞', texture: 'hen', buy: 1000, sell: 500, interval: 4 * HOUR, daily: 6, eggKey: 'inventoryEggs', eggName: '雞蛋', eggIcon: 'egg', eggPrice: 10 },
@@ -22,6 +22,13 @@ export function poultryState(farm, now = Date.now()) {
     const ready = Object.fromEntries(Object.keys(BREEDS).map(key => [key, legacy ? (key === 'hen' ? count(farm.eggsReady) : 0) : count(farm.readyEggs?.[key])]));
     return { hens, ready, cleanliness: count(farm.cleanliness) };
 }
+/**
+ * 依每隻雞的時鐘補算產蛋、滿產停鐘與逾期病雞；不直接寫資料庫。
+ * @param {Object} farm - 包含 hensState、readyEggs 的農場快照，亦相容舊格式。
+ * @param {number} [now=Date.now()] - 毫秒時間，用於可重現的結算。
+ * @returns {Object} 新養殖狀態，須由 poultryPatch 轉成交易更新欄位。
+ * @description 放風只是呈現設定，不能用外面精靈數取代完整養殖隻數。
+ */
 export function settlePoultry(farm, now = Date.now()) {
     const state = poultryState(farm, now);
     state.hens = state.hens.filter(h => !(h.isSick && h.sickTimestamp && now - h.sickTimestamp > 48 * HOUR));
@@ -68,10 +75,16 @@ export function clearPoultryEggs(farm, now = Date.now()) {
     state.ready = Object.fromEntries(Object.keys(BREEDS).map(key=>[key,0])); releaseFullClocks(state, now);
     return poultryPatch(state);
 }
+/**
+ * 先結算產量，再依倉庫可用容量與固定品種順序收蛋，保留未收部分。
+ * @param {Object} farm - 最新農場資料。
+ * @param {number} [now=Date.now()] - 結算時間（毫秒）。
+ * @returns {Object} patch、各品種 collected、total 與 remaining，交由交易提交。
+ */
 export function collectPoultry(farm, now = Date.now()) {
     const state = settlePoultry(farm, now), inventory = {}, collected = {};
     let available = Math.max(0, Math.floor((farm.warehouseLimit || 10) - getUsedSpace(farm)));
-    // Stable catalog order preserves collection priority for existing breeds.
+    // 固定品種順序保留既有收蛋優先順序。
     for (const [key, config] of Object.entries(BREEDS)) {
         collected[key] = Math.min(available, state.ready[key]);
         available -= collected[key];
@@ -108,7 +121,7 @@ export function tradePoultry(farm, breed, quantity, type, now = Date.now(), ids 
         for (let i = 0; i < quantity; i++) state.hens.push({ id: ids[i] || `${breed}-${now}-${i}`, breed, isSick: false, laidAt: now });
     } else {
         if (state.hens.filter(h => h.breed === breed).length < quantity) throw new Error('此品種的雞隻數量不足！');
-        // Sell healthy birds first; preserve already laid eggs even after the last bird is sold.
+        // 優先賣健康雞；即使賣掉最後一隻，已產出的蛋仍保留。
         const selected = state.hens.filter(h => h.breed === breed).sort((a, b) => Number(a.isSick || false) - Number(b.isSick || false)).slice(0, quantity);
         state.hens = state.hens.filter(h => !selected.includes(h)); coins += config.sell * quantity;
     }

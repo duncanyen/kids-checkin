@@ -9,6 +9,12 @@ const profile=(snap)=>{const p=snap.data()||{};return{uid:snap.id,accountId:p.ac
 const control=value=>({blocked:value?.blocked===true,notes:typeof value?.notes==='string'?value.notes:'',reason:typeof value?.reason==='string'?value.reason:'',revision:value?.revision||0,updatedAt:value?.updatedAt||null});
 const requireVersion=(old,expected)=>{if((old?.revision||0)!==revision(expected))D.fail('failed-precondition','資料已被更新，請重新讀取後再儲存');};
 
+/**
+ * 建立玩家、護衛犬設定、活動與系統開關的營運操作層。
+ * @param {Object} options - Admin SDK db 與 now 毫秒時鐘。
+ * @returns {Object} 查詢、交易及設定讀取介面，必須由 createService 先驗證管理員。
+ * @description 新控制資料獨立於 users／groups；只有明確的金幣調整更新原農場。
+ */
 function createManagement({db,now}){
     const read=(ref,t)=>t?t.get(ref):ref.get();
     async function settings(t){
@@ -71,6 +77,14 @@ function createManagement({db,now}){
         }
         D.fail('invalid-argument','未知管理查詢');
     }
+    /**
+     * 同筆交易完成管理變更、成功稽核與請求收據，版本不符則拒絕覆寫。
+     * @param {string} uid - 已由服務驗證的管理員 Auth UID。
+     * @param {string} action - 已支援的管理寫入操作。
+     * @param {Object} payload - 含原因、必要的 expectedRevision 或 expectedCoins。
+     * @param {string} requestId - 此次操作的固定識別碼。
+     * @returns {Promise<Object>} 操作結果；同 UID、識別碼與內容重送回傳原結果。
+     */
     async function mutate(uid,action,payload,requestId){
         const journal=db.doc('ops_admin_requests/'+D.hash(uid+':'+requestId)),fingerprint=D.fingerprint({action,payload}),audit=db.collection('ops_audit').doc();
         return db.runTransaction(async t=>{

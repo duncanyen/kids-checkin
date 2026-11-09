@@ -1,6 +1,14 @@
 import {collection,doc,getDoc,query,where,onSnapshot} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-// Read only the selected group's accounts. Each query also reacts to renames
-// while the feed is open; historical posts/comments themselves remain untouched.
+// 只訂閱所選群組帳號；改名即更新顯示，不改寫歷史貼文或留言。
+/**
+ * 取得群組名單後，按 accountId 分批訂閱最新名稱與頭像，不改寫歷史貼文。
+ * @param {Object} db - Firestore 實例。
+ * @param {string} groupId - 群組 ID。
+ * @param {string} accountId - 必須在該群組中的目前帳號。
+ * @param {Function} next - 全部分批首次就緒後接收合併成員。
+ * @param {Function} [error] - 查詢與監聽錯誤處理。
+ * @returns {Function} 立即可呼叫的停止函式，也會阻止延遲查詢建立新監聽。
+ */
 export function watchPhotoProfiles(db, groupId, accountId, next, error = () => {}) {
     let stopped = false;
     const stops = [];

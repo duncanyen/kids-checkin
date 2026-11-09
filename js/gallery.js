@@ -1,3 +1,8 @@
+/**
+ * Photo Dump 頁面：以群組查詢分頁、監聽已載入範圍並增量更新卡片。
+ * Storage 上傳及 viewer 按需匯入；pagehide 停訂閱，bfcache 恢復時重查帳號與群組。
+ * @module
+ */
 import { photoPerson, photoAvatar } from './gallery-profile-core.js';
 import {
     collection, addDoc, query, orderBy, onSnapshot, where, getDocs, limit, startAfter, endAt,
@@ -9,8 +14,7 @@ import { photoLikes, updatePhotoLike } from './gallery-core.js';
 import { loadPhotoAliases } from './gallery-identity.js';
 import { createPhotoViewer } from './gallery-viewer.js';
 const html = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// Viewing the feed needs only Firestore. Auth/Functions/Storage load when an
-// upload or storage-backed delete actually needs them; native ESM shares the load.
+// 瀏覽只需要 Firestore；上傳或刪除 Storage 照片時才載入 Auth／Functions／Storage，ESM 會共用載入。
 async function uploadPhotoPost(options) {
     return (await import('./gallery-storage.js')).uploadPhotoPost(options);
 }
@@ -91,7 +95,7 @@ window.onload = async function() {
     localStorage.setItem('homebase_photodump_last_read', Date.now().toString());
 };
 
-// Fixed cursor ranges keep realtime updates without a listener per document.
+// 以固定游標範圍維持即時更新，不對每份文件分別建立監聽。
 const PAGE_SIZE = 15;
 const posts = new Map(), cards = new Map();
 let ranges = [], subscriptions = [], cursor = null, loading = false, exhausted = false;
@@ -114,6 +118,13 @@ function pagingState(message) {
     pagingButton.textContent = message || (exhausted ? '已載入所有貼文' : '載入更多');
     pagingButton.disabled = loading || exhausted;
 }
+/**
+ * 訂閱已載入的游標區間，更新 Map 而不重新載入全部貼文。
+ * @param {Object} range - after、end 及此區間目前持有的 ids。
+ * @param {number} token - gallery 世代，阻止舊訂閱結果重繪。
+ * @returns {void} 停止函式加入 subscriptions，pauseGallery 時全部解除。
+ * @description 快取缺少文件不能證明刪除，僅由伺服器快照移除可見貼文。
+ */
 function subscribeRange(range, token) {
     const constraints = range.after ? [startAfter(range.after)] : [];
     if (range.end) constraints.push(endAt(range.end));
@@ -122,8 +133,7 @@ function subscribeRange(range, token) {
         const next = new Set();
         snapshot.forEach(d => { next.add(d.id); posts.set(d.id, {id:d.id, ...d.data()}); });
         const previousIds = range.ids;
-        // A cache-only snapshot can be incomplete after restore. Keep visible
-        // records until a server snapshot confirms their removal.
+        // 恢復時的純快取快照可能不完整；伺服器確認刪除前保留可見記錄。
         range.ids = snapshot.metadata?.fromCache ? new Set([...previousIds, ...next]) : next;
         for (const id of previousIds) if (!snapshot.metadata?.fromCache && !next.has(id) && !ranges.some(r=>r.ids.has(id))) posts.delete(id);
         syncFeed();
@@ -136,6 +146,11 @@ function subscribeRange(range, token) {
     });
     subscriptions.push(stop);
 }
+/**
+ * 以 groupId、timestamp 倒序與文件游標讀取下一頁 15 筆貼文。
+ * @returns {Promise<void>} 建立該頁監聽範圍；loading 鎖與世代避免並行重入。
+ * @description 空快取不判定已讀完，保留重試；首個空群組仍建立即時監聽。
+ */
 async function loadNextPage() {
     if (!active || loading || exhausted) return;
     loading = true; pagingState('載入中…');
@@ -145,8 +160,7 @@ async function loadNextPage() {
         const snapshot = await getDocs(baseQuery(...(after ? [startAfter(after)] : []), limit(PAGE_SIZE)));
         if (!active || token !== generation) return;
         const docs = snapshot.docs;
-        // An empty initial group still needs a live head. A nonempty tail is
-        // bounded by the last fetched document, including equal timestamps by ID.
+        // 空群組仍需即時接收新貼文；非空頁尾以最後文件限制範圍，同時間依文件鍵排序。
         if (docs.length || !ranges.length) {
             const range = {after, end:docs.at(-1) || null, ids:new Set(docs.map(d=>d.id))};
             ranges.push(range);
@@ -171,6 +185,10 @@ async function loadNextPage() {
         }
     }
 }
+/**
+ * 暫停相簿生命週期：讓請求失效，解除貼文／頭像監聽及分頁觀察器。
+ * @returns {void} 保留可重用的貼文狀態，交由 resumeGallery 驗證上下文後恢復。
+ */
 function pauseGallery() {
     active = false; generation++; loading = false;
     profileGeneration++;stopPhotoProfiles?.();stopPhotoProfiles = null;
@@ -179,7 +197,7 @@ function pauseGallery() {
 }
 function resumeGallery() {
     if (active || !currentUser || !currentGroupId) return;
-    // A restored document must never resume the previous group's subscriptions.
+    // 恢復頁面前必須確認上下文，不能重新訂閱先前群組。
     const saved = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
     if (localStorage.getItem('lastGroupId') !== currentGroupId || JSON.parse(saved || 'null')?.accountId !== currentUser.accountId) {
         window.location.replace('index.html'); return;
@@ -244,8 +262,7 @@ function renderFeed() {
             const card = renderPhotoCard(photo.id, photo, globalImageIndex);
             entry = {card, signature}; cards.set(photo.id, entry);
         } else if (signature !== entry.signature) {
-            // Patch only changed regions; image nodes, draft inputs and carousel
-            // scroll positions survive likes/comments and unrelated updates.
+            // 只更新有變動的區域；按讚、留言或其他更新不應重建圖片、輸入草稿及輪播位置。
             const imagesChanged = JSON.stringify(entry.images) !== JSON.stringify(photo.imageUrls || (photo.imageUrl ? [photo.imageUrl] : []));
             const fresh = renderPhotoCard(photo.id, photo, globalImageIndex, !imagesChanged);
             for (const selector of ['.card-caption','.interaction-bar']) {
@@ -256,7 +273,7 @@ function renderFeed() {
                 else if (next) entry.card.querySelector('.interaction-bar').before(next);
             }
             const oldComments = entry.card.querySelector('.comments-list'), newComments = fresh.querySelector('.comments-list');
-            // Compare comments individually so appending a reply preserves existing nodes.
+            // 逐則比較留言，新增回覆時保留既有留言節點。
             Array.from(newComments.children).forEach((node,index)=>{
                 const existing = oldComments.children[index];
                 if (!existing) oldComments.append(node.cloneNode(true));
@@ -495,7 +512,7 @@ window.deletePhoto = async function(photoId) {
             const photo = allPhotosData.find(item => item.id === photoId);
             if (!photo || photo.groupId !== currentGroupId) return;
             const filePaths = [...(photo.storagePaths || []), ...(photo.comments || []).flatMap(comment => comment.storagePaths || [])];
-            // Confirm the lazy cleanup code is available before deleting metadata.
+            // 刪除貼文資料前，先確認延遲載入的檔案清理程式可用。
             if (filePaths.length) await import('./gallery-storage.js');
             await deleteDoc(doc(db, "photos", photoId));
             try {

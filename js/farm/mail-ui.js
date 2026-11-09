@@ -17,6 +17,12 @@ const button = (label, action, className = 'farm-mail-button') => {
     return node;
 };
 
+/**
+ * 掛載村落通知、營運公告與兌換面板，協調戰鬥期間彈出及玩家操作鎖。
+ * @param {Object} game - Phaser.Game，銷毀時清理面板與相關訂閱／計時器。
+ * @param {{groupId: string, accountId: string}} context - 收件者群組與固定帳號。
+ * @returns {void} UI 與遊戲生命週期綁定；本機已讀不影響伺服器兌換收據。
+ */
 export function mountFarmMail(game, context) {
     const store = createFarmMailStore(db, context);
     const operations = createGameOperationsClient(context);
@@ -369,7 +375,7 @@ export function mountFarmMail(game, context) {
                 const result=await operations.redeem(redemption.code);
                 if(!Array.isArray(result?.rewards))throw Error('未能確認獎勵明細，請使用同一活動碼重試。');
                 redemption.phase='success';redemption.result=result;redemption.code='';
-                // Refresh from the authoritative save, including when the RTDB mirror is delayed.
+                // 重新取得權威存檔，即使 RTDB 鏡像尚未更新亦不能顯示舊獎勵狀態。
                 if(!disposed)Promise.resolve().then(()=>game.retryFarmSave?.()).catch(()=>{});
             }catch(error){
                 redemption.phase='error';redemption.error=error.message||'兌換失敗，請稍後使用同一組兌換碼重試';

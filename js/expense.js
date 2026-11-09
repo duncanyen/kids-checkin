@@ -1,3 +1,8 @@
+/**
+ * 記帳本入口：清單用游標分頁與聚合統計，日曆載入當月，回顧資料延後讀取。
+ * 資料以 groupId 隔離查詢；monthRequestVersion 防止切換月份後舊結果覆蓋。
+ * @module
+ */
 import { icon } from './ui-icons.js';
 import { CATEGORY_ICON_OPTIONS, categoryIconKey, categoryIconHTML } from './expense-category-icons.js';
 import { loadChart } from './chart-loader.js';
@@ -101,15 +106,13 @@ function formatK(num) {
 }
 
 async function initApp() {
-    // Category definitions and month records have no read dependency. The chart
-    // waits for both; only the calendar can be painted before categories arrive.
+    // 分類與當月記錄可平行讀取；圖表等兩者就緒，日曆可先呈現。
     categoriesReady = loadCustomCategories();
     await loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 }
 initApp();
 
-// Only identities referenced by this group's current month need avatars. Never
-// scan users, and never hold up amounts while optional profile data is loading.
+// 只查目前群組當月記錄引用的身分，選填頭像不得阻塞金額或改成掃描 users。
 async function loadMonthProfiles(records, version) {
     try {
         const [accounts, legacy] = await Promise.all([
@@ -184,6 +187,13 @@ function listMonthFilters() {
     return [where('groupId', '==', currentGroupId), where('date', '>=', prefix + '-01'), where('date', '<=', prefix + '-31')];
 }
 
+/**
+ * 載入指定清單頁及必要的當月統計；不為統計下載整月文件。
+ * @param {number} [pageIndex=0] - 從零起算的頁碼，依前頁游標前進。
+ * @param {boolean} [refreshTotals=false] - 是否重新取得伺服器聚合統計。
+ * @returns {Promise<void>} 更新清單與按需頭像；錯誤保留可重新讀取的狀態。
+ * @description 每次文件查詢 limit(10)；缺 type 的歷史記錄依舊規則當支出。
+ */
 async function loadListPage(pageIndex = 0, refreshTotals = false) {
     const version = ++monthRequestVersion;
     listRequestedPage = pageIndex;
@@ -192,7 +202,7 @@ async function loadListPage(pageIndex = 0, refreshTotals = false) {
     renderLedgerList();
     try {
         const filters = listMonthFilters();
-        // Server aggregates return totals/counts, never the month's documents.
+        // 伺服器聚合只回傳總額與筆數，不下載整月文件。
         if (!listTotals || refreshTotals) {
             const [all, income, expense] = await Promise.all([
                 getAggregateFromServer(query(collection(db, 'expenses'), ...filters), { amount: sum('amount'), records: count() }),
@@ -209,8 +219,7 @@ async function loadListPage(pageIndex = 0, refreshTotals = false) {
             let exhausted = previous?.exhausted || false;
             const records = [];
             const needed = Math.min(LIST_PAGE_SIZE, Math.max(0, listTotals[type].records - pageIndex * LIST_PAGE_SIZE));
-            // A bounded stream also includes legacy expense records with no type.
-            // Every document request has limit(10); only requested pages advance it.
+            // 有界讀取也相容缺 type 的舊支出；每次文件查詢 limit(10)，僅按要求推進頁面。
             while (records.length < needed) {
                 if (!buffer.length) {
                     if (exhausted) break;
@@ -249,7 +258,7 @@ async function loadListPage(pageIndex = 0, refreshTotals = false) {
         if (version !== monthRequestVersion) return;
         console.error('讀取清單失敗：', error);
         listBusy = false; monthError = true;
-        // Profile errors must not invalidate successfully loaded financial data.
+        // 頭像讀取失敗不能讓已成功取得的帳務資料失效。
         if (monthReady) { monthError = false; renderLedgerList(); return; }
         renderLedgerList();
     }
@@ -349,12 +358,18 @@ window.changeEntryDate = function() {
     renderDayList();
 };
 
+/**
+ * 依目前模式分流至清單，或查詢指定群組的當月日曆資料。
+ * @param {number} year - 西元年。
+ * @param {number} month - 1 至 12 月。
+ * @returns {Promise<void>} 記帳金額先呈現，分類與頭像依既有相依順序補上。
+ */
 async function loadMonthData(year, month) {
     if (currentMainView === 'list') { resetListData(); return loadListPage(0); }
     const version = ++monthRequestVersion;
     monthReady = false;
     monthError = false;
-    // Pending means unknown, never a plausible but incorrect $0/old-month sum.
+    // 載入中代表未知，不能先顯示看似合理但錯誤的零元或舊月份總額。
     document.getElementById('monthTotalExpense').innerText = '讀取中...';
     document.getElementById('monthTotalIncome').innerText = '讀取中...';
     if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
@@ -521,7 +536,7 @@ window.switchChartType = function(type) {
     renderPieChart();
 }
 
-// This state occupies the existing chart area only; amounts remain independent.
+// 此提示只佔原圖表區域，不影響金額獨立呈現。
 async function chartConstructor(canvasId, retry) {
     const canvas = document.getElementById(canvasId);
     let status = document.getElementById(canvasId + 'Status');
@@ -939,7 +954,7 @@ function renderManageCategories() {
 window.editCategory = function(catId) {
     const cat = customCategories.find(c => c.id === catId);
     if (!cat) return;
-    // Open first: the new-category initialization must not erase the saved fields.
+    // 先開啟表單，避免新增分類的初始化清掉正在編輯的既有欄位。
     openModal('customCatModal');
     document.getElementById('editCatId').value = cat.id;
     document.getElementById('newCatName').value = cat.name;
@@ -1155,7 +1170,7 @@ function renderDayList() {
     });
 }
 
-// Name edits leave amounts, categories, dates and monthly totals unchanged.
+// 只改名稱，不變動金額、分類、日期及月份總計。
 window.editExpenseName = async function(docId) {
     if (savingEntry || !monthReady) return;
     const item = monthData.find(entry => entry.id === docId && entry.groupId === currentGroupId);

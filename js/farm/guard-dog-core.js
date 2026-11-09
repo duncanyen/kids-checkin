@@ -5,7 +5,7 @@ export const GUARD_DOG_BREEDS = {
     collie: { rentable: false, name: '邊境牧羊犬', texture: 'guard_collie', biteChance: 0.8, blockMs: 4 * 3600000, dayPrice: 200, weekPrice: 1000, herding: true },
 };
 
-// Running occupies 18 seconds of each 30-second cycle. Return/rest share 12 seconds.
+// 每 30 秒有 18 秒奔跑，剩餘 12 秒返回或休息。
 export const COLLIE_CYCLE_MS = 30000;
 export const COLLIE_RUN_MS = 18000;
 export function colliePatrolPhase(elapsedMs) {
@@ -13,6 +13,14 @@ export function colliePatrolPhase(elapsedMs) {
     return {running:position<COLLIE_RUN_MS,remaining:(position<COLLIE_RUN_MS?COLLIE_RUN_MS:COLLIE_CYCLE_MS)-position};
 }
 
+/**
+ * 以日租與週租組合計算最低費用，允許整週覆蓋剩餘天數以取得更低價格。
+ * @param {string} breedId - 護衛犬品種鍵。
+ * @param {number} days - 欲租用的正整數天數。
+ * @param {Object} [catalog] - 預設品種表；後端可傳入已驗證的營運覆寫設定。
+ * @returns {number} 安全整數金幣費用，不在此扣款或建立租約。
+ * @throws {Error} 品種、天數、時間或價格超出合法範圍。
+ */
 export function rentalPrice(breedId, days, catalog = GUARD_DOG_BREEDS) {
     const breed = catalog[breedId];
     if (!breed || !Number.isSafeInteger(days) || days < 1 || !Number.isSafeInteger(days * DAY_MS + Date.now()) || days * DAY_MS + Date.now() > 8640000000000000) throw new Error('請輸入有效的整數天數');

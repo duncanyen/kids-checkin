@@ -6,8 +6,7 @@
     <link rel="modulepreload" href="js/navigation-config.js">
     <script src="js/theme-bootstrap.js"></script>
     <script>
-    // Reserve navigation space and hide the return link before the first paint.
-    // This reads layout context only; page permissions and data still initialize normally.
+    // 首屏前先預留導覽空間並隱藏返回連結；只讀取版面上下文，不取代權限或資料初始化。
     try { if (new URLSearchParams(location.search).get('nav') === '1' && JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null')?.accountId) document.documentElement.dataset.navigationEntry = 'nav'; } catch {}
     </script>
     <link rel="manifest" href="./manifest.webmanifest">
@@ -160,6 +159,11 @@
             window.loadData();
         };
 
+        /**
+         * 載入舊制打卡通知的房間清單與共用 settings/checkinConfig。
+         * @returns {Promise<void>} 更新選單；此版本讀取 rooms 全集合，非群組隔離查詢。
+         * @description 此歷史限制列於技術文件，本次不變更查詢或通知寫入方式。
+         */
         async function loadChatRoomsForSelect() {
             try {
                 const select = document.getElementById('targetChatRoomSelect');

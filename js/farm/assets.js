@@ -50,8 +50,7 @@ export class FarmAssetScene extends Phaser.Scene {
     ensure(keys, progress) {
         if (this.closed) return Promise.reject(Error('Game destroyed'));
         if (keys.every(key=>this.textures.exists(key))) { registerAvailableAnimations(this); return Promise.resolve(); }
-        // One persistent loader serializes jobs. Later requests recheck the cache,
-        // so overlapping requests never download the same texture twice.
+        // 固定載入器依序處理工作，後續需求重查紋理快取，重疊請求不重複下載。
         return new Promise((resolve,reject)=>{this.jobs.push({keys:[...new Set(keys)],progress,resolve,reject});this.pump();});
     }
     pump() {
@@ -73,11 +72,17 @@ export class FarmAssetScene extends Phaser.Scene {
         this.load.start();
     }
 }
+/**
+ * 透過持續存在的 FarmAssetScene 排隊載入素材，共用已完成的紋理。
+ * @param {Object} scene - 需要素材的 Phaser Scene。
+ * @param {Array<string>} keys - ASSET_MANIFEST 素材鍵。
+ * @param {Function} [progress] - 接收目前載入進度。
+ * @returns {Promise<void>} 素材與對應動畫可使用；載入失敗拒絕並交由頁面重試。
+ */
 export function ensureAssets(scene, keys, progress) {
     return scene.game.scene.getScene('FarmAssetScene').ensure(keys,progress);
 }
-// A custom Loader File waits on the shared asset loader. Phaser still controls
-// preload -> create; direct scene.start calls and retry paths obey the same gate.
+// 自訂 Loader File 等待共用素材；仍由 Phaser 控制 preload→create，直接切場景或重試也走同一閘門。
 export function preloadSceneAssets(scene) {
     const keys=bundles[scene.sys.settings.key] || CORE_ASSETS;
     const token=scene.farmAssetToken=Symbol();scene.farmAssetError=false;

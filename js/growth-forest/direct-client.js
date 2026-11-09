@@ -2,8 +2,13 @@ import {app,db} from '../firebase-config.js';
 import * as sdk from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import {createFirestoreStore} from './firestore-store.js';
 import {createGrowthService} from './direct-service.js';
-// Temporary compatibility with Nexus's existing session and Firestore access.
-// These browser checks are UX guards, not a replacement for trusted backend auth.
+// 暫行沿用 Nexus 工作階段與 Firestore 權限；瀏覽器檢查只防誤操作，不能取代可信任後端。
+/**
+ * 建立沿用 Nexus 工作階段的暫行 Firestore 客戶端。
+ * @param {{groupId: string, accountId: string}} context - 連線期間不得變動的識別。
+ * @returns {Promise<Object>} API、群組修訂監聽、外觀監聽及考卷照片存取介面。
+ * @description 交易前重查成員與角色僅是前端防護，不能替代可信任後端與正式 Rules。
+ */
 export async function connect(context){
  const assertCurrent=()=>{
   const user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');
@@ -33,7 +38,7 @@ export async function connect(context){
    return sdk.onSnapshot(sdk.doc(db,'userSettings',context.accountId),{includeMetadataChanges:true},snapshot=>{try{assertCurrent();receive(snapshot.data()?.appearance,snapshot.metadata);}catch(e){error(e);}},error);
   },
   subscribe(_parent,refresh,error){
-   // The shared revision reacts to all forest writes without composite indexes.
+   // 共用修訂文件通知所有森林寫入，不依賴複合索引監聽。
    const root=`groups/${context.groupId}`,sources=[sdk.doc(db,root),sdk.doc(db,root,'growthSync','main'),sdk.doc(db,root,'growthProfiles',context.accountId),sdk.doc(db,root,'growthSettings','main')];
    const stops=sources.map(source=>sdk.onSnapshot(source,()=>{try{assertCurrent();refresh();}catch(e){error(e);}},error));return()=>stops.forEach(stop=>stop());
   },
@@ -53,7 +58,7 @@ export async function connect(context){
    const c=await resolveContext(),parts=path.split('/');if(parts.length!==4||parts[0]!=='growth-exams'||parts[1]!==c.groupId||(parts[2]!==c.accountId&&!c.parent))throw Error('無法讀取此帳號的照片');
    const id=parts[3].replace(/\.jpg$/,'');
    if(id.startsWith('firestore_')){const image=await sdk.getDocFromServer(sdk.doc(db,`groups/${context.groupId}/growthExamPhotos/${id}`));const row=image.data();if(!row||row.accountId!==parts[2]||row.groupId!==c.groupId||typeof row.dataUrl!=='string'||!row.dataUrl.startsWith('data:image/jpeg;base64,')||row.dataUrl.length>650000)throw Error('找不到有效的考卷照片');return(await fetch(row.dataUrl)).blob();}
-   // Existing Storage photos, if any, still use the existing project's policy.
+   // 歷史 Storage 照片仍使用原專案的政策。
    const storage=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js');return storage.getBlob(storage.ref(storage.getStorage(app),path));
   },
   async removePhoto(path){const c=await resolveContext(),parts=path.split('/');if(parts.length!==4||parts[1]!==c.groupId||parts[2]!==c.accountId)throw Error('照片不屬於目前帳號');const id=parts[3].replace(/\.jpg$/,'');if(!id.startsWith('firestore_'))throw Error('此照片需由原儲存方式處理');await sdk.deleteDoc(sdk.doc(db,`groups/${context.groupId}/growthExamPhotos/${id}`));},

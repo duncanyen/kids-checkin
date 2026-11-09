@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-// Share only concurrent work, never keep a cross-page/account profile cache.
+// 僅共用進行中的請求，不保留跨頁或跨帳號的永久成員快取。
 const pendingByDb = new WeakMap();
 async function mapBatches(values, read) {
     const batches = [];
@@ -16,6 +16,14 @@ async function mapBatches(values, read) {
     return result.flat();
 }
 
+/**
+ * 批次讀取指定帳號資料，共用尚未完成的同參數請求，完成後移除快取。
+ * @param {Object} db - Firestore 實例，也是 WeakMap 的隔離範圍。
+ * @param {Array<string>} identifiers - 去重後查詢的 accountId 或相容舊姓名。
+ * @param {Object} [options] - allowLegacyNames 控制未命中帳號的姓名回退。
+ * @returns {Promise<Array<Object>>} 成員資料含 docId；同名歧義不任選帳號。
+ * @description 每批 10 筆、最多 4 批並行；呼叫端須先限定合法群組識別清單。
+ */
 export function loadScopedProfiles(db, identifiers, { allowLegacyNames = true } = {}) {
     const ids = [...new Set((identifiers || []).filter(id => typeof id === 'string' && id))];
     let pending = pendingByDb.get(db);
@@ -31,8 +39,7 @@ export function loadScopedProfiles(db, identifiers, { allowLegacyNames = true } 
         const found = new Set(accounts.map(profile => profile.accountId));
         const unresolved = ids.filter(id => !found.has(id));
         const legacy = allowLegacyNames ? await mapBatches(unresolved, read('name')) : [];
-        // A name is not an identity. Ambiguous legacy names must not select a
-        // random account (possibly in another group).
+        // 姓名不是固定身分；同名舊資料不能任意選取其中一個帳號，以免跨群組誤認。
         const unresolvedNames = new Set(unresolved);
         const legacyCounts = new Map();
         legacy.forEach(profile => legacyCounts.set(profile.name, (legacyCounts.get(profile.name) || 0) + 1));

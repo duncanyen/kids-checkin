@@ -6,6 +6,12 @@ const cleanAudit=value=>{
     if(!value)return null;
     const {codeHash,searchTokens,audienceKeys,...safe}=value;return safe;
 };
+/**
+ * 建立可信任營運服務，管理公告、禮包、護衛犬及四個管理模組。
+ * @param {Object} options - Admin SDK db、auth 及可注入的毫秒時鐘 now。
+ * @returns {Object} adminAPI、announcements、guardDog、redeem callable 處理介面。
+ * @description 每次管理操作核對當前 Auth admin claim；users.role 不授予營運管理權。
+ */
 function createService({db,auth,now=Date.now}) {
     const management=createManagement({db,now});
     async function admin(request){
@@ -132,7 +138,7 @@ function createService({db,auth,now=Date.now}) {
         const kind=D.enumValue(request.data.channel||'announcements',['announcements','notifications']),collection=COLLECTIONS[kind];
         let query=db.collection(collection).where('status','in',['published','scheduled']).where('audienceKeys','array-contains-any',['all','account:'+identity.accountId]).orderBy('priority','desc').orderBy('createdAt','desc');
         if(request.data.cursor){const cursor=await db.doc(`${collection}/${D.id(request.data.cursor)}`).get();if(!cursor.exists)D.fail('failed-precondition','公告分頁已變更');query=query.startAfter(cursor);}
-        // Filter time on the server; never return an out-of-window or other-player body.
+        // 在後端檢查有效期，不回傳過期或屬於其他玩家的內容。
         const result=await query.limit(101).get(),scanned=result.docs.slice(0,100),stamp=now();
         return{rows:scanned.map(doc=>({...doc.data(),id:doc.id})).filter(a=>D.activeAnnouncement(a,identity.accountId,stamp)).map(({searchTokens,audienceKeys,...a})=>a),nextCursor:result.size>100?scanned.at(-1).id:null,asOf:stamp,settings};
     }
@@ -147,7 +153,7 @@ function createService({db,auth,now=Date.now}) {
         if(action==='rent'){
             payload.breedId=D.id(input.breedId);payload.days=D.integer(input.days,1,Number.MAX_SAFE_INTEGER);
             if(!Object.hasOwn(G.GUARD_DOG_BREEDS,payload.breedId))D.fail('invalid-argument','找不到此護衛犬');
-            // The deployed server configuration is authoritative; never trust client flags/prices.
+            // 以部署後端的設定為準，不信任客戶端的開放旗標或價格。
 
         }else if(action!=='expire')payload.id=D.id(input.id);
         const fingerprint=D.fingerprint({groupId:identity.groupId,...payload}),receipt=db.doc(`ops_guard_requests/${D.hash(identity.uid+':'+requestId)}`);
@@ -170,9 +176,15 @@ function createService({db,auth,now=Date.now}) {
             return response;
         });
     }
+    /**
+     * 驗證玩家、碼、期間、對象及限額，原子發獎並建立成功收據。
+     * @param {Object} request - Firebase 驗證過的 auth 與 code、groupId、requestId。
+     * @returns {Promise<Object>} 獎勵結果；相同收據重送不再發獎。
+     * @description 僅更新 Firestore，RTDB 由既有鏡像更新；不建立跨庫第二份獎勵。
+     */
     async function redeem(request){
         const identity=await playerSession(request),requestId=D.requestId(request.data.requestId);
-        // Invalid-format attempts are rate limited too, before parsing the code.
+        // 先限流再解析活動碼，格式錯誤的嘗試也必須計數。
         await throttle('redeem:'+identity.uid,10,60000);
         const ip=request.rawRequest?.ip;if(ip)await throttle('redeem-ip:'+ip,60,60000);
         let giftCodeId=null,giftName=null;

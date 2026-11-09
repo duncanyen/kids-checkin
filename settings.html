@@ -200,6 +200,11 @@
             } catch (e) {}
         }
 
+        /**
+         * 讀取帳號範圍的導覽、外觀及首頁設定，再排除不在 menus 的項目。
+         * @returns {Promise<void>} hydrate 不覆蓋使用者已開始的預覽／編輯。
+         * @description 姓名文件僅經 readPersonalLayout 確認唯一歸屬後唯讀相容。
+         */
         async function loadPersonalConfig() {
             try {
                 const data = await readPersonalLayout(db, currentUser);

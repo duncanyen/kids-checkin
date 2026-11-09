@@ -1,6 +1,11 @@
 const {onCall,HttpsError}=require('firebase-functions/v2/https');
-// Website attestation is optional for management and redemption. Authentication,
-// current roles, player eligibility and award limits are always checked by the service.
+// 管理與兌換的網站驗證為選用；身分、目前角色、玩家資格及獎勵限額仍由服務檢查。
+/**
+ * 將服務包為 Firebase v2 callable，統一 CORS、區域與對外錯誤。
+ * @param {Object} service - 已包含管理員／玩家驗證的後端服務。
+ * @param {Object} [options] - 管理與兌換 App Check 是否必要及隔離 emulator 設定。
+ * @returns {Object} 四個具名 callable；App Check 選用不代表取消登入或獎勵驗證。
+ */
 function createCallables(service,{adminAppCheckRequired=false,redemptionAppCheckRequired=false,emulator=process.env.FUNCTIONS_EMULATOR==='true'}={}) {
     const options={region:'asia-southeast1',cors:true,maxInstances:10,enforceAppCheck:!emulator};
     const wrap=(handler,overrides={})=>onCall({...options,...overrides},async request=>{
@@ -14,7 +19,7 @@ function createCallables(service,{adminAppCheckRequired=false,redemptionAppCheck
     });
     return {
         gameOpsAdmin:wrap(service.adminAPI,{enforceAppCheck:!emulator&&adminAppCheckRequired}),
-        // Read-only feed still checks Auth, current membership, account status and audience.
+        // 唯讀公告仍核對 Auth、目前成員資格、帳號狀態及公告對象。
         gameOpsAnnouncements:wrap(service.announcements,{enforceAppCheck:false}),
         gameOpsGuardDog:wrap(service.guardDog,{enforceAppCheck:false}),
         gameOpsRedeem:wrap(service.redeem,{enforceAppCheck:!emulator&&redemptionAppCheckRequired})

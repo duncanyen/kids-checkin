@@ -1,7 +1,12 @@
 import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-// Current preferences are account keyed; only read an old name key if its owner
-// can be proved. Never move/delete name-keyed documents when a person is renamed.
+// 個人設定依 accountId 保存；舊姓名文件僅在可證明歸屬時讀取，更名不搬移或刪除同名文件。
+/**
+ * 讀取以 accountId 為鍵的個人設定，必要時唯讀相容可證明歸屬的姓名文件。
+ * @param {Object} db - Firestore 實例。
+ * @param {Object} user - 含 accountId、name 的目前使用者。
+ * @returns {Promise<Object>} 設定或空物件；不搬移、刪除同名歷史設定。
+ */
 export async function readPersonalLayout(db, user) {
     if (!user?.accountId) return {};
     const current = await getDoc(doc(db, 'userSettings', user.accountId));

@@ -1,8 +1,15 @@
 import { db } from './firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-// groups.members is authoritative: users.groupId describes only one group and
-// cannot represent a person who has joined several groups.
+// 以 groups.members 為依據；users.groupId 無法代表同時加入多個群組的完整資格。
+/**
+ * 先確認目前帳號仍在 groups.members，再分批讀取該群組的有效 users。
+ * @param {string} groupId - 所選群組 ID。
+ * @param {string} accountId - 必須屬於該群組的目前帳號。
+ * @param {Object} [options] - includeDocumentIds 控制是否包含 users 文件 ID。
+ * @returns {Promise<Array<Object>>} 按 members 順序排列、排除 removed 的成員。
+ * @throws {Error} 群組不存在或目前帳號已離開；前端檢查仍須搭配後端／Rules。
+ */
 export async function loadGameGroupMembers(groupId, accountId, { includeDocumentIds = false } = {}) {
     const ids = await getGameGroupMemberIds(groupId, accountId);
     const members = new Map();

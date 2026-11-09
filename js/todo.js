@@ -1,3 +1,8 @@
+/**
+ * 待辦頁面控制器：群組聚合文件 todos/{groupId}、即時成員與循環待辦。
+ * 初始化先確認群組；所有變更經 commit 交易；pagehide 解除訂閱與分鐘計時器。
+ * @module
+ */
 import { icon } from './ui-icons.js';
 import { db } from './firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where, runTransaction, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
@@ -15,7 +20,7 @@ function fallbackAvatar(name) {
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 function avatarURL(member) {
-    // Personal uploads in js/main.js are persisted as users.avatar (JPEG data URL).
+    // 個人上傳由 main.js 保存為 users.avatar 的 JPEG data URL。
     const value = member?.avatar || member?.photoURL || member?.avatarUrl || '';
     if (/^data:image\/(png|jpeg|webp|gif);base64,/i.test(value)) return value;
     try {
@@ -128,6 +133,12 @@ const NexusTodoApp = {
         document.querySelectorAll('[data-write]').forEach(element => { element.disabled = !this.ready || this.busy; });
     },
 
+    /**
+     * 重讀群組與最新聚合文件後套用待辦變更，避免用過期陣列覆蓋他人操作。
+     * @param {Function} change - 可被交易重試的純資料修改；接收 data、allowed。
+     * @param {boolean} [quiet=false] - 背景循環更新不顯示全頁等待與 alert。
+     * @returns {Promise<boolean>} 交易是否成功；busy 鎖保護同頁重複操作。
+     */
     async commit(change, quiet = false) {
         if (!this.ready || this.busy) return false;
         this.busy = true;
@@ -167,6 +178,10 @@ const NexusTodoApp = {
         }
     },
 
+    /**
+     * 以台灣日期檢查循環實例，有缺漏才經交易產生固定識別的待辦。
+     * @returns {Promise<void>} 由頁面初始化、訂閱與分鐘計時驅動，並非伺服器排程。
+     */
     async refreshRecurring() {
         if (!this.ready || this.busy) return;
         if (this.lastRenderedDay !== dateKey()) this.renderTodoList();

@@ -6,6 +6,13 @@ export function foodDocumentId(groupId, date, meal) {
     return `${groupId}_${date}_${meal}`;
 }
 
+/**
+ * 建立單一群組的餐廳及投票存取層，寫入交易會重新確認 groups.members。
+ * @param {Object} db - Firestore 實例。
+ * @param {{groupId: string, accountId: string}} context - 固定帳號與群組上下文。
+ * @returns {Object} watch、vote、decide 及 changeRestaurant 操作。
+ * @description watch 回傳 Promise<停止函式>；固定群組／日期／餐別文件避免票數分散。
+ */
 export function createFoodStore(db, context) {
     const reference = selection => doc(db, 'food_votes', foodDocumentId(context.groupId, selection.date, selection.meal));
     async function change(selection, modify) {
@@ -32,8 +39,7 @@ export function createFoodStore(db, context) {
             });
         },
         async watch(selection, receive, fail) {
-            // Old versions used addDoc rather than the intended fixed document ID.
-            // Import those votes once; canonical votes always take precedence.
+            // 舊版用隨機 addDoc 存票；只匯入一次，固定文件已有的票優先。
             const legacy = await getDocs(query(collection(db, 'food_votes'), where('groupId', '==', context.groupId), where('date', '==', selection.date), where('meal', '==', selection.meal)));
             const imported = {};
             legacy.docs.filter(s => s.id !== reference(selection).id).sort((a, b) => a.id.localeCompare(b.id)).forEach(s => {
