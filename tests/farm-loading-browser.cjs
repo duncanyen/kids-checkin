@@ -64,7 +64,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  await page.waitForFunction(()=>document.querySelector('[data-farm-loading]').hidden);
  assert.equal(await page.locator('[data-loading-hen-fallback]').getAttribute('hidden'),'');
  // DOM 木牌與圖示不屬於 Phaser 核心素材，另由 HUD 瀏覽器測試驗證。
- const initial=requests.filter(file=>!['ui-hud-icons.png','ui-wood.webp'].includes(file));
+ const initial=requests.filter(file=>!['ui-hud-icons.png','ui-icon-pedestal.png','ui-wood.webp'].includes(file));
  assert.equal(initial.length,10);assert.ok(!initial.some(f=>/wolf|tiger|dragon|gorilla|eagle|mace|battleaxe|silkie|bresse/.test(f)));
  const progress=await page.evaluate(()=>__progress);assert.ok(progress.includes(100));assert.ok(progress.every((n,i)=>!i||n>=progress[i-1]),'initial progress never moves backward');
  assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').farmData.coins),3141);

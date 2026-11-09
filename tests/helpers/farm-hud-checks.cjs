@@ -3,6 +3,10 @@ const assert = require('node:assert/strict');
 // 使用 farm-mail-browser 的隔離 Firebase fixture 與真正 Phaser 場景。
 module.exports = async function checkFarmHud(page) {
     const dock = page.locator('.farm-hud-bottom');
+    assert.ok(await page.evaluate(async()=>{
+        const image=new Image(); image.src='/assets/farm/ui-icon-pedestal.png';
+        await image.decode(); return image.naturalWidth>0;
+    }));
     assert.equal(await page.locator('.farm-hud-label,.farm-hud-soon,.farm-hud-stat small').count(),0);
     assert.deepEqual(await dock.locator('button').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-label').split('，')[0].replace('開啟',''))),['村落','商店','倉庫','圖鑑','通知']);
     for (const name of ['每日任務，尚未開放','活動，尚未開放','圖鑑，尚未開放','設定，尚未開放']) {
@@ -57,8 +61,13 @@ module.exports = async function checkFarmHud(page) {
         const layout=await page.evaluate(()=>{
             const dock=document.querySelector('.farm-hud-bottom').getBoundingClientRect();
             const canvas=document.querySelector('#game-container canvas').getBoundingClientRect();
-            return {scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
+            const coin=document.querySelector('.farm-hud-stat').getBoundingClientRect();
+            const side=document.querySelector('.farm-hud-side').getBoundingClientRect();
+            const bases=[...document.querySelectorAll('.farm-hud-bottom button')].every(n=>getComputedStyle(n,'::before').backgroundImage.includes('ui-icon-pedestal.png'));
+            const firstIcon=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
+            return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,bases,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
         });
+        assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1); assert.equal(layout.bases,true);
         assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.ok(layout.buttons.every(Boolean));
         await page.waitForSelector('.farm-hud-toast',{state:'hidden'});
         await page.screenshot({path:`/tmp/farm-hud-${viewport.width}.png`});

@@ -59,9 +59,18 @@ export function mountFarmHud(game) {
     const resizeObserver = new ResizeObserver(([entry]) => {
         const { width,height } = entry.contentRect;
         if (width > 0 && height > 0) game.scale.setParentSize(width,height);
+        positionSide();
     });
     resizeObserver.observe(document.querySelector('#game-container'));
     let currentKey, lastCheck = 0;
+    function positionSide() {
+        if (root.hidden || top.hidden) return;
+        const coin = top.querySelector('.farm-hud-stat').getBoundingClientRect();
+        const bounds = root.getBoundingClientRect();
+        const iconOffset = side.querySelector('.farm-hud-art').getBoundingClientRect().top - side.getBoundingClientRect().top;
+        side.style.top = `calc(${coin.bottom - bounds.top - iconOffset}px + 0.5cm)`;
+        side.style.left = `${coin.left - bounds.left}px`;
+    }
     function refresh() {
         const farm = game.registry.get('myFarmData');
         const ready = game.registry.get('farmLoadState')?.phase === 'ready';
@@ -77,6 +86,7 @@ export function mountFarmHud(game) {
             stat.setAttribute('aria-label',`${stat.dataset.label}：${text}`);
         }
         top.querySelector('[data-hud-value="dirt"]').classList.toggle('is-warning', values.dirt > 80);
+        positionSide();
     }
     function occupied() {
         return !game.input.enabled || game.scene.getScenes(true).some(scene => scene.input?.enabled === false || scene.isProcessing || scene.isFeeding || scene.isTreating || scene.preparingEncounter || scene.preparingGiant || scene.preparingCobra || scene.preparingMole || scene.housingDialog || scene.dialogContainer?.visible || scene.tradeContainer?.visible ||
@@ -98,6 +108,7 @@ export function mountFarmHud(game) {
         const key = scene?.scene.key;
         if (key !== currentKey) {
             currentKey = key; top.hidden = !game.registry.get('myFarmData') || key !== 'MyFarmScene'; side.hidden = !['MyFarmScene','VisitScene'].includes(key);
+            positionSide();
             for (const [node,target] of routes) {
                 const active = target === 'LobbyScene' ? ['MyFarmScene','LobbyScene','VisitScene'].includes(key) : key === target;
                 if (active) node.setAttribute('aria-current','page'); else node.removeAttribute('aria-current');
