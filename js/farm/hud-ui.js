@@ -18,6 +18,14 @@ function button(kind, label, locked = false) {
     return node;
 }
 
+/** 怪物準備、戰鬥與尚未成功結算時，暫時收起場景導覽。 */
+export function hasFarmHudEncounter(scene) {
+    if (!scene) return false;
+    return !!(scene.preparingEncounter || scene.preparingGiant || scene.preparingCobra || scene.preparingMole ||
+        ['giantEncounter','cobraEncounter','moleEncounter','dragonEncounter','gorillaEncounter','eagleEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled) ||
+        ['wolf','tiger'].some(key=>scene[key]?.active&&!scene[key].getData('resolved')));
+}
+
 /**
  * 將既有通知與排行榜入口接到固定圖示導覽；生命週期隨 Phaser.Game 結束。
  * @param {Phaser.Game} game - 已掛載通知與排行榜的遊戲實例。
@@ -89,9 +97,7 @@ export function mountFarmHud(game) {
         positionSide();
     }
     function occupied() {
-        return !game.input.enabled || game.scene.getScenes(true).some(scene => scene.input?.enabled === false || scene.isProcessing || scene.isFeeding || scene.isTreating || scene.preparingEncounter || scene.preparingGiant || scene.preparingCobra || scene.preparingMole || scene.housingDialog || scene.dialogContainer?.visible || scene.tradeContainer?.visible ||
-            ['giantEncounter','cobraEncounter','moleEncounter','dragonEncounter','gorillaEncounter','eagleEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled) ||
-            ['wolf','tiger'].some(key=>scene[key]?.active&&!scene[key].getData('resolved')));
+        return !game.input.enabled || game.scene.getScenes(true).some(scene => scene.input?.enabled === false || scene.isProcessing || scene.isFeeding || scene.isTreating || hasFarmHudEncounter(scene) || scene.housingDialog || scene.dialogContainer?.visible || scene.tradeContainer?.visible);
     }
     const routes = [[village,'LobbyScene'],[shop,'ShopScene'],[warehouse,'WarehouseScene']];
     for (const [node,key] of routes) node.addEventListener('click', () => {
@@ -106,14 +112,21 @@ export function mountFarmHud(game) {
         lastCheck = _time;
         const scene = game.scene.getScenes(true).find(scene=>['MyFarmScene','LobbyScene','VisitScene','ShopScene','WarehouseScene'].includes(scene.scene.key));
         const key = scene?.scene.key;
+        const inEncounter = game.scene.getScenes(true).some(hasFarmHudEncounter);
+        const sideWasHidden = side.hidden;
+        // 每次檢查戰鬥狀態，而非只在切換場景時更新，才能在同一農場恢復按鈕。
+        side.hidden = inEncounter || !['MyFarmScene','VisitScene'].includes(key);
+        bottom.hidden = inEncounter;
+        if (inEncounter) { toast.hidden = true; clearTimeout(toastTimer); }
         if (key !== currentKey) {
-            currentKey = key; top.hidden = !game.registry.get('myFarmData') || key !== 'MyFarmScene'; side.hidden = !['MyFarmScene','VisitScene'].includes(key);
+            currentKey = key; top.hidden = !game.registry.get('myFarmData') || key !== 'MyFarmScene';
             positionSide();
             for (const [node,target] of routes) {
                 const active = target === 'LobbyScene' ? ['MyFarmScene','LobbyScene','VisitScene'].includes(key) : key === target;
                 if (active) node.setAttribute('aria-current','page'); else node.removeAttribute('aria-current');
             }
         }
+        if (!side.hidden && sideWasHidden) positionSide();
         const disabled = !scene || game.registry.get('farmLoadState')?.phase !== 'ready' || occupied();
         for (const [node] of routes) node.disabled = disabled;
         mail.classList.toggle('is-selected', document.querySelector('.farm-mail-overlay')?.hidden === false);

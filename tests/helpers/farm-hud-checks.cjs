@@ -29,6 +29,26 @@ module.exports = async function checkFarmHud(page) {
     assert.equal(await page.locator('[data-hud-value=dirt]').evaluate(n=>n.classList.contains('is-warning')),true);
     await page.evaluate(() => __farmGame.registry.set('myFarmData',__hudOriginal));
 
+    // 怪物出現、戰鬥結算與失敗重試期間，左右導覽必須一起消失。
+    await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').preparingGiant=true);
+    await page.waitForSelector('.farm-hud-side',{state:'hidden'});
+    await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
+    assert.equal(await page.locator('.farm-hud-status').isVisible(),true);
+    await page.evaluate(()=>{
+        const scene=__farmGame.scene.getScene('MyFarmScene');
+        scene.preparingGiant=false;
+        scene.giantEncounter={result:'win',settling:true};
+    });
+    await page.waitForTimeout(150);
+    assert.equal(await dock.isVisible(),false);
+    await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter.settling=false);
+    await page.waitForTimeout(150);
+    assert.equal(await dock.isVisible(),false,'failed settlement must keep navigation hidden');
+    await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter.settled=true);
+    await page.waitForSelector('.farm-hud-bottom',{state:'visible'});
+    await page.waitForSelector('.farm-hud-side',{state:'visible'});
+    await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter=null);
+
     // 按壓時縮小，放開後透過正式導航進入倉庫，且選取亮框跟著頁面更新。
     const warehouse = dock.getByRole('button',{name:'倉庫',exact:true});
     const bounds=await warehouse.boundingBox();

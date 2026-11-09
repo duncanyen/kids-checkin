@@ -2,7 +2,7 @@
 :root{--farm-dock-height:82px}
 .farm-hud-mounted{padding-bottom:0;box-sizing:border-box}
 .farm-hud{position:absolute;inset:0;z-index:45;pointer-events:none;font-family:system-ui,sans-serif;color:#553014}
-.farm-hud[hidden],.farm-hud-status[hidden],.farm-hud-side[hidden]{display:none}
+.farm-hud[hidden],.farm-hud-status[hidden],.farm-hud-side[hidden],.farm-hud-bottom[hidden]{display:none}
 .farm-hud-status{position:absolute;top:0;left:0;width:100%;box-sizing:border-box;pointer-events:none;display:flex;align-items:center;justify-content:center;gap:7px;padding:7px max(8px,env(safe-area-inset-left)) 8px;background:transparent;font-family:system-ui,sans-serif;box-shadow:none}
 .farm-hud-stat{position:relative;display:flex;align-items:center;gap:4px;min-width:0;flex:1;max-width:220px;height:42px;border:2px solid #f8d99b;border-radius:25px 19px 22px 19px;background:linear-gradient(100deg,#624025,#382515);box-shadow:0 3px 0 #45270f,0 0 0 1px #513313,inset 0 2px 0 #c69a5b;color:#fff4cf;padding:0 8px 0 2px;box-sizing:border-box}
 .farm-hud-stat svg{width:37px;height:42px;flex-shrink:0;filter:drop-shadow(0 2px 0 #1e170d88)}
