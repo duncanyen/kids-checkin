@@ -1,0 +1,42 @@
+/* 純圖示 HUD 浮在原場景上；透明區域不攔截 Phaser 點擊。 */
+:root{--farm-dock-height:82px}
+.farm-hud-mounted{padding-bottom:0;box-sizing:border-box}
+.farm-hud{position:absolute;inset:0;z-index:45;pointer-events:none;font-family:system-ui,sans-serif;color:#553014}
+.farm-hud[hidden],.farm-hud-status[hidden],.farm-hud-side[hidden]{display:none}
+.farm-hud-status{position:absolute;top:0;left:0;width:100%;box-sizing:border-box;pointer-events:none;display:flex;align-items:center;justify-content:center;gap:7px;padding:7px max(8px,env(safe-area-inset-left)) 8px;background:transparent;font-family:system-ui,sans-serif;box-shadow:none}
+.farm-hud-stat{position:relative;display:flex;align-items:center;gap:4px;min-width:0;flex:1;max-width:220px;height:42px;border:2px solid #f8d99b;border-radius:25px 19px 22px 19px;background:linear-gradient(100deg,#624025,#382515);box-shadow:0 3px 0 #45270f,0 0 0 1px #513313,inset 0 2px 0 #c69a5b;color:#fff4cf;padding:0 8px 0 2px;box-sizing:border-box}
+.farm-hud-stat svg{width:37px;height:42px;flex-shrink:0;filter:drop-shadow(0 2px 0 #1e170d88)}
+.farm-hud-stat span{min-width:0;flex:1;overflow:hidden}
+.farm-hud-stat strong{display:block;font-size:16px;line-height:1.1;font-variant-numeric:tabular-nums;text-shadow:0 2px #241609;white-space:nowrap}
+.farm-hud-stat strong{overflow:hidden;text-overflow:ellipsis}.farm-hud-stat strong.is-long{font-size:12px}
+.farm-hud-stat .is-warning{color:#ffac7a}
+.farm-hud-button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;min-width:0;border:0;border-radius:18px;background:none;box-shadow:none;cursor:pointer;touch-action:manipulation;pointer-events:auto;transition:transform .18s cubic-bezier(.18,.9,.34,1.5),filter .18s;color:#553014;padding:0;font-family:system-ui,sans-serif;-webkit-tap-highlight-color:transparent;isolation:isolate}
+.farm-hud-button:active:not(:disabled){transform:translateY(2px) scale(.95);transition-duration:.07s}
+.farm-hud-button:focus-visible{outline:3px solid #fff6c5;outline-offset:4px}
+.farm-hud-button:disabled{cursor:default}
+.farm-hud-button:is([aria-current=page],.is-selected) .farm-hud-art{filter:drop-shadow(0 0 2px #fffbe4) drop-shadow(0 0 5px #ffdf56) drop-shadow(0 0 7px #ffdf56)}
+.farm-hud-art{display:block;width:47px;height:47px;flex-shrink:0;background-image:url('../assets/farm/ui-hud-icons.png');background-size:400% 200%;background-repeat:no-repeat;filter:drop-shadow(0 1px 0 #fff1bc) drop-shadow(0 2px 1px #67391044)}
+.farm-hud-art--village{background-position:0 0}.farm-hud-art--shop{background-position:33.333333% 0}.farm-hud-art--warehouse{background-position:66.666667% 0}.farm-hud-art--guide{background-position:100% 0}.farm-hud-art--mail{background-position:0 100%}.farm-hud-art--tasks{background-position:33.333333% 100%}.farm-hud-art--trophy{background-position:66.666667% 100%}.farm-hud-art--gift{background-position:100% 100%}
+.farm-hud-settings{width:42px;height:43px;flex-shrink:0;border:2px solid #724019;border-radius:50%;padding:2px;background:linear-gradient(#ffdc82,#c48432);box-shadow:inset 0 2px 0 #fff2bb,0 3px 0 #653812;filter:drop-shadow(0 2px 3px #31220f55)}
+.farm-hud-settings svg{width:35px;height:35px}
+.farm-hud-side{position:absolute;top:190px;left:max(9px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.farm-hud-side .farm-hud-button{width:61px;height:70px;flex-shrink:0}
+.farm-hud-side .farm-hud-art{width:44px;height:44px}
+.farm-hud-button:disabled .farm-hud-art{filter:saturate(.65) drop-shadow(0 1px 0 #fff1bc)}
+.farm-hud-bottom{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,590px);height:calc(var(--farm-dock-height) + env(safe-area-inset-bottom,0px));padding:5px 12px calc(9px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;box-sizing:border-box;pointer-events:none;border:0;background:none;box-shadow:none}
+.farm-hud-bottom .farm-hud-button{height:65px;align-self:end;padding:0}
+/* 既有入口僅換外觀與位置，保留原本的通知／排行生命週期和鍵盤操作。 */
+.farm-hud :is(.farm-mail-launcher,.farm-ranking-launcher){position:relative;inset:auto;z-index:auto;display:flex}
+.farm-hud .farm-mail-badge{top:-7px;right:-5px;width:14px;min-width:14px;height:14px;border:2px solid #fff2bf;padding:0;background:radial-gradient(circle at 35% 25%,#ffac86,#ef3f36 55%,#ae211d);box-shadow:0 2px 2px #6f281a88;font-size:0}
+@media(min-width:700px){.farm-hud-status{gap:14px}.farm-hud-stat{height:46px}.farm-hud-stat strong{font-size:19px}.farm-hud-side{left:max(18px,env(safe-area-inset-left))}.farm-hud-side .farm-hud-button{width:70px;height:76px}.farm-hud-bottom{gap:18px}}
+@media(max-width:359px){.farm-hud-status{gap:4px;padding-inline:5px}.farm-hud-stat{padding-right:5px;gap:1px}.farm-hud-stat svg{width:29px}.farm-hud-stat strong{font-size:14px}.farm-hud-bottom{gap:7px;padding-inline:9px}.farm-hud-bottom .farm-hud-art{width:43px;height:43px}.farm-hud-side .farm-hud-button{width:53px;height:64px}}
+@media(max-height:520px){:root{--farm-dock-height:65px}.farm-hud-status{padding-block:3px 5px}.farm-hud-stat{height:35px}.farm-hud-stat svg{height:34px}.farm-hud-side{top:128px;gap:8px;flex-direction:row}.farm-hud-side .farm-hud-button{width:58px;height:59px}.farm-hud-side .farm-hud-art{width:33px;height:33px}.farm-hud-bottom .farm-hud-button{height:50px}.farm-hud-bottom .farm-hud-art{width:37px;height:37px}}
+@media(prefers-reduced-motion:reduce){.farm-hud-button{transition:none}}
+
+/* 左側與下方只保留插畫及選取光暈，不再顯示文字、木牌或橫條。 */
+.farm-hud-bottom .farm-hud-art{margin:0;width:58px;height:58px}
+.farm-hud-side .farm-hud-art{width:56px;height:56px}
+.farm-hud-toast{position:absolute;bottom:calc(var(--farm-dock-height) + env(safe-area-inset-bottom,0px) + 12px);left:50%;transform:translateX(-50%);max-width:85%;padding:10px 18px;border:2px solid #f3d497;border-radius:16px;background:#51361bea;color:#fff3d1;box-shadow:0 3px 8px #24160866;font-size:14px;font-weight:700;text-align:center;pointer-events:none}
+.farm-hud-toast[hidden]{display:none}
+@media(max-width:359px){.farm-hud-bottom .farm-hud-art{width:50px;height:50px}.farm-hud-side .farm-hud-art{width:49px;height:49px}}
+@media(max-height:520px){.farm-hud-bottom .farm-hud-art{width:44px;height:44px}.farm-hud-side .farm-hud-art{width:41px;height:41px}}

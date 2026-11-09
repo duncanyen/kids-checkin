@@ -80,13 +80,14 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.waitForSelector('.farm-ranking-launcher');
         await page.waitForSelector('.farm-mail-badge:not([hidden])');
         assert.equal(await page.locator('.farm-mail-badge').textContent(), '1');
-        assert.equal(await page.locator('.farm-mail-launcher').innerText(), '1');
+        assert.match(await page.locator('.farm-mail-launcher').getAttribute('aria-label'), /開啟通知/);
         for (const viewport of [{width:390,height:844},{width:1440,height:900},{width:844,height:390}]) {
             await page.setViewportSize(viewport);
             await page.waitForTimeout(150);
             const layout = await page.evaluate(() => {
                 const parent=document.querySelector('#game-container').getBoundingClientRect(),canvas=document.querySelector('#game-container canvas').getBoundingClientRect();
-                return {width:innerWidth,height:innerHeight,parent:{x:parent.x,y:parent.y,width:parent.width,height:parent.height,bottom:parent.bottom},canvas:{x:canvas.x,y:canvas.y,width:canvas.width,height:canvas.height,right:canvas.right,bottom:canvas.bottom},scroll:document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight,bg:getComputedStyle(document.querySelector('#game-container'),'::before').backgroundImage};
+                const dock=document.querySelector('.farm-hud-bottom').getBoundingClientRect();
+                return {dockTop:dock.top,width:innerWidth,height:innerHeight,parent:{x:parent.x,y:parent.y,width:parent.width,height:parent.height,bottom:parent.bottom},canvas:{x:canvas.x,y:canvas.y,width:canvas.width,height:canvas.height,right:canvas.right,bottom:canvas.bottom},scroll:document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight,bg:getComputedStyle(document.querySelector('#game-container'),'::before').backgroundImage};
             });
             assert.equal(Math.round(layout.parent.width),viewport.width);
             assert.ok(Math.abs(layout.parent.bottom-viewport.height)<=1);
@@ -100,15 +101,16 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
                 const scene=window.__farmGame.scene.getScene('MyFarmScene'),camera=scene.cameras.main;
                 const image=scene.children.list.find(o=>['farm_map','farm_panorama'].includes(o.texture?.key)),bounds=image.getBounds();
                 const halfWidth=camera.width/camera.zoom/2,halfHeight=camera.height/camera.zoom/2;
-                return{expectedRatio:image.texture.key==='farm_map'?720/1280:2172/724,ratio:image.displayWidth/image.displayHeight,covers:bounds.left<=195-halfWidth+.1&&bounds.right>=195+halfWidth-.1&&bounds.top<=422-halfHeight+.1&&bounds.bottom>=422+halfHeight-.1,plantsVisible:scene.gardenPlants.length===42&&scene.gardenPlants.every(plant=>{const b=plant.getBounds();return b.left>=195-halfWidth&&b.right<=195+halfWidth&&b.top>=422-halfHeight&&b.bottom<=422+halfHeight}),hudWidth:scene.children.list.find(o=>o.type==='Text'&&o.text==='村落').scaleX};
+                return{expectedRatio:image.texture.key==='farm_map'?720/1280:2172/724,ratio:image.displayWidth/image.displayHeight,covers:bounds.left<=195-halfWidth+.1&&bounds.right>=195+halfWidth-.1&&bounds.top<=422-halfHeight+.1&&bounds.bottom>=422+halfHeight-.1,plantsVisible:scene.gardenPlants.length===42&&scene.gardenPlants.every(plant=>{const b=plant.getBounds();return b.left>=195-halfWidth&&b.right<=195+halfWidth&&b.top>=422-halfHeight&&b.bottom<=422+halfHeight}),hudWidth:document.querySelector('.farm-hud-bottom [aria-current=page]')?.getAttribute('aria-label')};
             });
             assert.ok(Math.abs(scenery.ratio-scenery.expectedRatio)<.001);
             assert.equal(scenery.covers,true);
             assert.equal(scenery.plantsVisible,true);
-            assert.equal(scenery.hudWidth,1);
+            assert.equal(scenery.hudWidth,'村落');
             await page.screenshot({path:`/tmp/farm-fullscreen-${viewport.width}.png`,fullPage:true});
         }
         await page.setViewportSize({width:390,height:844});
+        await require('./helpers/farm-hud-checks.cjs')(page);
         await page.locator('.farm-mail-launcher').click();
         await page.getByRole('tab', { name: '系統', exact: true }).click();
         await page.waitForSelector('.farm-mail-gift');

@@ -73,15 +73,6 @@ export default class MyFarmScene extends Phaser.Scene {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
 
-        this.createMinBtn(55, 40, '村落', 0x1976D2, () => this.scene.start('LobbyScene'));
-        this.createMinBtn(145, 40, '商店', 0x8E24AA, () => this.scene.start('ShopScene'));
-        this.createMinBtn(235, 40, '倉庫', 0xE65100, () => this.scene.start('WarehouseScene'));
-
-        this.add.rectangle(335, 40, 95, 48, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
-        this.coinIcon = this.add.image(302, 31, 'coin').setDisplaySize(18, 18).setDepth(31);
-        this.coinsText = this.add.text(314, 24, '—', { fontSize: '12px', color: '#FFD54F', fontStyle: 'bold' }).setDepth(31);
-        this.cleanText = this.add.text(295, 42, '清潔 —', { fontSize: '12px', color: '#FFFFFF', fontStyle: 'bold' }).setDepth(31);
-
         this.timerBg = this.add.rectangle(cx, 90, 200, 26, 0x000000, 0.6).setOrigin(0.5);
         this.timerText = this.add.text(cx, 90, '讀取存檔中…', { fontSize: '13px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5);
 
@@ -99,7 +90,6 @@ export default class MyFarmScene extends Phaser.Scene {
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
             this.farmInterval = null;
-            if (this.cleanFlashTween) this.cleanFlashTween.stop();
             this.layingVisit?.cancel();
             this.eggTick = null;
             this.hensGroup.forEach(hen => {
@@ -225,21 +215,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     updateUI() {
         if (!this.farmData) return;
-        this.coinsText.setText(`${this.farmData.coins || 0}`);
         this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
-
-        const cleanVal = this.farmData.cleanliness || 0;
-        this.cleanText.setText(`清潔 ${cleanVal}/100`);
-
-        if (this.cleanFlashTween) this.cleanFlashTween.stop();
-        if (cleanVal <= 50) {
-            this.cleanText.setColor('#FFFFFF').setAlpha(1);
-        } else if (cleanVal <= 80) {
-            this.cleanText.setColor('#FFB74D').setAlpha(1);
-        } else {
-            this.cleanText.setColor('#E53935');
-            this.cleanFlashTween = this.tweens.add({ targets: this.cleanText, alpha: 0.3, duration: 400, yoyo: true, repeat: -1 });
-        }
     }
 
     renderCleanlinessVisual() {

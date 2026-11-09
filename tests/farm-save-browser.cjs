@@ -77,14 +77,11 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         await page.waitForTimeout(600);
         assert.equal(writes.length, 0);
         assert.deepEqual(docs[owner].farm, farm);
-        assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').coinsText.text), '—');
-        assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').coinIcon.texture.key), 'coin');
+        assert.equal(await page.locator('[data-hud-value=coins]').textContent(), '—');
+        assert.equal(await page.locator('[data-hud-value=coins]').evaluate(n=>!!n.closest('.farm-hud-stat').querySelector('svg')), true);
         assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').farmData), null);
         // Slow loading cannot enter a shop that would misleadingly show defaults.
-        await page.evaluate(() => {
-            const scene = window.__farmGame.scene.getScene('MyFarmScene');
-            scene.children.list.find(o => o.type === 'Rectangle' && o.x === 145 && o.y === 40).emit('pointerdown');
-        });
+        await page.locator('.farm-hud-bottom button[aria-label=商店]').dispatchEvent('click');
         assert.equal(await page.evaluate(() => window.__farmGame.scene.isActive('ShopScene')), false);
         mode = 'online'; release();
         await page.waitForFunction(() => window.__farmGame.scene.getScene('MyFarmScene').farmData?.coins === 12345);
