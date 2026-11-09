@@ -46,3 +46,12 @@
 .farm-hud-bottom .farm-hud-art{transform:translateY(-7px)}
 .farm-hud-bottom .farm-hud-button:is([aria-current=page],.is-selected)::before{filter:drop-shadow(0 0 2px #fffce2) drop-shadow(0 0 5px #ffdf56)}
 @media(max-height:520px){.farm-hud-bottom .farm-hud-button::before{height:27px}.farm-hud-bottom .farm-hud-art{transform:translateY(-5px)}}
+
+/* 八個導覽圖示與底座縮至 80%，按鈕本身保留原觸控範圍。 */
+.farm-hud-side .farm-hud-art{transform:scale(.8);transform-origin:center top}
+.farm-hud-bottom{--farm-hud-icon-size:58px;--farm-hud-icon-lift:7px}
+.farm-hud-bottom .farm-hud-art{transform:translateY(calc(-1 * var(--farm-hud-icon-lift))) scale(.8);transform-origin:center bottom}
+.farm-hud-bottom .farm-hud-button::before{transform:scale(.8);transform-origin:center bottom}
+.farm-hud-bottom .farm-mail-badge{top:calc(50% - var(--farm-hud-icon-size) * .3 - var(--farm-hud-icon-lift) - 7px);right:calc(50% - var(--farm-hud-icon-size) * .4 - 5px)}
+@media(max-width:359px){.farm-hud-bottom{--farm-hud-icon-size:50px}}
+@media(max-height:520px){.farm-hud-bottom{--farm-hud-icon-size:44px;--farm-hud-icon-lift:5px}}

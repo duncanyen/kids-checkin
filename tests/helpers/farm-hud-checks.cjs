@@ -104,6 +104,15 @@ module.exports = async function checkFarmHud(page) {
             const firstIcon=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
             return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,bases,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
         });
+        const sizes=await page.evaluate(()=>{
+            const art=document.querySelector('.farm-hud-bottom .farm-hud-art').getBoundingClientRect();
+            const side=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
+            return {bottom:art.width,side:side.width,touch:[...document.querySelectorAll('.farm-hud-side button,.farm-hud-bottom button')].every(n=>{const b=n.getBoundingClientRect();return b.width>=44&&b.height>=44;})};
+        });
+        const narrow=viewport.width<359, short=viewport.height<=520;
+        assert.ok(Math.abs(sizes.bottom-(short?44:narrow?50:58)*.8)<.1);
+        assert.ok(Math.abs(sizes.side-(short?41:narrow?49:56)*.8)<.1);
+        assert.equal(sizes.touch,true);
         assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1); assert.equal(layout.bases,true);
         assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.ok(layout.buttons.every(Boolean));
         await page.waitForSelector('.farm-hud-toast',{state:'hidden'});
