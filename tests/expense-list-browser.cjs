@@ -38,6 +38,13 @@ export const addDoc=async(ref,data)=>{
 export const deleteDoc=async ref=>{delete window.__store[ref.path];};
 export const updateDoc=async(ref,patch)=>{if(window.__failSave)throw Error('offline');Object.assign(window.__store[ref.path],patch);};
 export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>window.__store[ref.path]});
+export const runTransaction=async(_,change)=>{
+ if(window.__delayEditSave)await new Promise(resolve=>window.__releaseEditSave=resolve);
+ const writes=[];
+ await change({get:getDoc,update:(ref,patch)=>writes.push({ref,patch})});
+ if(window.__failSave)throw Error('offline');
+ for(const {ref,patch} of writes){window.__editPatches.push(structuredClone(patch));Object.assign(window.__store[ref.path],structuredClone(patch));window.__editWrites++;}
+};
 `;
 (async()=>{
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -54,7 +61,7 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.addInitScript(()=>{
   const user={accountId:'alice',name:'Alice',role:sessionStorage.getItem('testRole')||'parent',menus:['finance']};
   sessionStorage.setItem('familyCheckInUser',JSON.stringify(user));localStorage.setItem('lastGroupId','A');
-  window.__writes=0; window.__documentReads=[];
+  window.__writes=0; window.__editWrites=0; window.__editPatches=[]; window.__documentReads=[];
   window.__store={
    'users/alice':{...user,avatar:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='},
    'customCategories/legacy':{groupId:'A',type:'expense',name:'舊圖示',icon:'🥪',imgBase64:null},
@@ -110,20 +117,81 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.locator('#dayExpenseList .expense-item').filter({hasText:'<img src=x'}).locator('.btn-del-exp').click();
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
  await page.click('#expenseModal .btn-close');
- // Save a record without a name, then fill its name without changing money.
+ // Empty names remain optional; the existing form edits the original record only.
  await page.evaluate(()=>window.__delaySave=false);
  await page.click('#addListIncome');
  await page.fill('#expenseAmount','88');
  await page.click('#btnSaveExpense');
  await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent.includes('已儲存'));
- assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'');await page.evaluate(()=>window.__store['expenses/new-2'].name='不應回填的舊名');
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'');
+ await page.evaluate(()=>Object.assign(window.__store['expenses/new-2'],{name:'不應回填的舊名',timestamp:777,extra:{keep:true}}));
+ const metadata=await page.evaluate(()=>{const {date,type,category,amount,note,...rest}=window.__store['expenses/new-2'];return rest;});
  assert.equal(await page.locator('#dayExpenseList button.exp-note').first().innerText(),'');
- promptAnswer='補記薪資';
  await page.locator('#dayExpenseList button.exp-note').first().click();
- await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='名稱已更新。');
- assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'補記薪資');
+ assert.equal(await page.inputValue('#expenseAmount'),'88');
+ assert.equal(await page.inputValue('#expenseNote'),'');
+ assert.equal(await page.inputValue('#expenseDate'),'2026-11-01');
+ assert.match(await page.locator('#btnTypeIncome').getAttribute('class'),/active/);
+ assert.equal(await page.locator('#btnSaveExpense').innerText(),'儲存修改');
+ await page.fill('#expenseNote','補記薪資');
+ await page.evaluate(()=>window.__failSave=true);await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent.includes('儲存失敗'));
+ assert.equal(await page.inputValue('#expenseNote'),'補記薪資');
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].note),'');
+ await page.evaluate(()=>{window.__failSave=false;window.__store['expenses/new-2'].groupId='B';});
+ await page.click('#btnSaveExpense');await page.waitForFunction(()=>!document.querySelector('#btnSaveExpense').disabled);
+ assert.equal(await page.evaluate(()=>window.__editWrites),0,'changed group is rejected without writing');
+ await page.evaluate(()=>{window.__store['expenses/new-2'].groupId='A';window.__delayEditSave=true;});
+ await page.evaluate(()=>{document.getElementById('btnSaveExpense').click();document.getElementById('btnSaveExpense').click();});
+ assert.equal(await page.locator('#btnSaveExpense').isDisabled(),true);
+ await page.waitForFunction(()=>typeof window.__releaseEditSave==='function');await page.evaluate(()=>window.__releaseEditSave());
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='紀錄已更新。');
+ assert.equal(await page.evaluate(()=>window.__editWrites),1);
+ assert.equal(await page.evaluate(()=>window.__writes),2,'editing must not add a new document');
  assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].amount),88);
  assert.equal(await page.locator('#listTotal').innerText(),'NT$ 30,088');
+ await page.evaluate(()=>window.__delayEditSave=false);
+ // Edit all five fields, including a type change, and refresh both monthly totals.
+ await page.fill('#expenseDate','2026-11-15');await page.locator('#expenseDate').dispatchEvent('change');
+ await page.click('#btnTypeExpense');await page.locator('#categoryGrid .cat-btn').filter({hasText:'交通'}).click();
+ await page.fill('#expenseAmount','0');await page.click('#btnSaveExpense');
+ assert.match(await page.locator('#entryStatus').innerText(),/大於 0/);
+ await page.fill('#expenseAmount','150.75');await page.fill('#expenseNote','');
+ await page.evaluate(()=>window.__store['expenses/new-2'].amount=99);await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent.includes('已由其他人修改'));
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].amount),99);
+ assert.equal(await page.evaluate(()=>window.__editWrites),1,'stale fields must not overwrite a concurrent edit');
+ await page.evaluate(()=>window.__store['expenses/new-2'].amount=88);await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='紀錄已更新。'&&!document.querySelector('#btnSaveExpense').disabled);
+ assert.equal(await page.locator('#listTotal').innerText(),'NT$ 30,000');
+ const edited=await page.evaluate(()=>window.__store['expenses/new-2']);
+ assert.equal(edited.date,'2026-11-15');assert.equal(edited.type,'expense');assert.equal(edited.category,'交通');assert.equal(edited.amount,150.75);assert.equal(edited.note,'');
+ const {date,type,category,amount,note,...unchanged}=edited;assert.deepEqual(unchanged,metadata);
+ assert.ok(await page.evaluate(()=>window.__editPatches.every(p=>JSON.stringify(Object.keys(p).sort())===JSON.stringify(['amount','category','date','note','type']))));
+ await page.click('#expenseModal .btn-close');await page.click('#listExpenseTab');
+ await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 301');
+ await page.locator('.ledger-row').filter({hasText:'150.75'}).click();
+ assert.equal(await page.inputValue('#expenseDate'),'2026-11-15');assert.equal(await page.inputValue('#expenseAmount'),'150.75');
+ // Closing cancels edits; cross-month editing is allowed without changing the selected month.
+ await page.fill('#expenseAmount','999');await page.click('#expenseModal .btn-close');
+ assert.equal(await page.evaluate(()=>window.__store['expenses/new-2'].amount),150.75);
+ await page.locator('.ledger-row').filter({hasText:'150.75'}).click();
+ await page.fill('#expenseDate','2026-12-02');await page.locator('#expenseDate').dispatchEvent('change');
+ await page.click('#btnTypeIncome');await page.locator('#categoryGrid .cat-btn').filter({hasText:'獎金'}).click();
+ await page.fill('#expenseAmount','200.5');await page.fill('#expenseNote','跨月收入');await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='紀錄已更新。'&&!document.querySelector('#btnSaveExpense').disabled);
+ assert.equal(await page.locator('#listTotal').innerText(),'NT$ 150.25');
+ await page.click('#expenseModal .btn-close');await page.fill('#listPeriod','2026-12');await page.locator('#listPeriod').dispatchEvent('change');await page.click('#listIncomeTab');
+ await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 200.5');
+ await page.locator('.ledger-row').filter({hasText:'跨月收入'}).click();
+ assert.equal(await page.inputValue('#expenseDate'),'2026-12-02');
+ // Restore the fixture to continue the original add/delete/pagination regressions.
+ await page.fill('#expenseDate','2026-11-01');await page.locator('#expenseDate').dispatchEvent('change');
+ await page.locator('#categoryGrid .cat-btn').filter({hasText:'薪資'}).click();await page.fill('#expenseAmount','88');await page.fill('#expenseNote','補記薪資');await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='紀錄已更新。'&&!document.querySelector('#btnSaveExpense').disabled);
+ await page.click('#expenseModal .btn-close');await page.fill('#listPeriod','2026-11');await page.locator('#listPeriod').dispatchEvent('change');
+ await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,088');
+ await page.locator('.ledger-row').filter({hasText:'補記薪資'}).click();
  await page.locator('#dayExpenseList .expense-item').filter({hasText:'補記薪資'}).locator('.btn-del-exp').click();
  await page.waitForFunction(()=>document.querySelector('#listTotal').textContent==='NT$ 30,000');
  await page.click('#expenseModal .btn-close');
@@ -240,6 +308,25 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  assert.equal(await page.locator('#categoryGrid .cat-icon svg').count(),10);
  assert.equal(await page.locator('#categoryGrid .cat-icon img').count(),0);
  await page.click('#expenseModal .btn-close');
+ // Calendar details share the same full editor and remove moved records from the old month.
+ await page.click('#tabCalendar');
+ await page.waitForFunction(()=>document.querySelector('#monthTotalExpense').textContent==='$325');
+ await page.evaluate(()=>window.openModal('expenseModal','2026-12-25'));
+ await page.locator('#dayExpenseList .exp-cat-name').click();
+ assert.equal(await page.inputValue('#expenseAmount'),'25');
+ await page.fill('#expenseAmount','35');await page.fill('#expenseNote','');
+ await page.fill('#expenseDate','2026-11-30');await page.locator('#expenseDate').dispatchEvent('change');
+ await page.click('#btnSaveExpense');
+ await page.waitForFunction(()=>document.querySelector('#entryStatus').textContent==='紀錄已更新。'&&!document.querySelector('#btnSaveExpense').disabled);
+ assert.equal(await page.locator('#monthTotalExpense').innerText(),'$300');
+ assert.equal(await page.locator('#monthTotalIncome').innerText(),'$999');
+ assert.equal(await page.evaluate(()=>window.__store['expenses/page-25'].date),'2026-11-30');
+ await page.click('#expenseModal .btn-close');
+ await page.evaluate(()=>window.openModal('expenseModal','2026-12-25'));
+ assert.equal(await page.locator('#btnSaveExpense').innerText(),'儲存紀錄');
+ assert.equal(await page.inputValue('#expenseAmount'),'');
+ assert.equal(await page.getAttribute('#expenseDate','min'),'2026-12-01');
+ await page.click('#expenseModal .btn-close');
  await page.evaluate(()=>sessionStorage.setItem('testRole','member'));
  await page.reload();await page.click('#tabList');
  await page.waitForFunction(()=>!document.querySelector('#addListExpense').disabled);
@@ -248,6 +335,6 @@ export const getDoc=async ref=>({exists:()=>!!window.__store[ref.path],data:()=>
  await page.evaluate(()=>window.openListEntry('income'));
  assert.equal(await page.locator('#expenseModal').isVisible(),false);
  assert.deepEqual(errors,[]);
- console.log('PASS: bounded document reads, pagination, cached pages, monthly aggregate totals, single year/month picker, month arrows, one symbol-only add button; month/year selection, totals, order, avatars, legacy records, group isolation, income/expense entry, date limits, validation, failed save/retry, duplicate-submit guard, deletion sync, stale requests, read retry, mobile layout and existing income permissions.');
+ console.log('PASS: full record editing with five-field-only updates, metadata preservation, cancel, failed edit retry, changed-group rejection, duplicate-submit protection, type/category/amount/date/name changes and cross-month totals in list and calendar modes; bounded document reads, pagination, cached pages, monthly aggregate totals, single year/month picker, month arrows, one symbol-only add button; month/year selection, totals, order, avatars, legacy records, group isolation, income/expense entry, date limits, validation, failed save/retry, duplicate-submit guard, deletion sync, stale requests, read retry, mobile layout and existing income permissions.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

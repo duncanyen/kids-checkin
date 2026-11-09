@@ -10,7 +10,7 @@ import { loadScopedProfiles, profileAvatarMap } from './scoped-profiles.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { 
     getFirestore, collection, addDoc, getDocs, query, where, 
-    deleteDoc, doc, serverTimestamp, updateDoc, orderBy, documentId, startAfter, limit, getAggregateFromServer, sum, count
+    deleteDoc, doc, serverTimestamp, updateDoc, runTransaction, orderBy, documentId, startAfter, limit, getAggregateFromServer, sum, count
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -61,6 +61,8 @@ let listProfiles = {};
 
 let monthError = false;
 let savingEntry = false;
+let editingExpenseId = null;
+let editingExpenseOriginal = null;
 let selectedDateStr = "";     
 let monthRequestVersion = 0;
 let monthReady = false;
@@ -334,7 +336,7 @@ function renderLedgerList() {
         const money = document.createElement('strong'); money.className = `ledger-row-amount ${currentListType}`;
         money.textContent = `${income ? '+' : '−'}$${Number(item.amount).toLocaleString('zh-TW', { maximumFractionDigits: 2 })}`;
         row.append(date, details, avatar, money);
-        row.onclick = () => { openModal('expenseModal', item.date); switchModalType(currentListType); };
+        row.onclick = () => window.editExpense(item.id);
         container.append(row);
     }
 }
@@ -350,11 +352,11 @@ window.openListEntry = function(type) {
 window.changeEntryDate = function() {
     if (savingEntry) { document.getElementById('expenseDate').value = selectedDateStr; return; }
     const input = document.getElementById('expenseDate');
-    if (!input.value || input.value < input.min || input.value > input.max) {
+    if (!validEntryDate(input.value) || (input.min && input.value < input.min) || (input.max && input.value > input.max)) {
         input.value = selectedDateStr; return;
     }
     selectedDateStr = input.value;
-    document.getElementById('modalDateTitle').textContent = `${selectedDateStr.replaceAll('-', '/')} 記帳`;
+    document.getElementById('modalDateTitle').textContent = `${selectedDateStr.replaceAll('-', '/')} ${editingExpenseId ? '修改紀錄' : '記帳'}`;
     renderDayList();
 };
 
@@ -788,6 +790,7 @@ async function processReviewData() {
 
 window.openModal = function(modalId, dateStr = null) {
     if (savingEntry && modalId === 'expenseModal') return;
+    if (modalId === 'expenseModal') resetExpenseEditor();
     if(dateStr) {
         if (!monthReady) return;
         selectedDateStr = dateStr;
@@ -822,6 +825,7 @@ window.openModal = function(modalId, dateStr = null) {
 window.closeModal = function(modalId) {
     if (savingEntry && modalId === 'expenseModal') return;
     document.getElementById(modalId).style.display = 'none';
+    if (modalId === 'expenseModal') resetExpenseEditor();
 };
 
 window.onclick = function(event) {
@@ -1076,6 +1080,13 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
     if (!selectedCategory || !selectedDateStr || (currentModalType === 'income' && !canViewIncome)) {
         status.textContent = '請確認日期與分類。'; return;
     }
+    const date = document.getElementById('expenseDate').value;
+    if (!validEntryDate(date)) { status.textContent = '請選擇有效日期。'; return; }
+    if (note.length > 100) { status.textContent = '名稱最多 100 個字。'; return; }
+    if (!['income', 'expense'].includes(currentModalType)) return;
+    selectedDateStr = date;
+    const editingId = editingExpenseId;
+    const original = editingExpenseOriginal;
     savingEntry = true;
     document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = true);
     status.textContent = '';
@@ -1086,6 +1097,37 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
     btn.innerText = '儲存中...';
 
     try {
+        if (editingId) {
+            // 只更新表單的五個欄位；交易重讀確認歸屬，不覆寫作者、群組或建立時間。
+            const patch = { date, type: currentModalType, category: selectedCategory, amount, note };
+            await runTransaction(db, async transaction => {
+                const ref = doc(db, 'expenses', editingId);
+                const snapshot = await transaction.get(ref);
+                if (!snapshot.exists()) throw new Error('這筆紀錄已刪除，請重新載入。');
+                const latest = snapshot.data();
+                if (latest.groupId !== currentGroupId) throw new Error('這筆紀錄不屬於目前群組，無法修改。');
+                if (latest.type === 'income' && !canViewIncome) throw new Error('目前無法修改收入紀錄。');
+                const current = { date: latest.date, type: latest.type || 'expense', category: latest.category, amount: latest.amount, note: expenseName(latest) };
+                if (!original || Object.keys(current).some(key => current[key] !== original[key])) {
+                    const error = new Error('這筆紀錄已由其他人修改，請重新點選明細後再儲存。');
+                    error.code = 'expense/changed';
+                    throw error;
+                }
+                transaction.update(ref, patch);
+            });
+            editingExpenseOriginal = { ...patch };
+            hasLoadedAllData = false;
+            if (entryVersion !== monthRequestVersion) return;
+            const month = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            monthData = monthData.map(item => item.id === editingId ? { ...item, ...patch } : item).filter(item => item.date.startsWith(month + '-'));
+            if (currentMainView === 'list') { resetListData(); await loadListPage(0); }
+            renderDayList();
+            if (currentMainView === 'calendar') renderCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1);
+            renderPersonalAvatars();
+            if (currentMainView === 'calendar') renderPieChart();
+            status.textContent = '紀錄已更新。';
+            return;
+        }
         const newItem = {
             groupId: currentGroupId,
             accountId: currentAccountId, 
@@ -1114,12 +1156,12 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
 
     } catch (e) {
         console.error("儲存失敗：", e);
-        status.textContent = '儲存失敗，內容已保留，請檢查網路後重試。';
+        status.textContent = e.code === 'expense/changed' ? e.message : '儲存失敗，內容已保留，請檢查網路後重試。';
     } finally {
         savingEntry = false;
         document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = false);
         btn.disabled = false;
-        btn.innerText = '儲存紀錄';
+        btn.innerText = editingExpenseId ? '儲存修改' : '儲存紀錄';
     }
 });
 
@@ -1158,7 +1200,7 @@ function renderDayList() {
                 <div class="exp-icon-box" style="color: ${catObj.color}">${iconHtml}</div>
                 <div class="exp-details">
                     <span class="exp-cat-name">${ledgerText(item.category)}</span>
-                    <button type="button" class="exp-note" style="border:0;background:none;padding:0;text-align:left;cursor:pointer" aria-label="修改名稱" onclick="editExpenseName('${item.id}')">${ledgerText(expenseName(item))}</button>
+                    <button type="button" class="exp-note" style="border:0;background:none;padding:0;text-align:left;cursor:pointer" aria-label="修改整筆紀錄" onclick="editExpense('${item.id}')">${ledgerText(expenseName(item))}</button>
                 </div>
             </div>
             <div style="display:flex; align-items:center;">
@@ -1166,41 +1208,48 @@ function renderDayList() {
                 <button class="btn-del-exp" onclick="deleteExpense('${item.id}')">✕</button>
             </div>
         `;
+        div.addEventListener('click', event => {
+            if (!event.target.closest('button')) window.editExpense(item.id);
+        });
         container.appendChild(div);
     });
 }
 
-// 只改名稱，不變動金額、分類、日期及月份總計。
-window.editExpenseName = async function(docId) {
+function validEntryDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+    const date = new Date(value + 'T00:00:00Z');
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function resetExpenseEditor() {
+    editingExpenseId = null;
+    editingExpenseOriginal = null;
+    document.getElementById('btnSaveExpense').textContent = '儲存紀錄';
+}
+
+/**
+ * 將明細帶入現有表單，允許修改日期、收支、分類、金額與選填名稱。
+ * @param {string} docId - 目前已載入且屬於所選群組的記帳文件 ID。
+ * @returns {void} 不建立新文件、不自動聚焦；關閉表單即放棄未儲存內容。
+ */
+window.editExpense = function(docId) {
     if (savingEntry || !monthReady) return;
     const item = monthData.find(entry => entry.id === docId && entry.groupId === currentGroupId);
-    if (!item) return;
-    const entered = window.prompt('名稱（選填，可留空）', expenseName(item));
-    if (entered === null) return;
-    const note = entered.trim();
-    const status = document.getElementById('entryStatus');
-    if (note.length > 100) { status.textContent = '名稱最多 100 個字。'; return; }
-    if (note === (expenseName(item))) return;
-    savingEntry = true;
-    const version = monthRequestVersion;
-    document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = true);
-    status.textContent = '更新名稱中…';
-    try {
-        await updateDoc(doc(db, 'expenses', docId), { note });
-        if (version !== monthRequestVersion) return;
-        item.note = note;
-        hasLoadedAllData = false;
-        if (currentMainView === 'list') { resetListData(); await loadListPage(0); }
-        renderDayList();
-        status.textContent = '名稱已更新。';
-    } catch (error) {
-        console.error('更新名稱失敗：', error);
-        status.textContent = '更新名稱失敗，請檢查網路後重試。';
-    } finally {
-        savingEntry = false;
-        document.querySelectorAll('#expenseModal input, #expenseModal button').forEach(control => control.disabled = false);
-    }
+    if (!item || (item.type === 'income' && !canViewIncome)) return;
+    openModal('expenseModal', item.date);
+    switchModalType(item.type || 'expense');
+    selectCategory(item.category);
+    editingExpenseId = item.id;
+    editingExpenseOriginal = { date: item.date, type: item.type || 'expense', category: item.category, amount: item.amount, note: expenseName(item) };
+    document.getElementById('expenseDate').removeAttribute('min');
+    document.getElementById('expenseDate').removeAttribute('max');
+    document.getElementById('expenseAmount').value = item.amount;
+    document.getElementById('expenseNote').value = expenseName(item);
+    document.getElementById('modalDateTitle').textContent = `${item.date.replaceAll('-', '/')} 修改紀錄`;
+    document.getElementById('btnSaveExpense').textContent = '儲存修改';
 };
+// 保留既有呼叫入口，統一進入完整編輯流程。
+window.editExpenseName = window.editExpense;
 
 window.deleteExpense = async function(docId) {
     if (savingEntry) return;
@@ -1208,6 +1257,11 @@ window.deleteExpense = async function(docId) {
     try {
         await deleteDoc(doc(db, "expenses", docId));
         monthData = monthData.filter(e => e.id !== docId);
+        if (editingExpenseId === docId) {
+            resetExpenseEditor();
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseNote').value = '';
+        }
         if (currentMainView === 'list') { resetListData(); await loadListPage(0); }
         
         hasLoadedAllData = false; 
