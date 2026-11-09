@@ -104,6 +104,13 @@ module.exports = async function checkFarmHud(page) {
             const firstIcon=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
             return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,bases,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
         });
+        const spacing=await page.evaluate(()=>{
+            const side=[...document.querySelectorAll('.farm-hud-side .farm-hud-art')].map(n=>n.getBoundingClientRect());
+            const bottom=[...document.querySelectorAll('.farm-hud-bottom .farm-hud-art')].map(n=>n.getBoundingClientRect());
+            return {side:side.slice(1).map((r,i)=>r.top-side[i].bottom),bottom:bottom.slice(1).map((r,i)=>r.left-bottom[i].right)};
+        });
+        assert.ok(spacing.side.every(gap=>Math.abs(gap-96/2.54*.4)<.15));
+        assert.ok(spacing.bottom.every(gap=>Math.abs(gap-96/2.54*.3)<.15));
         const sizes=await page.evaluate(()=>{
             const art=document.querySelector('.farm-hud-bottom .farm-hud-art').getBoundingClientRect();
             const side=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();

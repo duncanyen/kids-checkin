@@ -24,7 +24,7 @@
 .farm-hud-side .farm-hud-art{width:44px;height:44px}
 .farm-hud-button:disabled .farm-hud-art{filter:saturate(.65) drop-shadow(0 1px 0 #fff1bc)}
 .farm-hud-bottom{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,590px);height:calc(var(--farm-dock-height) + env(safe-area-inset-bottom,0px));padding:5px 12px calc(9px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;box-sizing:border-box;pointer-events:none;border:0;background:none;box-shadow:none}
-.farm-hud-bottom .farm-hud-button{height:65px;align-self:end;padding:0}
+.farm-hud-bottom .farm-hud-button{width:100%;height:65px;align-self:end;padding:0}
 /* 既有入口僅換外觀與位置，保留原本的通知／排行生命週期和鍵盤操作。 */
 .farm-hud :is(.farm-mail-launcher,.farm-ranking-launcher){position:relative;inset:auto;z-index:auto;display:flex}
 .farm-hud .farm-mail-badge{top:-7px;right:-5px;width:14px;min-width:14px;height:14px;border:2px solid #fff2bf;padding:0;background:radial-gradient(circle at 35% 25%,#ffac86,#ef3f36 55%,#ae211d);box-shadow:0 2px 2px #6f281a88;font-size:0}
@@ -55,3 +55,11 @@
 .farm-hud-bottom .farm-mail-badge{top:calc(50% - var(--farm-hud-icon-size) * .3 - var(--farm-hud-icon-lift) - 7px);right:calc(50% - var(--farm-hud-icon-size) * .4 - 5px)}
 @media(max-width:359px){.farm-hud-bottom{--farm-hud-icon-size:50px}}
 @media(max-height:520px){.farm-hud-bottom{--farm-hud-icon-size:44px;--farm-hud-icon-lift:5px}}
+
+/* 收緊側邊圖示的可見間距，並將底部獨立底座集中排列。 */
+.farm-hud-side{--farm-hud-side-icon-size:56px;gap:calc(.4cm + var(--farm-hud-side-icon-size) * .8 - 44px)}
+.farm-hud-side .farm-hud-button{height:44px}
+.farm-hud-bottom{--farm-hud-cell-width:max(44px,calc((var(--farm-hud-icon-size) + 7px) * .8));grid-template-columns:repeat(5,var(--farm-hud-cell-width));gap:calc(.3cm + var(--farm-hud-icon-size) * .8 - var(--farm-hud-cell-width));justify-content:center}
+.farm-hud-bottom .farm-hud-button::before{left:50%;right:auto;width:calc(var(--farm-hud-icon-size) + 7px);margin-left:calc((var(--farm-hud-icon-size) + 7px) * -.5)}
+@media(max-width:359px){.farm-hud-side{--farm-hud-side-icon-size:49px}}
+@media(max-height:520px){.farm-hud-side{--farm-hud-side-icon-size:41px}}
