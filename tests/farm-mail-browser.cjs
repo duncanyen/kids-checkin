@@ -158,6 +158,14 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
             window.__farmGame.scene.getScene('MyFarmScene').scene.start('VisitScene', { targetAccountId: 'neighbor', targetName: '鄰居', targetGroupId: 'A' });
         });
         await page.waitForFunction(() => window.__farmGame.scene.isActive('VisitScene') && window.__farmGame.scene.getScene('VisitScene').targetFarmData);
+        await page.waitForSelector('.farm-hud-side',{state:'hidden'});
+        await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
+        // 拜訪時即使沒有怪物，或怪物準備狀態解除，也不恢復自家的導覽。
+        await page.evaluate(()=>__farmGame.scene.getScene('VisitScene').preparingCobra=true);
+        await page.waitForTimeout(150);
+        await page.evaluate(()=>__farmGame.scene.getScene('VisitScene').preparingCobra=false);
+        await page.waitForTimeout(150);
+        assert.equal(await page.locator('.farm-hud-bottom').isVisible(),false);
         // Full welcome inventory is deliberate; free space for theft tests.
         docs[owner].farm.worms = 0; docs[owner].farm.earthworms = 0;
         await page.evaluate(async () => {
@@ -197,6 +205,12 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         const during=Date.now()>=Date.parse('2026-11-09T00:00:00+08:00')&&Date.now()<Date.parse('2026-11-15T00:00:00+08:00');
         assert.equal(docs[owner].farm.stolenEggs20261109,during?2:undefined);
         assert.equal(Object.keys(docs).some(path=>path.startsWith('farm_theft_events/')),false);
+        await require('./helpers/farm-hud-checks.cjs').clickBack(page,'VisitScene');
+        await page.waitForFunction(()=>__farmGame.scene.isActive('LobbyScene'));
+        await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
+        await require('./helpers/farm-hud-checks.cjs').clickBack(page,'LobbyScene');
+        await page.waitForSelector('.farm-hud-side',{state:'visible'});
+        await page.waitForSelector('.farm-hud-bottom',{state:'visible'});
         // Visit records show no detail button, include Taiwan timestamps and can be deleted.
         await page.evaluate(async notice => {
             const {setDoc,doc}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');

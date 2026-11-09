@@ -114,9 +114,9 @@ export function mountFarmHud(game) {
         const key = scene?.scene.key;
         const inEncounter = game.scene.getScenes(true).some(hasFarmHudEncounter);
         const sideWasHidden = side.hidden;
-        // 每次檢查戰鬥狀態，而非只在切換場景時更新，才能在同一農場恢復按鈕。
-        side.hidden = inEncounter || !['MyFarmScene','VisitScene'].includes(key);
-        bottom.hidden = inEncounter;
+        // 導覽只屬於自家農場；拜訪結束或戰鬥結算後，也須回到自家才恢復。
+        side.hidden = inEncounter || key !== 'MyFarmScene';
+        bottom.hidden = inEncounter || key !== 'MyFarmScene';
         if (inEncounter) { toast.hidden = true; clearTimeout(toastTimer); }
         if (key !== currentKey) {
             currentKey = key; top.hidden = !game.registry.get('myFarmData') || key !== 'MyFarmScene';

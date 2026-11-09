@@ -1,5 +1,19 @@
 const assert = require('node:assert/strict');
 
+// 使用場景既有返回鍵的實際畫面座標，確認沒有 DOM 導覽仍能離開。
+async function clickBack(page,key) {
+    const point=await page.evaluate(key=>{
+        const scene=__farmGame.scene.getScene(key), camera=scene.cameras.main;
+        const x=key==='LobbyScene'?42:55, y=['LobbyScene','VisitScene'].includes(key)?50:60;
+        const button=scene.children.list.find(o=>o.input?.enabled&&o.x===x&&o.y===y);
+        if(!button) throw Error(`Missing return button: ${key}`);
+        const canvas=__farmGame.canvas.getBoundingClientRect();
+        return {x:canvas.left+(button.x-camera.worldView.x)*camera.zoom,y:canvas.top+(button.y-camera.worldView.y)*camera.zoom};
+    },key);
+    await page.mouse.click(point.x,point.y);
+    await page.waitForFunction(key=>!__farmGame.scene.isActive(key),key);
+}
+
 // 使用 farm-mail-browser 的隔離 Firebase fixture 與真正 Phaser 場景。
 module.exports = async function checkFarmHud(page) {
     const dock = page.locator('.farm-hud-bottom');
@@ -49,7 +63,7 @@ module.exports = async function checkFarmHud(page) {
     await page.waitForSelector('.farm-hud-side',{state:'visible'});
     await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').giantEncounter=null);
 
-    // 按壓時縮小，放開後透過正式導航進入倉庫，且選取亮框跟著頁面更新。
+    // 按壓時縮小，進入功能頁後隱藏導覽，並保留場景原本的返回鍵。
     const warehouse = dock.getByRole('button',{name:'倉庫',exact:true});
     const bounds=await warehouse.boundingBox();
     await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
@@ -58,23 +72,26 @@ module.exports = async function checkFarmHud(page) {
     assert.ok(Math.abs(scale-.95)<.01);
     await page.mouse.up();
     await page.waitForFunction(()=>__farmGame.scene.isActive('WarehouseScene'));
-    await page.waitForFunction(()=>document.querySelector('.farm-hud-bottom [aria-current=page]')?.getAttribute('aria-label')==='倉庫');
-    assert.equal(await warehouse.evaluate(n=>getComputedStyle(n.querySelector('.farm-hud-art')).filter.includes('255, 223, 86')),true);
+    await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
+    await clickBack(page,'WarehouseScene');
+    await page.waitForSelector('.farm-hud-bottom',{state:'visible'});
     await dock.getByRole('button',{name:'商店',exact:true}).click();
     await page.waitForFunction(()=>__farmGame.scene.isActive('ShopScene'));
-    await page.waitForFunction(()=>document.querySelector('.farm-hud-bottom [aria-current=page]')?.getAttribute('aria-label')==='商店');
+    await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
+    await clickBack(page,'ShopScene');
+    await page.waitForSelector('.farm-hud-bottom',{state:'visible'});
     // 避免交易尚未結束就透過新的 DOM 導覽離開，直接派送 click 也須被拒絕。
-    await page.evaluate(()=>__farmGame.scene.getScene('ShopScene').isProcessing=true);
+    await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').isProcessing=true);
     await page.waitForFunction(()=>document.querySelector('.farm-hud-bottom button').disabled);
     await dock.getByRole('button',{name:'村落',exact:true}).dispatchEvent('click');
-    assert.equal(await page.evaluate(()=>__farmGame.scene.isActive('ShopScene')),true);
-    await page.evaluate(()=>__farmGame.scene.getScene('ShopScene').isProcessing=false);
-    await dock.getByRole('button',{name:'村落',exact:true}).click();
-    await page.waitForFunction(()=>__farmGame.scene.isActive('MyFarmScene'));
+    assert.equal(await page.evaluate(()=>__farmGame.scene.isActive('MyFarmScene')),true);
+    await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').isProcessing=false);
     await dock.getByRole('button',{name:'村落',exact:true}).click();
     await page.waitForFunction(()=>__farmGame.scene.isActive('LobbyScene'));
-    await dock.getByRole('button',{name:'村落',exact:true}).click();
+    await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
+    await clickBack(page,'LobbyScene');
     await page.waitForFunction(()=>__farmGame.scene.isActive('MyFarmScene'));
+    await page.waitForSelector('.farm-hud-bottom',{state:'visible'});
 
     for (const viewport of [{width:320,height:740},{width:390,height:844},{width:1440,height:900},{width:844,height:390}]) {
         await page.setViewportSize(viewport); await page.waitForTimeout(200);
@@ -95,3 +112,4 @@ module.exports = async function checkFarmHud(page) {
     await page.setViewportSize({width:390,height:844});
     console.log('Farm HUD: resource totals, unavailable entries, press/selection states, navigation, transaction lock and responsive layout passed');
 };
+module.exports.clickBack=clickBack;
