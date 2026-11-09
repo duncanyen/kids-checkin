@@ -1,7 +1,8 @@
+import {createManagementUI} from './management.js?v=20261109-ops2';
 import * as runtime from './runtime.js?v=20261108-admin-auth';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
-const labels={dashboard:'營運總覽',announcements:'使用者公告',notifications:'系統通知',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄'};
+const labels={dashboard:'營運總覽',announcements:'使用者公告',notifications:'系統通知',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄',players:'玩家管理',balance:'遊戲數值',events:'活動管理',settings:'系統設定'};
 const statusNames={draft:'草稿',scheduled:'排程發布',published:'已發布',archived:'已下架',active:'已啟用',inactive:'已停用',success:'成功',failed:'失敗'};
 const types={announcements:{general:'一般公告',maintenance:'維護公告',event:'活動公告',update:'更新公告'},gifts:{universal:'通用禮包',limited:'限量禮包',single:'單次兌換',targeted:'指定玩家'}};
 types.notifications=types.announcements;
@@ -10,6 +11,7 @@ const saveAction=()=>view==='gifts'?'saveGift':view==='notifications'?'saveNotif
 const formatTime=value=>value?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',dateStyle:'short',timeStyle:'short',hour12:false}).format(new Date(value)):'—';
 const wallTime=value=>new Date(value+8*3600000).toISOString().slice(0,16);
 const utc=value=>new Date(value+':00+08:00').getTime();
+let currentAdminUid='';
 let view='dashboard',rows=[],pages=[null],page=0,nextCursor=null,revision=0,busy=false,catalog,editing,writeId;
 const errorText=error=>error.code==='functions/permission-denied'?'權限驗證失敗，請確認管理員角色，並重新登入。':error.message||'操作失敗，請稍後重試。';
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
@@ -23,6 +25,7 @@ function table(headers,values){
 function auditRows(values){return values.map(r=>{const detail=button('查看差異',()=>showDetails(r));return[formatTime(r.createdAt),r.adminUid,r.action,r.target,pill(r.result),detail];});}
 function showDetails(record){$('previewContent').replaceChildren(node('pre',JSON.stringify(record,null,2),'audit-diff'));$('preview').showModal();}
 function fillSelect(select,values){select.replaceChildren();for(const [value,label]of Object.entries(values)){const option=node('option',label);option.value=value;select.append(option);}}
+const management=createManagementUI({root:$('managementView'),api:runtime.api,node,button,table,formatTime,wallTime,utc,status,getAdminUid:()=>currentAdminUid});
 function configureFilters(){
     const nameBased=['announcements','notifications','gifts'].includes(view);
     $('searchLabel').firstChild.textContent=nameBased?'名稱前綴':view==='redemptions'?'玩家 accountId（完整）':'操作類型（完整）';
@@ -59,7 +62,7 @@ function renderList(){
         headers=isMessage()?['標題','類型','狀態','有效期間（台灣）','對象','操作']:['禮包名稱','模式','狀態','已兌換／總上限','有效期間（台灣）','操作'];
         values=rows.map(r=>{
             const actions=node('div');actions.append(button('編輯',()=>openEditor(r)));
-            if(isMessage())actions.append(button('預覽',()=>previewAnnouncement(r)),button('立即發布',()=>changeStatus(r,'published')),button('下架',()=>changeStatus(r,'archived'),'danger'));
+            if(isMessage()){if(r.sourceEventId)actions.replaceChildren(button('至活動管理',()=>selectView('events')),button('預覽',()=>previewAnnouncement(r)));else actions.append(button('預覽',()=>previewAnnouncement(r)),button('立即發布',()=>changeStatus(r,'published')),button('下架',()=>changeStatus(r,'archived'),'danger'));}
             else actions.append(button(r.status==='active'?'停用':'啟用',()=>changeStatus(r,r.status==='active'?'inactive':'active'),r.status==='active'?'danger':''));
             return isMessage()?[r.title,types.announcements[r.type],pill(r.status),formatTime(r.startAt)+' ～ '+formatTime(r.endAt),r.targetType==='all'?'所有玩家':r.targetAccountIds.join('、'),actions]:[r.name,types.gifts[r.type],pill(r.status),`${r.redeemedCount} / ${r.maxRedemptions??'不限'}`,formatTime(r.startAt)+' ～ '+formatTime(r.endAt),actions];
         });
@@ -72,6 +75,13 @@ function renderList(){
 async function selectView(value){
     view=value;pages=[null];page=0;nextCursor=null;
     $('pageTitle').textContent=labels[view];$('breadcrumb').textContent=labels[view];document.title=labels[view]+' · Nexus Game Admin';
+    if(management.has(view)){
+        $('dashboard').hidden=true;$('listView').hidden=true;$('managementView').hidden=false;$('createButton').hidden=true;
+        $('pageDescription').textContent={players:'以固定帳號查詢玩家與農場，所有重要變更由後端驗證及留存。',balance:'查看目前遊戲版本，調整已接入後端的護衛犬租用設定。',events:'建立活動公告、指定對象與排程，連動村落通知。',settings:'控制已接入後端的營運服務，不影響既有付費租約。'}[view];
+        document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===view));
+        document.body.classList.remove('menu-open');$('menuButton').setAttribute('aria-expanded','false');await management.open(view);return;
+    }
+    management.deactivate();$('managementView').hidden=true;
     $('pageDescription').textContent=view==='dashboard'?'掌握公告、禮包與最近營運動態。':isMessage()?(view==='notifications'?'發送給所有帳號或指定 accountId；可排程、預覽與下架。':'管理玩家公告與排程，時間以台灣時區顯示。'):view==='gifts'?'管理兌換資格、限額與獎勵，兌換碼只在建立時顯示。':view==='redemptions'?'追查成功與失敗的兌換請求。':'由伺服器保留的重要管理操作與前後差異。';
     $('dashboard').hidden=view!=='dashboard';$('listView').hidden=view==='dashboard';$('createButton').hidden=!['announcements','notifications','gifts'].includes(view);$('createButton').textContent=view==='gifts'?'＋ 建立禮包':view==='notifications'?'＋ 新增系統通知':'＋ 新增公告';
     document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===view));
@@ -159,7 +169,7 @@ async function changeStatus(record,statusValue){
     if(busy||!confirm(`確定將「${record.title||record.name}」設為${statusNames[statusValue]}？`))return;
     busy=true;try{const payload={...record,status:statusValue};if(statusValue==='published')payload.startAt=Date.now();await runtime.api(saveAction(),payload,crypto.randomUUID());await load();status('狀態已更新');}catch(error){status(errorText(error),true);}finally{busy=false;}
 }
-$('navigation').onclick=event=>{const target=event.target.closest('[data-view]');if(target&&!busy)selectView(target.dataset.view);};
+$('navigation').onclick=event=>{const target=event.target.closest('[data-view]');if(target&&!busy&&!management.isBusy())selectView(target.dataset.view);};
 $('filters').onsubmit=event=>{event.preventDefault();pages=[null];page=0;load();};$('resetFilters').onclick=()=>{$('filters').reset();pages=[null];page=0;load();};
 $('previousPage').onclick=()=>{if(page>0){page--;load();}};$('nextPage').onclick=()=>{if(nextCursor){pages[++page]=nextCursor;load();}};
 $('createButton').onclick=()=>openEditor();$('closeEditor').onclick=()=>{if(!busy)$('editor').close();};$('closePreview').onclick=()=>$('preview').close();$('previewButton').onclick=()=>previewAnnouncement(editorPayload());
@@ -168,7 +178,7 @@ $('menuButton').onclick=()=>{const open=document.body.classList.toggle('menu-ope
 $('logout').onclick=async()=>{try{await runtime.logout();location.replace('login.html'+location.search);}catch(error){status(errorText(error),true);}};
 runtime.observe(async user=>{
     if(!user){location.replace('login.html'+location.search);return;}
-    try{const identity=await runtime.identity(user);if(!identity.admin){await runtime.logout();location.replace('login.html'+location.search);return;}$('adminEmail').textContent=identity.email||identity.uid;$('app').hidden=false;$('loading').hidden=true;await selectView('dashboard');}
+    try{const identity=await runtime.identity(user);if(!identity.admin){await runtime.logout();location.replace('login.html'+location.search);return;}currentAdminUid=identity.uid;$('adminEmail').textContent=identity.email||identity.uid;$('app').hidden=false;$('loading').hidden=true;await selectView('dashboard');}
     catch(error){$('loading').textContent=errorText(error);}
 });
 

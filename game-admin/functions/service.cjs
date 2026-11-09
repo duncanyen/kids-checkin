@@ -1,11 +1,13 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
+const {createManagement}=require('./management.cjs');
 const COLLECTIONS={announcements:'ops_announcements',notifications:'ops_notifications',gifts:'ops_gifts',redemptions:'ops_redemptions',audit:'ops_audit'};
 const cleanAudit=value=>{
     if(!value)return null;
     const {codeHash,searchTokens,audienceKeys,...safe}=value;return safe;
 };
 function createService({db,auth,now=Date.now}) {
+    const management=createManagement({db,now});
     async function admin(request){
         const uid=D.adminIdentity(request.auth),user=await auth.getUser(uid);
         if(user.disabled||user.customClaims?.role!=='admin')D.fail('permission-denied','管理權限已撤銷，請重新登入');
@@ -20,6 +22,8 @@ function createService({db,auth,now=Date.now}) {
         const profileSnap=await read(db.doc(`users/${D.id(request.auth.uid)}`));
         const profile=profileSnap.data();
         if(!profile||profile.role==='removed'||profile.accountId!==token.photoAccountId)D.fail('permission-denied','玩家帳號無效或已停用');
+        const restriction=await read(db.doc(`ops_player_controls/${D.id(request.auth.uid)}`));
+        if(restriction.data()?.blocked===true)D.fail('permission-denied','此帳號暫停使用營運功能，請聯絡管理員');
         const groupSnap=await read(db.doc(`groups/${groupId}`));
         if(!groupSnap.data()?.members?.includes(profile.accountId))D.fail('permission-denied','已不在此群組');
         return{uid:request.auth.uid,accountId:profile.accountId,groupId};
@@ -83,6 +87,7 @@ function createService({db,auth,now=Date.now}) {
             }
             const snap=await t.get(ref),before=snap.data();
             if(payload.id&&!snap.exists)D.fail('not-found','找不到要編輯的資料');
+            if(!isGift&&before?.sourceEventId)D.fail('failed-precondition','此公告由活動管理維護，請至活動管理編輯');
             if(isGift&&codeHash){const mapping=await t.get(db.doc(`ops_code_index/${codeHash}`));if(mapping.exists)D.fail('already-exists','此兌換碼已存在，請使用另一組');}
             if(isGift&&before?.redeemedCount){
                 for(const field of ['type','rewards','targetAccountIds'])if(D.fingerprint(before[field])!==D.fingerprint(value[field]))D.fail('failed-precondition','已有兌換紀錄，不可變更獎勵、模式或指定對象');
@@ -105,12 +110,14 @@ function createService({db,auth,now=Date.now}) {
         if(action==='dashboard')return dashboard();
         if(action==='list')return list(payload.kind,payload);
         if(action==='catalog')return rewardCatalog();
+        if(management.isRead(action))return management.query(action,payload);
         const requestId=D.requestId(request.data.requestId);
         try{
+            if(management.isWrite(action))return await management.mutate(uid,action,payload,requestId);
             if(['saveAnnouncement','saveNotification','saveGift'].includes(action))return await save(uid,action,payload,requestId);
             D.fail('invalid-argument','尚未提供此管理操作');
         }catch(error){
-            await db.collection(COLLECTIONS.audit).add({adminUid:uid,createdAt:now(),action:typeof action==='string'?action.slice(0,80):'invalid',target:payload.id?String(payload.id).slice(0,160):null,result:'failed',errorCode:error.code||'internal',requestId});
+            await db.collection(COLLECTIONS.audit).add({adminUid:uid,createdAt:now(),action:typeof action==='string'?action.slice(0,80):'invalid',target:payload.uid?'users/'+String(payload.uid).slice(0,160):payload.id?String(payload.id).slice(0,160):payload.breedId?'guard-dogs/'+String(payload.breedId).slice(0,160):action==='saveSettings'?'ops_settings/global':null,result:'failed',errorCode:error.code||'internal',requestId});
             throw error;
         }
     }
@@ -120,16 +127,19 @@ function createService({db,auth,now=Date.now}) {
     }
     async function announcements(request){
         const identity=await playerSession(request);await throttle('announcements:'+identity.uid,30,60000);
+        const settings=(await management.settings()).values;
+        if(!settings.announcementsEnabled)return{rows:[],nextCursor:null,asOf:now(),paused:true,settings};
         const kind=D.enumValue(request.data.channel||'announcements',['announcements','notifications']),collection=COLLECTIONS[kind];
         let query=db.collection(collection).where('status','in',['published','scheduled']).where('audienceKeys','array-contains-any',['all','account:'+identity.accountId]).orderBy('priority','desc').orderBy('createdAt','desc');
         if(request.data.cursor){const cursor=await db.doc(`${collection}/${D.id(request.data.cursor)}`).get();if(!cursor.exists)D.fail('failed-precondition','公告分頁已變更');query=query.startAfter(cursor);}
         // Filter time on the server; never return an out-of-window or other-player body.
         const result=await query.limit(101).get(),scanned=result.docs.slice(0,100),stamp=now();
-        return{rows:scanned.map(doc=>({...doc.data(),id:doc.id})).filter(a=>D.activeAnnouncement(a,identity.accountId,stamp)).map(({searchTokens,audienceKeys,...a})=>a),nextCursor:result.size>100?scanned.at(-1).id:null,asOf:stamp};
+        return{rows:scanned.map(doc=>({...doc.data(),id:doc.id})).filter(a=>D.activeAnnouncement(a,identity.accountId,stamp)).map(({searchTokens,audienceKeys,...a})=>a),nextCursor:result.size>100?scanned.at(-1).id:null,asOf:stamp,settings};
     }
     async function guardDog(request){
         const identity=await playerSession(request),input=request.data||{};
-        const action=D.enumValue(input.action,['rent','activate','release','expire']);
+        const action=D.enumValue(input.action,['rent','activate','release','expire','catalog']);
+        if(action==='catalog'){await throttle('guard-catalog:'+identity.uid,30,60000);return management.guardCatalog();}
         const requestId=D.requestId(input.requestId);
         await throttle('guard-dog:'+identity.uid,30,60000);
         const G=await import('./game/guard-dog-core.js');
@@ -138,7 +148,7 @@ function createService({db,auth,now=Date.now}) {
             payload.breedId=D.id(input.breedId);payload.days=D.integer(input.days,1,Number.MAX_SAFE_INTEGER);
             if(!Object.hasOwn(G.GUARD_DOG_BREEDS,payload.breedId))D.fail('invalid-argument','找不到此護衛犬');
             // The deployed server configuration is authoritative; never trust client flags/prices.
-            if(G.GUARD_DOG_BREEDS[payload.breedId].rentable===false)D.fail('failed-precondition',`${G.GUARD_DOG_BREEDS[payload.breedId].name}尚未開放租用`);
+
         }else if(action!=='expire')payload.id=D.id(input.id);
         const fingerprint=D.fingerprint({groupId:identity.groupId,...payload}),receipt=db.doc(`ops_guard_requests/${D.hash(identity.uid+':'+requestId)}`);
         return db.runTransaction(async t=>{
@@ -146,9 +156,12 @@ function createService({db,auth,now=Date.now}) {
             if(prior.exists){if(prior.data().fingerprint!==fingerprint)D.fail('invalid-argument','此請求識別碼已用於其他操作');return{...prior.data().response,replayed:true};}
             const ref=db.doc(`groups/${current.groupId}/users/${current.accountId}`),snapshot=await t.get(ref),farm=snapshot.data()?.farm,stamp=now();
             if(!farm)D.fail('failed-precondition','找不到農場存檔');
+            const catalog=action==='rent'?await management.guardCatalog(t):null;
+            if(catalog&&!catalog.settings.guardDogRentalsEnabled)D.fail('failed-precondition',catalog.settings.pauseMessage);
+            if(catalog&&input.expectedPrice!==undefined&&D.integer(input.expectedPrice,1,Number.MAX_SAFE_INTEGER)!==G.rentalPrice(payload.breedId,payload.days,catalog.breeds))D.fail('failed-precondition','租金已變更，請重新開啟商品確認');
             let patch;
             try{
-                patch=action==='rent'?G.rentGuardDog(farm,payload.breedId,payload.days,requestId,stamp):action==='activate'?G.activateGuardDog(farm,payload.id,stamp):action==='release'?G.releaseGuardDog(farm,payload.id,stamp):{'farm.guardDogs':G.guardDogLeases(farm,stamp)};
+                patch=action==='rent'?G.rentGuardDog(farm,payload.breedId,payload.days,requestId,stamp,catalog.breeds):action==='activate'?G.activateGuardDog(farm,payload.id,stamp):action==='release'?G.releaseGuardDog(farm,payload.id,stamp):{'farm.guardDogs':G.guardDogLeases(farm,stamp)};
             }catch(error){D.fail('failed-precondition',error.message||'護衛犬操作失敗');}
             const next={...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))};
             const response={action,dogId:action==='rent'?requestId:payload.id||null,paid:action==='rent'?farm.coins-next.coins:0};
@@ -173,6 +186,7 @@ function createService({db,auth,now=Date.now}) {
                     if(data.codeHash!==codeHash||data.groupId!==current.groupId)D.fail('invalid-argument','此請求識別碼已用於其他兌換');
                     return{...data.response,replayed:true};
                 }
+                const system=(await management.settings(t)).values;if(!system.redemptionEnabled)D.fail('failed-precondition',system.pauseMessage);
                 const lookup=await t.get(db.doc(`ops_code_index/${codeHash}`));
                 if(!lookup.exists)D.fail('not-found','找不到此禮包，請確認兌換碼');
                 giftCodeId=lookup.data().giftCodeId;

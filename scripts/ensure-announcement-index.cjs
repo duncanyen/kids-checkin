@@ -15,6 +15,6 @@ function ensure({project='homebasedb',run=execFileSync,log=console.log,definitio
         log(`${definition.collectionGroup} 索引已送出建立，未刪除或變更其他索引。請等 READY。`);
     }
 }
-function main(){const args=process.argv.slice(2),at=args.indexOf('--project'),project=at>=0?args[at+1]:'homebasedb';if(!project)throw Error('請提供 --project');const definitions=[required,...(args.includes('--notifications')?require('../firestore.indexes.json').indexes.filter(i=>i.collectionGroup==='ops_notifications'):[])];ensure({project,definitions});}
+function main(){const args=process.argv.slice(2),at=args.indexOf('--project'),project=at>=0?args[at+1]:'homebasedb';if(!project)throw Error('請提供 --project');const definitions=[required,...(args.includes('--notifications')?require('../firestore.indexes.json').indexes.filter(i=>i.collectionGroup==='ops_notifications'):[]),...(args.includes('--management')?require('../firestore.indexes.json').indexes.filter(i=>i.collectionGroup==='ops_events'):[])];ensure({project,definitions});}
 module.exports={matches,required,ensure};
 if(require.main===module){try{main();}catch(error){console.error(error.message);process.exitCode=1;}}

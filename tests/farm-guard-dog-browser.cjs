@@ -236,6 +236,19 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const readyAtRelease=Object.values(settlePoultry(docs['groups/A/users/owner'].farm,collieBlock).ready).reduce((sum,count)=>sum+count,0);
  await clock(collieBlock);await page.evaluate(async()=>{Math.random=()=>.8;await __farmGame.scene.getScene('VisitScene').attemptSteal();});assert.equal(docs['groups/A/users/owner'].farm.eggsReady,readyAtRelease-1);
  await clock(collie.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
- assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying');
+ // Phase 2: admin overrides are read by the real shop, and a stale quote cannot charge a different price.
+ const adminService=createService({db:backendDB,auth:{getUser:async()=>({disabled:false,customClaims:{role:'admin'}})},now:()=>backendNow});
+ async function setPrice(dayPrice,weekPrice,expectedRevision){
+  backendDB.data=new Map(Object.entries(docs).map(([path,data])=>[path,clone(data)]));
+  await adminService.adminAPI({auth:{uid:'admin',token:{role:'admin'}},data:{action:'saveGuardConfig',payload:{breedId:'beagle',dayPrice,weekPrice,rentable:true,expectedRevision,reason:'整合測試調價'},requestId:require('node:crypto').randomUUID()}});
+  for(const [path,data]of backendDB.data)docs[path]=clone(data);
+ }
+ await setPrice(30,150,0);await identity('owner','主人');await rent(1,'beagle');await page.getByText('1 天 · 30 金幣',{exact:true}).waitFor();
+ const beforePriceChange=docs['groups/A/users/owner'].farm.coins;await setPrice(40,200,1);
+ await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.getByRole('alert').filter({hasText:'租金已變更'}).waitFor();
+ assert.equal(docs['groups/A/users/owner'].farm.coins,beforePriceChange);await page.getByRole('button',{name:'取消',exact:true}).click();
+ await rent(1,'beagle');await page.getByText('1 天 · 40 金幣',{exact:true}).waitFor();await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ assert.equal(docs['groups/A/users/owner'].farm.coins,beforePriceChange-40);
+ assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

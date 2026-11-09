@@ -30,7 +30,7 @@ test('Firestore emulator: award failure rolls back, then same receipt safely ret
 });
 test('Security Rules emulator: anonymous, player and admin clients cannot access privileged collections or increase farm assets',async()=>{
     await env.clearFirestore();await fixture(db);
-    const protectedPaths=['ops_notifications/n','ops_announcements/a','ops_gifts/g','ops_code_index/h','ops_receipts/r','ops_redemptions/r','ops_audit/a','ops_admin_requests/r','ops_limits/l','ops_admins/admin'];
+    const protectedPaths=['ops_player_controls/alice','ops_game_config/guard-dogs','ops_settings/global','ops_events/e','ops_notifications/n','ops_announcements/a','ops_gifts/g','ops_code_index/h','ops_receipts/r','ops_redemptions/r','ops_audit/a','ops_admin_requests/r','ops_limits/l','ops_admins/admin'];
     for(const context of [env.unauthenticatedContext(),env.authenticatedContext('alice',{photoAccountId:'alice',photoGroupId:'A'}),env.authenticatedContext('admin',{role:'admin',firebase:{sign_in_second_factor:'totp'}})]){
         const client=context.firestore();
         for(const value of protectedPaths){await assertFails(getDoc(doc(client,value)));await assertFails(setDoc(doc(client,value),{forged:true}));}

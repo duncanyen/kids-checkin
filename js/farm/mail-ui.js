@@ -24,6 +24,7 @@ export function mountFarmMail(game, context) {
     let operationsTimer=null,pendingPopupId=null,nextPopupCheck=0;
     const categories=['visitor','system','operations','redeem'];
     const redemption={phase:'idle',code:'',result:null,error:''};
+    let runtimeSettings={redemptionEnabled:true,pauseMessage:'此營運功能暫停開放，請稍後再試。'};
     let ensured = false, initializing, unsubscribe, notices = [], category = 'visitor', detailId = null, busy = false;
     let disposed = false, openVersion = 0;
     let starting, loaded = false;
@@ -278,6 +279,7 @@ export function mountFarmMail(game, context) {
             return;
         }
         detailId = null;
+        if((category==='operations'||category==='system')&&feeds[category==='system'?'notifications':'announcements'].paused)content.append(el('p','farm-mail-empty',runtimeSettings.pauseMessage));
         const rows = allNotices().filter(row => row.type === category);
         for (const id of selected) if (!rows.some(row => row.id === id)) selected.delete(id);
         if (rows.length) {
@@ -331,6 +333,9 @@ export function mountFarmMail(game, context) {
         try{
             const result=await operations.announcements(more?feed.cursor:null,channel);
             if(disposed)return;
+            const changed=result.settings&&JSON.stringify(runtimeSettings)!==JSON.stringify(result.settings);
+            if(result.settings)runtimeSettings=result.settings;feed.paused=result.paused===true;
+            if(changed&&category==='redeem'&&!overlay.hidden)render();
             feed.rows=(more?[...feed.rows,...result.rows]:result.rows).filter(a=>a.startAt<=Date.now()&&a.endAt>Date.now());feed.cursor=result.nextCursor;updateBadge();
             if(category===targetCategory&&!overlay.hidden){message.textContent='';render();}
             if(background){
@@ -349,16 +354,16 @@ export function mountFarmMail(game, context) {
             if(result.replayed)card.append(el('p','','已確認先前的兌換結果，沒有重複發放。'));
             content.append(card,button('完成，返回村落',close),button('兌換其他禮包',()=>{Object.assign(redemption,{phase:'idle',code:'',result:null,error:''});render();}));return;
         }
-        const pending=redemption.phase==='pending';
+        const pending=redemption.phase==='pending',enabled=GAME_REDEMPTION_ENABLED&&runtimeSettings.redemptionEnabled;
         const form=el('form','farm-redeem-form'),label=el('label','','輸入禮包兌換碼'),input=el('input');
         input.type='text';input.name='giftCode';input.autocomplete='off';input.autocapitalize='characters';input.spellcheck=false;input.maxLength=160;input.required=true;input.value=redemption.code;input.setAttribute('aria-label','禮包兌換碼');
         input.oninput=()=>{redemption.code=input.value;};
-        const submit=button(pending?'正在兌換…':'兌換禮包',()=>{});submit.type='submit';submit.disabled=pending||!GAME_REDEMPTION_ENABLED;input.disabled=pending||!GAME_REDEMPTION_ENABLED;
+        const submit=button(pending?'正在兌換…':'兌換禮包',()=>{});submit.type='submit';submit.disabled=pending||!enabled;input.disabled=pending||!enabled;
         label.append(input);form.append(label,submit);content.append(form);
         const feedback=el('p','farm-mail-body',pending?'正在確認兌換結果，可先返回村落。請勿重複送出。':redemption.error||'');feedback.setAttribute('role','status');content.append(feedback);
-        content.append(el('p','farm-mail-empty',GAME_REDEMPTION_ENABLED?'獎勵會直接收入目前農場；空間不足時不會部分發放。':'禮包服務尚未啟用。'),button('返回村落',close));
+        content.append(el('p','farm-mail-empty',enabled?'獎勵會直接收入目前農場；空間不足時不會部分發放。':runtimeSettings.redemptionEnabled===false?runtimeSettings.pauseMessage:'禮包服務尚未啟用。'),button('返回村落',close));
         form.onsubmit=async event=>{
-            event.preventDefault();if(redemption.phase==='pending'||!GAME_REDEMPTION_ENABLED||!input.value.trim())return;
+            event.preventDefault();if(redemption.phase==='pending'||!enabled||!input.value.trim())return;
             redemption.code=input.value;redemption.phase='pending';redemption.error='';input.blur();render();
             try{
                 const result=await operations.redeem(redemption.code);

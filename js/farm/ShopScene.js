@@ -10,6 +10,7 @@ import { hitsToDefeat } from './combat-rules.js';
 import { GORILLA_FANG_PRICE } from './gorilla-rules.js';
 import { GUARD_DOG_BREEDS } from './guard-dog-core.js';
 import { openGuardDogRental } from './guard-dog-ui.js';
+import { loadGuardDogCatalogue } from './guard-dog-store.js';
 import { addFarmBackground } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -74,7 +75,7 @@ export default class ShopScene extends Phaser.Scene {
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
         const buy = this.catalog.buy, sell = this.catalog.sell;
-        for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,`${breed.name}${breed.rentable===false?`\n防偷蛋 ${Math.round(breed.biteChance*100)}%`:''}\n${breed.dayPrice}／天\n${breed.weekPrice}／週${breed.rentable===false?'\n🔒 即將開放':''}`,()=>openGuardDogRental(this,breedId)]);
+        for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,this.guardDogProductText(breed),()=>openGuardDogRental(this,breedId)]);
         for (const [key, breed] of Object.entries(BREEDS)) {
             buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣${breed.purchasable === false ? '\n尚未開賣' : ''}`, () => breed.purchasable === false ? this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F') : this.openTradeModal('buy', key, breed.name, breed.buy)]);
             sell.push([`bird:${key}`, breed.texture, `${breed.name}\n${breed.sell}金幣`, () => this.openTradeModal('sell', `bird:${key}`, breed.name, breed.sell)]);
@@ -129,6 +130,31 @@ export default class ShopScene extends Phaser.Scene {
         if (!ITEM_CATEGORIES.some(c => c.key === key)) return;
         this.shopCategory = key;
         this.changeShopPage(0);
+        if(key==='dogs')this.loadGuardDogCatalogue().catch(()=>{if(this.sys.isActive())this.showMsg('護衛犬設定讀取失敗，請稍後重試','#F44336');});
+    }
+
+    guardDogProductText(breed){
+        return `${breed.name}${breed.rentable===false?`\n防偷蛋 ${Math.round(breed.biteChance*100)}%`:''}\n${breed.dayPrice}／天\n${breed.weekPrice}／週${breed.rentable===false?(breed.availability==='paused'?'\n暫停租用':'\n🔒 即將開放'):''}`;
+    }
+
+    async loadGuardDogCatalogue(force=false){
+        if(this.guardCatalogueLoading)return this.guardCatalogueLoading;
+        if(!force&&this.guardDogCatalogue&&Date.now()-this.guardCatalogueFetchedAt<30000)return this.guardDogCatalogue;
+        this.guardCatalogueLoading=loadGuardDogCatalogue().then(result=>{
+            if(!result?.breeds)throw Error('無法確認護衛犬設定');
+            this.guardDogCatalogue=result.breeds;this.guardCatalogueFetchedAt=Date.now();
+            if(this.sys.isActive()&&this.buyContainer?.scene){
+                for(const entry of this.catalog.buy.filter(entry=>entry[0].startsWith('guard:'))){
+                    const breed=result.breeds[entry[0].slice(6)];if(!breed)continue;entry[2]=this.guardDogProductText(breed);
+                    for(const object of this.buyContainer.list.filter(o=>o.catalogKey===entry[0])){
+                        if(object.type==='Text')object.setText(entry[2]).setFontSize(breed.rentable===false?11:13);
+                        if(object.input)object.setData('rentalDisabled',breed.rentable===false);
+                    }
+                }
+            }
+            return result.breeds;
+        }).finally(()=>{this.guardCatalogueLoading=null;});
+        return this.guardCatalogueLoading;
     }
 
     changeShopPage(delta) {

@@ -13,8 +13,8 @@ export function colliePatrolPhase(elapsedMs) {
     return {running:position<COLLIE_RUN_MS,remaining:(position<COLLIE_RUN_MS?COLLIE_RUN_MS:COLLIE_CYCLE_MS)-position};
 }
 
-export function rentalPrice(breedId, days) {
-    const breed = GUARD_DOG_BREEDS[breedId];
+export function rentalPrice(breedId, days, catalog = GUARD_DOG_BREEDS) {
+    const breed = catalog[breedId];
     if (!breed || !Number.isSafeInteger(days) || days < 1 || !Number.isSafeInteger(days * DAY_MS + Date.now()) || days * DAY_MS + Date.now() > 8640000000000000) throw new Error('請輸入有效的整數天數');
     const price = Math.min(Math.floor(days / 7) * breed.weekPrice + days % 7 * breed.dayPrice, Math.ceil(days / 7) * breed.weekPrice);
     if (!Number.isSafeInteger(price)) throw new Error('租用天數過大');
@@ -26,10 +26,10 @@ export function guardDogLeases(farm, now = Date.now()) {
 }
 export const activeGuardDog = (farm, now = Date.now()) => guardDogLeases(farm, now).find(dog => Number.isFinite(dog.startedAt) && dog.expiresAt > now) || null;
 
-export function rentGuardDog(farm, breedId, days, id, now = Date.now()) {
-    if(!Object.hasOwn(GUARD_DOG_BREEDS,breedId))throw new Error('找不到此護衛犬');
-    if(GUARD_DOG_BREEDS[breedId].rentable===false)throw new Error(`${GUARD_DOG_BREEDS[breedId].name}尚未開放租用`);
-    const price = rentalPrice(breedId, days), dogs = guardDogLeases(farm, now);
+export function rentGuardDog(farm, breedId, days, id, now = Date.now(), catalog = GUARD_DOG_BREEDS) {
+    if(!Object.hasOwn(catalog,breedId))throw new Error('找不到此護衛犬');
+    if(catalog[breedId].rentable===false)throw new Error(`${catalog[breedId].name}尚未開放租用`);
+    const price = rentalPrice(breedId, days, catalog), dogs = guardDogLeases(farm, now);
     if (dogs.some(dog => dog.breedId === breedId)) throw new Error('同一品種同時只能租用一隻');
     if (!Number.isFinite(farm.coins) || farm.coins < price) throw new Error('金幣不足');
     return { 'farm.coins': farm.coins - price, 'farm.guardDogs': [...dogs, { id, breedId, days, paid: price, rentedAt: now, startedAt: null, expiresAt: null }] };

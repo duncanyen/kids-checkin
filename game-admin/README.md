@@ -1,5 +1,9 @@
 # Nexus Game Admin — 第一階段交付與部署前檢查
 
+## 四個管理模組擴充（2026-11-09）
+
+已新增玩家管理、遊戲數值、活動管理及系統設定。功能範圍、實際操作、32 項後端／182 項單元測試結果、索引與部署步驟見 [第二階段說明](OPERATIONS_PHASE2.md)。尚未正式部署；雞種與武器唯讀，護衛犬價格／開放狀態可由後端即時調整。
+
 ## 目前狀態
 
 已實作獨立管理站、獨立 `nexus-ops` Functions codebase、公告、系統通知、禮包、兌換及稽核；玩家通知面板新增公告與兌換分頁。
@@ -94,7 +98,7 @@ TOTP 實際註冊及第二因素登入仍須在擁有者設定好的 Firebase �
 | ops_guard_requests | 後端護衛犬操作冪等收據，禁止玩家直接存取 |
 | ops_limits | 每使用者／IP 雜湊的限流桶，不保存明文 IP |
 
-API 為 `gameOpsAdmin`、`gameOpsAnnouncements`、`gameOpsRedeem`，區域 asia-southeast1。管理操作包含 dashboard、list、catalog、saveAnnouncement、saveGift；不同資源由 handler 分流，便於之後加入玩家管理、數值、活動與設定。尚未實作的功能在側欄標示即將推出，沒有假資料或假操作。
+API 為 `gameOpsAdmin`、`gameOpsAnnouncements`、`gameOpsRedeem`，區域 asia-southeast1。管理操作包含 dashboard、list、catalog、saveAnnouncement、saveGift；不同資源由 handler 分流，已加入玩家管理、數值、活動與設定，詳細 API、集合及限制見第二階段說明。
 
 所有時間存為 UTC Unix 毫秒，由伺服器判斷是否有效；管理畫面輸入及顯示採 Asia/Taipei。排程公告不用排程工作改寫狀態：scheduled 在開始時間到達後，由讀取 API 判定生效，到期即不回傳。公告內容以純文字 textContent 顯示，沒有富文字或 HTML 執行。指定公告只經後端過濾後回傳，不能直接讀取集合。玩家通知每分鐘刷新，保留舊通知／歡迎禮；新公告提供 popup 與本機已讀標記，沒有推播。
 

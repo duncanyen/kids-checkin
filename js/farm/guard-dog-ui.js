@@ -43,8 +43,10 @@ function modal(scene, title) {
     return {root,panel,error,actions,submit,body:element=>panel.insertBefore(element,error),close};
 }
 
-export function openGuardDogRental(scene, breedId) {
-    const breed=GUARD_DOG_BREEDS[breedId];if(!breed)return;
+export async function openGuardDogRental(scene, breedId) {
+    try{await scene.loadGuardDogCatalogue?.(true);}catch{if(scene.sys.isActive())scene.showMsg('無法確認最新租用價格，請稍後重試','#F44336');return;}
+    if(!scene.sys.isActive())return;
+    const catalog=scene.guardDogCatalogue||GUARD_DOG_BREEDS,breed=catalog[breedId];if(!breed)return;
     const dialog=modal(scene,`租用${breed.name}`);
     dialog.body(node('p',`攔截小偷 ${Math.round(breed.biteChance*100)}% · 對該雞舍禁偷 ${breed.blockMs/3600000} 小時`));
     if(breed.herding)dialog.body(node('p','活潑的牧羊犬，約 60% 時間在雞群旁奔跑巡邏；雞群會自動避讓。'));
@@ -56,8 +58,8 @@ export function openGuardDogRental(scene, breedId) {
     dialog.body(presets);const price=node('p','','guard-dog-price');dialog.body(price);
     dialog.body(node('p',`自動採最省組合：${breed.dayPrice} 金幣／天、${breed.weekPrice} 金幣／週。先放入倉庫，第一次開始護衛才計時。每品種最多一隻，且同時只能一隻護衛。`));
     dialog.body(node('p','攔截成功會通知村落已設定的廣播頻道，並保留主人農場通知。'));
-    const submit=dialog.submit(breed.rentable===false?'尚未開放':'確認租用',async()=>{await rentDog(breedId,Number(input.value));refreshFarm(scene);if(scene.sys.isActive())scene.showMsg('租用成功！請到倉庫「護衛犬」開始護衛。','#4CAF50');});
-    function update(){try{const amount=rentalPrice(breedId,Number(input.value));price.textContent=`${input.value} 天 · ${amount} 金幣`;submit.disabled=breed.rentable===false;dialog.error.textContent=breed.rentable===false?'尚未開放租用，目前僅供展示。':'';}catch(error){price.textContent='';dialog.error.textContent=error.message;submit.disabled=true;}}
+    const submit=dialog.submit(breed.rentable===false?'尚未開放':'確認租用',async()=>{await rentDog(breedId,Number(input.value),rentalPrice(breedId,Number(input.value),catalog));refreshFarm(scene);if(scene.sys.isActive())scene.showMsg('租用成功！請到倉庫「護衛犬」開始護衛。','#4CAF50');});
+    function update(){try{const amount=rentalPrice(breedId,Number(input.value),catalog);price.textContent=`${input.value} 天 · ${amount} 金幣`;submit.disabled=breed.rentable===false;dialog.error.textContent=breed.rentable===false?'尚未開放租用，目前僅供展示。':'';}catch(error){price.textContent='';dialog.error.textContent=error.message;submit.disabled=true;}}
     input.disabled=breed.rentable===false;input.addEventListener('input',update);update();if(!input.disabled)input.focus();
 }
 

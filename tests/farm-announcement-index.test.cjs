@@ -24,3 +24,8 @@ test('notification rollout creates its management and audience indexes without d
  const definition=definitions.find(i=>i.fields.some(f=>f.fieldPath==='audienceKeys'));
  assert.equal(matches({...existing,name:existing.name.replace('ops_announcements','ops_notifications')},definition),true);
 });
+test('management rollout creates only the three event search/status indexes',()=>{
+ const definitions=require('../firestore.indexes.json').indexes.filter(i=>i.collectionGroup==='ops_events');assert.equal(definitions.length,3);
+ const calls=[];ensure({project:'p',definitions,log:()=>{},run:(_cmd,args)=>{calls.push(args);return args.includes('list')?'[]':'';}});
+ assert.equal(calls.length,4);assert.ok(calls.slice(1).every(args=>args.includes('--collection-group=ops_events')&&!args.includes('delete')));
+});

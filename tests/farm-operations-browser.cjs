@@ -162,6 +162,11 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         assert.equal(await page.getByLabel('禮包兌換碼').inputValue(),'NOTREAL2026');
         await page.getByRole('tab',{name:'訪客',exact:true}).click();assert.equal(await page.getByText('找不到此禮包，請確認兌換碼',{exact:true}).count(),0,'errors do not leak into other tabs');
         await page.getByRole('button',{name:'關閉',exact:true}).click();assert.equal(await page.evaluate(()=>__farmGame.input.enabled),true);
+        await ops.admin('saveSettings',{announcementsEnabled:true,redemptionEnabled:false,guardDogRentalsEnabled:true,pauseMessage:'禮包兌換維護中',reason:'測試玩家介面開關',expectedRevision:0});
+        await page.evaluate(()=>window.__pollOperations());await page.waitForTimeout(200);
+        await page.click('.farm-mail-launcher');await page.getByRole('tab',{name:'禮包兌換',exact:true}).click();
+        await page.getByText('禮包兌換維護中',{exact:true}).waitFor();assert.equal(await page.getByLabel('禮包兌換碼').isDisabled(),true);
+        await page.getByRole('button',{name:'關閉',exact:true}).click();
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         assert.deepEqual(errors,[]);console.log('PASS player operations UI: published announcements, server audience/expiry filtering, initial/read notices, newly-published popup after combat, no repeated popup, system notification delivery, shared inbox rows, personal and bulk deletion, production redemption enabled, safe text, transactional gift redemption, one-click code copy and fallback, prefilled redemption, pending exit/reopen, authoritative reward sync, explicit completion, recoverable errors and mobile layout; transport mocked');
     }finally{await browser.close();}

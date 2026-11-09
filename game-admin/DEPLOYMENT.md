@@ -1,3 +1,7 @@
+## 四個管理模組更新（2026-11-09，尚未正式部署）
+
+新增玩家、數值、活動及設定 API。需同步發布前端及 `functions:nexus-ops`，並執行索引腳本加上 `--management`；只有 GitHub Pages 更新時，舊後端會因未知 action 回傳 400。完整指令、安全規則前置與驗收見 [第二階段部署說明](OPERATIONS_PHASE2.md#啟動與發布)。本次未修改正式設定或玩家資料。
+
 ## 本次程式設定策略（2026-11-08，前後端發布後生效）
 
 依專案擁有者選擇，管理端 App Check 改為選用，預設關閉；管理站不初始化 reCAPTCHA，`gameOpsAdmin` 不要求 App Check Token，但仍以 Firebase Auth、token 的 admin 角色及 Auth 使用者目前的 admin claim／停用狀態驗證每次操作。一般玩家和未登入者不能管理公告。

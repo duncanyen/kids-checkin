@@ -44,7 +44,7 @@ cd game-admin
 npx firebase-tools deploy --only functions:nexus-ops --project homebasedb
 ```
 
-之後重新開放邊牧：調整同一份 rentable=true，先部署後端，再發布前端；不需修改既有租約。
+2026-11-09 新增營運中心的護衛犬設定覆寫：同步部署新版前後端後，可在「遊戲數值」調整各犬租金與開放狀態，不必為每次改價重新部署。後端依 ops_game_config/guard-dogs 與系統租犬開關驗證；未設定覆寫時仍沿用本文件預設。既有租約不變。詳見 [營運模組說明](../game-admin/OPERATIONS_PHASE2.md)。
 
 ## 驗證及限制
 

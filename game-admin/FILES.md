@@ -35,3 +35,7 @@
 - `scripts/prepare-game-admin.cjs`
 - `scripts/set-game-admin-claim.cjs`
 - `tests/farm-operations-browser.cjs`
+
+## 四個管理模組擴充（2026-11-09）
+
+本次新增及修改清單見 [OPERATIONS_PHASE2.md](OPERATIONS_PHASE2.md#修改檔案)，包含獨立管理模組、後端服務、玩家設定串接、規則片段、索引與測試。
