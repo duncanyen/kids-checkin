@@ -19,7 +19,7 @@ export const deleteDoc=async ref=>{delete window.__events[ref.path];await emit()
  try{
  const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Taipei',hasTouch:true});
  await context.addInitScript(()=>{
-  sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',name:'Alice',menus:['calendar']}));localStorage.setItem('lastGroupId','A');
+  sessionStorage.setItem('familyCheckInUser',JSON.stringify({id:'legacy-document-id',accountId:'alice',name:'Alice',menus:['calendar']}));localStorage.setItem('lastGroupId','A');
   window.__events=JSON.parse(sessionStorage.getItem('calendarSeed')||'{}');window.__counter=0;
   if(!sessionStorage.getItem('skipCalendarTarget'))localStorage.setItem('calendar_target_date','2026-11-18');
  });
@@ -47,7 +47,7 @@ export const deleteDoc=async ref=>{delete window.__events[ref.path];await emit()
  await page.evaluate(()=>window.__failWrite=false);await page.click('#btnSaveEvent');
  await page.waitForFunction(()=>document.getElementById('listView').style.display==='block');
  const saved=await page.evaluate(()=>Object.entries(__events).find(([key,value])=>key.startsWith('events/')&&value.title==='跨月行程'));
- assert.equal(saved[1].date,'2026-12-09');assert.equal(saved[1].groupId,'A');
+ assert.equal(saved[1].accountId,'alice');assert.equal(saved[1].date,'2026-12-09');assert.equal(saved[1].groupId,'A');
  assert.equal(await page.locator('#calendarTitle').innerText(),'2026-12-09');
  // Editing keeps existing details while changing the event's date.
  await page.locator('.event-actions .edit').click();assert.equal(await page.inputValue('#evDate'),'2026-12-09');

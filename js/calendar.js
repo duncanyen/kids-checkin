@@ -630,7 +630,7 @@ if(btnCloseModal) btnCloseModal.addEventListener('click', () => { document.getEl
 /**
  * 驗證日期、標題與起訖時間後，新增或更新行程並回到當日清單。
  * @returns {Promise<void>} 按鈕鎖在 finally 解除；儲存失敗顯示提示。
- * @description 沿用既有 accountId 相容順序及 serverTimestamp，不在此遷移舊識別。
+ * @description 優先儲存固定 accountId，舊工作階段才回退 id／uid；保留 serverTimestamp。
  */
 async function saveEvent() {
     if (document.getElementById('btnSaveEvent').disabled) return;
@@ -647,7 +647,7 @@ async function saveEvent() {
     if (!isAllDay && startTime >= endTime) return alert('結束時間必須晚於開始時間！');
 
     // 加入 accountId 到存入資料庫的物件
-    const accountId = currentUser.id || currentUser.accountId || currentUser.uid || '';
+    const accountId = currentUser.accountId || currentUser.id || currentUser.uid || '';
 
     const evtData = {
         groupId: currentGroupId,

@@ -4,6 +4,7 @@
  * @module
  */
 import { photoPerson, photoAvatar } from './gallery-profile-core.js';
+import { calendarPerson } from './calendar-identity-core.js';
 import { todoAssignedTo, todoAssigneeProfiles } from './todo-core.js';
 import { photoLikes, updatePhotoLike } from './gallery-core.js';
 import { loadPhotoAliases } from './gallery-identity.js';
@@ -537,8 +538,11 @@ window.renderAgendaUI = function() {
         });
         listHtml = validEvents.map(evt => {
             let timeStr = (evt.isAllDay !== false) ? '全天' : `${evt.startTime} - ${evt.endTime}`;
-            const avatar = window.userAvatarMap[evt.operator] || `https://ui-avatars.com/api/?name=${evt.operator}&background=e5e7eb`;
-            return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${avatar}"></div>`;
+            const person = calendarPerson(evt, window.groupMembers || []);
+            const name = person.name || person.accountId || evt.operator || '未知使用者';
+            const avatar = photoAvatar(person) || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e5e7eb`;
+            const escapeAvatar = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            return `<div class="agenda-item"><div class="agenda-time">${timeStr}</div><div class="agenda-divider"></div><div class="agenda-title">${evt.title}</div><img class="agenda-avatar" src="${escapeAvatar(avatar)}" alt="${escapeAvatar(name)}" title="${escapeAvatar(name)}"></div>`;
         }).join('');
         
         agendaContainer.innerHTML = `
