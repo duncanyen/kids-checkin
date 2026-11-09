@@ -67,11 +67,21 @@ function createService({db,auth,now=Date.now}) {
     }
     async function dashboard(){
         const stamp=now(),announcements=db.collection(COLLECTIONS.announcements),gifts=db.collection(COLLECTIONS.gifts);
-        const effectiveAnn=announcements.where('status','in',['published','scheduled']).where('startAt','<=',stamp).where('endAt','>',stamp);
-        const effectiveGifts=gifts.where('status','==','active').where('startAt','<=',stamp).where('endAt','>',stamp);
-        const count=q=>q.count().get().then(s=>s.data().count);
+        // 固定兩個時間欄位的排序，與 status/startAt/endAt 複合索引維持一致。
+        const effectiveAnn=announcements.where('status','in',['published','scheduled']).where('startAt','<=',stamp).where('endAt','>',stamp).orderBy('startAt').orderBy('endAt');
+        const effectiveGifts=gifts.where('status','==','active').where('startAt','<=',stamp).where('endAt','>',stamp).orderBy('startAt').orderBy('endAt');
+        const count=async(q,metric)=>{
+            try{return (await q.count().get()).data().count;}
+            catch(error){
+                const indexMissing=[9,'9','failed-precondition','FAILED_PRECONDITION'].includes(error.code)&&/index/i.test(error.message||'');
+                // 不記錄查詢內容、玩家資料或完整 SDK 訊息，避免敏感資料進入日誌。
+                console.error('game-ops-dashboard-query-failed',{metric,code:error.code??'internal',indexMissing});
+                if(indexMissing)D.fail('failed-precondition',`營運總覽「${metric}」所需的 Firestore 索引尚未就緒，請建立營運總覽索引並等待 READY 後重試。`);
+                throw error;
+            }
+        };
         const [players,announcementCount,activeAnnouncements,giftCount,activeGifts,redemptionCount,recent]=await Promise.all([
-            count(db.collection('users')),count(announcements),count(effectiveAnn),count(gifts),count(effectiveGifts),count(db.collection(COLLECTIONS.redemptions).where('result','==','success')),list('audit',{pageSize:8})
+            count(db.collection('users'),'玩家總數'),count(announcements,'公告總數'),count(effectiveAnn,'有效公告'),count(gifts,'禮包總數'),count(effectiveGifts,'有效禮包'),count(db.collection(COLLECTIONS.redemptions).where('result','==','success'),'成功兌換次數'),list('audit',{pageSize:8})
         ]);
         return{players,announcementCount,activeAnnouncements,giftCount,activeGifts,redemptionCount,recent:recent.rows,asOf:stamp,playerCountDefinition:'users 文件總數（含已停用帳號）'};
     }

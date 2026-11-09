@@ -1,3 +1,55 @@
+## 營運總覽 HTTP 500：統計索引盤點與修正（2026-11-09）
+
+500 是伺服器端錯誤，不能單憑瀏覽器的狀態碼確認原因。程式盤點確認了以下部署缺口；是否為正式環境這次故障的原因，仍須對照正式日誌與索引狀態：
+
+- 有效公告與有效禮包的聚合查詢同時使用 `status`、`startAt`、`endAt`，需要各自的複合索引。
+- 這兩項定義原本只在 `game-admin/rules/firestore.indexes.json`；根目錄 `firestore.indexes.json` 沒有收錄。管理端的定義由測試配置使用，`game-admin/firebase.json` 的 Functions 部署不會發布它們。
+- 原本的補索引腳本只選玩家公告 feed、`--notifications`、`--management`；未涵蓋上述兩項統計。
+- 原本 callable 將 Firestore 的數字錯誤碼統一記為 `internal`，缺索引也只回傳一般 500，不易辨識失敗項目。
+
+本次修正補齊根目錄索引與腳本 `--dashboard` 選項；統計查詢明確依 `startAt`、`endAt` 排序以對齊索引。缺索引／索引未就緒會回報具名的設定錯誤，其餘資料庫錯誤仍會失敗，不以 0 或假數據取代。新增日誌僅記錄統計名稱、錯誤碼及索引判斷，不輸出查詢資料或完整 SDK 訊息。
+
+### 既有 GitHub 版本即可執行的補索引方式
+
+在具有 `homebasedb` 索引管理權限的 Cloud Shell 執行以下指令。使用已存在的管理端定義，只新增缺少的兩項索引，不刪除索引、不部署 Rules、不修改玩家資料：
+
+```sh
+cd ~/kids-checkin
+node <<'NODE'
+const {ensure} = require('./scripts/ensure-announcement-index.cjs');
+const definitions = require('./game-admin/rules/firestore.indexes.json').indexes.filter(
+  i => ['ops_announcements', 'ops_gifts'].includes(i.collectionGroup)
+    && i.fields.map(f => f.fieldPath).join(',') === 'status,startAt,endAt'
+);
+if (definitions.length !== 2) throw Error('找不到完整的營運總覽索引定義，請先確認 GitHub 版本');
+ensure({project: 'homebasedb', definitions});
+NODE
+```
+
+再次執行同一指令可檢查狀態；兩項均顯示 `READY` 後再重新整理營運總覽。這一步不需要重新部署 Functions。如果仍為 500，請取得日誌繼續定位，不應假設所有錯誤都來自索引：
+
+```sh
+gcloud functions logs read gameOpsAdmin --gen2 --region=asia-southeast1 --project=homebasedb --limit=20
+```
+
+### 本次修正推送後的標準流程
+
+```sh
+cd ~/kids-checkin
+git pull --ff-only origin main
+node scripts/ensure-announcement-index.cjs --project homebasedb --dashboard
+```
+
+要套用本次較清楚的錯誤提示、日誌與明確查詢排序，才另外部署 Functions：
+
+```sh
+npm --prefix game-admin/functions ci
+cd game-admin
+npx firebase-tools deploy --only functions:nexus-ops --project homebasedb
+```
+
+隔離測試可驗證查詢及錯誤處理；Firestore Emulator 不強制正式複合索引，因此 Emulator 通過也不能代替正式索引 `READY` 的確認。本次工作環境沒有正式 Firebase 身分，沒有執行正式索引建立或部署。
+
 ## 四個管理模組更新（2026-11-09，尚未正式部署）
 
 新增玩家、數值、活動及設定 API。需同步發布前端及 `functions:nexus-ops`，並執行索引腳本加上 `--management`；只有 GitHub Pages 更新時，舊後端會因未知 action 回傳 400。完整指令、安全規則前置與驗收見 [第二階段部署說明](OPERATIONS_PHASE2.md#啟動與發布)。本次未修改正式設定或玩家資料。

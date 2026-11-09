@@ -13,7 +13,7 @@ function createCallables(service,{adminAppCheckRequired=false,redemptionAppCheck
         catch(error){
             const valid=['invalid-argument','unauthenticated','permission-denied','failed-precondition','not-found','already-exists','resource-exhausted','deadline-exceeded'];
             if(valid.includes(error.code))throw new HttpsError(error.code,error.message);
-            console.error('game-operations-failure',{code:typeof error.code==='string'?error.code:'internal'});
+            console.error('game-operations-failure',{handler:handler.name||'unknown',code:['string','number'].includes(typeof error.code)?error.code:'internal'});
             throw new HttpsError('internal','服務暫時無法使用，請稍後以同一請求重試');
         }
     });
