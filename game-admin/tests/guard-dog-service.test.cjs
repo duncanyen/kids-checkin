@@ -50,3 +50,24 @@ test('closing rentals preserves previously rented collies and server-side expiry
  f.clock(dog.expiresAt);await f.service.guardDog(request(f,'expire'));
  const after=(await ref.get()).data().farm;assert.deepEqual(after.guardDogs,[]);assert.equal(after.coins,100);
 });
+
+test('trusted corgi catalogue and rental enforce 100/500 pricing, idempotency and activation',async()=>{
+ const f=await fixture();
+ const catalog=await f.service.guardDog({...f.request(),data:{groupId:'A',action:'catalog'}});
+ assert.equal(catalog.breeds.corgi.rentable,true);
+ assert.equal(catalog.breeds.corgi.dayPrice,100);assert.equal(catalog.breeds.corgi.weekPrice,500);assert.equal(catalog.breeds.corgi.biteChance,.4);
+ const initial=(await f.db.doc('groups/A/users/alice').get()).data();
+ await f.db.doc('groups/A/users/alice').set({...initial,farm:{...initial.farm,coins:1000}});
+ const req=request(f,'rent',{breedId:'corgi',days:7,price:0,expectedPrice:500});
+ const rented=await f.service.guardDog(req);assert.equal(rented.paid,500);
+ assert.equal((await f.service.guardDog(req)).replayed,true);
+ const farm=(await f.db.doc('groups/A/users/alice').get()).data().farm;
+ assert.equal(farm.coins,500);assert.equal(farm.guardDogs.length,1);assert.equal(farm.guardDogs[0].startedAt,null);
+ await assert.rejects(f.service.guardDog(request(f,'rent',{breedId:'corgi',days:1})),{code:'failed-precondition'});
+ await f.service.guardDog(request(f,'activate',{id:rented.dogId}));
+ assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.guardDogs[0].expiresAt,f.now()+7*86400000);
+ const poor=await fixture(),poorUser=(await poor.db.doc('groups/A/users/alice').get()).data();
+ await poor.db.doc('groups/A/users/alice').set({...poorUser,farm:{...poorUser.farm,coins:99}});
+ await assert.rejects(poor.service.guardDog(request(poor,'rent',{breedId:'corgi',days:1})),{code:'failed-precondition'});
+ assert.equal((await poor.db.doc('groups/A/users/alice').get()).data().farm.coins,99);
+});

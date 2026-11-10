@@ -67,6 +67,9 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const identity=async(accountId,name)=>{await page.evaluate(({accountId,name})=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name})),{accountId,name});await page.reload();await ready();};
  const rent=async(days,breedId='pyrenees')=>{await scene('ShopScene');await page.evaluate(breedId=>{const s=__farmGame.scene.getScene('ShopScene');s.selectShopCategory('dogs');s.catalog.buy.find(row=>row[0]===`guard:${breedId}`)[3]();},breedId);if(await page.getByLabel('租用天數').isEnabled())await page.getByLabel('租用天數').fill(String(days));};
  await page.goto(base+'/farmgame.html');await ready();
+ const {settlePoultry}=await import('../js/farm/poultry.js');
+ const notices=()=>Object.keys(docs).filter(path=>path.startsWith('messages/guard-'));
+ if(!process.env.CORGI_ONLY){
  await scene('WarehouseScene');assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').categoryTabs.tabs.get('dogs').background.visible),false);
  await rent(8);await page.getByText('8 天 · 480 金幣',{exact:true}).waitFor();await page.screenshot({path:'/tmp/guard-dog-rental.png',fullPage:true});await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  assert.equal(docs['groups/A/users/owner'].farm.coins,4520);let dog=docs['groups/A/users/owner'].farm.guardDogs[0];assert.equal(dog.startedAt,null);
@@ -84,7 +87,6 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.evaluate(async()=>{window.__retryDogTransaction=true;Math.random=()=>0;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
  assert.equal(docs['groups/A/users/owner'].farm.eggsReady,3);assert.equal(docs['groups/A/users/thief'].farm.inventoryEggs,0);
  const block=Object.values(docs['groups/A/users/thief'].farm.villageStealBlockedUntil)[0];assert.equal(block,epoch+3*DAY+4*3600000);
- const notices=()=>Object.keys(docs).filter(path=>path.startsWith('messages/guard-'));
  assert.equal(notices().length,1);assert.equal(docs[notices()[0]].roomId,'room-A');assert.equal(Object.keys(docs).filter(p=>p.startsWith('groups/A/users/owner/farm_notifications/guard-')).length,1);
  await page.evaluate(()=>__farmGame.scene.getScene('VisitScene').attemptSteal());assert.equal(notices().length,1);
  await clock(block);await page.evaluate(async()=>{Math.random=()=>.99;await __farmGame.scene.getScene('VisitScene').attemptSteal();});assert.equal(docs['groups/A/users/owner'].farm.eggsReady,2);assert.equal(docs['groups/A/users/thief'].farm.inventoryEggs,1);
@@ -232,7 +234,6 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.evaluate(async()=>{Math.random=()=>.79999;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
  assert.equal(docs['groups/A/users/owner'].farm.eggsReady,collieEggs);assert.ok(docs[notices().at(-1)].text.includes('邊境牧羊犬'));
  const collieBlock=Math.max(...Object.values(docs['groups/A/users/thief'].farm.villageStealBlockedUntil));assert.equal(collieBlock,collie.startedAt+9*3600000);
- const {settlePoultry}=await import('../js/farm/poultry.js');
  const readyAtRelease=Object.values(settlePoultry(docs['groups/A/users/owner'].farm,collieBlock).ready).reduce((sum,count)=>sum+count,0);
  await clock(collieBlock);await page.evaluate(async()=>{Math.random=()=>.8;await __farmGame.scene.getScene('VisitScene').attemptSteal();});assert.equal(docs['groups/A/users/owner'].farm.eggsReady,readyAtRelease-1);
  await clock(collie.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
@@ -249,6 +250,59 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  assert.equal(docs['groups/A/users/owner'].farm.coins,beforePriceChange);await page.getByRole('button',{name:'取消',exact:true}).click();
  await rent(1,'beagle');await page.getByText('1 天 · 40 金幣',{exact:true}).waitFor();await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  assert.equal(docs['groups/A/users/owner'].farm.coins,beforePriceChange-40);
- assert.deepEqual(errors,[]);console.log('PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal');
+ } else {
+  docs['groups/A/users/owner'].farm={...seed(),hens:10,coopLevel:3,hensState:Array.from({length:10},(_,i)=>({id:'corgi-hen-'+i,breed:'hen',laidAt:epoch,isSick:false})),readyEggs:{hen:3,silkie:0,bresse:0}};
+  await page.reload();await ready();
+ }
+ // Corgi: new rental uses the same trusted API, warehouse clock and shared flock avoidance.
+ await rent(7,'corgi');await page.getByText('7 天 · 500 金幣',{exact:true}).waitFor();
+ assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('攔截小偷 40%'));
+ assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('約 50%'));
+ await page.screenshot({path:'/tmp/corgi-rental-mobile.png',fullPage:true});
+ await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'/tmp/corgi-rental-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:900});
+ const corgiCoins=docs['groups/A/users/owner'].farm.coins;
+ await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ let corgi=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='corgi');
+ assert.equal(corgi.startedAt,null);assert.equal(docs['groups/A/users/owner'].farm.coins,corgiCoins-500);
+ await page.screenshot({path:'/tmp/corgi-shop.png',fullPage:true});
+ await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:corgi','柯基犬'));
+ await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ corgi=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='corgi');assert.equal(corgi.expiresAt,corgi.startedAt+7*DAY);
+ await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_corgi');
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='run');
+ // Rental Date.now is deliberately frozen. Give only this animation manager a
+ // monotonic delta so the real tween can naturally return home without changing lease assertions.
+ await page.evaluate(()=>{
+  const manager=__farmGame.scene.getScene('MyFarmScene').tweens;let previous=performance.now();
+  manager.getDelta=function(){const current=performance.now(),delta=current-previous;previous=current;this.time+=delta/1000;return delta;};
+ });
+ await page.waitForTimeout(700);await page.screenshot({path:'/tmp/corgi-flock-patrol.png',fullPage:true});
+ await page.evaluate(async()=>{
+  const s=__farmGame.scene.getScene('MyFarmScene'),dog=s.guardDog;
+  if(Math.abs(dog.displayWidth-84)>.1)throw Error('Corgi should have a compact display size');
+  const {getThreatZones}=await import('/js/farm/hen-navigation.js');
+  if(!getThreatZones(s).some(z=>z.friendlyGuard))throw Error('Corgi must participate in hen avoidance');
+  for(const hen of s.hensGroup){s.tweens.killTweensOf(hen);hen.walkTimer?.remove();hen.walkPath=[];hen.setPosition(dog.x,dog.y-30);}
+  s.avoidPredators();if(s.hensGroup.some(h=>!h.isEvading))throw Error('Hens must evade the corgi');
+  dog.setData('guardPatrolStartedAt',s.time.now-16000);
+ });
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='rest',null,{timeout:18000});
+ await page.evaluate(async()=>{
+  const s=__farmGame.scene.getScene('MyFarmScene'),{getHenWalkArea}=await import('/js/farm/scenery.js');
+  if(Math.hypot(s.guardDog.x-(s.coop.x+s.coop.displayWidth*.32),s.guardDog.y-(getHenWalkArea(s).top-58))>2)throw Error('Corgi must return to its resting place by the coop');
+ });
+ await page.waitForFunction(()=>{const d=__farmGame.scene.getScene('MyFarmScene').guardDog;return d?.getData('guardActivity')==='rest'&&String(d.frame.name)==='3';});
+ await page.screenshot({path:'/tmp/corgi-rest-by-coop.png',fullPage:true});
+ await identity('thief','小偷');await page.evaluate(()=>{Math.random=()=>.99;});await clock(corgi.startedAt+3600000);await scene('VisitScene',{targetAccountId:'owner',targetName:'主人',targetGroupId:'A'});
+ await page.waitForFunction(()=>__farmGame.scene.getScene('VisitScene').guardDog?.texture.key==='guard_corgi');
+ const corgiEggs=docs['groups/A/users/owner'].farm.eggsReady;
+ await page.evaluate(async()=>{Math.random=()=>.39999;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
+ assert.equal(docs['groups/A/users/owner'].farm.eggsReady,corgiEggs);assert.ok(notices().length>0,'successful corgi interception must create a notification');assert.ok(docs[notices().at(-1)].text.includes('柯基犬'));
+ const corgiBlock=Math.max(...Object.values(docs['groups/A/users/thief'].farm.villageStealBlockedUntil));assert.equal(corgiBlock,corgi.startedAt+3*3600000);
+ const corgiReady=Object.values(settlePoultry(docs['groups/A/users/owner'].farm,corgiBlock).ready).reduce((n,v)=>n+v,0);
+ await clock(corgiBlock);await page.evaluate(async()=>{Math.random=()=>.4;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
+ assert.equal(docs['groups/A/users/owner'].farm.eggsReady,corgiReady-1);
+ await clock(corgi.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
+ assert.deepEqual(errors,[]);console.log(process.env.CORGI_ONLY?'PASS: corgi rental 100/500, activation, 50% patrol and natural return/rest, avoidance, 40%/2h boundary and expiry':'PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal; corgi 100/500, warehouse activation, compact breed art, 50% patrol/rest, hen avoidance, 40%/2h interception and expiry');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

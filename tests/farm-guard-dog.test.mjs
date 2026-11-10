@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DAY_MS, GUARD_DOG_BREEDS, rentalPrice, rentGuardDog, activateGuardDog, releaseGuardDog, guardDogLeases, activeGuardDog, guardDogInterception, stealBlockedUntil, colliePatrolPhase } from '../js/farm/guard-dog-core.js';
+import { DAY_MS, GUARD_DOG_BREEDS, rentalPrice, rentGuardDog, activateGuardDog, releaseGuardDog, guardDogLeases, activeGuardDog, guardDogInterception, stealBlockedUntil, colliePatrolPhase, guardDogPatrolPhase } from '../js/farm/guard-dog-core.js';
 const now = 1000000;
 const apply = (farm,patch) => ({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
 const rented = (days=7) => apply({coins:2000},rentGuardDog({coins:2000},'pyrenees',days,'dog-1',now));
@@ -91,4 +91,26 @@ test('collie spends exactly 60 percent of each full patrol cycle running',()=>{
     }
     assert.deepEqual(colliePatrolPhase(18000),{running:false,remaining:12000});
     assert.deepEqual(colliePatrolPhase(30000),{running:true,remaining:18000});
+});
+
+test('corgi rents at 100/500, waits in storage, intercepts below 40%, and expires normally',()=>{
+    assert.equal(rentalPrice('corgi',1),100);assert.equal(rentalPrice('corgi',7),500);assert.equal(rentalPrice('corgi',8),600);
+    let farm=apply({coins:600},rentGuardDog({coins:600},'corgi',7,'corgi',now));
+    assert.equal(farm.coins,100);assert.equal(activeGuardDog(farm,now),null);
+    assert.throws(()=>rentGuardDog(farm,'corgi',1,'duplicate',now),/同一品種/);
+    assert.throws(()=>rentGuardDog({coins:99},'corgi',1,'poor',now),/金幣不足/);
+    farm=apply(farm,activateGuardDog(farm,'corgi',now));
+    assert.equal(guardDogInterception(farm,.399999,now).breed.blockMs,2*3600000);
+    assert.equal(guardDogInterception(farm,.4,now),null);
+    assert.equal(activeGuardDog(farm,now+7*DAY_MS),null);
+});
+
+test('corgi has a 50% flock patrol phase and a 50% return/rest phase without changing collie',()=>{
+    for(let cycle=0;cycle<3;cycle++){
+        const phases=Array.from({length:30},(_,second)=>guardDogPatrolPhase('corgi',cycle*30000+second*1000));
+        assert.equal(phases.filter(p=>p.running).length,15);
+    }
+    assert.deepEqual(guardDogPatrolPhase('corgi',15000),{running:false,remaining:15000});
+    assert.deepEqual(guardDogPatrolPhase('corgi',30000),{running:true,remaining:15000});
+    assert.equal(colliePatrolPhase(15000).running,true);
 });

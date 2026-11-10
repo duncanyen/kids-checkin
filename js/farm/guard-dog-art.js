@@ -1,5 +1,5 @@
 import { ensureAssets } from './assets.js';
-import { activeGuardDog, guardDogLeases, GUARD_DOG_BREEDS, colliePatrolPhase } from './guard-dog-core.js';
+import { activeGuardDog, guardDogLeases, GUARD_DOG_BREEDS, guardDogPatrolPhase } from './guard-dog-core.js';
 import { expireDogs } from './guard-dog-store.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { getHenWalkArea } from './scenery.js';
@@ -10,9 +10,9 @@ export function mountGuardDog(scene, getFarm, owner = false) {
     // Calm breeds patrol the strip in front of the coop, above the hens' clearing.
     // The full 96px dog body stays at least 12px clear of the 64px hens.
     const home=()=>({x:scene.coop.x+scene.coop.displayWidth*.32,y:getHenWalkArea(scene).top-58});
-    const colliePatrol=()=>{
+    const herdingPatrol=()=>{
         if(!sprite?.active)return;stopMovement();
-        const phase=colliePatrolPhase(scene.time.now-sprite.getData('guardPatrolStartedAt'));
+        const phase=guardDogPatrolPhase(sprite.getData('guardBreedId'),scene.time.now-sprite.getData('guardPatrolStartedAt'));
         let point,speed;
         if(phase.running){
             const area=getHenWalkArea(scene),hens=(scene.hensGroup||[]).filter(hen=>hen.active&&hen.visible);
@@ -25,13 +25,13 @@ export function mountGuardDog(scene, getFarm, owner = false) {
             point=home();speed=75;
             if(Math.hypot(point.x-sprite.x,point.y-sprite.y)<2){
                 sprite.setPosition(point.x,point.y).setData('guardActivity','rest').play(`${sprite.texture.key}_rest`,true);
-                activity=scene.time.delayedCall(phase.remaining,colliePatrol);return;
+                activity=scene.time.delayedCall(phase.remaining,herdingPatrol);return;
             }
             sprite.setData('guardActivity','return').play(`${sprite.texture.key}_walk`,true);
         }
         const dist=Math.hypot(point.x-sprite.x,point.y-sprite.y),travel=Math.max(1,dist/speed*1000),duration=Math.min(travel,phase.remaining),fraction=duration/travel;
         sprite.setFlipX(point.x<sprite.x);
-        move=scene.tweens.add({targets:sprite,x:sprite.x+(point.x-sprite.x)*fraction,y:sprite.y+(point.y-sprite.y)*fraction,duration,ease:'Linear',onComplete:colliePatrol});
+        move=scene.tweens.add({targets:sprite,x:sprite.x+(point.x-sprite.x)*fraction,y:sprite.y+(point.y-sprite.y)*fraction,duration,ease:'Linear',onComplete:herdingPatrol});
     };
     const rest=()=>{
         if(!sprite?.active)return;stopMovement();const point=home();
@@ -72,14 +72,15 @@ export function mountGuardDog(scene, getFarm, owner = false) {
             for(const [action,start,rate,repeat] of [['rest',0,1,0],['walk',4,6,-1],['run',8,10,-1],['guard',12,8,0]]){
                 if(!scene.anims.exists(`${breed.texture}_${action}`))scene.anims.create({key:`${breed.texture}_${action}`,frames:scene.anims.generateFrameNumbers(breed.texture,{start,end:start+3}),frameRate:rate,repeat});
             }
-            sprite=scene.guardDog=scene.add.sprite(0,0,breed.texture,0).setOrigin(.5,.875).setDisplaySize(96,96).setDepth(12);
-            sprite.setData('guardLeaseId',dog.id).setData('henObstacle',!!breed.herding).setData('guardPatrolStartedAt',scene.time.now);
-            sprite.on('animationcomplete',anim=>{if(anim.key===`${breed.texture}_guard`){if(breed.herding)colliePatrol();else goHome();}});
-            if(breed.herding){const point=home();sprite.setPosition(point.x,point.y);colliePatrol();}else rest();
+            const size=breed.displaySize||96;
+            sprite=scene.guardDog=scene.add.sprite(0,0,breed.texture,0).setOrigin(.5,.875).setDisplaySize(size,size).setDepth(12);
+            sprite.setData('guardLeaseId',dog.id).setData('guardBreedId',dog.breedId).setData('henObstacle',!!breed.herding).setData('guardPatrolStartedAt',scene.time.now);
+            sprite.on('animationcomplete',anim=>{if(anim.key===`${breed.texture}_guard`){if(breed.herding)herdingPatrol();else goHome();}});
+            if(breed.herding){const point=home();sprite.setPosition(point.x,point.y);herdingPatrol();}else rest();
         }catch(error){/* Keep the farm usable; the next tick retries missing art. */}
         finally{loading=false;}
     };
-    const resize=()=>{if(sprite?.active){if(sprite.getData('henObstacle')){const point=home();sprite.setPosition(point.x,point.y);colliePatrol();}else rest();}};scene.events.on('farm-viewport-resize',resize);
+    const resize=()=>{if(sprite?.active){if(sprite.getData('henObstacle')){const point=home();sprite.setPosition(point.x,point.y);herdingPatrol();}else rest();}};scene.events.on('farm-viewport-resize',resize);
     const timer=scene.time.addEvent({delay:1000,loop:true,callback:tick});
     const controller={
         tick,
