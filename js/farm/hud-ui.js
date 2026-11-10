@@ -141,8 +141,15 @@ export function mountFarmHud(game) {
         const sideRight = side.getBoundingClientRect().right - bounds.left;
         const width = Math.min(490, bounds.width - sideRight - 16);
         countdown.style.width = `${Math.max(0, width)}px`;
-        countdown.style.left = `${Math.max(sideRight + 8, (bounds.width - width) / 2)}px`;
-        countdown.style.top = `${top.getBoundingClientRect().bottom - bounds.top + 2}px`;
+        // 原木牌整體縮為 50%；以原圖吊繩端點定位，讓兩條繩子接住上方框線。
+        // 原圖為 897×235，繩心 x=218/722、頂端 y=15；資源圖透明留白不算外框。
+        const eggs = top.querySelector('[data-panel="eggs"]').getBoundingClientRect();
+        const dirt = top.querySelector('[data-panel="cleanliness"]').getBoundingClientRect();
+        const renderedWidth = Math.max(0, width) * .5;
+        const anchorCenter = (eggs.left + eggs.width / 2 + dirt.left + dirt.width / 2) / 2;
+        const frameBottom = Math.min(eggs.top + eggs.height * .954, dirt.top + dirt.height * .950);
+        countdown.style.left = `${anchorCenter - bounds.left - renderedWidth * 470 / 897}px`;
+        countdown.style.top = `${frameBottom - bounds.top - renderedWidth * 15 / 897 - .75}px`;
         const dockHeight = bottom.getBoundingClientRect().height;
         if (dockHeight) root.style.setProperty('--farm-dock-height', `${dockHeight + 8}px`);
         top.querySelectorAll('[data-hud-value]').forEach(fitHudText);

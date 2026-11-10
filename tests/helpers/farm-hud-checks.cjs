@@ -146,9 +146,17 @@ module.exports = async function checkFarmHud(page) {
             const side=document.querySelector('.farm-hud-side').getBoundingClientRect();
             const countdown=document.querySelector('.farm-hud-countdown').getBoundingClientRect();
             const firstIcon=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
+            const eggFrame=document.querySelector('[data-panel=eggs]').getBoundingClientRect();
+            const dirtFrame=document.querySelector('[data-panel=cleanliness]').getBoundingClientRect();
+            const ropeY=countdown.top+countdown.width*15/897;
+            const ropeLeft=countdown.left+countdown.width*218/897;
+            const ropeRight=countdown.left+countdown.width*722/897;
+            const expectedWidth=Math.min(490,canvas.width-(side.right-canvas.left)-16)*.5;
             const panelRects=[...document.querySelectorAll('.farm-hud-stat,.farm-hud-settings')].map(n=>n.getBoundingClientRect());
             return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,
-                countdownClear:countdown.top>=Math.max(...panelRects.map(r=>r.bottom)) && countdown.left>=firstIcon.right,
+                countdownClear:countdown.top+countdown.width*90/897>=Math.max(eggFrame.bottom,dirtFrame.bottom) && countdown.left>=firstIcon.right,
+                countdownHalf:Math.abs(countdown.width-expectedWidth)<.1,
+                ropesAttached:ropeLeft>eggFrame.left&&ropeLeft<eggFrame.right&&ropeRight>dirtFrame.left&&ropeRight<dirtFrame.right&&Math.abs(ropeY-(eggFrame.top+eggFrame.height*.954))<2&&Math.abs(ropeY-(dirtFrame.top+dirtFrame.height*.950))<2,
                 aligned:panelRects.slice(1).every((r,i)=>r.left>=panelRects[i].right),
                 textFits:[...document.querySelectorAll('[data-hud-value],.farm-hud-countdown>span')].every(n=>n.scrollWidth<=n.clientWidth+1),
                 buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
@@ -172,7 +180,7 @@ module.exports = async function checkFarmHud(page) {
         assert.equal(sizes.touch,true);
         assert.equal(sizes.scale,.8);
         assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1);
-        assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.equal(layout.countdownClear,true); assert.equal(layout.aligned,true); assert.equal(layout.textFits,true); assert.ok(layout.buttons.every(Boolean));
+        assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.equal(layout.countdownClear,true); assert.equal(layout.countdownHalf,true); assert.equal(layout.ropesAttached,true); assert.equal(layout.aligned,true); assert.equal(layout.textFits,true); assert.ok(layout.buttons.every(Boolean));
         await page.evaluate(()=>__farmGame.registry.set('myFarmData',__hudLayoutFarm));
         await page.waitForSelector('.farm-hud-toast',{state:'hidden'});
         await page.screenshot({path:`/tmp/farm-hud-${viewport.width}.png`});

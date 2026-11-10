@@ -101,3 +101,6 @@
 /* 整組縮至原先 80%，圖片、透明熱區與動態紅點使用相同縮放。 */
 .farm-hud-bottom.farm-hud-bottom--v2{transform:translateX(-50%) scale(.8);transform-origin:center bottom}
 .farm-hud-mail-art{position:absolute;left:-2%;top:-1%;width:104%;height:102%;object-fit:contain;pointer-events:none}
+
+/* 木牌、吊繩與動態文字一起縮至 50%，端點由上方兩個資源框定位。 */
+.farm-hud-countdown{transform:scale(.5);transform-origin:left top}
