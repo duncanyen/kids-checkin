@@ -97,3 +97,7 @@
 
 .farm-hud-countdown:not(.has-time) .farm-hud-countdown-label{white-space:normal;line-height:1.15;text-align:center}
 .farm-hud-bottom.farm-hud-bottom--v2[hidden]{display:none}
+
+/* 整組縮至原先 80%，圖片、透明熱區與動態紅點使用相同縮放。 */
+.farm-hud-bottom.farm-hud-bottom--v2{transform:translateX(-50%) scale(.8);transform-origin:center bottom}
+.farm-hud-mail-art{position:absolute;left:-2%;top:-1%;width:104%;height:102%;object-fit:contain;pointer-events:none}

@@ -4,6 +4,10 @@ import { FARM_DOCK, placeFarmDockButton, splitFarmCountdown } from './hud-layout
 
 // 共用 HUD 只讀取 BootScene 維護的存檔快照，不另外建立 Firebase 訂閱。
 const assetV2 = file => `assets/farm/reference-ui/v2/${file}`;
+const repairedAsset = file => `assets/farm/reference-ui/repairs/${file}`;
+const resourcePanel = kind => kind === 'coins'
+    ? assetV2('coins_panel_dynamic_base.png')
+    : repairedAsset(`${kind}-panel.png`);
 // 保留第一階段已完成的四張圖片與按鈕。
 const referenceIcons = new Set(['tasks', 'trophy', 'gift', 'settings']);
 const icon = kind => referenceIcons.has(kind)
@@ -45,7 +49,7 @@ export function mountFarmHud(game) {
     for (const [kind, label, key] of [['coins','金幣','coins'],['eggs','待採收雞蛋（所有雞種）','eggs'],['cleanliness','雞舍髒亂值','dirt']]) {
         const stat = document.createElement('div'); stat.className = 'farm-hud-stat'; stat.dataset.label = label;
         stat.dataset.panel = kind;
-        stat.innerHTML = `<img class="farm-hud-panel-art" src="${assetV2(`${kind}_panel_dynamic_base.png`)}" alt="" decoding="async" draggable="false"><span><strong data-hud-value="${key}">—</strong></span>`;
+        stat.innerHTML = `<img class="farm-hud-panel-art" src="${resourcePanel(kind)}" alt="" decoding="async" draggable="false"><span><strong data-hud-value="${key}">—</strong></span>`;
         stat.setAttribute('aria-label', label); top.append(stat);
     }
     const settings = document.createElement('button'); settings.type = 'button'; settings.className = 'farm-hud-button farm-hud-settings';
@@ -69,6 +73,8 @@ export function mountFarmHud(game) {
         node.querySelector('.farm-hud-art')?.remove();
         placeFarmDockButton(node, FARM_DOCK.hotzones[index]);
     });
+    // 使用完整通知木牌蓋住 V2 的補色缺口；其餘底座圖像與熱區維持原檔。
+    mail.insertAdjacentHTML('afterbegin', `<img class="farm-hud-mail-art" src="${repairedAsset('mail-button.png')}" alt="" decoding="async" draggable="false">`);
     const countdown = document.createElement('button'); countdown.type = 'button';
     countdown.className = 'farm-hud-countdown'; countdown.hidden = true;
     countdown.innerHTML = `<img src="${assetV2('egg_countdown_dynamic_base.png')}" alt="" decoding="async" draggable="false"><span class="farm-hud-countdown-label"></span><span class="farm-hud-countdown-time"></span>`;

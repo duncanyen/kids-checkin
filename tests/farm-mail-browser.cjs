@@ -137,6 +137,8 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.screenshot({ path: '/tmp/farm-mail-reward.png', fullPage: true });
         await page.getByRole('button', { name: '關閉', exact: true }).click();
         assert.equal(await page.evaluate(() => window.__farmGame.input.enabled), true);
+        assert.equal(await page.locator('.farm-mail-badge').isVisible(),false);
+        await page.screenshot({path:'/tmp/farm-hud-mail-no-badge.png'});
         await page.reload(); await page.locator('.farm-mail-launcher').click();
         await page.getByRole('tab', { name: '系統', exact: true }).click();
         await page.waitForSelector('.farm-mail-summary');

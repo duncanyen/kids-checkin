@@ -28,8 +28,8 @@ module.exports = async function checkFarmHud(page) {
         const style=getComputedStyle(node);
         return {background:style.backgroundImage,shadow:style.boxShadow,border:style.borderTopWidth};
     }),{background:'none',shadow:'none',border:'0px'});
-    assert.ok(await page.locator('.farm-hud-panel-art,.farm-hud-dock-art,.farm-hud-countdown>img').evaluateAll(async nodes => {
-        await Promise.all(nodes.map(node => node.decode())); return nodes.length===5 && nodes.every(node=>node.naturalWidth>0);
+    assert.ok(await page.locator('.farm-hud-panel-art,.farm-hud-dock-art,.farm-hud-mail-art,.farm-hud-countdown>img').evaluateAll(async nodes => {
+        await Promise.all(nodes.map(node => node.decode())); return nodes.length===6 && nodes.every(node=>node.naturalWidth>0);
     }));
     assert.equal(await dock.locator('.farm-hud-art,svg').count(),0);
     assert.equal(await page.locator('.farm-hud-stat,.farm-hud-settings,.farm-hud-side button,.farm-hud-bottom button,.farm-hud-countdown').count(),13);
@@ -165,11 +165,12 @@ module.exports = async function checkFarmHud(page) {
         assert.ok(zones.slice(1).every((zone,i)=>zone.x>=zones[i].x+zones[i].w-.001));
         const sizes=await page.evaluate(()=>{
             const side=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
-            return {side:side.width,touch:[...document.querySelectorAll('.farm-hud-side button,.farm-hud-bottom button')].every(n=>{const b=n.getBoundingClientRect();return b.width>=44&&b.height>=44;})};
+            return {side:side.width,scale:new DOMMatrix(getComputedStyle(document.querySelector('.farm-hud-bottom')).transform).a,touch:[...document.querySelectorAll('.farm-hud-side button,.farm-hud-bottom button')].every(n=>{const b=n.getBoundingClientRect();const min=n.closest('.farm-hud-bottom')?44*.8:44;return b.width>=min&&b.height>=min;})};
         });
         const narrow=viewport.width<359, short=viewport.height<=520;
         assert.ok(Math.abs(sizes.side-(short?41:narrow?49:56)*.8)<.1);
         assert.equal(sizes.touch,true);
+        assert.equal(sizes.scale,.8);
         assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1);
         assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.equal(layout.countdownClear,true); assert.equal(layout.aligned,true); assert.equal(layout.textFits,true); assert.ok(layout.buttons.every(Boolean));
         await page.evaluate(()=>__farmGame.registry.set('myFarmData',__hudLayoutFarm));
