@@ -20,6 +20,19 @@ export function placeFarmDockButton(node, zone) {
     node.style.height = `${zone.h / FARM_DOCK.height * 100}%`;
 }
 
+/** 只裁出共用圖片中的按鈕像素，讓它能獨立縮放；不使用舊版單顆切圖。 */
+export function styleFarmDockSprite(node, zone) {
+    node.style.backgroundSize = `${FARM_DOCK.width / zone.w * 100}% ${FARM_DOCK.height / zone.h * 100}%`;
+    node.style.backgroundPosition = `${zone.x / (FARM_DOCK.width - zone.w) * 100}% ${zone.y / (FARM_DOCK.height - zone.h) * 100}%`;
+}
+
+/** 遮掉底座圖重複的按鈕，避免縮放後仍露出一顆未縮小的原圖。SVG 僅作遮罩。 */
+export function farmDockMaskURL() {
+    const holes = FARM_DOCK.hotzones.map(({x,y,w,h}) => `M${x} ${y}h${w}v${h}h-${w}Z`).join(' ');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${FARM_DOCK.width} ${FARM_DOCK.height}"><path fill="white" fill-rule="evenodd" d="M0 0H${FARM_DOCK.width}V${FARM_DOCK.height}H0Z ${holes}"/></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
 /** 拆開場景已產生的倒數字串供排版；不計算或改寫產蛋時間。 */
 export function splitFarmCountdown(text) {
     const match = /^(.*?)\s+(\d+:\d{2}:\d{2})$/.exec(text);

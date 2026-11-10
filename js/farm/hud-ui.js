@@ -1,6 +1,6 @@
 import { poultryState } from './poultry.js';
 
-import { FARM_DOCK, placeFarmDockButton, splitFarmCountdown } from './hud-layout.js';
+import { FARM_DOCK, placeFarmDockButton, splitFarmCountdown, styleFarmDockSprite, farmDockMaskURL } from './hud-layout.js';
 
 // 共用 HUD 只讀取 BootScene 維護的存檔快照，不另外建立 Firebase 訂閱。
 const assetV2 = file => `assets/farm/reference-ui/v2/${file}`;
@@ -68,13 +68,38 @@ export function mountFarmHud(game) {
     const dockImage = document.createElement('img');
     dockImage.className = 'farm-hud-dock-art'; dockImage.src = assetV2('bottom_dock_no_badge.png');
     dockImage.alt = ''; dockImage.draggable = false; dockImage.decoding = 'async';
+    dockImage.style.maskImage = farmDockMaskURL();
+    dockImage.style.webkitMaskImage = farmDockMaskURL();
     bottom.prepend(dockImage);
-    [...bottom.querySelectorAll('button')].forEach((node, index) => {
+    const dockButtons = [...bottom.querySelectorAll('button')];
+    dockButtons.forEach((node, index) => {
         node.querySelector('.farm-hud-art')?.remove();
-        placeFarmDockButton(node, FARM_DOCK.hotzones[index]);
+        const zone = FARM_DOCK.hotzones[index];
+        placeFarmDockButton(node, zone);
+        // 固定木質承座留在原位，只有按鈕圖像隨按壓縮放。
+        const underlay = document.createElement('span');
+        underlay.className = 'farm-hud-dock-underlay'; underlay.setAttribute('aria-hidden','true');
+        underlay.style.cssText = node.style.cssText;
+        styleFarmDockSprite(underlay, {...zone, y:290, h:50});
+        bottom.insertBefore(underlay, node);
+        if (node !== mail) {
+            const sprite = document.createElement('span');
+            sprite.className = 'farm-hud-dock-sprite'; sprite.setAttribute('aria-hidden','true');
+            styleFarmDockSprite(sprite, zone); node.append(sprite);
+        }
     });
     // 使用完整通知木牌蓋住 V2 的補色缺口；其餘底座圖像與熱區維持原檔。
     mail.insertAdjacentHTML('afterbegin', `<img class="farm-hud-mail-art" src="${repairedAsset('mail-button.png')}" alt="" decoding="async" draggable="false">`);
+    let selectedDock = null, mailWasOpen = false;
+    function updateDockSelection(mailOpen = false) {
+        const selected = mailOpen ? mail : selectedDock;
+        for (const node of dockButtons) node.classList.toggle('is-selected', node === selected);
+    }
+    bottom.addEventListener('click', event => {
+        const node = event.target.closest('button');
+        if (!node || node.disabled) return;
+        selectedDock = node; updateDockSelection();
+    });
     const countdown = document.createElement('button'); countdown.type = 'button';
     countdown.className = 'farm-hud-countdown'; countdown.hidden = true;
     countdown.innerHTML = `<img src="${assetV2('egg_countdown_dynamic_base.png')}" alt="" decoding="async" draggable="false"><span class="farm-hud-countdown-label"></span><span class="farm-hud-countdown-time"></span>`;
@@ -194,8 +219,9 @@ export function mountFarmHud(game) {
         // 導覽只屬於自家農場；拜訪結束或戰鬥結算後，也須回到自家才恢復。
         side.hidden = inEncounter || key !== 'MyFarmScene';
         bottom.hidden = inEncounter || key !== 'MyFarmScene';
-        if (inEncounter) { toast.hidden = true; clearTimeout(toastTimer); }
+        if (inEncounter) { selectedDock = null; toast.hidden = true; clearTimeout(toastTimer); }
         if (key !== currentKey) {
+            selectedDock = null;
             currentKey = key; top.hidden = !game.registry.get('myFarmData') || key !== 'MyFarmScene';
             positionSide();
             for (const [node,target] of routes) {
@@ -206,7 +232,10 @@ export function mountFarmHud(game) {
         if (!side.hidden && sideWasHidden) positionSide();
         const disabled = !scene || game.registry.get('farmLoadState')?.phase !== 'ready' || occupied();
         for (const [node] of routes) node.disabled = disabled;
-        mail.classList.toggle('is-selected', document.querySelector('.farm-mail-overlay')?.hidden === false);
+        const mailOpen = document.querySelector('.farm-mail-overlay')?.hidden === false;
+        if (mailWasOpen && !mailOpen && selectedDock === mail) selectedDock = null;
+        mailWasOpen = mailOpen;
+        updateDockSelection(mailOpen);
         ranking.classList.toggle('is-selected', document.querySelector('.farm-ranking-overlay')?.hidden === false);
     }
     const onSet = (_parent,key) => { if (key === 'myFarmData' || key === 'farmLoadState') refresh(); };

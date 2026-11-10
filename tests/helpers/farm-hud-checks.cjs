@@ -61,6 +61,26 @@ module.exports = async function checkFarmHud(page) {
     });
     assert.equal(await page.locator('.farm-hud-label,.farm-hud-soon,.farm-hud-stat small').count(),0);
     assert.deepEqual(await dock.locator('button').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-label').split('，')[0].replace('開啟',''))),['村落','商店','倉庫','圖鑑','通知']);
+    assert.equal(await dock.locator('button.is-selected').count(),0);
+    assert.equal(await dock.getByRole('button',{name:'村落',exact:true}).evaluate(node=>getComputedStyle(node).outlineStyle),'none');
+    assert.equal(await dock.locator('.farm-hud-dock-sprite').count(),4);
+    assert.notEqual(await page.locator('.farm-hud-dock-art').evaluate(node=>getComputedStyle(node).maskImage),'none');
+    // 驗證實際圖片跟著縮小，非只有透明熱區；放開後回彈並顯示選取亮框。
+    const guide=dock.getByRole('button',{name:'圖鑑，尚未開放',exact:true});
+    const guideBounds=await guide.boundingBox();
+    const artWidth=await guide.locator('.farm-hud-dock-sprite').evaluate(node=>node.getBoundingClientRect().width);
+    await page.mouse.move(guideBounds.x+guideBounds.width/2,guideBounds.y+guideBounds.height/2);
+    await page.mouse.down(); await page.waitForTimeout(120);
+    const pressedWidth=await guide.locator('.farm-hud-dock-sprite').evaluate(node=>node.getBoundingClientRect().width);
+    assert.ok(Math.abs(pressedWidth/artWidth-.95)<.01);
+    assert.ok(Math.abs((await guide.boundingBox()).width-guideBounds.width)<.1,'press must keep the hit area stable');
+    assert.notEqual(await guide.evaluate(node=>getComputedStyle(node).outlineStyle),'none');
+    await page.screenshot({path:'/tmp/farm-hud-button-pressed.png'});
+    await page.mouse.up(); await page.waitForTimeout(350);
+    const releasedWidth=await guide.locator('.farm-hud-dock-sprite').evaluate(node=>node.getBoundingClientRect().width);
+    assert.ok(Math.abs(releasedWidth/artWidth-1)<.01);
+    assert.equal(await guide.evaluate(node=>node.classList.contains('is-selected')),true);
+    await page.screenshot({path:'/tmp/farm-hud-button-selected.png'});
     for (const name of ['每日任務，尚未開放','活動，尚未開放','圖鑑，尚未開放','設定，尚未開放']) {
         const entry=page.getByRole('button',{name,exact:true});
         assert.equal(await entry.isEnabled(),true);
@@ -107,13 +127,14 @@ module.exports = async function checkFarmHud(page) {
     const bounds=await warehouse.boundingBox();
     await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
     await page.mouse.down(); await page.waitForTimeout(100);
-    const scale=await warehouse.evaluate(n=>new DOMMatrix(getComputedStyle(n).transform).a);
+    const scale=await warehouse.locator('.farm-hud-dock-sprite').evaluate(n=>new DOMMatrix(getComputedStyle(n).transform).a);
     assert.ok(Math.abs(scale-.95)<.01);
     await page.mouse.up();
     await page.waitForFunction(()=>__farmGame.scene.isActive('WarehouseScene'));
     await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});
     await clickBack(page,'WarehouseScene');
     await page.waitForSelector('.farm-hud-bottom',{state:'visible'});
+    assert.equal(await dock.locator('button.is-selected').count(),0);
     await dock.getByRole('button',{name:'商店',exact:true}).click();
     await page.waitForFunction(()=>__farmGame.scene.isActive('ShopScene'));
     await page.waitForSelector('.farm-hud-bottom',{state:'hidden'});

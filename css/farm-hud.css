@@ -82,7 +82,7 @@
 .farm-hud-dock-art{display:block;width:100%;height:100%;pointer-events:none}
 .farm-hud-bottom--v2 .farm-hud-button{position:absolute;inset:auto;align-self:auto;min-width:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
 .farm-hud-bottom--v2 .farm-hud-button::before{content:none}
-.farm-hud-bottom--v2 .farm-hud-button:is([aria-current=page],.is-selected){outline:2px solid #ffe8a0;outline-offset:-4px}
+.farm-hud-bottom--v2 .farm-hud-button:is(:active,.is-selected):not(:disabled){outline:2px solid #ffe8a0;outline-offset:-4px;filter:drop-shadow(0 0 3px #ffdf75)}
 .farm-hud .farm-hud-bottom--v2 .farm-mail-badge{position:absolute;left:62.2881356%;top:-10.5042017%;right:auto;width:38.1355932%;min-width:0;height:auto;aspect-ratio:1;border:0;border-radius:0;padding:0;background:url('../assets/farm/reference-ui/v2/mail_unread_badge.png') center/contain no-repeat;box-shadow:none;font-size:0;pointer-events:none}
 
 .farm-hud-countdown{position:absolute;display:block;aspect-ratio:897/235;height:auto;padding:0;border:0;border-radius:0;background:none;box-shadow:none;pointer-events:auto;cursor:pointer;color:#fff4cf;font-family:inherit;font-weight:700}
@@ -104,3 +104,14 @@
 
 /* 木牌、吊繩與動態文字一起縮至 50%，端點由上方兩個資源框定位。 */
 .farm-hud-countdown{transform:scale(.5);transform-origin:left top}
+
+/* 圖片分層而非重畫：底座固定，按鈕採同一張 PNG 的原座標像素。 */
+.farm-hud-dock-art{mask-size:100% 100%;mask-repeat:no-repeat;-webkit-mask-size:100% 100%;-webkit-mask-repeat:no-repeat}
+.farm-hud-dock-underlay,.farm-hud-dock-sprite{position:absolute;pointer-events:none;background-image:url('../assets/farm/reference-ui/v2/bottom_dock_no_badge.png');background-repeat:no-repeat}
+.farm-hud-dock-underlay{z-index:0}
+.farm-hud-dock-sprite{inset:0}
+.farm-hud-bottom--v2 .farm-hud-button{z-index:1}
+.farm-hud-bottom--v2 .farm-hud-button:active:not(:disabled){transform:none}
+.farm-hud-dock-sprite,.farm-hud-mail-art{transform-origin:center;transition:transform .18s cubic-bezier(.18,.9,.34,1.5)}
+.farm-hud-bottom--v2 .farm-hud-button:active:not(:disabled)>:is(.farm-hud-dock-sprite,.farm-hud-mail-art){transform:scale(.95);transition-duration:.07s}
+@media(prefers-reduced-motion:reduce){.farm-hud-dock-sprite,.farm-hud-mail-art{transition:none}}
