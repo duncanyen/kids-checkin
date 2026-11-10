@@ -3,6 +3,7 @@ export const GUARD_DOG_BREEDS = {
     pyrenees: { rentable: true, name: '大白熊犬', texture: 'guard_dog', biteChance: 0.7, blockMs: 4 * 3600000, dayPrice: 80, weekPrice: 400 },
     beagle: { rentable: true, name: '米格魯', texture: 'guard_beagle', biteChance: 0.33, blockMs: 2 * 3600000, dayPrice: 20, weekPrice: 100 },
     collie: { rentable: false, name: '邊境牧羊犬', texture: 'guard_collie', biteChance: 0.8, blockMs: 4 * 3600000, dayPrice: 200, weekPrice: 1000, herding: true },
+    // patrolRunMs 保留舊版相容；現行柯基使用 corgi-routine.js 的到家後睡眠流程。
     corgi: { rentable: true, name: '柯基犬', texture: 'guard_corgi', biteChance: 0.4, blockMs: 2 * 3600000, dayPrice: 100, weekPrice: 500, herding: true, patrolRunMs: 15000, displaySize: 84 },
 };
 
@@ -13,7 +14,7 @@ export function colliePatrolPhase(elapsedMs) {
     return guardDogPatrolPhase('collie', elapsedMs);
 }
 
-/** 各犬種沿用 30 秒巡邏週期；柯基 15 秒繞雞群，邊牧維持原本 18 秒。 */
+/** 舊版巡邏相容入口；邊牧維持 18 秒，現行柯基改由 corgi-routine.js 控制。 */
 export function guardDogPatrolPhase(breedId, elapsedMs) {
     const runMs = GUARD_DOG_BREEDS[breedId]?.patrolRunMs ?? COLLIE_RUN_MS;
     const position = Math.max(0, elapsedMs) % COLLIE_CYCLE_MS;

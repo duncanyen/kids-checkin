@@ -50,7 +50,7 @@ export async function openGuardDogRental(scene, breedId) {
     if(!breed){scene.showMsg('護衛犬商品尚未同步至伺服器，請稍後再試','#F44336');return;}
     const dialog=modal(scene,`租用${breed.name}`);
     dialog.body(node('p',`攔截小偷 ${Math.round(breed.biteChance*100)}% · 對該雞舍禁偷 ${breed.blockMs/3600000} 小時`));
-    if(breed.herding)dialog.body(node('p',breedId==='corgi'?'活潑的柯基犬，約 50% 時間繞著雞群巡邏，其餘時間返回雞舍旁睡覺；雞群會自動避讓。':'活潑的牧羊犬，約 60% 時間在雞群旁奔跑巡邏；雞群會自動避讓。'));
+    if(breed.herding)dialog.body(node('p',breedId==='corgi'?'柯基犬放慢 30% 奔跑，活動約 60 秒，期間坐下賣萌兩次；回雞舍後睡滿 60 秒再出來。休息時仍有 40% 防偷蛋能力，雞群會自動避讓。':'活潑的牧羊犬，約 60% 時間在雞群旁奔跑巡邏；雞群會自動避讓。'));
     const label=node('label','租用天數');label.htmlFor='guard-rental-days';
     const input=node('input');input.id='guard-rental-days';input.type='number';input.min='1';input.step='1';input.inputMode='numeric';input.value='1';
     dialog.body(label);dialog.body(input);

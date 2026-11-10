@@ -257,7 +257,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  // Corgi: new rental uses the same trusted API, warehouse clock and shared flock avoidance.
  await rent(7,'corgi');await page.getByText('7 天 · 500 金幣',{exact:true}).waitFor();
  assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('攔截小偷 40%'));
- assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('約 50%'));
+ assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('回雞舍後睡滿 60 秒'));
  await page.screenshot({path:'/tmp/corgi-rental-mobile.png',fullPage:true});
  await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'/tmp/corgi-rental-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:900});
  const corgiCoins=docs['groups/A/users/owner'].farm.coins;
@@ -273,7 +273,10 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  // Rental Date.now is deliberately frozen. Give only this animation manager a
  // monotonic delta so the real tween can naturally return home without changing lease assertions.
  await page.evaluate(()=>{
-  const manager=__farmGame.scene.getScene('MyFarmScene').tweens;let previous=performance.now();
+  const s=__farmGame.scene.getScene('MyFarmScene');
+  window.__corgiTimeOffset=0;window.__corgiActivityStart=s.guardDog.getData('guardPatrolStartedAt');
+  Object.defineProperty(s.time,'now',{configurable:true,get:()=>s.game.loop.now+window.__corgiTimeOffset,set:()=>{}});
+  const manager=s.tweens;let previous=performance.now();
   manager.getDelta=function(){const current=performance.now(),delta=current-previous;previous=current;this.time+=delta/1000;return delta;};
  });
  await page.waitForTimeout(700);await page.screenshot({path:'/tmp/corgi-flock-patrol.png',fullPage:true});
@@ -284,15 +287,39 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   if(!getThreatZones(s).some(z=>z.friendlyGuard))throw Error('Corgi must participate in hen avoidance');
   for(const hen of s.hensGroup){s.tweens.killTweensOf(hen);hen.walkTimer?.remove();hen.walkPath=[];hen.setPosition(dog.x,dog.y-30);}
   s.avoidPredators();if(s.hensGroup.some(h=>!h.isEvading))throw Error('Hens must evade the corgi');
-  dog.setData('guardPatrolStartedAt',s.time.now-16000);
+  if(Math.abs(s.anims.get('guard_corgi_run').frameRate-7)>.01)throw Error('Corgi running animation must slow by 30 percent');
  });
+ const corgiTime=async elapsed=>page.evaluate(elapsed=>{__corgiTimeOffset=__corgiActivityStart+elapsed-__farmGame.loop.now;},elapsed);
+ await corgiTime(20000);await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='sit');
+ await page.screenshot({path:'/tmp/corgi-sitting.png',fullPage:true});
+ await corgiTime(24000);await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='run');
+ await corgiTime(40000);await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='sit');
+ await corgiTime(44000);await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='run');
+ await corgiTime(60000);
  await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='rest',null,{timeout:18000});
  await page.evaluate(async()=>{
   const s=__farmGame.scene.getScene('MyFarmScene'),{getHenWalkArea}=await import('/js/farm/scenery.js');
   if(Math.hypot(s.guardDog.x-(s.coop.x+s.coop.displayWidth*.32),s.guardDog.y-(getHenWalkArea(s).top-58))>2)throw Error('Corgi must return to its resting place by the coop');
  });
- await page.waitForFunction(()=>{const d=__farmGame.scene.getScene('MyFarmScene').guardDog;return d?.getData('guardActivity')==='rest'&&String(d.frame.name)==='3';});
+ await page.waitForFunction(()=>{const d=__farmGame.scene.getScene('MyFarmScene').guardDog;return d?.getData('guardActivity')==='rest'&&['2','3'].includes(String(d.frame.name));});
  await page.screenshot({path:'/tmp/corgi-rest-by-coop.png',fullPage:true});
+ await page.evaluate(async()=>{
+  const s=__farmGame.scene.getScene('MyFarmScene'),{corgiRoutineFor}=await import('/js/farm/corgi-routine.js');
+  const phase=corgiRoutineFor(__farmGame,s.guardDog.getData('guardLeaseId'),s.time.now).phase(s.time.now);
+  if(phase.remaining<58000||phase.remaining>60000)throw Error('Sleep must start at home and last a full minute');
+  window.__corgiWake=s.time.now+phase.remaining;
+  __corgiTimeOffset=__corgiWake-30000-__farmGame.loop.now;
+  s.events.emit('farm-viewport-resize');
+ });
+ await scene('ShopScene');await scene('MyFarmScene');
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='rest');
+ await page.evaluate(async()=>{
+  const s=__farmGame.scene.getScene('MyFarmScene'),{corgiRoutineFor}=await import('/js/farm/corgi-routine.js');
+  const phase=corgiRoutineFor(__farmGame,s.guardDog.getData('guardLeaseId'),s.time.now).phase(s.time.now);
+  if(phase.remaining>31000||phase.remaining<25000)throw Error('Changing scene must not restart the full sleep minute');
+  __corgiTimeOffset=__corgiWake+1-__farmGame.loop.now;
+ });
+ await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.getData('guardActivity')==='run');
  await identity('thief','小偷');await page.evaluate(()=>{Math.random=()=>.99;});await clock(corgi.startedAt+3600000);await scene('VisitScene',{targetAccountId:'owner',targetName:'主人',targetGroupId:'A'});
  await page.waitForFunction(()=>__farmGame.scene.getScene('VisitScene').guardDog?.texture.key==='guard_corgi');
  const corgiEggs=docs['groups/A/users/owner'].farm.eggsReady;
@@ -303,6 +330,6 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await clock(corgiBlock);await page.evaluate(async()=>{Math.random=()=>.4;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
  assert.equal(docs['groups/A/users/owner'].farm.eggsReady,corgiReady-1);
  await clock(corgi.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
- assert.deepEqual(errors,[]);console.log(process.env.CORGI_ONLY?'PASS: corgi rental 100/500, activation, 50% patrol and natural return/rest, avoidance, 40%/2h boundary and expiry':'PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal; corgi 100/500, warehouse activation, compact breed art, 50% patrol/rest, hen avoidance, 40%/2h interception and expiry');
+ assert.deepEqual(errors,[]);console.log(process.env.CORGI_ONLY?'PASS: corgi rental 100/500, activation, slower patrol, sitting, full-minute sleep and scene resume, avoidance, 40%/2h boundary and expiry':'PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal; corgi 100/500, warehouse activation, compact breed art, slower patrol/sitting/60s sleep, hen avoidance, 40%/2h interception and expiry');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -105,7 +105,7 @@ test('corgi rents at 100/500, waits in storage, intercepts below 40%, and expire
     assert.equal(activeGuardDog(farm,now+7*DAY_MS),null);
 });
 
-test('corgi has a 50% flock patrol phase and a 50% return/rest phase without changing collie',()=>{
+test('legacy corgi patrol helper stays compatible; current routine is tested separately',()=>{
     for(let cycle=0;cycle<3;cycle++){
         const phases=Array.from({length:30},(_,second)=>guardDogPatrolPhase('corgi',cycle*30000+second*1000));
         assert.equal(phases.filter(p=>p.running).length,15);
