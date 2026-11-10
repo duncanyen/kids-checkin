@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DAY_MS, GUARD_DOG_BREEDS, rentalPrice, rentGuardDog, activateGuardDog, releaseGuardDog, guardDogLeases, activeGuardDog, guardDogInterception, stealBlockedUntil, colliePatrolPhase, guardDogPatrolPhase } from '../js/farm/guard-dog-core.js';
+import { DAY_MS, GUARD_DOG_BREEDS, rentalPrice, rentGuardDog, activateGuardDog, releaseGuardDog, guardDogLeases, activeGuardDog, guardDogInterception, stealBlockedUntil, colliePatrolPhase, guardDogPatrolPhase, guardDogRemainingMs, guardDogStatus } from '../js/farm/guard-dog-core.js';
 const now = 1000000;
 const apply = (farm,patch) => ({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
 const rented = (days=7) => apply({coins:2000},rentGuardDog({coins:2000},'pyrenees',days,'dog-1',now));
@@ -26,16 +26,17 @@ test('first activation starts continuous absolute time, not the rental purchase 
     assert.equal(activeGuardDog(active,start+7*DAY_MS),null);assert.deepEqual(guardDogLeases(active,start+7*DAY_MS),[]);
     assert.throws(()=>activateGuardDog(active,'dog-1',start+7*DAY_MS),/找不到/);
 });
-test('different breeds may wait together, but switching requires forfeiting the current dog',()=>{
+test('different breeds may wait together, and switching preserves the current balance',()=>{
     GUARD_DOG_BREEDS.future={...GUARD_DOG_BREEDS.pyrenees,name:'未來犬種'};
     try{
         let farm=rented();farm=apply(farm,rentGuardDog(farm,'future',1,'dog-2',now));
         assert.equal(farm.guardDogs.length,2);farm=apply(farm,activateGuardDog(farm,'dog-1',now));
         assert.throws(()=>activateGuardDog(farm,'dog-2',now),/先解除/);
         const coins=farm.coins;farm=apply(farm,releaseGuardDog(farm,'dog-1',now+1));
-        assert.equal(farm.coins,coins);assert.deepEqual(farm.guardDogs.map(d=>d.id),['dog-2']);
+        assert.equal(farm.coins,coins);assert.deepEqual(farm.guardDogs.map(d=>d.id),['dog-1','dog-2']);
+        assert.equal(farm.guardDogs[0].remainingMs,7*DAY_MS-1);
         farm=apply(farm,activateGuardDog(farm,'dog-2',now+2));assert.equal(activeGuardDog(farm,now+2).id,'dog-2');
-        assert.throws(()=>releaseGuardDog(rented(),'dog-1',now),/護衛中/);
+        assert.deepEqual(releaseGuardDog(rented(),'dog-1',now)['farm.guardDogs'],rented().guardDogs);
     }finally{delete GUARD_DOG_BREEDS.future;}
 });
 test('only an unexpired activated dog can bite, with a precise 70 percent boundary',()=>{
@@ -71,7 +72,7 @@ test('pyrenees and beagle can both be rented, but cannot guard at the same time'
     assert.throws(()=>activateGuardDog(farm,'beagle-1',now),/先解除/);
     farm=apply(farm,releaseGuardDog(farm,'dog-1',now+1));
     farm=apply(farm,activateGuardDog(farm,'beagle-1',now+2));
-    assert.equal(activeGuardDog(farm,now+2).breedId,'beagle');assert.equal(farm.guardDogs[0].expiresAt,now+2+DAY_MS);
+    assert.equal(activeGuardDog(farm,now+2).breedId,'beagle');assert.equal(farm.guardDogs.find(d=>d.id==='beagle-1').expiresAt,now+2+DAY_MS);
 });
 
 
@@ -113,4 +114,36 @@ test('legacy corgi patrol helper stays compatible; current routine is tested sep
     assert.deepEqual(guardDogPatrolPhase('corgi',15000),{running:false,remaining:15000});
     assert.deepEqual(guardDogPatrolPhase('corgi',30000),{running:true,remaining:15000});
     assert.equal(colliePatrolPhase(15000).running,true);
+});
+
+
+test('pause saves exact milliseconds across long storage and repeated resume cycles',()=>{
+    let farm=rented(1);farm=apply(farm,activateGuardDog(farm,'dog-1',now));
+    farm=apply(farm,releaseGuardDog(farm,'dog-1',now+6*3600000+123));
+    const balance=18*3600000-123;
+    assert.equal(farm.guardDogs[0].remainingMs,balance);
+    assert.equal(farm.guardDogs[0].startedAt,null);assert.equal(farm.guardDogs[0].expiresAt,null);
+    assert.equal(activeGuardDog(farm,now),null);assert.equal(guardDogInterception(farm,0,now),null);
+    assert.equal(guardDogRemainingMs(farm.guardDogs[0],now+100*DAY_MS),balance);
+    assert.match(guardDogStatus(farm.guardDogs[0],now+100*DAY_MS),/待命・餘 18時0分/);
+    const duplicate=apply(farm,releaseGuardDog(farm,'dog-1',now+100*DAY_MS));assert.deepEqual(duplicate,farm);
+    const resumedAt=now+100*DAY_MS;farm=apply(farm,activateGuardDog(farm,'dog-1',resumedAt));
+    assert.equal(farm.guardDogs[0].expiresAt,resumedAt+balance);
+    farm=apply(farm,releaseGuardDog(farm,'dog-1',resumedAt+60001));
+    assert.equal(farm.guardDogs[0].remainingMs,balance-60001);
+    farm=apply(farm,activateGuardDog(farm,'dog-1',resumedAt+10*DAY_MS));
+    assert.equal(activeGuardDog(farm,resumedAt+10*DAY_MS+balance-60001),null);
+});
+
+test('legacy waiting and active leases pause safely; zero or corrupt balances cannot restore full days',()=>{
+    let farm={coins:42,guardDogs:[{id:'legacy',breedId:'pyrenees',days:1,startedAt:now,expiresAt:now+DAY_MS}]};
+    farm=apply(farm,releaseGuardDog(farm,'legacy',now+1000));assert.equal(farm.guardDogs[0].remainingMs,DAY_MS-1000);
+    farm=apply(farm,activateGuardDog(farm,'legacy',now+10*DAY_MS));assert.equal(farm.guardDogs[0].expiresAt,now+11*DAY_MS-1000);
+    const waiting={guardDogs:[{id:'waiting',breedId:'beagle',days:1,startedAt:null,expiresAt:null}]};
+    assert.equal(activateGuardDog(waiting,'waiting',now)['farm.guardDogs'][0].expiresAt,now+DAY_MS);
+    for(const remainingMs of [0,-1,NaN,1.5,DAY_MS+1,'86400000']){
+        const invalid={guardDogs:[{...waiting.guardDogs[0],remainingMs}]};
+        assert.deepEqual(guardDogLeases(invalid,now),[]);assert.throws(()=>activateGuardDog(invalid,'waiting',now),/找不到/);
+    }
+    assert.throws(()=>releaseGuardDog(farm,'legacy',now+11*DAY_MS),/找不到/);
 });

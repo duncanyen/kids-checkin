@@ -70,13 +70,13 @@ export function openGuardDogAction(scene, breedId) {
     dialog.root.dataset.guardDogLeaseId=dog.id;
     dialog.body(node('p',guardDogStatus(dog)));
     if(Number.isFinite(dog.startedAt)) {
-        dialog.body(node('p','解除後本犬會立即離開倉庫，剩餘租期作廢且不退還金幣，無法暫停或存回倉庫。確定要解除嗎？'));
-        dialog.submit('解除護衛並放棄租期',async()=>{await releaseDog(dog.id);refreshFarm(scene);if(scene.sys.isActive())scene.showMsg('已解除護衛，本犬已離開。','#FFD54F');});
+        dialog.body(node('p','解除後本犬會回到倉庫，剩餘租用時間完整保留且停止扣時。可以改派其他護衛犬，下次再啟用時繼續使用剩餘時間。'));
+        dialog.submit('解除護衛並保留時間',async()=>{await releaseDog(dog.id);refreshFarm(scene);if(scene.sys.isActive())scene.showMsg('已回到倉庫，剩餘租用時間已保留。','#4CAF50');});
     }else{
-        dialog.body(node('p',`開始後會連續護衛 ${dog.days} 天，離線仍計時，不能暫停；到期會自動離開倉庫。`));
+        dialog.body(node('p','啟用後從剩餘時間繼續計時，值勤期間離線仍計時；解除護衛可回到倉庫暫停。剩餘時間用完後會離開倉庫。'));
         const occupied=activeGuardDog(scene.farmData);
         const button=dialog.submit('開始護衛',async()=>{await activateDog(dog.id);refreshFarm(scene);if(scene.sys.isActive())scene.showMsg(`${breed.name}開始護衛雞舍！`,'#4CAF50');});
-        if(occupied){button.disabled=true;dialog.error.textContent='請先解除目前護衛中的犬隻；解除會放棄該犬剩餘租期。';}
+        if(occupied){button.disabled=true;dialog.error.textContent='請先解除目前護衛中的犬隻回到倉庫，剩餘時間會保留。';}
     }
     dialog.actions.querySelector('button')?.focus();
 }
@@ -85,7 +85,7 @@ export function watchGuardDogInventory(scene, getFarm, refresh) {
     let signature='',pending=false;
     const tick=()=>{
         const farm=getFarm();if(!farm)return;
-        const dogs=guardDogLeases(farm),next=dogs.map(dog=>`${dog.id}:${Number.isFinite(dog.startedAt)?Math.ceil((dog.expiresAt-Date.now())/60000):'waiting'}`).join('|');
+        const dogs=guardDogLeases(farm),next=dogs.map(dog=>`${dog.id}:${Number.isFinite(dog.startedAt)?Math.ceil((dog.expiresAt-Date.now())/60000):`waiting:${dog.remainingMs??'full'}`}`).join('|');
         if(next!==signature){signature=next;refresh();}
         if(!pending&&dogs.length!==(farm.guardDogs||[]).length){pending=true;expireDogs().catch(()=>{}).finally(()=>{pending=false;});}
     };

@@ -26,7 +26,7 @@ test('trusted rental uses canonical price and identity, is atomic/idempotent, an
  await f.service.guardDog(request(f,'release',{id:first.dogId}));
  await f.service.guardDog(request(f,'activate',{id:waiting.id}));
  assert.equal((await f.db.doc('groups/A/users/alice').get()).data().keep,'unchanged');
- await f.service.guardDog(req);assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.guardDogs.length,1,'replayed rent cannot recreate a released dog');
+ await f.service.guardDog(req);assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.guardDogs.length,2,'replayed rent cannot duplicate a paused dog');
 });
 test('concurrent rental, insufficient coins, failed writes and unauthenticated/group-mismatched requests cannot create free leases',async()=>{
  const f=await fixture();
@@ -70,4 +70,45 @@ test('trusted corgi catalogue and rental enforce 100/500 pricing, idempotency an
  await poor.db.doc('groups/A/users/alice').set({...poorUser,farm:{...poorUser.farm,coins:99}});
  await assert.rejects(poor.service.guardDog(request(poor,'rent',{breedId:'corgi',days:1})),{code:'failed-precondition'});
  assert.equal((await poor.db.doc('groups/A/users/alice').get()).data().farm.coins,99);
+});
+
+test('server pauses exact balance, ignores forged time, resumes after storage and never reapplies old receipts',async()=>{
+ const f=await fixture(),base=f.now(),ref=f.db.doc('groups/A/users/alice');
+ const catalogue=await f.service.guardDog({...f.request(),data:{groupId:'A',action:'catalog'}});
+ assert.equal(catalogue.leasePolicy,'pausable-v1');
+ const rented=await f.service.guardDog(request(f,'rent',{breedId:'pyrenees',days:1}));
+ await f.service.guardDog(request(f,'resume',{id:rented.dogId}));
+ f.clock(base+6*3600000+123);
+ const pause=request(f,'pause',{id:rented.dogId,remainingMs:999999999999,days:999});
+ await f.service.guardDog(pause);
+ let farm=(await ref.get()).data().farm;const saved=18*3600000-123;
+ assert.equal(farm.guardDogs[0].remainingMs,saved);assert.equal(farm.guardDogs[0].startedAt,null);assert.equal(farm.guardDogs[0].expiresAt,null);
+ assert.equal(farm.coins,20);
+ await f.service.guardDog(request(f,'pause',{id:rented.dogId}));
+ f.clock(base+100*86400000);await f.service.guardDog(request(f,'expire'));
+ assert.equal((await ref.get()).data().farm.guardDogs[0].remainingMs,saved);
+ const resume=request(f,'resume',{id:rented.dogId,remainingMs:86400000,expiresAt:999999999999});
+ await f.service.guardDog(resume);assert.equal((await ref.get()).data().farm.guardDogs[0].expiresAt,f.now()+saved);
+ assert.equal((await f.service.guardDog(pause)).replayed,true);
+ farm=(await ref.get()).data().farm;assert.equal(farm.guardDogs[0].startedAt,f.now());assert.equal(farm.coins,20);
+ f.clock(f.now()+saved);await f.service.guardDog(request(f,'expire'));
+ assert.deepEqual((await ref.get()).data().farm.guardDogs,[]);
+ await assert.rejects(f.service.guardDog(request(f,'resume',{id:rented.dogId})),{code:'failed-precondition'});
+ await f.service.guardDog(resume);assert.deepEqual((await ref.get()).data().farm.guardDogs,[],'replayed resume cannot recreate an expired dog');
+});
+
+test('pause failure is atomic and concurrent resumes still allow only one active dog',async()=>{
+ const f=await fixture(),ref=f.db.doc('groups/A/users/alice'),base=f.now();
+ const first=await f.service.guardDog(request(f,'rent',{breedId:'pyrenees',days:1}));
+ const second=await f.service.guardDog(request(f,'rent',{breedId:'beagle',days:1}));
+ await f.service.guardDog(request(f,'resume',{id:first.dogId}));f.clock(base+1000);
+ f.db.failAward=true;const pause=request(f,'pause',{id:first.dogId});
+ await assert.rejects(f.service.guardDog(pause),/simulated storage failure/);
+ assert.equal((await ref.get()).data().farm.guardDogs[0].startedAt,base);
+ await f.service.guardDog(pause);const saved=(await ref.get()).data().farm.guardDogs[0].remainingMs;
+ const results=await Promise.allSettled([f.service.guardDog(request(f,'resume',{id:first.dogId})),f.service.guardDog(request(f,'resume',{id:second.dogId}))]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+ const dogs=(await ref.get()).data().farm.guardDogs;
+ assert.equal(dogs.filter(d=>Number.isFinite(d.startedAt)).length,1);assert.equal(dogs[0].expiresAt,f.now()+saved);
+ assert.equal((await ref.get()).data().farm.coins,0);
 });

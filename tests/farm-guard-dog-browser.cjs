@@ -50,7 +50,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.route('**/js/farm/operations-client.js*',r=>r.fulfill({contentType:'text/javascript',body:`
  import {notify} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
  export function createGameOperationsClient(context){return{guardDog:async(action,payload={})=>{
- const user=JSON.parse(sessionStorage.getItem('familyCheckInUser'));const result=await window.__guardDogAPI({action,payload,accountId:user.accountId,groupId:context.groupId,now:Date.now(),requestId:crypto.randomUUID()});await notify();return result;}};}
+ const user=JSON.parse(sessionStorage.getItem('familyCheckInUser'));(window.__guardCalls??=[]).push(action);const result=await window.__guardDogAPI({action,payload,accountId:user.accountId,groupId:context.groupId,now:Date.now(),requestId:crypto.randomUUID()});await notify();if(action==='catalog'&&window.__oldGuardAPI)delete result.leasePolicy;return result;}};}
  `}));
  await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('/tmp/kids-phaser.js','utf8')}));
  await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:sdk}));
@@ -67,6 +67,43 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const identity=async(accountId,name)=>{await page.evaluate(({accountId,name})=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name})),{accountId,name});await page.reload();await ready();};
  const rent=async(days,breedId='pyrenees')=>{await scene('ShopScene');await page.evaluate(breedId=>{const s=__farmGame.scene.getScene('ShopScene');s.selectShopCategory('dogs');s.catalog.buy.find(row=>row[0]===`guard:${breedId}`)[3]();},breedId);if(await page.getByLabel('租用天數').isEnabled())await page.getByLabel('租用天數').fill(String(days));};
  await page.goto(base+'/farmgame.html');await ready();
+ const resetGuardFixture=async()=>{docs['groups/A/users/owner'].farm.guardDogs=[];await page.evaluate(async()=>{const {notify}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await notify();});};
+ if(process.env.GUARD_PAUSE_ONLY){
+  await rent(1);await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  const first=docs['groups/A/users/owner'].farm.guardDogs[0];
+  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+  await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  const started=docs['groups/A/users/owner'].farm.guardDogs[0].startedAt;await clock(started+6*3600000);
+  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+  await page.evaluate(()=>{window.__oldGuardAPI=true;window.__guardCalls=[];});
+  await page.getByRole('button',{name:'解除護衛並保留時間',exact:true}).click();await page.getByRole('alert').filter({hasText:'服務更新中'}).waitFor();
+  assert.equal(docs['groups/A/users/owner'].farm.guardDogs[0].startedAt,started);
+  assert.equal(await page.evaluate(()=>__guardCalls.includes('pause')),false);
+  await page.evaluate(()=>{window.__oldGuardAPI=false;});
+  await page.getByRole('button',{name:'解除護衛並保留時間',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  let saved=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.id===first.id);
+  assert.equal(saved.remainingMs,18*3600000);assert.equal(saved.startedAt,null);assert.equal(saved.expiresAt,null);
+  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+  assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('待命・餘 18時0分'));
+  await page.screenshot({path:'/tmp/guard-paused-balance.png',fullPage:true});await page.getByRole('button',{name:'取消',exact:true}).click();
+  const savedCoins=docs['groups/A/users/owner'].farm.coins;
+  await clock(started+20*DAY);await identity('owner','主人');await scene('MyFarmScene');
+  assert.equal(await page.evaluate(()=>!!__farmGame.scene.getScene('MyFarmScene').guardDog),false);
+  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+  await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  saved=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.id===first.id);assert.equal(saved.expiresAt,started+20*DAY+18*3600000);assert.equal(docs['groups/A/users/owner'].farm.coins,savedCoins);
+  await rent(1,'beagle');await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:beagle','米格魯'));assert.equal(await page.getByRole('button',{name:'開始護衛',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'取消',exact:true}).click();
+  await clock(started+20*DAY+90*60000);await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+  await page.getByRole('button',{name:'解除護衛並保留時間',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  assert.equal(docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.id===first.id).remainingMs,16.5*3600000);
+  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:beagle','米格魯'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+  await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_beagle');
+  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));
+  assert.ok((await page.locator('[data-guard-dog-dialog]').innerText()).includes('待命・餘 16時30分'));await page.screenshot({path:'/tmp/guard-switched-preserved.png',fullPage:true});
+  assert.deepEqual(errors,[]);console.log('PASS: old-service protection, release to warehouse, exact remaining balance, offline storage, resume without charge, single active guard and breed switching');return;
+ }
+
  const {settlePoultry}=await import('../js/farm/poultry.js');
  const notices=()=>Object.keys(docs).filter(path=>path.startsWith('messages/guard-'));
  if(!process.env.CORGI_ONLY){
@@ -107,8 +144,9 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await rent(1);await page.getByRole('button',{name:'確認租用',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  const coins=docs['groups/A/users/owner'].farm.coins;
- await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
- assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,0);assert.equal(docs['groups/A/users/owner'].farm.coins,coins);
+ await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'解除護衛並保留時間',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,1);assert.equal(docs['groups/A/users/owner'].farm.guardDogs[0].remainingMs,DAY);assert.equal(docs['groups/A/users/owner'].farm.coins,coins);
+ await resetGuardFixture(); // Independent rental/concurrency fixture; production pauses retain the dog.
  // Concurrent requests use the same transactional uniqueness and activation rules.
  const concurrency=await page.evaluate(async()=>{
   const store=await import('/js/farm/guard-dog-store.js'),core=await import('/js/farm/guard-dog-core.js');
@@ -127,7 +165,8 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
   }finally{delete core.GUARD_DOG_BREEDS.future;}
  });
  assert.equal(concurrency.rent.filter(s=>s==='fulfilled').length,1);assert.equal(concurrency.activate.filter(s=>s==='fulfilled').length,1);
- assert.equal(docs['groups/A/users/owner'].farm.coins,coins-100);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,0);
+ assert.equal(docs['groups/A/users/owner'].farm.coins,coins-100);assert.equal(docs['groups/A/users/owner'].farm.guardDogs.length,2);
+ await resetGuardFixture(); // Begin a separate price/breed scenario with fresh leases.
  // The real second breed uses its own quote, art, interception and notification.
  await rent(8,'beagle');await page.getByRole('heading',{name:'租用米格魯',exact:true}).waitFor();
  await page.getByText('8 天 · 120 金幣',{exact:true}).waitFor();
@@ -156,7 +195,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await clock(beagleBlock);await page.evaluate(async()=>{Math.random=()=>.33;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
  assert.equal(docs['groups/A/users/owner'].farm.eggsReady,eggsBefore-1);assert.equal(docs['groups/A/users/thief'].farm.inventoryEggs,inventoryBefore+1);
  await identity('owner','主人');await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:beagle','米格魯'));
- await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ await page.getByRole('button',{name:'解除護衛並保留時間',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_dog');
  assert.equal(docs['groups/A/users/owner'].farm.coins,coins-300);
@@ -205,7 +244,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await page.evaluate(async()=>{const {notify}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');await notify();});
  await scene('WarehouseScene');await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:collie','邊境牧羊犬'));
  assert.equal(await page.getByRole('button',{name:'開始護衛',exact:true}).isDisabled(),true);await page.getByRole('button',{name:'取消',exact:true}).click();
- await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'解除護衛並放棄租期',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
+ await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:pyrenees','大白熊犬'));await page.getByRole('button',{name:'解除護衛並保留時間',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  await page.evaluate(()=>__farmGame.scene.getScene('WarehouseScene').handleItemClick('guard:collie','邊境牧羊犬'));await page.getByRole('button',{name:'開始護衛',exact:true}).click();await page.locator('[data-guard-dog-dialog]').waitFor({state:'detached'});
  collie=docs['groups/A/users/owner'].farm.guardDogs.find(d=>d.breedId==='collie');assert.equal(collie.expiresAt,collie.startedAt+DAY);
  await scene('MyFarmScene');await page.waitForFunction(()=>__farmGame.scene.getScene('MyFarmScene').guardDog?.texture.key==='guard_collie');
@@ -237,6 +276,7 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  const readyAtRelease=Object.values(settlePoultry(docs['groups/A/users/owner'].farm,collieBlock).ready).reduce((sum,count)=>sum+count,0);
  await clock(collieBlock);await page.evaluate(async()=>{Math.random=()=>.8;await __farmGame.scene.getScene('VisitScene').attemptSteal();});assert.equal(docs['groups/A/users/owner'].farm.eggsReady,readyAtRelease-1);
  await clock(collie.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
+ await resetGuardFixture(); // Isolate catalogue-price changes from prior paused leases.
  // Phase 2: admin overrides are read by the real shop, and a stale quote cannot charge a different price.
  const adminService=createService({db:backendDB,auth:{getUser:async()=>({disabled:false,customClaims:{role:'admin'}})},now:()=>backendNow});
  async function setPrice(dayPrice,weekPrice,expectedRevision){
@@ -330,6 +370,6 @@ export const addDoc=async(ref,data)=>{const id=crypto.randomUUID();await setDoc(
  await clock(corgiBlock);await page.evaluate(async()=>{Math.random=()=>.4;await __farmGame.scene.getScene('VisitScene').attemptSteal();});
  assert.equal(docs['groups/A/users/owner'].farm.eggsReady,corgiReady-1);
  await clock(corgi.expiresAt);await page.waitForFunction(()=>!__farmGame.scene.getScene('VisitScene').guardDog);
- assert.deepEqual(errors,[]);console.log(process.env.CORGI_ONLY?'PASS: corgi rental 100/500, activation, slower patrol, sitting, full-minute sleep and scene resume, avoidance, 40%/2h boundary and expiry':'PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and irreversible release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal; corgi 100/500, warehouse activation, compact breed art, slower patrol/sitting/60s sleep, hen avoidance, 40%/2h interception and expiry');
+ assert.deepEqual(errors,[]);console.log(process.env.CORGI_ONLY?'PASS: corgi rental 100/500, activation, slower patrol, sitting, full-minute sleep and scene resume, avoidance, 40%/2h boundary and expiry':'PASS: arbitrary rental price, duplicate protection, pending clock, warehouse activation, resting/walking dog, 70% interception with retry-safe owner/channel notification, 4h/1h cooldowns, unguarded theft, cross-group routing, expiry and pausable release; beagle 33%/2h, 20/100 pricing, breed-specific art/text and real two-breed switching; 10-hen body separation while patrolling, nesting and resizing; collie visible at 200/1000 but UI and server reject new rentals despite client tampering; existing collie 80%/4h, activation/expiry, 60% patrol, hen avoidance and normal laying; live admin pricing and stale-price refusal; corgi 100/500, warehouse activation, compact breed art, slower patrol/sitting/60s sleep, hen avoidance, 40%/2h interception and expiry');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

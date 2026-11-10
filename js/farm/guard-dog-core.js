@@ -37,8 +37,20 @@ export function rentalPrice(breedId, days, catalog = GUARD_DOG_BREEDS) {
     return price;
 }
 
+/** 值勤依絕對期限計算；待命保存毫秒餘額，缺少新欄位的舊待命租約沿用原天數。 */
+export function guardDogRemainingMs(dog, now = Date.now()) {
+    if (!dog || !Number.isSafeInteger(dog.days) || dog.days < 1) return 0;
+    const full = dog.days * DAY_MS;
+    if (!Number.isSafeInteger(full)) return 0;
+    if (Number.isFinite(dog.startedAt)) {
+        return Number.isSafeInteger(dog.expiresAt) ? Math.min(full, Math.max(0, dog.expiresAt - now)) : 0;
+    }
+    if (!Object.hasOwn(dog, 'remainingMs')) return full;
+    return Number.isSafeInteger(dog.remainingMs) && dog.remainingMs > 0 && dog.remainingMs <= full ? dog.remainingMs : 0;
+}
+
 export function guardDogLeases(farm, now = Date.now()) {
-    return (Array.isArray(farm?.guardDogs) ? farm.guardDogs : []).filter(dog => dog && (!Number.isFinite(dog.startedAt) || dog.expiresAt > now));
+    return (Array.isArray(farm?.guardDogs) ? farm.guardDogs : []).filter(dog => guardDogRemainingMs(dog, now) > 0);
 }
 export const activeGuardDog = (farm, now = Date.now()) => guardDogLeases(farm, now).find(dog => Number.isFinite(dog.startedAt) && dog.expiresAt > now) || null;
 
@@ -48,23 +60,26 @@ export function rentGuardDog(farm, breedId, days, id, now = Date.now(), catalog 
     const price = rentalPrice(breedId, days, catalog), dogs = guardDogLeases(farm, now);
     if (dogs.some(dog => dog.breedId === breedId)) throw new Error('同一品種同時只能租用一隻');
     if (!Number.isFinite(farm.coins) || farm.coins < price) throw new Error('金幣不足');
-    return { 'farm.coins': farm.coins - price, 'farm.guardDogs': [...dogs, { id, breedId, days, paid: price, rentedAt: now, startedAt: null, expiresAt: null }] };
+    return { 'farm.coins': farm.coins - price, 'farm.guardDogs': [...dogs, { id, breedId, days, paid: price, rentedAt: now, startedAt: null, expiresAt: null, remainingMs: days * DAY_MS }] };
 }
 
 export function activateGuardDog(farm, id, now = Date.now()) {
     const dogs = guardDogLeases(farm, now), dog = dogs.find(item => item.id === id);
     if (!dog || !GUARD_DOG_BREEDS[dog.breedId] || !Number.isSafeInteger(dog.days) || dog.days < 1) throw new Error('找不到可用的護衛犬');
     if (Number.isFinite(dog.startedAt)) throw new Error('這隻護衛犬已在護衛中，不能重設租期');
-    if (activeGuardDog(farm, now)) throw new Error('請先解除目前的護衛犬，解除會放棄剩餘租期');
-    const expiresAt = now + dog.days * DAY_MS;
+    if (activeGuardDog(farm, now)) throw new Error('請先解除目前的護衛犬回到倉庫，剩餘時間會保留');
+    const remainingMs = guardDogRemainingMs(dog, now), expiresAt = now + remainingMs;
     if (!Number.isSafeInteger(expiresAt) || expiresAt > 8640000000000000) throw new Error('租用天數過大');
-    return { 'farm.guardDogs': dogs.map(item => item.id === id ? { ...item, startedAt: now, expiresAt } : item) };
+    return { 'farm.guardDogs': dogs.map(item => item.id === id ? { ...item, startedAt: now, expiresAt, remainingMs } : item) };
 }
 
 export function releaseGuardDog(farm, id, now = Date.now()) {
     const dogs = guardDogLeases(farm, now), dog = dogs.find(item => item.id === id);
-    if (!dog || !Number.isFinite(dog.startedAt)) throw new Error('只有護衛中的犬隻可以提前解除');
-    return { 'farm.guardDogs': dogs.filter(item => item.id !== id) };
+    if (!dog) throw new Error('找不到可用的護衛犬');
+    // 已回倉庫的重複解除是無操作，不重算餘額，也不恢復完整天數。
+    if (!Number.isFinite(dog.startedAt)) return { 'farm.guardDogs': dogs };
+    const remainingMs = guardDogRemainingMs(dog, now);
+    return { 'farm.guardDogs': dogs.map(item => item.id === id ? { ...item, startedAt: null, expiresAt: null, remainingMs } : item) };
 }
 
 export function stealBlockedUntil(farm, key, legacyAccountId) {
@@ -78,7 +93,6 @@ export function guardDogInterception(farm, roll, now = Date.now()) {
 }
 
 export function guardDogStatus(dog, now = Date.now()) {
-    if (!Number.isFinite(dog.startedAt)) return `待命・租期 ${dog.days} 天`;
-    const minutes = Math.max(0, Math.ceil((dog.expiresAt - now) / 60000));
-    return `護衛中・餘 ${Math.floor(minutes / 60)}時${minutes % 60}分`;
+    const minutes = Math.max(0, Math.ceil(guardDogRemainingMs(dog, now) / 60000));
+    return `${Number.isFinite(dog.startedAt) ? '護衛中' : '待命'}・餘 ${Math.floor(minutes / 60)}時${minutes % 60}分`;
 }

@@ -47,3 +47,23 @@ test('Auth emulator: native password sign-in has signed role claim; admin API ac
         await signOut(c);assert.equal(c.currentUser,null);await deleteApp(a);
     }finally{if(user)await auth.deleteUser(user.uid);}
 });
+
+test('Firestore emulator: paused leases preserve balances and competing resumes keep one guard',async()=>{
+    await env.clearFirestore();const f=await fixture(db),base=f.now();
+    const request=(action,payload={})=>({...f.request(),data:{groupId:'A',action,...payload,requestId:require('node:crypto').randomUUID()}});
+    const first=await f.service.guardDog(request('rent',{breedId:'pyrenees',days:1}));
+    const second=await f.service.guardDog(request('rent',{breedId:'beagle',days:1}));
+    await f.service.guardDog(request('resume',{id:first.dogId}));f.clock(base+6*3600000+123);
+    const pause=request('pause',{id:first.dogId,remainingMs:999999999999});await f.service.guardDog(pause);
+    const ref=db.doc('groups/A/users/alice'),saved=18*3600000-123;
+    assert.equal((await ref.get()).data().farm.guardDogs[0].remainingMs,saved);
+    f.clock(base+100*86400000);await f.service.guardDog(request('expire'));
+    const results=await Promise.allSettled([f.service.guardDog(request('resume',{id:first.dogId})),f.service.guardDog(request('resume',{id:second.dogId}))]);
+    assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+    let farm=(await ref.get()).data().farm;
+    assert.equal(farm.guardDogs.length,2);assert.equal(farm.guardDogs.filter(d=>Number.isFinite(d.startedAt)).length,1);assert.equal(farm.coins,0);
+    const active=farm.guardDogs.find(d=>Number.isFinite(d.startedAt));
+    assert.equal(active.expiresAt,f.now()+(active.id===first.dogId?saved:86400000));
+    assert.equal((await f.service.guardDog(pause)).replayed,true);
+    farm=(await ref.get()).data().farm;assert.equal(farm.guardDogs.find(d=>d.id===active.id).startedAt,f.now());
+});

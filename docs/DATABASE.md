@@ -127,7 +127,9 @@
 | gardenCatchCount、moleLastMilestone、moleChallenge、moleResults | number、number、Object、Array<Object>；抓蟲里程碑、持久化挑戰與結算 |
 | combatKills、giantLastMilestone、giantChallenge、giantResults | Map<number>、number、Object、Array<Object>；擊殺門檻與遠古巨人結果 |
 | cobraLastMilestone、cobraChallenge、cobraResults | number、Object、Array<Object>；蛇王遭遇與結算 |
-| guardDogs | Array<Object>；id、breedId、days、paid、rentedAt:ms、startedAt:ms|null、expiresAt:ms|null；首次啟用才起算租期 |
+| guardDogs | Array<Object>；id、breedId、days、paid、rentedAt:ms、startedAt:ms|null、expiresAt:ms|null、remainingMs:number（毫秒餘額）；待命不扣時，啟用／解除由後端更新；舊待命租約缺少 remainingMs 時按原 days 相容 |
+
+護衛犬值勤中的 `remainingMs` 為本次啟用餘額快照，即時餘額應以 `expiresAt－目前時間` 計算；待命時才直接使用保存的 `remainingMs`。統一透過 `guardDogRemainingMs` 讀取，避免誤把值勤餘額顯示成固定值。
 
 其他怪物、偷蛋通知、冷卻與排行榜欄位以 `farm-*.md`、各 rules／store 為準；不同遭遇不可假設都有相同持久化 Schema。
 

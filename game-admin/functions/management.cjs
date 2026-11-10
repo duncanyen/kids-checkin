@@ -33,7 +33,7 @@ function createManagement({db,now}){
             breeds[id]={...configured,configuredRentable:configured.rentable!==false,rentable:system.values.guardDogRentalsEnabled&&configured.rentable!==false,
                 availability:!system.values.guardDogRentalsEnabled?'paused':configured.rentable===false?'closed':'open'};
         }
-        return{breeds,revision:data.revision||0,updatedAt:data.updatedAt||null,settings:system.values};
+        return{breeds,revision:data.revision||0,updatedAt:data.updatedAt||null,settings:system.values,leasePolicy:'pausable-v1'};
     }
     function validateGuard(value){
         const dayPrice=D.integer(value.dayPrice,1,1000000),weekPrice=D.integer(value.weekPrice,dayPrice,dayPrice*7);

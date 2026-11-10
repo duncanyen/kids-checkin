@@ -16,7 +16,7 @@ match /groups/{groupId}/users/{accountId} {
 match /ops_guard_requests/{path=**} {allow read,write:if false;}
 }}`;
 let env;
-test.before(async()=>{env=await initializeTestEnvironment({projectId:'demo-nexus-ops',firestore:{host:'127.0.0.1',port:8085,rules}});});
+test.before(async()=>{env=await initializeTestEnvironment({projectId:'demo-nexus-ops',firestore:{host:'127.0.0.1',port:8085,rules}});await env.clearFirestore();});
 test.after(async()=>env?.cleanup());
 test('direct client writes cannot create, replace, append, remove or extend guard leases; unrelated farm updates still work',async()=>{
  const client=env.authenticatedContext('alice').firestore(),ref=doc(client,'groups/A/users/alice');
@@ -37,4 +37,15 @@ test('players, anonymous clients and browser admin claims cannot forge trusted g
  for(const context of [env.unauthenticatedContext(),env.authenticatedContext('alice'),env.authenticatedContext('admin',{role:'admin'})]){
   const ref=doc(context.firestore(),'ops_guard_requests/forged');await assertFails(setDoc(ref,{paid:0}));await assertFails(getDoc(ref));
  }
+});
+
+test('paused balance and activation timestamps cannot be changed directly by a client',async()=>{
+ const paused={id:'paused-lease',breedId:'corgi',days:1,paid:100,startedAt:null,expiresAt:null,remainingMs:18*3600000};
+ await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),'groups/A/users/alice'),{farm:{coins:500,guardDogs:[paused]}}));
+ const ref=doc(env.authenticatedContext('alice').firestore(),'groups/A/users/alice');
+ for(const changed of [{...paused,remainingMs:86400000},{...paused,startedAt:1,expiresAt:9999999999999},{...paused,days:100}]){
+  await assertFails(updateDoc(ref,{'farm.guardDogs':[changed]}));
+ }
+ await assertSucceeds(updateDoc(ref,{'farm.coins':499}));
+ assert.equal((await getDoc(ref)).data().farm.guardDogs[0].remainingMs,18*3600000);
 });

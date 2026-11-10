@@ -154,7 +154,7 @@ function createService({db,auth,now=Date.now}) {
     }
     async function guardDog(request){
         const identity=await playerSession(request),input=request.data||{};
-        const action=D.enumValue(input.action,['rent','activate','release','expire','catalog']);
+        const action=D.enumValue(input.action,['rent','activate','release','resume','pause','expire','catalog']);
         if(action==='catalog'){await throttle('guard-catalog:'+identity.uid,30,60000);return management.guardCatalog();}
         const requestId=D.requestId(input.requestId);
         await throttle('guard-dog:'+identity.uid,30,60000);
@@ -177,7 +177,7 @@ function createService({db,auth,now=Date.now}) {
             if(catalog&&input.expectedPrice!==undefined&&D.integer(input.expectedPrice,1,Number.MAX_SAFE_INTEGER)!==G.rentalPrice(payload.breedId,payload.days,catalog.breeds))D.fail('failed-precondition','租金已變更，請重新開啟商品確認');
             let patch;
             try{
-                patch=action==='rent'?G.rentGuardDog(farm,payload.breedId,payload.days,requestId,stamp,catalog.breeds):action==='activate'?G.activateGuardDog(farm,payload.id,stamp):action==='release'?G.releaseGuardDog(farm,payload.id,stamp):{'farm.guardDogs':G.guardDogLeases(farm,stamp)};
+                patch=action==='rent'?G.rentGuardDog(farm,payload.breedId,payload.days,requestId,stamp,catalog.breeds):['activate','resume'].includes(action)?G.activateGuardDog(farm,payload.id,stamp):['release','pause'].includes(action)?G.releaseGuardDog(farm,payload.id,stamp):{'farm.guardDogs':G.guardDogLeases(farm,stamp)};
             }catch(error){D.fail('failed-precondition',error.message||'護衛犬操作失敗');}
             const next={...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))};
             const response={action,dogId:action==='rent'?requestId:payload.id||null,paid:action==='rent'?farm.coins-next.coins:0};
