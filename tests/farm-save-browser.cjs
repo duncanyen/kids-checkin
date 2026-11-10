@@ -78,7 +78,7 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         assert.equal(writes.length, 0);
         assert.deepEqual(docs[owner].farm, farm);
         assert.equal(await page.locator('[data-hud-value=coins]').textContent(), '—');
-        assert.equal(await page.locator('[data-hud-value=coins]').evaluate(n=>!!n.closest('.farm-hud-stat').querySelector('svg')), true);
+        assert.equal(await page.locator('[data-hud-value=coins]').evaluate(n=>!!n.closest('.farm-hud-stat').querySelector('.farm-hud-panel-art')), true);
         assert.equal(await page.evaluate(() => window.__farmGame.scene.getScene('MyFarmScene').farmData), null);
         // Slow loading cannot enter a shop that would misleadingly show defaults.
         await page.locator('.farm-hud-bottom button[aria-label=商店]').dispatchEvent('click');

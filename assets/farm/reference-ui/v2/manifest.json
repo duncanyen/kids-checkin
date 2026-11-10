@@ -1,0 +1,53 @@
+{
+  "note": "V2 repair, source art is generated approximation of screenshot; not pixel-perfect. Use dock image with 5 transparent click zones. Render all dynamic text in DOM.",
+  "top_panels": {
+    "coins": "coins_panel_dynamic_base.png",
+    "eggs": "eggs_panel_dynamic_base.png",
+    "cleanliness": "cleanliness_panel_dynamic_base.png"
+  },
+  "countdown": "egg_countdown_dynamic_base.png",
+  "dock": "bottom_dock_no_badge.png",
+  "unread_badge": "mail_unread_badge.png",
+  "dock_dimensions": [
+    1495,
+    356
+  ],
+  "dock_hotzones": [
+    {
+      "id": "village",
+      "x": 145,
+      "y": 43,
+      "w": 248,
+      "h": 238
+    },
+    {
+      "id": "shop",
+      "x": 392,
+      "y": 43,
+      "w": 247,
+      "h": 238
+    },
+    {
+      "id": "warehouse",
+      "x": 645,
+      "y": 43,
+      "w": 245,
+      "h": 238
+    },
+    {
+      "id": "collection",
+      "x": 898,
+      "y": 43,
+      "w": 240,
+      "h": 238
+    },
+    {
+      "id": "mail",
+      "x": 1148,
+      "y": 43,
+      "w": 236,
+      "h": 238
+    }
+  ],
+  "warning": "Do not use previous individually cropped bottom icons: adjacent components were included."
+}

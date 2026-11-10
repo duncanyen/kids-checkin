@@ -17,10 +17,48 @@ async function clickBack(page,key) {
 // 使用 farm-mail-browser 的隔離 Firebase fixture 與真正 Phaser 場景。
 module.exports = async function checkFarmHud(page) {
     const dock = page.locator('.farm-hud-bottom');
-    assert.ok(await page.evaluate(async()=>{
-        const image=new Image(); image.src='/assets/farm/ui-icon-pedestal.png';
-        await image.decode(); return image.naturalWidth>0;
+    const referenceImages = await page.locator('.farm-hud-art--reference img').evaluateAll(async nodes => {
+        await Promise.all(nodes.map(node => node.decode()));
+        return nodes.map(node => ({file:node.getAttribute('src').split('/').at(-1),width:node.naturalWidth,height:node.naturalHeight}));
+    });
+    assert.deepEqual(referenceImages.map(image => image.file),['settings.png','tasks.png','trophy.png','gift.png']);
+    assert.ok(referenceImages.every(image => image.width===200 && image.height===200));
+    assert.equal(await page.locator('.farm-hud-settings svg').count(),0);
+    assert.deepEqual(await page.locator('.farm-hud-settings').evaluate(node=>{
+        const style=getComputedStyle(node);
+        return {background:style.backgroundImage,shadow:style.boxShadow,border:style.borderTopWidth};
+    }),{background:'none',shadow:'none',border:'0px'});
+    assert.ok(await page.locator('.farm-hud-panel-art,.farm-hud-dock-art,.farm-hud-countdown>img').evaluateAll(async nodes => {
+        await Promise.all(nodes.map(node => node.decode())); return nodes.length===5 && nodes.every(node=>node.naturalWidth>0);
     }));
+    assert.equal(await dock.locator('.farm-hud-art,svg').count(),0);
+    assert.equal(await page.locator('.farm-hud-stat,.farm-hud-settings,.farm-hud-side button,.farm-hud-bottom button,.farm-hud-countdown').count(),13);
+    assert.equal(await page.locator('.farm-hud-status svg').count(),0);
+    await page.waitForSelector('.farm-hud-countdown:not([hidden])');
+    assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').timerText.visible),false);
+    // UI 直接鏡射場景字串，不複製產蛋公式；非計時提示與重試事件仍正常。
+    await page.evaluate(()=>{
+        const timer=__farmGame.scene.getScene('MyFarmScene').timerText;
+        window.__hudTimerBefore=timer.text; window.__hudSetText=timer.setText;
+        timer.setText=function(){ return this; };
+        __hudSetText.call(timer,'布雷斯雞下顆蛋 0:38:52');
+    });
+    await page.waitForFunction(()=>document.querySelector('.farm-hud-countdown-time').textContent==='0:38:52');
+    assert.equal(await page.locator('.farm-hud-countdown-label').textContent(),'布雷斯雞下顆蛋');
+    await page.evaluate(()=>{
+        __hudSetText.call(__farmGame.scene.getScene('MyFarmScene').timerText,'存檔未確認，點此重試');
+        window.__hudRetry=__farmGame.retryFarmSave; window.__hudRetryCount=0;
+        __farmGame.retryFarmSave=()=>window.__hudRetryCount++;
+    });
+    await page.waitForFunction(()=>document.querySelector('.farm-hud-countdown-label').textContent==='存檔未確認，點此重試');
+    assert.equal(await page.locator('.farm-hud-countdown-time').textContent(),'');
+    await page.locator('.farm-hud-countdown').click();
+    assert.equal(await page.evaluate(()=>__hudRetryCount),1);
+    await page.evaluate(()=>{
+        __farmGame.retryFarmSave=__hudRetry;
+        const timer=__farmGame.scene.getScene('MyFarmScene').timerText;
+        timer.setText=__hudSetText; timer.setText(__hudTimerBefore);
+    });
     assert.equal(await page.locator('.farm-hud-label,.farm-hud-soon,.farm-hud-stat small').count(),0);
     assert.deepEqual(await dock.locator('button').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-label').split('，')[0].replace('開啟',''))),['村落','商店','倉庫','圖鑑','通知']);
     for (const name of ['每日任務，尚未開放','活動，尚未開放','圖鑑，尚未開放','設定，尚未開放']) {
@@ -32,7 +70,8 @@ module.exports = async function checkFarmHud(page) {
     }
     assert.equal(await page.locator('[data-hud-value=eggs]').textContent(),'3');
     const dot = await page.locator('.farm-mail-badge').evaluate(n=>({hidden:n.hidden,width:n.offsetWidth,height:n.offsetHeight,font:getComputedStyle(n).fontSize}));
-    assert.deepEqual(dot,{hidden:false,width:14,height:14,font:'0px'});
+    assert.equal(dot.hidden,false); assert.ok(dot.width>10 && Math.abs(dot.width-dot.height)<=1); assert.equal(dot.font,'0px');
+    assert.ok(await page.locator('.farm-mail-badge').evaluate(node=>getComputedStyle(node).backgroundImage.includes('mail_unread_badge.png')));
     await page.evaluate(() => {
         const g=__farmGame; window.__hudOriginal=g.registry.get('myFarmData');
         g.registry.set('myFarmData',{...__hudOriginal,poultryVersion:2,readyEggs:{hen:1,silkie:2,bresse:3,onagadori:4},eggsReady:10,coins:131300,cleanliness:85});
@@ -95,33 +134,45 @@ module.exports = async function checkFarmHud(page) {
 
     for (const viewport of [{width:320,height:740},{width:390,height:844},{width:1440,height:900},{width:844,height:390}]) {
         await page.setViewportSize(viewport); await page.waitForTimeout(200);
+        await page.evaluate(()=>{
+            window.__hudLayoutFarm=__farmGame.registry.get('myFarmData');
+            __farmGame.registry.set('myFarmData',{...__hudLayoutFarm,coins:987654321});
+        });
+        assert.equal(await page.locator('[data-hud-value=coins]').textContent(),'987,654,321');
         const layout=await page.evaluate(()=>{
             const dock=document.querySelector('.farm-hud-bottom').getBoundingClientRect();
             const canvas=document.querySelector('#game-container canvas').getBoundingClientRect();
             const coin=document.querySelector('.farm-hud-stat').getBoundingClientRect();
             const side=document.querySelector('.farm-hud-side').getBoundingClientRect();
-            const bases=[...document.querySelectorAll('.farm-hud-bottom button')].every(n=>getComputedStyle(n,'::before').backgroundImage.includes('ui-icon-pedestal.png'));
+            const countdown=document.querySelector('.farm-hud-countdown').getBoundingClientRect();
             const firstIcon=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
-            return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,bases,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
+            const panelRects=[...document.querySelectorAll('.farm-hud-stat,.farm-hud-settings')].map(n=>n.getBoundingClientRect());
+            return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,
+                countdownClear:countdown.top>=Math.max(...panelRects.map(r=>r.bottom)) && countdown.left>=firstIcon.right,
+                aligned:panelRects.slice(1).every((r,i)=>r.left>=panelRects[i].right),
+                textFits:[...document.querySelectorAll('[data-hud-value],.farm-hud-countdown>span')].every(n=>n.scrollWidth<=n.clientWidth+1),
+                buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
         });
-        const spacing=await page.evaluate(()=>{
-            const side=[...document.querySelectorAll('.farm-hud-side .farm-hud-art')].map(n=>n.getBoundingClientRect());
-            const bottom=[...document.querySelectorAll('.farm-hud-bottom .farm-hud-art')].map(n=>n.getBoundingClientRect());
-            return {side:side.slice(1).map((r,i)=>r.top-side[i].bottom),bottom:bottom.slice(1).map((r,i)=>r.left-bottom[i].right)};
+        const manifest=require('../../assets/farm/reference-ui/v2/manifest.json');
+        const zones=await dock.locator('button').evaluateAll(nodes=>nodes.map(node=>{
+            const b=node.getBoundingClientRect(),dock=node.parentElement.getBoundingClientRect();
+            return {id:node.dataset.dockZone,x:(b.left-dock.left)/dock.width,y:(b.top-dock.top)/dock.height,w:b.width/dock.width,h:b.height/dock.height};
+        }));
+        zones.forEach((zone,i)=>{
+            const expected=manifest.dock_hotzones[i]; assert.equal(zone.id,expected.id);
+            for(const [key,dimension] of [['x',1495],['y',356],['w',1495],['h',356]]) assert.ok(Math.abs(zone[key]-expected[key]/dimension)<.001);
         });
-        assert.ok(spacing.side.every(gap=>Math.abs(gap-96/2.54*.4)<.15));
-        assert.ok(spacing.bottom.every(gap=>Math.abs(gap-96/2.54*.3)<.15));
+        assert.ok(zones.slice(1).every((zone,i)=>zone.x>=zones[i].x+zones[i].w-.001));
         const sizes=await page.evaluate(()=>{
-            const art=document.querySelector('.farm-hud-bottom .farm-hud-art').getBoundingClientRect();
             const side=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
-            return {bottom:art.width,side:side.width,touch:[...document.querySelectorAll('.farm-hud-side button,.farm-hud-bottom button')].every(n=>{const b=n.getBoundingClientRect();return b.width>=44&&b.height>=44;})};
+            return {side:side.width,touch:[...document.querySelectorAll('.farm-hud-side button,.farm-hud-bottom button')].every(n=>{const b=n.getBoundingClientRect();return b.width>=44&&b.height>=44;})};
         });
         const narrow=viewport.width<359, short=viewport.height<=520;
-        assert.ok(Math.abs(sizes.bottom-(short?44:narrow?50:58)*.8)<.1);
         assert.ok(Math.abs(sizes.side-(short?41:narrow?49:56)*.8)<.1);
         assert.equal(sizes.touch,true);
-        assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1); assert.equal(layout.bases,true);
-        assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.ok(layout.buttons.every(Boolean));
+        assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1);
+        assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.equal(layout.countdownClear,true); assert.equal(layout.aligned,true); assert.equal(layout.textFits,true); assert.ok(layout.buttons.every(Boolean));
+        await page.evaluate(()=>__farmGame.registry.set('myFarmData',__hudLayoutFarm));
         await page.waitForSelector('.farm-hud-toast',{state:'hidden'});
         await page.screenshot({path:`/tmp/farm-hud-${viewport.width}.png`});
     }

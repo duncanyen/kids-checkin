@@ -63,3 +63,37 @@
 .farm-hud-bottom .farm-hud-button::before{left:50%;right:auto;width:calc(var(--farm-hud-icon-size) + 7px);margin-left:calc((var(--farm-hud-icon-size) + 7px) * -.5)}
 @media(max-width:359px){.farm-hud-side{--farm-hud-side-icon-size:49px}}
 @media(max-height:520px){.farm-hud-side{--farm-hud-side-icon-size:41px}}
+
+/* 使用提供的完整木牌圖片；透明邊緣、木紋及陰影皆來自原素材。 */
+.farm-hud-art--reference{background:none;filter:none}
+.farm-hud-art--reference img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.farm-hud-settings{border:0;border-radius:0;padding:0;background:none;box-shadow:none;filter:none}
+.farm-hud-settings .farm-hud-art{width:100%;height:100%}
+
+/* V2：圖片自帶木紋、邊框、鉚釘與陰影；文字只疊在空白區域。 */
+.farm-hud-stat[data-panel]{display:block;aspect-ratio:526/243;height:auto;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.farm-hud-panel-art{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.farm-hud-stat[data-panel]>span{position:absolute;left:36%;right:7%;top:42%;bottom:10%;display:flex;align-items:center;justify-content:center}
+.farm-hud-stat[data-panel] strong{font-size:clamp(10px,2.9vw,19px);color:#fff4cf}
+.farm-hud-stat[data-panel] strong.is-long{font-size:clamp(8px,2.2vw,14px)}
+
+/* 一張底座圖搭配 manifest 原圖座標熱區；不混用舊版單顆切圖。 */
+.farm-hud-bottom.farm-hud-bottom--v2{display:block;width:min(calc(100% - max(8px,env(safe-area-inset-left)) - max(8px,env(safe-area-inset-right))),620px);height:auto;aspect-ratio:1495/356;padding:0;bottom:max(6px,env(safe-area-inset-bottom));gap:0;background:none;box-shadow:none}
+.farm-hud-dock-art{display:block;width:100%;height:100%;pointer-events:none}
+.farm-hud-bottom--v2 .farm-hud-button{position:absolute;inset:auto;align-self:auto;min-width:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.farm-hud-bottom--v2 .farm-hud-button::before{content:none}
+.farm-hud-bottom--v2 .farm-hud-button:is([aria-current=page],.is-selected){outline:2px solid #ffe8a0;outline-offset:-4px}
+.farm-hud .farm-hud-bottom--v2 .farm-mail-badge{position:absolute;left:62.2881356%;top:-10.5042017%;right:auto;width:38.1355932%;min-width:0;height:auto;aspect-ratio:1;border:0;border-radius:0;padding:0;background:url('../assets/farm/reference-ui/v2/mail_unread_badge.png') center/contain no-repeat;box-shadow:none;font-size:0;pointer-events:none}
+
+.farm-hud-countdown{position:absolute;display:block;aspect-ratio:897/235;height:auto;padding:0;border:0;border-radius:0;background:none;box-shadow:none;pointer-events:auto;cursor:pointer;color:#fff4cf;font-family:inherit;font-weight:700}
+.farm-hud-countdown[hidden]{display:none}
+.farm-hud-countdown>img{display:block;width:100%;height:100%;pointer-events:none}
+.farm-hud-countdown>span{position:absolute;top:43%;bottom:9%;display:flex;align-items:center;white-space:nowrap;font-size:clamp(11px,3.4vw,19px);text-shadow:0 1px #241609;pointer-events:none}
+.farm-hud-countdown-label{left:24%;right:8%;justify-content:center}
+.farm-hud-countdown.has-time .farm-hud-countdown-label{right:33%}
+.farm-hud-countdown-time{left:69%;right:7%;justify-content:center;color:#ffdf75;font-variant-numeric:tabular-nums}
+.farm-hud-countdown:focus-visible{outline:2px solid #fff4cf;outline-offset:2px}
+@media(max-height:520px){.farm-hud-bottom.farm-hud-bottom--v2{width:min(calc(100% - 16px),360px)}}
+
+.farm-hud-countdown:not(.has-time) .farm-hud-countdown-label{white-space:normal;line-height:1.15;text-align:center}
+.farm-hud-bottom.farm-hud-bottom--v2[hidden]{display:none}

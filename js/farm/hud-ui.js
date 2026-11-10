@@ -1,14 +1,23 @@
 import { poultryState } from './poultry.js';
 
+import { FARM_DOCK, placeFarmDockButton, splitFarmCountdown } from './hud-layout.js';
+
 // 共用 HUD 只讀取 BootScene 維護的存檔快照，不另外建立 Firebase 訂閱。
-const glyphs = {
-    coin: '<circle cx="24" cy="24" r="20" fill="#ed9719"/><circle cx="24" cy="23" r="16" fill="#ffd94c"/><path d="m24 10 4 8 9 1-7 6 2 10-8-5-8 5 2-10-7-6 9-1Z" fill="#ffa719"/>',
-    egg: '<path d="M24 3C14 3 5 22 6 33c2 18 34 18 36 0C43 22 34 3 24 3Z" fill="#ffe1a1"/><path d="M17 12c-5 5-7 13-6 17" fill="none" stroke="#fff9dd" stroke-width="5"/>',
-    broom: '<path d="m30 5 6 3-15 27-6-4Z" fill="#bd7b3e"/><path d="m12 23 15 9-7 14L2 36Z" fill="#ffcb43"/><path d="m10 29 13 7M9 34l-3 4m9-1-3 5m9-1-2 4" fill="none"/><path d="m35 25 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z" fill="#ffe97b"/>',
-    gear: '<path d="m20 3 8 0 1 6 5 2 5-3 5 6-4 5 1 5 6 3-3 8-6-1-4 4-1 7h-9l-1-7-5-2-6 2-4-7 5-4-1-6-4-4 5-7 6 2 4-3Z" fill="#ffca69"/><circle cx="25" cy="24" r="8" fill="#fff3c7"/>'
-};
-const icon = kind => `<span class="farm-hud-art farm-hud-art--${kind}" aria-hidden="true"></span>`;
-const glyph = kind => `<svg viewBox="0 0 50 50" aria-hidden="true" stroke="#64381b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${glyphs[kind]}</svg>`;
+const assetV2 = file => `assets/farm/reference-ui/v2/${file}`;
+// 保留第一階段已完成的四張圖片與按鈕。
+const referenceIcons = new Set(['tasks', 'trophy', 'gift', 'settings']);
+const icon = kind => referenceIcons.has(kind)
+    ? `<span class="farm-hud-art farm-hud-art--${kind} farm-hud-art--reference" aria-hidden="true"><img src="assets/farm/reference-ui/${kind}.png" alt="" decoding="async" draggable="false"></span>`
+    : `<span class="farm-hud-art farm-hud-art--${kind}" aria-hidden="true"></span>`;
+
+// 在圖片預留區內縮排較長數值，不截斷實際金額或倒數字串。
+function fitHudText(node) {
+    node.style.fontSize = '';
+    if (node.clientWidth > 0 && node.scrollWidth > node.clientWidth) {
+        const size = parseFloat(getComputedStyle(node).fontSize);
+        node.style.fontSize = `${Math.max(6, Math.floor(size * node.clientWidth / node.scrollWidth * 10) / 10)}px`;
+    }
+}
 function button(kind, label, locked = false) {
     const node = document.createElement('button');
     node.type = 'button'; node.className = 'farm-hud-button';
@@ -33,13 +42,14 @@ export function hasFarmHudEncounter(scene) {
 export function mountFarmHud(game) {
     const root = document.createElement('div'); root.className = 'farm-hud'; root.hidden = true;
     const top = document.createElement('section'); top.className = 'farm-hud-status'; top.setAttribute('aria-label', '農莊資源');
-    for (const [kind, label, key] of [['coin','金幣','coins'],['egg','待採收雞蛋（所有雞種）','eggs'],['broom','雞舍髒亂值','dirt']]) {
+    for (const [kind, label, key] of [['coins','金幣','coins'],['eggs','待採收雞蛋（所有雞種）','eggs'],['cleanliness','雞舍髒亂值','dirt']]) {
         const stat = document.createElement('div'); stat.className = 'farm-hud-stat'; stat.dataset.label = label;
-        stat.innerHTML = `${glyph(kind)}<span><strong data-hud-value="${key}">—</strong></span>`;
+        stat.dataset.panel = kind;
+        stat.innerHTML = `<img class="farm-hud-panel-art" src="${assetV2(`${kind}_panel_dynamic_base.png`)}" alt="" decoding="async" draggable="false"><span><strong data-hud-value="${key}">—</strong></span>`;
         stat.setAttribute('aria-label', label); top.append(stat);
     }
     const settings = document.createElement('button'); settings.type = 'button'; settings.className = 'farm-hud-button farm-hud-settings';
-    settings.innerHTML = glyph('gear'); settings.dataset.unavailable = '設定'; settings.setAttribute('aria-label', '設定，尚未開放'); top.append(settings);
+    settings.innerHTML = icon('settings'); settings.dataset.unavailable = '設定'; settings.setAttribute('aria-label', '設定，尚未開放'); top.append(settings);
     const side = document.createElement('nav'); side.className = 'farm-hud-side'; side.setAttribute('aria-label', '村落活動');
     const ranking = document.querySelector('.farm-ranking-launcher') || button('trophy','排行榜',true);
     ranking.classList.add('farm-hud-button'); ranking.innerHTML = icon('trophy');
@@ -49,12 +59,56 @@ export function mountFarmHud(game) {
     const mail = document.querySelector('.farm-mail-launcher') || button('mail','通知',true);
     mail.classList.add('farm-hud-button'); mail.querySelector('svg')?.remove();
     mail.querySelectorAll('.farm-hud-art,.farm-hud-label').forEach(node=>node.remove());
-    mail.insertAdjacentHTML('afterbegin',icon('mail'));
     bottom.append(village, shop, warehouse, button('guide','圖鑑',true), mail);
+    bottom.classList.add('farm-hud-bottom--v2');
+    const dockImage = document.createElement('img');
+    dockImage.className = 'farm-hud-dock-art'; dockImage.src = assetV2('bottom_dock_no_badge.png');
+    dockImage.alt = ''; dockImage.draggable = false; dockImage.decoding = 'async';
+    bottom.prepend(dockImage);
+    [...bottom.querySelectorAll('button')].forEach((node, index) => {
+        node.querySelector('.farm-hud-art')?.remove();
+        placeFarmDockButton(node, FARM_DOCK.hotzones[index]);
+    });
+    const countdown = document.createElement('button'); countdown.type = 'button';
+    countdown.className = 'farm-hud-countdown'; countdown.hidden = true;
+    countdown.innerHTML = `<img src="${assetV2('egg_countdown_dynamic_base.png')}" alt="" decoding="async" draggable="false"><span class="farm-hud-countdown-label"></span><span class="farm-hud-countdown-time"></span>`;
+    // 保留原資訊欄的重試入口；正常計時仍由場景本身更新。
+    countdown.addEventListener('click', () => {
+        const scene = game.scene.getScenes(true).find(scene => scene.scene.key === 'MyFarmScene');
+        if (game.input.enabled && scene?.input?.enabled && scene.timerText?.input?.enabled) scene.timerText.emit('pointerdown');
+    });
+    let timerPresentation, lastCountdownText;
+    function restoreTimerPresentation() {
+        if (!timerPresentation) return;
+        for (const [node, visible] of timerPresentation) if (node?.active) node.setVisible(visible);
+        timerPresentation = undefined;
+    }
+    function syncCountdown(scene) {
+        const image = countdown.querySelector('img');
+        const show = scene?.scene.key === 'MyFarmScene' && scene.timerText?.active && image.complete && image.naturalWidth > 0;
+        countdown.hidden = !show;
+        if (!show) { restoreTimerPresentation(); return; }
+        if (timerPresentation?.[0][0] !== scene.timerText) {
+            restoreTimerPresentation();
+            timerPresentation = [scene.timerText, scene.timerBg].map(node => [node, node?.visible]);
+            for (const [node] of timerPresentation) node?.setVisible(false);
+        }
+        const text = scene.timerText.text;
+        countdown.disabled = !game.input.enabled || scene.input?.enabled === false;
+        if (text === lastCountdownText) return;
+        lastCountdownText = text;
+        const { label, time } = splitFarmCountdown(text);
+        countdown.querySelector('.farm-hud-countdown-label').textContent = label;
+        countdown.querySelector('.farm-hud-countdown-time').textContent = time;
+        countdown.classList.toggle('has-time', !!time);
+        countdown.setAttribute('aria-label', text);
+        if (time) countdown.querySelectorAll('span').forEach(fitHudText);
+        else countdown.querySelector('.farm-hud-countdown-label').style.fontSize = '';
+    }
     const toast = document.createElement('div');
     toast.className = 'farm-hud-toast'; toast.hidden = true; toast.setAttribute('role','status');
     let toastTimer;
-    root.append(top, side, bottom, toast); document.querySelector('#game-container').append(root);
+    root.append(top, side, bottom, countdown, toast); document.querySelector('#game-container').append(root);
     root.addEventListener('click', event => {
         const entry = event.target.closest('[data-unavailable]');
         if (!entry) return;
@@ -78,6 +132,15 @@ export function mountFarmHud(game) {
         const iconOffset = side.querySelector('.farm-hud-art').getBoundingClientRect().top - side.getBoundingClientRect().top;
         side.style.top = `calc(${coin.bottom - bounds.top - iconOffset}px + 0.5cm)`;
         side.style.left = `${coin.left - bounds.left}px`;
+        const sideRight = side.getBoundingClientRect().right - bounds.left;
+        const width = Math.min(490, bounds.width - sideRight - 16);
+        countdown.style.width = `${Math.max(0, width)}px`;
+        countdown.style.left = `${Math.max(sideRight + 8, (bounds.width - width) / 2)}px`;
+        countdown.style.top = `${top.getBoundingClientRect().bottom - bounds.top + 2}px`;
+        const dockHeight = bottom.getBoundingClientRect().height;
+        if (dockHeight) root.style.setProperty('--farm-dock-height', `${dockHeight + 8}px`);
+        top.querySelectorAll('[data-hud-value]').forEach(fitHudText);
+        if (countdown.classList.contains('has-time')) countdown.querySelectorAll('span').forEach(fitHudText);
     }
     function refresh() {
         const farm = game.registry.get('myFarmData');
@@ -112,6 +175,7 @@ export function mountFarmHud(game) {
         lastCheck = _time;
         const scene = game.scene.getScenes(true).find(scene=>['MyFarmScene','LobbyScene','VisitScene','ShopScene','WarehouseScene'].includes(scene.scene.key));
         const key = scene?.scene.key;
+        syncCountdown(scene);
         const inEncounter = game.scene.getScenes(true).some(hasFarmHudEncounter);
         const sideWasHidden = side.hidden;
         // 導覽只屬於自家農場；拜訪結束或戰鬥結算後，也須回到自家才恢復。
@@ -139,6 +203,7 @@ export function mountFarmHud(game) {
     game.events.on('step',step); refresh();
     game.events.once('destroy', () => {
         game.registry.events.off('setdata',onSet); game.registry.events.off('changedata-myFarmData',refresh); game.registry.events.off('changedata-farmLoadState',refresh);
+        restoreTimerPresentation();
         game.events.off('step',step); clearTimeout(toastTimer); resizeObserver.disconnect(); root.remove(); top.remove(); document.body.classList.remove('farm-hud-mounted');
     });
 }
