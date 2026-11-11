@@ -128,7 +128,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
     chatContainer.innerHTML = ''; 
     
     window.NexusTheme?.refresh();
-    const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'food']; 
+    const defaultAllowed = ['chat', 'calendar', 'finance', 'photodump', 'gamezone', 'todo', 'wishlist'];
     const allowedMenus = user.menus || defaultAllowed;
     let modules = {}, order = [], personalSettings;
     try {
@@ -152,7 +152,6 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
         wishlist: `<div class="sidebar-item" onclick="window.navTo('wishwall.html', '成長森林')"><span class="sidebar-icon">${icon('wishlist')}</span>成長森林</div>`,
         finance: `<div class="sidebar-item" onclick="window.navTo('expense.html', '記帳本')"><span class="sidebar-icon">${icon('finance')}</span>記帳本</div>`,
         todo: `<div class="sidebar-item" onclick="window.navTo('todo.html', '待辦事項')"><span class="sidebar-icon">${icon('todo')}</span>待辦事項</div>`,
-        food: `<div class="sidebar-item" onclick="window.navTo('food-decision.html', '吃什麼？')"><span class="sidebar-icon">${icon('food')}</span>吃什麼？</div>`
     };
     
     order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
@@ -195,16 +194,16 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
             `;
         }
         
-        if (allowedMenus.includes('food') && modules.food !== false) {
+        if (allowedMenus.includes('wishlist') && modules.wishlist !== false) {
             miniCardsHtml += `
-                <div class="mini-widget" onclick="window.navTo('food-decision.html', '吃什麼？')">
+                <div class="mini-widget" onclick="window.navTo('wishwall.html', '成長森林')">
                     <div class="mini-widget-header">
-                        <div class="mini-widget-icon" style="background: #fef08a; color: #ca8a04;">${icon('food')}</div>
-                        <div class="mini-widget-title">吃什麼？</div>
+                        <div class="mini-widget-icon">${icon('wishlist')}</div>
+                        <div class="mini-widget-title">成長森林</div>
                     </div>
                     <div>
-                        <div class="mini-widget-value" style="font-size: calc(16px * var(--n-font-scale, 1));">票選進行中</div>
-                        <div class="mini-widget-sub">點擊決定下一餐</div>
+                        <div class="mini-widget-value" style="font-size: calc(16px * var(--n-font-scale, 1));">查看我的森林</div>
+                        <div class="mini-widget-sub">種植、澆水與成長紀錄</div>
                     </div>
                 </div>
             `;
