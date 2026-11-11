@@ -39,6 +39,12 @@
         <button aria-label="帳本設定" data-ui-icon="settings" class="btn-settings" onclick="openModal('settingsModal')" style="background:transparent; border:none; font-size:calc(20px * var(--n-font-scale, 1)); cursor:pointer;"></button>
     </div>
 
+    <section class="ledger-mode-picker" aria-label="選擇帳本">
+        <button type="button" id="ledgerMode-group" class="scope-btn active" data-ledger-mode aria-pressed="true" disabled onclick="switchLedgerMode('group')">群組記帳</button>
+        <button type="button" id="ledgerMode-personal" class="scope-btn" data-ledger-mode aria-pressed="false" disabled onclick="switchLedgerMode('personal')">個人記帳</button>
+    </section>
+    <p id="ledgerStatus" class="ledger-status" role="status">正在讀取帳本設定…</p>
+
     <!-- 頂部 Tab 切換 -->
     <div class="view-tabs">
         <button id="tabCalendar" class="view-tab-btn" onclick="switchMainView('calendar')">月曆模式</button>
@@ -67,8 +73,8 @@
         <div class="chart-card">
             <!-- 群組與個人切換區 -->
             <div class="scope-tabs">
-                <button id="btnScopeGroup" class="scope-btn active" onclick="switchScope('group')">群組</button>
-                <button id="btnScopePersonal" class="scope-btn" onclick="switchScope('personal')">個人</button>
+                <button id="btnScopeGroup" class="scope-btn active" onclick="switchScope('group')"><span id="chartGroupLabel">群組全部</span></button>
+                <button id="btnScopePersonal" class="scope-btn" onclick="switchScope('personal')">依記帳人篩選</button>
             </div>
             <!-- 個人大頭照列表 -->
             <div id="avatarContainer" class="avatar-container"></div>
@@ -226,12 +232,20 @@
     <div class="modal" id="settingsModal" style="z-index: 3000;">
         <div class="modal-content" style="max-height: 80vh;">
             <div class="modal-header">
-                <div class="modal-date"><span data-ui-icon="settings" aria-hidden="true"></span> 分類設定</div>
+                <div class="modal-date"><span data-ui-icon="settings" aria-hidden="true"></span> 帳本設定</div>
                 <button class="btn-close" onclick="closeModal('settingsModal')">✕</button>
             </div>
             <div class="settings-content">
+                <div class="ledger-preferences">
+                    <label for="homepageLedgerSource">Nexus 首頁本月累計支出</label>
+                    <select id="homepageLedgerSource"><option value="group">群組記帳</option><option value="personal">個人記帳</option></select>
+                    <label for="defaultLedgerMode">進入記帳本的預設模式</label>
+                    <select id="defaultLedgerMode"><option value="group">群組記帳</option><option value="personal">個人記帳</option></select>
+                    <button type="button" id="saveLedgerPreferences" class="btn-save">儲存帳本設定</button>
+                    <p id="preferencesStatus" role="status"></p>
+                </div>
                 <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight:bold;">自訂類別列表</span>
+                    <span id="categoryScopeLabel" style="font-weight:bold;">群組帳自訂類別</span>
                     <button class="btn-add-cat" onclick="openModal('customCatModal')" style="background: var(--primary-color); color: white; border: none; padding: 5px 10px; border-radius: 8px; cursor:pointer;">+ 新增類別</button>
                 </div>
                 <div id="manageCategoryList" style="display:flex; flex-direction:column; gap:10px;"></div>
@@ -275,6 +289,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/expense.js?v=navigation3"></script>
+    <script type="module" src="js/expense.js?v=personal-ledger1"></script>
 </body>
 </html>

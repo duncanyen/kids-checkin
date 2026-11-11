@@ -1,28 +1,18 @@
 /**
  * 記帳本入口：清單用游標分頁與聚合統計，日曆載入當月，回顧資料延後讀取。
- * 資料以 groupId 隔離查詢；monthRequestVersion 防止切換月份後舊結果覆蓋。
+ * 群組帳沿用 groupId；個人帳使用 Auth／Rules 保護的 personalLedgers/{accountId}；monthRequestVersion 防止切換月份後舊結果覆蓋。
  * @module
  */
 import { icon } from './ui-icons.js';
 import { CATEGORY_ICON_OPTIONS, categoryIconKey, categoryIconHTML } from './expense-category-icons.js';
 import { loadChart } from './chart-loader.js';
 import { loadScopedProfiles, profileAvatarMap } from './scoped-profiles.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { 
-    getFirestore, collection, addDoc, getDocs, query, where, 
+import { db } from './firebase-config.js';
+import { personalLedgerDatabase, readLedgerPreferences, saveLedgerPreferences, DEFAULT_LEDGER_PREFERENCES } from './personal-ledger.js';
+import {
+    collection, addDoc, getDocs, query, where,
     deleteDoc, doc, serverTimestamp, updateDoc, runTransaction, orderBy, documentId, startAfter, limit, getAggregateFromServer, sum, count
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 let currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
@@ -35,16 +25,92 @@ const currentGroupId = localStorage.getItem('lastGroupId') || 'wJOpq0uAnXvO4ezZ1
 // ================= 權限判斷邏輯 =================
 const roleStr = String(currentUser.role || '').toLowerCase();
 const nameStr = String(currentUser.name || '').toLowerCase(); 
-const canViewIncome = 
+const groupCanViewIncome =
     roleStr.includes('家長') || roleStr.includes('管理') || roleStr.includes('admin') || roleStr.includes('parent') ||
     nameStr.includes('爸') || nameStr.includes('媽') || nameStr.includes('admin');
 
-if (!canViewIncome) {
-    document.getElementById('statBoxIncome').style.display = 'none';
-    document.getElementById('btnTypeIncome').style.display = 'none';
-    document.querySelectorAll('.require-income').forEach(el => el.style.display = 'none');
-    document.getElementById('revThisMonthExpense').parentElement.classList.add('full-width');
+let canViewIncome = groupCanViewIncome;
+let ledgerMode = 'group';
+let ledgerDatabase = db;
+let ledgerGeneration = 0;
+let changingLedger = true;
+let ledgerAvailable = false;
+let categorySaving = false;
+let ledgerPreferences = { ...DEFAULT_LEDGER_PREFERENCES };
+let preferencesReady = false;
+const ledgerCollection = name => ledgerMode === 'personal'
+    ? collection(ledgerDatabase, 'personalLedgers', currentAccountId, name) : collection(db, name);
+const ledgerDoc = (name, id) => ledgerMode === 'personal'
+    ? doc(ledgerDatabase, 'personalLedgers', currentAccountId, name, id) : doc(db, name, id);
+const ledgerFilters = () => ledgerMode === 'personal' ? [] : [where('groupId', '==', currentGroupId)];
+const ledgerOwner = () => ledgerMode === 'personal' ? { accountId: currentAccountId } : { groupId: currentGroupId };
+const belongsToLedger = item => ledgerMode === 'personal' ? item.accountId === currentAccountId : item.groupId === currentGroupId;
+
+function applyLedgerUI() {
+    canViewIncome = ledgerMode === 'personal' || groupCanViewIncome;
+    document.getElementById('statBoxIncome').style.display = canViewIncome ? '' : 'none';
+    document.getElementById('btnTypeIncome').style.display = canViewIncome ? '' : 'none';
+    document.querySelectorAll('.require-income').forEach(el => el.style.display = canViewIncome ? '' : 'none');
+    document.getElementById('revThisMonthExpense').parentElement.classList.toggle('full-width', !canViewIncome);
+    for (const mode of ['group', 'personal']) {
+        const button = document.getElementById('ledgerMode-' + mode);
+        button.classList.toggle('active', ledgerMode === mode);
+        button.setAttribute('aria-pressed', String(ledgerMode === mode));
+    }
+    document.querySelector('.ledger-scope-note').textContent = `${ledgerMode === 'personal' ? '我的個人帳' : '所屬群組帳'}的當月紀錄 · 點選明細查看當日紀錄`;
+    document.getElementById('categoryScopeLabel').textContent = ledgerMode === 'personal' ? '個人帳自訂類別' : '群組帳自訂類別';
+    document.getElementById('chartGroupLabel').textContent = ledgerMode === 'personal' ? '個人帳全部' : '群組全部';
 }
+
+/** 切換帳本前清空資料與游標，取消舊非同步結果；寫入期間不允許切換。 */
+window.switchLedgerMode = async function(mode, force = false) {
+    if (!['group', 'personal'].includes(mode) || changingLedger || savingEntry || categorySaving || (!force && mode === ledgerMode && monthReady)) return;
+    changingLedger = true;
+    ++ledgerGeneration; ++monthRequestVersion; ++pieRenderVersion; ++reviewRenderVersion;
+    const status = document.getElementById('ledgerStatus');
+    status.textContent = '正在開啟帳本…';
+    document.querySelectorAll('[data-ledger-mode]').forEach(button => button.disabled = true);
+    // 不讓切換前的資料、圖表或表單留在新帳本畫面。
+    document.querySelectorAll('.modal').forEach(el => el.style.display = 'none');
+    monthReady = false; monthData = []; customCategories = []; allExpensesData = []; allAvailableYears.clear();
+    hasLoadedAllData = false; allUsersMap = {}; selectedPersonalAccountId = null; currentScope = 'group';
+    currentListType = 'expense'; currentChartType = 'expense'; resetExpenseEditor(); resetListData();
+    if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
+    if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+    document.getElementById('avatarContainer').innerHTML = '';
+    document.getElementById('avatarContainer').style.display = 'none';
+    document.getElementById('btnScopeGroup').classList.add('active');
+    document.getElementById('btnScopePersonal').classList.remove('active');
+    document.querySelectorAll('#reviewView .summary-val').forEach(el => el.textContent = '讀取中…');
+    document.getElementById('reviewYearFilter').replaceChildren();
+    document.getElementById('chartAnalysisText').textContent = '分析載入中…';
+    ledgerAvailable = false;
+    ledgerMode = mode;
+    applyLedgerUI();
+    document.getElementById('statBoxExpense').className = 'stat-box active-expense';
+    document.getElementById('statBoxIncome').className = 'stat-box';
+    renderLedgerList();
+    const calendar = document.getElementById('calendarGrid');
+    while (calendar.children.length > 7) calendar.removeChild(calendar.lastChild);
+    document.getElementById('monthTotalExpense').textContent = '讀取中…';
+    document.getElementById('monthTotalIncome').textContent = '讀取中…';
+    try {
+        ledgerDatabase = mode === 'personal' ? await personalLedgerDatabase(currentUser, currentGroupId) : db;
+        ledgerAvailable = true;
+        categoriesReady = loadCustomCategories();
+        if (currentMainView === 'review') await fetchAndRenderReviewData();
+        else await loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        status.textContent = monthError ? '帳本讀取失敗，請確認連線及資料權限後重試。' : '';
+    } catch (error) {
+        status.textContent = '無法開啟個人帳，請確認連線及個人帳權限設定。可重新點選個人帳重試。';
+        monthReady = false; listBusy = false; monthError = true;
+        renderLedgerList();
+        console.error('開啟帳本失敗', error.code || 'unknown');
+    } finally {
+        changingLedger = false;
+        document.querySelectorAll('[data-ledger-mode]').forEach(button => button.disabled = false);
+    }
+};
 
 // --- 全域變數 ---
 let currentDate = new Date();
@@ -108,11 +174,20 @@ function formatK(num) {
 }
 
 async function initApp() {
-    // 分類與當月記錄可平行讀取；圖表等兩者就緒，日曆可先呈現。
-    categoriesReady = loadCustomCategories();
-    await loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
+    try {
+        ledgerPreferences = await readLedgerPreferences(currentUser, currentGroupId);
+        preferencesReady = true;
+    } catch (error) {
+        document.getElementById('preferencesStatus').textContent = '設定讀取失敗，暫用預設群組帳；設定與個人帳需要啟用私有資料權限。';
+    }
+    document.getElementById('homepageLedgerSource').value = ledgerPreferences.homepageSource;
+    document.getElementById('defaultLedgerMode').value = ledgerPreferences.defaultMode;
+    changingLedger = false;
+    await window.switchLedgerMode(ledgerPreferences.defaultMode, true);
 }
-initApp();
+// 預設群組；先確認個人設定，避免顯示錯誤的帳本。
+applyLedgerUI();
+void initApp();
 
 // 只查目前群組當月記錄引用的身分，選填頭像不得阻塞金額或改成掃描 users。
 async function loadMonthProfiles(records, version) {
@@ -132,9 +207,11 @@ async function loadMonthProfiles(records, version) {
 }
 
 async function loadCustomCategories() {
+    const generation = ledgerGeneration;
     try {
-        const q = query(collection(db, "customCategories"), where("groupId", "==", currentGroupId));
+        const q = query(ledgerCollection('customCategories'), ...ledgerFilters());
         const snap = await getDocs(q);
+        if (generation !== ledgerGeneration) return;
         customCategories = [];
         snap.forEach(docSnap => customCategories.push({ id: docSnap.id, ...docSnap.data() }));
     } catch (error) {
@@ -143,7 +220,7 @@ async function loadCustomCategories() {
 }
 
 window.switchMainView = function(view) {
-    if (savingEntry || view === currentMainView) return;
+    if (changingLedger || !ledgerAvailable || savingEntry || categorySaving || view === currentMainView) return;
     currentMainView = view;
     ++monthRequestVersion;
     for (const [name, tab] of [['calendar', 'Calendar'], ['list', 'List'], ['review', 'Review']]) {
@@ -160,7 +237,7 @@ function syncListPeriod() {
 }
 
 window.selectListMonth = function() {
-    if (savingEntry) { syncListPeriod(); return; }
+    if (changingLedger || savingEntry || !ledgerAvailable) { syncListPeriod(); return; }
     const match = /^(\d{4})-(\d{2})$/.exec(document.getElementById('listPeriod').value);
     if (!match || Number(match[1]) < 1900 || Number(match[2]) < 1 || Number(match[2]) > 12) { syncListPeriod(); return; }
     currentDate = new Date(Number(match[1]), Number(match[2]) - 1, 1);
@@ -168,12 +245,12 @@ window.selectListMonth = function() {
     loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
 };
 window.retryListMonth = () => {
-    if (savingEntry || listBusy) return;
+    if (changingLedger || savingEntry || listBusy || !ledgerAvailable) return;
     listPages = listPages.slice(0, listRequestedPage);
     loadListPage(listRequestedPage, true);
 };
 window.switchListType = function(type) {
-    if (savingEntry || type === currentListType || (type === 'income' && !canViewIncome)) return;
+    if (changingLedger || savingEntry || type === currentListType || (type === 'income' && !canViewIncome)) return;
     currentListType = type;
     resetListData();
     loadListPage(0);
@@ -186,7 +263,7 @@ function resetListData() {
 
 function listMonthFilters() {
     const prefix = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    return [where('groupId', '==', currentGroupId), where('date', '>=', prefix + '-01'), where('date', '<=', prefix + '-31')];
+    return [...ledgerFilters(), where('date', '>=', prefix + '-01'), where('date', '<=', prefix + '-31')];
 }
 
 /**
@@ -207,9 +284,9 @@ async function loadListPage(pageIndex = 0, refreshTotals = false) {
         // 伺服器聚合只回傳總額與筆數，不下載整月文件。
         if (!listTotals || refreshTotals) {
             const [all, income, expense] = await Promise.all([
-                getAggregateFromServer(query(collection(db, 'expenses'), ...filters), { amount: sum('amount'), records: count() }),
-                getAggregateFromServer(query(collection(db, 'expenses'), ...filters, where('type', '==', 'income')), { amount: sum('amount'), records: count() }),
-                getAggregateFromServer(query(collection(db, 'expenses'), ...filters, where('type', '==', 'expense')), { amount: sum('amount'), records: count() })
+                getAggregateFromServer(query(ledgerCollection('expenses'), ...filters), { amount: sum('amount'), records: count() }),
+                getAggregateFromServer(query(ledgerCollection('expenses'), ...filters, where('type', '==', 'income')), { amount: sum('amount'), records: count() }),
+                getAggregateFromServer(query(ledgerCollection('expenses'), ...filters, where('type', '==', 'expense')), { amount: sum('amount'), records: count() })
             ]);
             if (version !== monthRequestVersion) return;
             listTotals = { income: income.data(), expense: { amount: all.data().amount - income.data().amount, records: all.data().records - income.data().records }, legacy: all.data().records - income.data().records - expense.data().records };
@@ -229,7 +306,7 @@ async function loadListPage(pageIndex = 0, refreshTotals = false) {
                     if (type === 'income' || !listTotals.legacy) constraints.push(where('type', '==', type));
                     constraints.push(orderBy('date', 'desc'), orderBy(documentId(), 'desc'));
                     if (cursor) constraints.push(startAfter(cursor));
-                    const snapshot = await getDocs(query(collection(db, 'expenses'), ...constraints, limit(LIST_PAGE_SIZE)));
+                    const snapshot = await getDocs(query(ledgerCollection('expenses'), ...constraints, limit(LIST_PAGE_SIZE)));
                     if (version !== monthRequestVersion) return;
                     exhausted = snapshot.docs.length < LIST_PAGE_SIZE;
                     cursor = snapshot.docs.at(-1) || cursor;
@@ -267,7 +344,7 @@ async function loadListPage(pageIndex = 0, refreshTotals = false) {
 }
 
 window.changeListPage = function(offset) {
-    if (listBusy || savingEntry || !monthReady) return;
+    if (changingLedger || listBusy || savingEntry || !monthReady) return;
     const next = listPageIndex + offset;
     const pages = Math.ceil((listTotals?.[currentListType].records || 0) / LIST_PAGE_SIZE);
     if (next >= 0 && next < pages) loadListPage(next);
@@ -342,7 +419,7 @@ function renderLedgerList() {
 }
 
 window.openListEntry = function(type) {
-    if (!monthReady || savingEntry || (type === 'income' && !canViewIncome)) return;
+    if (changingLedger || !monthReady || savingEntry || (type === 'income' && !canViewIncome)) return;
     const today = new Date();
     const day = today.getFullYear() === currentDate.getFullYear() && today.getMonth() === currentDate.getMonth() ? today.getDate() : 1;
     const date = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -388,8 +465,8 @@ async function loadMonthData(year, month) {
     
     try {
         const q = query(
-            collection(db, "expenses"),
-            where("groupId", "==", currentGroupId),
+            ledgerCollection('expenses'),
+            ...ledgerFilters(),
             where("date", ">=", startStr),
             where("date", "<=", endStr)
         );
@@ -458,7 +535,7 @@ function renderCalendar(year, month) {
 }
 
 window.changeMonth = function(offset) {
-    if (savingEntry) return;
+    if (changingLedger || !ledgerAvailable || savingEntry) return;
     currentDate.setDate(1);
     currentDate.setMonth(currentDate.getMonth() + offset);
     loadMonthData(currentDate.getFullYear(), currentDate.getMonth() + 1);
@@ -621,10 +698,13 @@ async function renderPieChart() {
 }
 
 async function fetchAndRenderReviewData() {
+    const generation = ledgerGeneration;
+    const version = monthRequestVersion;
     if (!hasLoadedAllData) {
         try {
-            const q = query(collection(db, "expenses"), where("groupId", "==", currentGroupId));
+            const q = query(ledgerCollection('expenses'), ...ledgerFilters());
             const snapshot = await getDocs(q);
+            if (generation !== ledgerGeneration || version !== monthRequestVersion) return;
             allExpensesData = [];
             allAvailableYears.clear();
             
@@ -789,7 +869,8 @@ async function processReviewData() {
 }
 
 window.openModal = function(modalId, dateStr = null) {
-    if (savingEntry && modalId === 'expenseModal') return;
+    if (changingLedger || categorySaving || (savingEntry && modalId === 'expenseModal')) return;
+    if (modalId === 'customCatModal' && !ledgerAvailable) return;
     if (modalId === 'expenseModal') resetExpenseEditor();
     if(dateStr) {
         if (!monthReady) return;
@@ -823,7 +904,7 @@ window.openModal = function(modalId, dateStr = null) {
 };
 
 window.closeModal = function(modalId) {
-    if (savingEntry && modalId === 'expenseModal') return;
+    if (changingLedger || categorySaving || (savingEntry && modalId === 'expenseModal')) return;
     document.getElementById(modalId).style.display = 'none';
     if (modalId === 'expenseModal') resetExpenseEditor();
 };
@@ -835,7 +916,7 @@ window.onclick = function(event) {
 };
 
 window.switchModalType = function(type) {
-    if (savingEntry) return;
+    if (changingLedger || savingEntry) return;
     if (type === 'income' && !canViewIncome) return;
     currentModalType = type;
     document.getElementById('btnTypeExpense').className = `type-btn ${type === 'expense' ? 'active expense' : ''}`;
@@ -876,7 +957,7 @@ function renderCategoryGrid() {
 }
 
 function selectCategory(catName) {
-    if (savingEntry) return;
+    if (changingLedger || savingEntry) return;
     selectedCategory = catName;
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected', 'expense', 'income'));
     const target = document.getElementById(`cat-${catName}`);
@@ -970,9 +1051,11 @@ window.editCategory = function(catId) {
 }
 
 window.deleteCategory = async function(catId) {
+    if (changingLedger || categorySaving || !ledgerAvailable) return;
     if(!confirm('確定要刪除此類別嗎？')) return;
+    categorySaving = true;
     try {
-        await deleteDoc(doc(db, "customCategories", catId));
+        await deleteDoc(ledgerDoc('customCategories', catId));
         customCategories = customCategories.filter(c => c.id !== catId);
         renderManageCategories();
         renderCategoryGrid();
@@ -980,20 +1063,22 @@ window.deleteCategory = async function(catId) {
     } catch(e) {
         alert('刪除失敗');
         console.error(e);
-    }
+    } finally { categorySaving = false; }
 }
 
 // ================= 自訂類別儲存邏輯 =================
 document.getElementById('btnSaveCustomCat').addEventListener('click', async () => {
+    if (changingLedger || categorySaving || !ledgerAvailable) return;
     const nameInput = document.getElementById('newCatName').value.trim();
     const iconKey = categoryIconKey(document.getElementById('newCatIcon').value);
     const fileInput = document.getElementById('newCatImage').files[0];
     const editCatId = document.getElementById('editCatId').value;
 
-    if(!nameInput) { alert("請輸入類別名稱！"); return; }
+    if(!nameInput || nameInput.length > 100) { alert("類別名稱請填寫 1–100 個字！"); return; }
 
 
     const btn = document.getElementById('btnSaveCustomCat');
+    categorySaving = true;
     btn.disabled = true;
     btn.innerText = '儲存中...';
 
@@ -1007,7 +1092,7 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
         }
 
         const catData = {
-            groupId: currentGroupId,
+            ...ledgerOwner(),
             type: currentCatModalType,
             name: nameInput,
             icon: iconKey,
@@ -1016,11 +1101,11 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
         };
 
         if(editCatId) {
-            await updateDoc(doc(db, "customCategories", editCatId), catData);
+            await updateDoc(ledgerDoc('customCategories', editCatId), catData);
             const index = customCategories.findIndex(c => c.id === editCatId);
             if(index !== -1) customCategories[index] = { id: editCatId, ...catData };
         } else {
-            const docRef = await addDoc(collection(db, "customCategories"), catData);
+            const docRef = await addDoc(ledgerCollection('customCategories'), catData);
             customCategories.push({ id: docRef.id, ...catData });
         }
         
@@ -1028,6 +1113,7 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
         renderCategoryIconPicker('package');
         useSvgCategoryIcon = false;
         document.getElementById('newCatImage').value = '';
+        categorySaving = false;
         closeModal('customCatModal');
         
         renderManageCategories();
@@ -1039,6 +1125,7 @@ document.getElementById('btnSaveCustomCat').addEventListener('click', async () =
     } finally {
         btn.disabled = false;
         btn.innerText = '儲存類別';
+        categorySaving = false;
     }
 });
 
@@ -1071,7 +1158,7 @@ function resizeImageToBase64(file) {
 document.getElementById('btnSaveExpense').addEventListener('click', async () => {
     const amountStr = document.getElementById('expenseAmount').value;
     const note = document.getElementById('expenseNote').value.trim();
-    if (savingEntry || !monthReady) return;
+    if (changingLedger || savingEntry || !monthReady) return;
     const status = document.getElementById('entryStatus');
     const amount = Number(amountStr);
     if (!Number.isFinite(amount) || amount <= 0 || amount > 999999999 || Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001) {
@@ -1100,12 +1187,12 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
         if (editingId) {
             // 只更新表單的五個欄位；交易重讀確認歸屬，不覆寫作者、群組或建立時間。
             const patch = { date, type: currentModalType, category: selectedCategory, amount, note };
-            await runTransaction(db, async transaction => {
-                const ref = doc(db, 'expenses', editingId);
+            await runTransaction(ledgerDatabase, async transaction => {
+                const ref = ledgerDoc('expenses', editingId);
                 const snapshot = await transaction.get(ref);
                 if (!snapshot.exists()) throw new Error('這筆紀錄已刪除，請重新載入。');
                 const latest = snapshot.data();
-                if (latest.groupId !== currentGroupId) throw new Error('這筆紀錄不屬於目前群組，無法修改。');
+                if (!belongsToLedger(latest)) throw new Error('這筆紀錄不屬於目前帳本，無法修改。');
                 if (latest.type === 'income' && !canViewIncome) throw new Error('目前無法修改收入紀錄。');
                 const current = { date: latest.date, type: latest.type || 'expense', category: latest.category, amount: latest.amount, note: expenseName(latest) };
                 if (!original || Object.keys(current).some(key => current[key] !== original[key])) {
@@ -1129,7 +1216,7 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
             return;
         }
         const newItem = {
-            groupId: currentGroupId,
+            ...ledgerOwner(),
             accountId: currentAccountId, 
             date: selectedDateStr,
             amount: amount,
@@ -1140,7 +1227,7 @@ document.getElementById('btnSaveExpense').addEventListener('click', async () => 
             timestamp: serverTimestamp()
         };
 
-        const docRef = await addDoc(collection(db, "expenses"), newItem);
+        const docRef = await addDoc(ledgerCollection('expenses'), newItem);
         if (entryVersion === monthRequestVersion) monthData.push({ id: docRef.id, ...newItem, timestamp: new Date() });
         
         hasLoadedAllData = false; 
@@ -1229,12 +1316,12 @@ function resetExpenseEditor() {
 
 /**
  * 將明細帶入現有表單，允許修改日期、收支、分類、金額與選填名稱。
- * @param {string} docId - 目前已載入且屬於所選群組的記帳文件 ID。
+ * @param {string} docId - 目前已載入且屬於所選帳本的記帳文件 ID。
  * @returns {void} 不建立新文件、不自動聚焦；關閉表單即放棄未儲存內容。
  */
 window.editExpense = function(docId) {
-    if (savingEntry || !monthReady) return;
-    const item = monthData.find(entry => entry.id === docId && entry.groupId === currentGroupId);
+    if (changingLedger || savingEntry || !monthReady) return;
+    const item = monthData.find(entry => entry.id === docId && belongsToLedger(entry));
     if (!item || (item.type === 'income' && !canViewIncome)) return;
     openModal('expenseModal', item.date);
     switchModalType(item.type || 'expense');
@@ -1252,10 +1339,11 @@ window.editExpense = function(docId) {
 window.editExpenseName = window.editExpense;
 
 window.deleteExpense = async function(docId) {
-    if (savingEntry) return;
+    if (changingLedger || savingEntry) return;
     if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+    savingEntry = true;
     try {
-        await deleteDoc(doc(db, "expenses", docId));
+        await deleteDoc(ledgerDoc('expenses', docId));
         monthData = monthData.filter(e => e.id !== docId);
         if (editingExpenseId === docId) {
             resetExpenseEditor();
@@ -1273,5 +1361,25 @@ window.deleteExpense = async function(docId) {
     } catch (e) {
         console.error("刪除失敗：", e);
         alert("刪除失敗，請檢查網路。");
-    }
+    } finally { savingEntry = false; }
 };
+
+
+let preferencesSaving = false;
+document.getElementById('saveLedgerPreferences').addEventListener('click', async () => {
+    if (preferencesSaving) return;
+    const button = document.getElementById('saveLedgerPreferences');
+    const status = document.getElementById('preferencesStatus');
+    preferencesSaving = true; button.disabled = true; status.textContent = '儲存中…';
+    try {
+        // 讀取失敗時先重讀確認權限恢復，再依使用者目前選擇儲存。
+        if (!preferencesReady) { await readLedgerPreferences(currentUser, currentGroupId); preferencesReady = true; }
+        ledgerPreferences = await saveLedgerPreferences(currentUser, currentGroupId, {
+            homepageSource: document.getElementById('homepageLedgerSource').value,
+            defaultMode: document.getElementById('defaultLedgerMode').value
+        });
+        status.textContent = '已儲存；首頁與下次進入記帳本時套用。';
+    } catch (error) { status.textContent = '設定儲存失敗，請檢查連線與個人帳權限後重試。'; }
+    finally { preferencesSaving = false; button.disabled = false; }
+});
+window.addEventListener('pagehide', () => { ++ledgerGeneration; ++monthRequestVersion; ++pieRenderVersion; ++reviewRenderVersion; });

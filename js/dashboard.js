@@ -12,6 +12,7 @@ import { loadChatProfiles, watchMemberRooms } from './chat-membership.js';
 import { unreadFor, readFor } from './chat-identity-core.js';
 import { mountAppNavigation } from './app-navigation.js';
 import { icon, enhanceNavigation } from './ui-icons.js';
+import { watchExpenseWidget } from './expense-home-widget.js';
 import { readPersonalLayout } from './personal-layout.js';
 import { db } from "./firebase-config.js";
 import { collection, query, where, onSnapshot, getDoc, updateDoc, doc, orderBy, limit, getCountFromServer, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -369,48 +370,22 @@ window.checkWidgetData = function(user) {
     }
 
     if (document.getElementById('financeWidgetValue')) {
-        const now = new Date();
-        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        const expQ = query(
-            collection(db, "expenses"),
-            where("groupId", "==", groupId),
-            where("date", ">=", `${currentYearMonth}-01`),
-            where("date", "<=", `${currentYearMonth}-31`)
-        );
-        
-        financeUnsubscribe = onSnapshot(expQ, (snap) => {
-            let totalExpense = 0;
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
-                let dateStr = '';
-                if (data.date && typeof data.date.toDate === 'function') {
-                    const d = data.date.toDate();
-                    dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                } else if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-                    const d = data.createdAt.toDate();
-                    dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                } else {
-                    dateStr = String(data.date || data.createdAt || '');
-                }
-
-                const typeVal = String(data.type || 'expense');
-                const amount = Number(data.amount || data.price || 0);
-                const isThisMonth = dateStr.includes(currentYearMonth) || !dateStr;
-
-                if (isThisMonth) {
-                    if (typeVal === 'expense' || typeVal === '支出' || typeVal === 'undefined' || !data.type) {
-                        totalExpense += amount;
-                    }
-                }
-            });
-            
-            const valEl = document.getElementById('financeWidgetValue');
-            const subEl = document.getElementById('financeWidgetSub');
-            if (valEl) {
-                valEl.innerText = `$${totalExpense.toLocaleString()}`;
-                subEl.innerText = `本月累計支出`;
+        document.getElementById('financeWidgetValue').textContent = '讀取中…';
+        financeUnsubscribe = watchExpenseWidget({ db, user, groupId,
+            onValue(total, source) {
+                const value = document.getElementById('financeWidgetValue');
+                const subtitle = document.getElementById('financeWidgetSub');
+                if (value) value.textContent = `$${total.toLocaleString()}`;
+                if (subtitle) subtitle.textContent = `本月累計支出 · ${source}`;
+            },
+            onError(error) {
+                const value = document.getElementById('financeWidgetValue');
+                const subtitle = document.getElementById('financeWidgetSub');
+                if (value) value.textContent = '讀取失敗';
+                if (subtitle) subtitle.textContent = '請確認連線與帳本權限設定';
+                console.error('記帳本讀取錯誤:', error.code || 'unknown');
             }
-        }, (err) => { console.error("記帳本讀取錯誤: ", err); });
+        });
     }
 };
 

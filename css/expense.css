@@ -209,3 +209,16 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 
 /* Rounded settings control matches the shared feature-page actions. */
 .btn-settings{display:grid;place-items:center;width:44px;height:44px;padding:10px;border-radius:50%;flex-shrink:0;}
+
+/* Ledger scope is independent of the existing per-member chart filter. */
+.ledger-mode-picker { display:flex; gap:6px; padding:5px; margin:0 auto 8px; max-width:420px; background:var(--n-surface,#fff); border-radius:14px; }
+.ledger-mode-picker .scope-btn { flex:1; min-height:44px; }
+.ledger-mode-picker .scope-btn.active { background:var(--primary-color); color:#fff; }
+.ledger-status { max-width:700px; margin:0 auto 10px; padding:0 12px; color:var(--n-muted,#62676e); font-size:14px; text-align:center; }
+.ledger-status:empty { display:none; }
+.ledger-preferences { display:grid; gap:10px; margin-bottom:24px; }
+.ledger-preferences label { font-weight:600; }
+.ledger-preferences select { width:100%; min-height:44px; box-sizing:border-box; padding:8px 12px; border:1px solid var(--n-border,#ddd); border-radius:10px; background:var(--n-surface,#fff); color:var(--n-text,#292c30); font:inherit; }
+.ledger-preferences p { margin:0; font-size:14px; color:var(--n-muted,#62676e); }
+.ledger-preferences .btn-save { background:var(--primary-color); margin:0; }
+.ledger-mode-picker button:disabled, .ledger-preferences button:disabled { opacity:.6; cursor:wait; }

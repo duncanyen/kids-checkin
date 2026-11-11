@@ -1,0 +1,53 @@
+// 合併到正式 rules_version = '2' 的 match /databases/{database}/documents 內。
+// 注意：Firestore allow 取聯集；必須移除會涵蓋此路徑的寬鬆 wildcard allow。
+// 本檔不包含或取代既有群組規則，不可直接當整份正式 Rules 部署。
+match /personalLedgers/{accountId} {
+  function ownsLedger() {
+    return request.auth != null
+      && request.auth.token.photoAccountId == accountId
+      && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountId == accountId
+      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') != 'removed';
+  }
+  function validPreferences(data) {
+    return data.keys().hasOnly(['defaultMode', 'homepageSource'])
+      && data.defaultMode in ['group', 'personal']
+      && data.homepageSource in ['group', 'personal'];
+  }
+  allow get: if ownsLedger();
+  allow list, delete: if false;
+  allow create, update: if ownsLedger() && validPreferences(request.resource.data);
+
+  match /expenses/{entryId} {
+    function validEntry(data) {
+      return data.keys().hasOnly(['accountId', 'date', 'amount', 'category', 'type', 'note', 'operator', 'timestamp'])
+        && data.accountId == accountId
+        && data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.amount is number && data.amount > 0 && data.amount <= 999999999
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 100
+        && data.type in ['expense', 'income']
+        && data.note is string && data.note.size() <= 100
+        && data.operator is string && data.operator.size() <= 500
+        && data.timestamp is timestamp;
+    }
+    allow read, delete: if ownsLedger();
+    allow create: if ownsLedger() && validEntry(request.resource.data)
+      && request.resource.data.timestamp == request.time;
+    allow update: if ownsLedger() && validEntry(request.resource.data)
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date', 'type', 'category', 'amount', 'note']);
+  }
+  match /customCategories/{categoryId} {
+    function validCategory(data) {
+      return data.keys().hasOnly(['accountId', 'type', 'name', 'icon', 'imgBase64', 'color'])
+        && data.accountId == accountId
+        && data.type in ['expense', 'income']
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.icon is string && data.icon.size() <= 100
+        && (data.imgBase64 == null || (data.imgBase64 is string && data.imgBase64.size() <= 600000
+          && data.imgBase64.matches('^data:image/(webp|png|jpeg);base64,.*$')))
+        && data.color in ['#e53935', '#43a047'];
+    }
+    allow read, delete: if ownsLedger();
+    allow create, update: if ownsLedger() && validCategory(request.resource.data);
+  }
+}
