@@ -278,10 +278,14 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
     }
     async function snapshot(request){
         const c=await context(request),accountId=target(c,request.data.payload?.accountId);await ensureProfile(request,accountId);
-        const [wallet,garden,settings,rewards,migration]=await Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
-        const forest=await forestPage(c,accountId,garden.data(),request.data.payload?.page);
-        const ids=c.parent?c.group.members:[c.accountId],members=[];
-        for(let start=0;start<ids.length;start+=10){const batch=await db.collection('users').where('accountId','in',ids.slice(start,start+10)).get();members.push(...batch.docs.map(d=>cleanMember(d.data())).filter(m=>m.role!=='removed'));}
+        // 成員批次與森林資料互不相依；平行查詢避免家長首次進頁逐批等待。
+        const ids=c.parent?c.group.members:[c.accountId];
+        const membersPending=Promise.all(Array.from({length:Math.ceil(ids.length/10)},(_,i)=>
+            db.collection('users').where('accountId','in',ids.slice(i*10,i*10+10)).get()));
+        const resourcesPending=Promise.all([ref(c.groupId,'growthProfiles',accountId).get(),ref(c.groupId,'gardens',accountId).get(),ref(c.groupId,'growthSettings','main').get(),collection(c.groupId,'growthRewards').limit(100).get(),ref(c.groupId,'growthMigrations',accountId).get()]);
+        const forestPending=resourcesPending.then(([,garden])=>forestPage(c,accountId,garden.data(),request.data.payload?.page));
+        const [[wallet,garden,settings,rewards,migration],memberBatches,forest]=await Promise.all([resourcesPending,membersPending,forestPending]);
+        const members=memberBatches.flatMap(batch=>batch.docs.map(d=>cleanMember(d.data())).filter(m=>m.role!=='removed'));
         return{actor:c.actor,parent:c.parent,group:{id:c.groupId,name:c.group.name||'目前群組'},members,wallet:wallet.data(),garden:{...garden.data(),plotCount:forest.count},gardenPage:forest.gardenPage,plants:forest.plants,plotPrice:D.PLOT_PRICE,settings:settings.data(),rewards:rewards.docs.map(d=>d.data()),migration:migration.data(),plantCatalog:D.PLANTS,asOf:now()};
     }
     async function list(request){

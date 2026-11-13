@@ -5,6 +5,14 @@ function loadEngine(){
  if(window.Phaser)return Promise.resolve();
  if(!engine)engine=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js';const timeout=setTimeout(()=>{script.remove();engine=null;reject(Error('森林畫面載入逾時，請重新整理'));},30000);script.onload=()=>{clearTimeout(timeout);resolve();};script.onerror=()=>{clearTimeout(timeout);engine=null;reject(Error('森林畫面載入失敗，請檢查網路'));};document.head.append(script);});return engine;
 }
+// 圖像與引擎可先於資料查詢載入；只快取公開美術，不快取帳號、資源或權限。
+let preparation;
+export function prepareForest(){
+ if(!preparation)preparation=Promise.all([loadEngine(),...[
+  art.background,...PLANT_TYPES.flatMap(type=>art.plants[type])
+ ].map(path=>new Promise(resolve=>{const image=new Image();image.onload=image.onerror=resolve;image.src=path;}))]).catch(error=>{preparation=null;throw error;});
+ return preparation;
+}
 /**
  * 按需載入 Phaser，建立單區九塊土地的森林視覺與點擊介面。
  * @param {HTMLElement} element - Canvas 掛載容器。

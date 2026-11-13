@@ -260,7 +260,20 @@ async function renderParent(){
  if(parentMode==='transactions')await transactions(panel,targetId);
  if(parentMode==='migration'){const r=await client.api('snapshot',{accountId:targetId}),m=r.migration;panel.innerHTML=`<h3>舊資料已安全銜接</h3><p class="body-copy">${esc(childName(targetId))} 的歷史成績 ${m.scoreCount} 筆、兌換 ${m.requestCount} 筆。<br>原可用積分 ${m.legacyBalance}，另有 ${m.pointsReserved} 點處於舊申請保留中。<br>原始資料保留不刪除，不重新發放歷史獎勵。</p><p class="hint">缺少 accountId 或群組歸屬矛盾的舊資料不會依姓名猜測，請專案擁有者查閱遷移報告。</p><button id="parentLegacy" class="outline">查看歷史紀錄</button>`;$('parentLegacy').onclick=()=>legacyRecords();}
 }
-document.querySelectorAll('[data-parent]').forEach(b=>b.onclick=async()=>{if(busy)return;parentMode=b.dataset.parent;document.querySelectorAll('[data-parent]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));try{await renderParent();}catch(e){status(message(e),true);}});
+const parentTabs=[...document.querySelectorAll('[data-parent]')];
+parentTabs.forEach((tab,index)=>{
+ tab.onclick=async()=>{
+  if(busy)return;parentMode=tab.dataset.parent;
+  parentTabs.forEach(item=>{const active=item===tab;item.setAttribute('aria-selected',String(active));item.tabIndex=active?0:-1;});
+  $('parentContent').setAttribute('aria-labelledby',tab.id);
+  tab.scrollIntoView({block:'nearest',inline:'nearest'});
+  try{await renderParent();}catch(error){status(message(error),true);}
+ };
+ tab.onkeydown=event=>{
+  let next;if(event.key==='ArrowRight')next=(index+1)%parentTabs.length;else if(event.key==='ArrowLeft')next=(index+parentTabs.length-1)%parentTabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=parentTabs.length-1;else return;
+  event.preventDefault();parentTabs[next].focus();parentTabs[next].click();
+ };
+});
 function settingsForm(root){
  const s=data.settings;root.innerHTML=`<form id="settingsForm"><p class="body-copy">新規則只套用於之後提交的紀錄；已提交紀錄使用當時的規則快照。</p><section class="settings-section"><h3>考試獎勵</h3>${s.examBands.map((b,i)=>`<div class="settings-row">${field('最低百分比',`examMin${i}`,'number',b.min,'required min="0" max="100" step="0.01"')}${field('星星',`examPoints${i}`,'number',b.points,'required min="0" step="0.01"')}${field('水滴',`examWater${i}`,'number',b.water,'required min="0" step="1"')}${field('金幣',`examCoins${i}`,'number',b.coins,'required min="0" step="1"')}</div>`).join('')}<label><input name="examApproval" type="checkbox" ${s.examApproval?'checked':''}> 考試需要家長審核</label></section><section class="settings-section"><h3>進步獎勵</h3>${s.improvementBands.map((b,i)=>`<div class="settings-row">${field('進步百分點',`improvementMin${i}`,'number',b.min,'required min="0.01" step="0.01"')}${field('額外星星',`improvementPoints${i}`,'number',b.points,'required min="0" step="0.01"')}</div>`).join('')}</section><section class="settings-section"><h3>閱讀獎勵與每日上限</h3><div class="form-grid">${field('每份需閱讀分鐘','readingMinutes','number',s.reading.minutes,'required min="1" max="1440" step="1"')}${field('每日最多獎勵份數','readingDaily','number',s.reading.dailyLimit,'required min="0" max="20" step="1"')}${field('每份星星','readingPoints','number',s.reading.points,'required min="0" step="0.01"')}${field('每份水滴','readingWater','number',s.reading.water,'required min="0" step="1"')}${field('每份金幣','readingCoins','number',s.reading.coins,'required min="0" step="1"')}</div><label><input name="readingApproval" type="checkbox" ${s.readingApproval?'checked':''}> 閱讀需要家長審核</label></section><p class="form-error"></p><button type="submit">儲存未來適用規則</button></form>`;
  $('settingsForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.currentTarget),n=name=>Number(fd.get(name));action('saveSettings',{settings:{examApproval:fd.has('examApproval'),readingApproval:fd.has('readingApproval'),examBands:s.examBands.map((_,i)=>({min:n('examMin'+i),points:n('examPoints'+i),water:n('examWater'+i),coins:n('examCoins'+i)})),improvementBands:s.improvementBands.map((_,i)=>({min:n('improvementMin'+i),points:n('improvementPoints'+i)})),reading:{minutes:n('readingMinutes'),dailyLimit:n('readingDaily'),points:n('readingPoints'),water:n('readingWater'),coins:n('readingCoins')}}},{close:false});};
@@ -281,4 +294,6 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInter
 function checkContext(){let user;try{user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{}if(user?.accountId!==context.accountId||getSelectedGameGroupId(user)!==context.groupId)location.replace('wishwall.html');}
 window.addEventListener('storage',checkContext);window.addEventListener('focus',checkContext);window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
 window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();stopAppearance?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();visitGame?.destroy();clearTimeout(noticeTimer);photoUrls.forEach(URL.revokeObjectURL);});
+// 讓公開場景素材與 Firebase 連線平行；預載失敗仍由場景建立流程提供重試提示。
+import('./scene.js').then(module=>module.prepareForest()).catch(()=>{});
 startTimer();initialize();
