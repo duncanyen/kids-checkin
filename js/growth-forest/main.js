@@ -24,9 +24,11 @@ function select(label,name,options,value=''){return `<label>${esc(label)}<select
 const note=(label='備註（選填）',name='note',value='')=>`<label class="full">${esc(label)}<textarea name="${name}" maxlength="1000">${esc(value)}</textarea></label>`;
 const formEnd=(text='儲存')=>`<p class="form-error full" role="status"></p><footer class="full"><button type="button" data-close class="outline">取消</button><button type="submit">${esc(text)}</button></footer></form>`;
 const available=()=>Math.round((data.wallet.pointsBalance-data.wallet.pointsReserved)*100)/100;
+// 暫停動畫不代表停止 Phaser 的原生輸入；分頁、背景與對話框共同控制輸入。
+function syncForestInput(){game?.setInputEnabled(view==='forest'&&!document.hidden&&!$('sheet').open&&!stopped);}
 function sheet(title,html){delete $('sheet').dataset.recordId;delete $('sheet').dataset.recordStatus;photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];game?.setInputEnabled(false);$('sheetTitle').textContent=title;$('sheetBody').innerHTML=html;if(!$('sheet').open)$('sheet').showModal();$('sheetBody').querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeSheet());updateTimer();}
 function closeSheet(){if(busy)return;$('sheet').close();photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];}
-$('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{game?.setInputEnabled(!$('sheet').open);photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+$('closeSheet').onclick=closeSheet;$('sheet').addEventListener('close',()=>{syncForestInput();photoUrls.forEach(URL.revokeObjectURL);photoUrls=[];});$('sheet').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 /**
  * 鎖定表單、送出變更並重讀畫面；資源計算由 service 的交易處理。
  * @param {string} action - 成長森林服務操作名稱。
@@ -58,11 +60,11 @@ async function refresh(){
 }
 function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{if(stopped)return;if(busy){scheduleRefresh();return;}refresh().catch(error=>status(message(error),true));},220);}
 async function openView(next){
- if(!data||busy||next==='parent'&&!data.parent)return;if(next==='parent'&&view!=='parent')$('parentRecordSection')?.removeAttribute('open');view=next;updateHeader();if(next!=='visit'){visitGame?.pause();visitGeneration++;}
+ if(!data||busy||next==='parent'&&!data.parent)return;if(next==='parent'&&view!=='parent')$('parentRecordSection')?.removeAttribute('open');view=next;syncForestInput();updateHeader();if(next!=='visit'){visitGame?.pause();visitGeneration++;}
  for(const item of ['forest','records','rewards','parent','members','visit'])$(item+'View').hidden=item!==view;
  document.querySelectorAll('[data-view]').forEach(b=>{if(b.dataset.view===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  if(view==='forest'){
-  if(!game&&!gamePending){gamePending=import('./scene.js').then(m=>m.createForest($('forestGame'),index=>{if(!$('sheet').open)plot(index);},lowPower)).then(g=>{if(stopped){g.destroy();return;}game=g;g.set(data);g.setInputEnabled(!$('sheet').open);if(view!=='forest'||document.hidden)g.pause();}).catch(e=>status(message(e),true)).finally(()=>gamePending=null);}
+  if(!game&&!gamePending){gamePending=import('./scene.js').then(m=>m.createForest($('forestGame'),index=>{if(view==='forest'&&!document.hidden&&!$('sheet').open)plot(index);},lowPower)).then(g=>{if(stopped){g.destroy();return;}game=g;g.set(data);syncForestInput();if(view!=='forest'||document.hidden)g.pause();}).catch(e=>status(message(e),true)).finally(()=>gamePending=null);}
   game?.resume();
  }else game?.pause();
  if(view==='members')await renderMembers();
@@ -115,7 +117,7 @@ $('visitPrevious').onclick=()=>changeVisitPage(-1);$('visitNext').onclick=()=>ch
 $('powerMode').onclick=async()=>{lowPower=!lowPower;localStorage.setItem('nexus.growth.lowPower',lowPower?'1':'0');$('powerMode').setAttribute('aria-pressed',String(lowPower));game?.destroy();game=null;if(view==='forest')await openView('forest');};
 
 function plot(index){
- if(!data||busy||!data.gardenPage.plots.some(slot=>slot.positionIndex===index))return;const plant=data.plants.find(p=>p.positionIndex===index);
+ if(view!=='forest'||document.hidden||!data||busy||!data.gardenPage.plots.some(slot=>slot.positionIndex===index))return;const plant=data.plants.find(p=>p.positionIndex===index);
  if(!plant){sheet('種下新的可能',`<p class="body-copy">位置 ${index+1} · 選一顆背包裡的種子；不足時可到種子小舖購買。</p><div class="seed-grid">${Object.entries(data.plantCatalog).map(([type,c])=>`<article class="seed"><img src="assets/growth-forest/${type}-2.svg" alt="${esc(c.name)}"><h3>${esc(c.name)}</h3><p>背包 ${data.garden.seeds[type]||0} 顆</p><button data-plant="${type}" ${!(data.garden.seeds[type]>0)?'disabled':''}>種下</button></article>`).join('')}</div><button class="text-link" id="shopFromPlant">前往種子小舖</button>`);
   $('sheetBody').querySelectorAll('[data-plant]').forEach(b=>b.onclick=async()=>{const r=await action('plant',{plantType:b.dataset.plant,positionIndex:index});if(r)game?.effect(index,'growth');});$('shopFromPlant').onclick=seedShop;return;
  }
@@ -189,8 +191,16 @@ $('openReading').onclick=readingForm;
 function updateTimer(){const out=$('readingTime');if(!out)return;const secs=Math.floor(clock.elapsed()/1000);out.textContent=[Math.floor(secs/3600),Math.floor(secs/60)%60,secs%60].map(n=>String(n).padStart(2,'0')).join(':');$('startClock').disabled=clock.running||busy;}
 function memberOptions(){return data.members.map(m=>({value:m.accountId,label:m.name}));}
 function childName(id){return data.members.find(m=>m.accountId===id)?.name||id;}
+// 依目前顯示文字計算原生選單寬度，並保留箭頭與觸控空間。
+function fitMemberSelect(container){
+ const control=container.querySelector('select[name=accountId],select[name=parentTarget]');if(!control)return;
+ const canvas=document.createElement('canvas'),drawing=canvas.getContext('2d');drawing.font=getComputedStyle(control).font;
+ control.style.width=Math.ceil(Math.max(108,drawing.measureText(control.selectedOptions[0]?.textContent||'').width+54))+'px';control.style.maxWidth='100%';
+}
 function renderFilters(container,parent){
- container.innerHTML=`<form class="filters record-filters" data-forest-filters>${parent?`<div class="filter-member">${select('孩子','accountId',[{value:'all',label:'全部成員'},...memberOptions()],recordFilters.accountId||'all')}</div>`:''}${select('類型','type',[{value:'',label:'全部'},{value:'exam',label:'考試'},{value:'reading',label:'閱讀'}],recordFilters.type||'')}<div class="filter-status-pair">${select('狀態','status',[{value:'',label:'全部'},...['pending','approved','rejected','revoked'].map(v=>({value:v,label:labels[v]}))],recordFilters.status||'')}${field('考試類型','examType','text',recordFilters.examType||'')}</div><div class="filter-date-range">${field('開始日期','from','date',recordFilters.from||'')}${field('結束日期','to','date',recordFilters.to||'')}</div>${field('科目','subject','text',recordFilters.subject||'')}${field('書名包含','bookName','text',recordFilters.bookName||'')}<button>套用篩選</button></form>`;
+ container.innerHTML=`<form class="filters record-filters" data-forest-filters>${parent?`<div class="filter-member">${select('成員','accountId',[{value:'all',label:'全部成員'},...memberOptions()],recordFilters.accountId||'all')}</div>`:''}${select('類型','type',[{value:'',label:'全部'},{value:'exam',label:'考試'},{value:'reading',label:'閱讀'}],recordFilters.type||'')}<div class="filter-status-pair">${select('狀態','status',[{value:'',label:'全部'},...['pending','approved','rejected','revoked'].map(v=>({value:v,label:labels[v]}))],recordFilters.status||'')}${field('考試類型','examType','text',recordFilters.examType||'')}</div><div class="filter-date-range">${field('開始日期','from','date',recordFilters.from||'')}${field('結束日期','to','date',recordFilters.to||'')}</div>${field('科目','subject','text',recordFilters.subject||'')}${field('書名包含','bookName','text',recordFilters.bookName||'')}<button>套用篩選</button></form>`;
+ fitMemberSelect(container);
+ container.querySelector('[name=accountId]')?.addEventListener('change',()=>fitMemberSelect(container));
  container.querySelector('form').onsubmit=async e=>{e.preventDefault();recordFilters=Object.fromEntries(new FormData(e.currentTarget));await loadRecords(true,parent);};
 }
 async function loadRecords(reset=false,parent=view==='parent'){
@@ -247,7 +257,7 @@ async function legacyRecords(cursor=null,append=false){
 async function renderParent(){
  if(!data.parent)return;const root=$('parentContent');targetId=targetId&&data.members.some(m=>m.accountId===targetId)?targetId:(data.members.find(m=>!['parent','admin'].includes(m.role))?.accountId||context.accountId);
  const previous=$('parentRecordSection'),expanded=parentMode==='records'&&previous?.dataset.accountId===targetId&&previous.open,scrollTop=expanded?$('parentRecordScroll')?.scrollTop||0:0;
- root.innerHTML=`<div class="filters">${select('查看成員','parentTarget',memberOptions(),targetId)}</div><div id="parentPanel"></div>`;root.querySelector('[name=parentTarget]').onchange=e=>{targetId=e.target.value;renderParent().catch(e=>status(message(e),true));};
+ root.innerHTML=`${parentMode==='records'?'':`<div class="filters">${select('成員','parentTarget',memberOptions(),targetId)}</div>`}<div id="parentPanel"></div>`;fitMemberSelect(root);const memberSelect=root.querySelector('[name=parentTarget]');if(memberSelect)memberSelect.onchange=e=>{targetId=e.target.value;renderParent().catch(e=>status(message(e),true));};
  const panel=$('parentPanel');
  if(parentMode==='records'){
   panel.innerHTML=`<div id="parentFilters"></div><details id="parentRecordSection" class="parent-record-section" data-account-id="${esc(targetId)}" ${expanded?'open':''}><summary>成長紀錄與審核 <span id="parentRecordCount"></span></summary><div id="parentRecordScroll" class="parent-record-scroll" tabindex="0" role="region" aria-label="成長紀錄與審核清單"><div id="parentRecords" class="record-list"></div><button id="parentMore" class="outline" hidden>載入更多紀錄</button></div></details>`;
@@ -290,7 +300,7 @@ async function initialize(){
 }
 $('retry').onclick=initialize;
 function startTimer(){clearInterval(timer);if(!document.hidden)timer=setInterval(updateTimer,500);}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);game?.pause();visitGame?.pause();}else{startTimer();if(view==='forest')game?.resume();if(view==='visit')visitGame?.resume();checkContext();}});
+document.addEventListener('visibilitychange',()=>{syncForestInput();if(document.hidden){clearInterval(timer);game?.pause();visitGame?.pause();}else{startTimer();if(view==='forest')game?.resume();if(view==='visit')visitGame?.resume();checkContext();}});
 function checkContext(){let user;try{user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{}if(user?.accountId!==context.accountId||getSelectedGameGroupId(user)!==context.groupId)location.replace('wishwall.html');}
 window.addEventListener('storage',checkContext);window.addEventListener('focus',checkContext);window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
 window.addEventListener('pagehide',()=>{stopped=true;unsubscribe?.();stopAppearance?.();clearTimeout(refreshTimer);clearInterval(timer);game?.destroy();visitGame?.destroy();clearTimeout(noticeTimer);photoUrls.forEach(URL.revokeObjectURL);});

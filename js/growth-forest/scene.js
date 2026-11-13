@@ -22,13 +22,13 @@ export function prepareForest(){
  * @description 換植物只替換紋理／必要精靈；擁有者須在離頁時呼叫 destroy。
  */
 export async function createForest(element,onPlot,lowPower=false){
- element.setAttribute('aria-busy','true');await loadEngine();let scene,latest,dead=false;
+ element.setAttribute('aria-busy','true');await loadEngine();let scene,latest,dead=false,inputEnabled=true,paused=false;
  const points=PLOT_POSITIONS;
- const activate=(index,pointer)=>{if(pointer.getDistance()>12)return;const slot=latest?.gardenPage.plots[index];if(slot)onPlot(slot.positionIndex);};
+ const activate=(index,pointer)=>{if(dead||paused||!inputEnabled||element.closest('[hidden]')||pointer.getDistance()>12)return;const slot=latest?.gardenPage.plots[index];if(slot)onPlot(slot.positionIndex);};
  class Forest extends Phaser.Scene{
   preload(){this.load.image('forest',art.background);for(const type of PLANT_TYPES)art.plants[type].forEach((path,i)=>this.load.image(type+'-'+(i+1),path));}
   create(){
-   scene=this;this.add.image(390,500,'forest');this.sprites=[];this.hits=[];this.soils=[];
+   scene=this;this.input.enabled=inputEnabled&&!paused&&!dead;this.add.image(390,500,'forest');this.sprites=[];this.hits=[];this.soils=[];
    points.forEach((p,i)=>{const soil=this.add.container(0,0,[this.add.ellipse(p.x,p.y+10,150,49,0x5a6944,.14),this.add.ellipse(p.x,p.y,142,47,0xa27d57).setStrokeStyle(3,0xceb68d),this.add.ellipse(p.x,p.y-2,120,32,0x816441)]);this.soils.push(soil);const hit=this.add.zone(p.x,p.y,160,62).setInteractive({cursor:'pointer'}).setDepth(2);this.hits.push(hit);hit.on('pointerup',pointer=>activate(i,pointer));});
    if(!lowPower){for(let i=0;i<7;i++){const mote=this.add.circle(85+i*97,280+(i%3)*130,3,0xfff6c9,.7);this.tweens.add({targets:mote,y:mote.y-60,alpha:.15,duration:3500+i*300,yoyo:true,repeat:-1});}}
    this.render(latest);element.setAttribute('aria-busy','false');
@@ -57,5 +57,7 @@ export async function createForest(element,onPlot,lowPower=false){
   }
  }
  const game=new Phaser.Game({type:Phaser.AUTO,parent:element,backgroundColor:'#c4d7ae',width:780,height:1000,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},transparent:false,antialias:true,fps:{target:lowPower?30:60},scene:Forest,audio:{noAudio:true}});
- return{set(data){latest=data;scene?.render(data);},effect(i,kind){scene?.effect(i-(latest?.gardenPage.start||0),kind);},setInputEnabled(enabled){game.input.enabled=enabled;if(scene)scene.input.enabled=enabled;},pause(){game.loop.sleep();},resume(){if(!dead)game.loop.wake();},destroy(){dead=true;game.destroy(true);}};
+ // 全域 Input Manager 保持接收 touchend／mouseup，避免返回森林時殘留按壓狀態。
+ const syncInput=()=>{const enabled=inputEnabled&&!paused&&!dead;if(scene)scene.input.enabled=enabled;};
+ return{set(data){latest=data;scene?.render(data);},effect(i,kind){scene?.effect(i-(latest?.gardenPage.start||0),kind);},setInputEnabled(enabled){inputEnabled=Boolean(enabled);syncInput();},pause(){paused=true;syncInput();game.loop.sleep();},resume(){if(!dead){paused=false;syncInput();game.loop.wake();}},destroy(){dead=true;syncInput();game.destroy(true);}};
 }

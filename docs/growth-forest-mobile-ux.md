@@ -51,3 +51,12 @@ GROWTH_DIRECT_BROWSER=1 node tests/growth-forest-browser.cjs
 - js/growth-forest/direct-service.js：由 scripts/build-growth-direct.cjs 生成。
 - tests/growth-forest-browser.cjs：啟動／分頁／排版驗證。
 - docs/growth-forest-mobile-ux.md：本說明。
+
+## 後續修正：分頁輸入隔離與欄位一致性
+
+- 原本 pause 只呼叫 game.loop.sleep，並未停用場景輸入；現在停止場景點擊，並於花朵／土壤回呼與 plot 入口檢查目前分頁。避免原生下拉選單操作期間，隱藏森林收到殘留事件而開啟植物視窗。
+- 全域 Phaser Input Manager 保持啟用，以接收 mouseup／touchend 並完成指標狀態清理；場景輸入由分頁、頁面可見性、對話框和暫停狀態共同決定。場景延遲建立時也沿用先前設定。
+- 紀錄與審核移除重複的「查看成員」，原「孩子」篩選改為「成員」，依選取文字計算選單寬度且不超出容器。其他管理分頁仍保留必要的「成員」操作對象選單。
+- 個人／家長紀錄的開始及結束日期，寬度對齊狀態欄位，高度固定 44px；調整 WebKit 原生日期控制項的內部 padding，保留原生日期選擇行為。
+- 新增真實 Phaser 回歸：種植後切到審核，切換三種成員選項並向隱藏場景發送 pointerup，均不開植物視窗；回森林後仍能正常點花。驗證 320／390／768／1440px，兩處日期與狀態的實際邊界框等寬等高。
+- 未進行 iPhone／iPad 真機驗收，未修改 Firebase 或遊戲獎勵規則。
