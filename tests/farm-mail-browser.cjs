@@ -12,6 +12,7 @@ const docs = {
     'groups/B/users/self': { farm: structuredClone(farm) }
 };
 let fail = false, failSecondBatch = false;
+const rankingProbe = {reads:0,fail:false,gate:null};
 const mock = `
 export const doc=(_, ...parts)=>({path:parts.join('/'),kind:'doc'}),collection=(_, ...parts)=>({path:parts.join('/'),kind:'query'});
 export const where=(field,op,value)=>({field,op,value}),query=(ref,...filters)=>({...ref,filters}),serverTimestamp=()=>Date.now();
@@ -40,9 +41,10 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error('PAGE', error.message); });
         const confirmations=[]; page.on('dialog', dialog => { confirmations.push(dialog.message()); dialog.accept(); });
         page.setDefaultTimeout(12000);
-        await page.exposeFunction('__mailDb', operation => {
+        await page.exposeFunction('__mailDb', async operation => {
             if (operation.kind === 'get') return structuredClone(docs[operation.path]);
             if (operation.kind === 'query') {
+                if(operation.path==='groups'&&operation.filters?.some(filter=>filter.field==='farmVillageVisibility')){rankingProbe.reads++;if(rankingProbe.gate){const gate=rankingProbe.gate;rankingProbe.gate=null;gate.started();await gate.wait;}if(rankingProbe.fail)throw Error('Firebase 暫時無法連線，請重新整理');}
                 let rows = Object.entries(docs).filter(([path]) => path.startsWith(operation.path + '/') && path.split('/').length === operation.path.split('/').length + 1).map(([path, data]) => ({ path, data: structuredClone(data) }));
                 for (const filter of operation.filters || []) rows = rows.filter(row => filter.op === 'in' ? filter.value.includes(row.data[filter.field]) : row.data[filter.field] === filter.value);
                 return rows;
@@ -78,6 +80,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         await page.goto(base + '/farmgame.html');
         await page.waitForSelector('.farm-mail-launcher').catch(async error => { console.error(await page.evaluate(()=>({ html:document.querySelector('.farm-mail-launcher')?.outerHTML, data:window.__farmGame?.registry?.get('myFarmData'), scenes:window.__farmGame?.scene?.getScenes(true).map(s=>s.scene.key) }))); throw error; });
         await page.waitForSelector('.farm-ranking-launcher');
+        if(process.env.FARM_RANKING_ONLY==='1'){await require('./helpers/farm-ranking-checks.cjs')(page,{docs,owner,errors,probe:rankingProbe});return;}
         await page.waitForSelector('.farm-mail-badge:not([hidden])');
         assert.equal(await page.locator('.farm-mail-badge').textContent(), '1');
         assert.match(await page.locator('.farm-mail-launcher').getAttribute('aria-label'), /開啟通知/);

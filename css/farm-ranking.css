@@ -1,0 +1,55 @@
+/* 排行榜 V2：美術來自使用者素材表；九宮格保留角件，不以 CSS 重畫木框。 */
+.farm-ranking-overlay{padding:max(20px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));background:#19160db5;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+.farm-ranking-panel{position:relative;width:min(660px,100%);max-width:660px;height:min(1170px,calc(100dvh - max(20px,env(safe-area-inset-top)) - max(10px,env(safe-area-inset-bottom))));max-height:none;min-height:0;display:flex;flex-direction:column;gap:0;padding:0 clamp(4px,2.4vw,16px) 10px;border:clamp(16px,3.9vw,28px) solid transparent;border-radius:0;border-image:url('../assets/farm/leaderboard/leaderboard_panel.png') 65 fill / clamp(16px,3.9vw,28px) stretch;background:none;box-shadow:none;isolation:isolate;overflow:visible;color:#4d301c;}
+.farm-ranking-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+.farm-ranking-header{position:relative;flex:none;height:auto;min-height:0;margin-top:clamp(-65px,-9vw,-30px);margin-bottom:-10px;display:flex;align-items:flex-start;justify-content:center;}
+.farm-ranking-header h2{width:80%;margin:0;line-height:0;}
+.farm-ranking-header h2 img{display:block;width:100%;height:auto;}
+.farm-ranking-panel button{font:inherit;touch-action:manipulation;cursor:pointer;color:inherit;}
+.farm-ranking-close{position:absolute;right:-13px;top:clamp(8px,3vw,24px);display:block;width:clamp(46px,9vw,68px);height:auto;aspect-ratio:103/109;padding:0;border:0;background:none;}
+.farm-ranking-close img{display:block;width:100%;height:100%;}
+.farm-ranking-tabs{flex:none;display:flex;justify-content:center;gap:8px;overflow-x:auto;min-height:0;margin:0 0 4px;padding:0;}
+.farm-ranking-tab{position:relative;flex:0 1 auto;min-width:0;width:84%;max-width:520px;border:0;background:none;padding:0;line-height:1.2;}
+.farm-ranking-tab img{display:block;width:100%;height:auto;}
+.farm-ranking-tab[aria-selected=false]{opacity:.65;}
+.farm-ranking-period{flex:none;display:grid;grid-template-columns:clamp(24px,5vw,42px) minmax(0,1fr);align-items:center;gap:6px;min-height:60px;margin:0;border:solid transparent;border-width:9px 16px;border-image:url('../assets/farm/leaderboard/leaderboard_period_banner.png') 22 50 fill / 9px 16px stretch;padding:1px 2px;line-height:1.5;font-size:clamp(10px,2.45vw,15px);font-weight:600;text-align:center;overflow-wrap:anywhere;}
+.farm-ranking-period>img{width:100%;height:auto;}
+.farm-ranking-status{flex:none;min-height:18px;margin:5px 0 8px;text-align:center;font-size:clamp(11px,2.6vw,17px);font-weight:700;line-height:1.4;overflow-wrap:anywhere;}
+.farm-ranking-status::before,.farm-ranking-status::after{content:'';display:inline-block;width:24px;height:12px;background:url('../assets/farm/leaderboard/leaderboard_divider.png') center/150px 12px no-repeat;vertical-align:middle;margin:0 5px;}
+.farm-ranking-status::before{background-position:23% center;}.farm-ranking-status::after{background-position:88% center;}
+.farm-ranking-content{flex:1 1 0;min-height:42px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;scrollbar-color:#a57d44 transparent;padding:4px 0 5px;scroll-padding-block:5px;}
+.farm-ranking-list{list-style:none;padding:0;margin:0;}
+.farm-ranking-row{display:grid;grid-template-columns:clamp(38px,10vw,72px) minmax(0,1fr) auto;align-items:center;gap:clamp(5px,1.8vw,14px);height:clamp(40px,8.2vw,58px);min-height:0;margin:0 0 2px;padding:0 clamp(4px,1vw,10px);border:4px solid transparent;border-image:url('../assets/farm/leaderboard/leaderboard_row_normal.png') 22 fill / 4px stretch;background:none;box-sizing:border-box;}
+.farm-ranking-row:is(.farm-ranking-row--gold,.farm-ranking-row--silver,.farm-ranking-row--bronze){height:clamp(50px,10.8vw,80px);}
+.farm-ranking-row--gold{border-image-source:url('../assets/farm/leaderboard/leaderboard_row_gold.png');}
+.farm-ranking-row--silver{border-image-source:url('../assets/farm/leaderboard/leaderboard_row_silver.png');}
+.farm-ranking-row--bronze{border-image-source:url('../assets/farm/leaderboard/leaderboard_row_bronze.png');}
+.farm-ranking-place{position:relative;display:grid;place-items:center;width:100%;min-width:0;height:100%;color:#57351e;font-size:clamp(17px,4.6vw,29px);font-weight:800;line-height:1;}
+.farm-ranking-place img{display:block;width:100%;height:100%;object-fit:contain;}
+.farm-ranking-row--normal .farm-ranking-place{width:65%;justify-self:center;}
+.farm-ranking-place-number{position:absolute;inset:0;display:grid;place-items:center;}
+.farm-ranking-person{min-width:0;overflow:hidden;}
+.farm-ranking-person strong,.farm-ranking-person small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.farm-ranking-person strong{font-size:clamp(13px,3.5vw,22px);font-weight:800;line-height:1.25;}
+.farm-ranking-person small{font-size:clamp(10px,2.5vw,15px);color:#74583a;margin-top:2px;line-height:1.25;}
+.farm-ranking-score{font-size:clamp(13px,3.9vw,26px);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums;max-width:100%;}
+.farm-ranking-empty{font-size:14px;line-height:1.8;text-align:center;padding:24px 12px;}
+.farm-ranking-footer{flex:none;position:relative;z-index:1;display:grid;justify-items:center;gap:3px;padding-top:6px;}
+.farm-ranking-reward-banner{max-height:min(20dvh,150px);overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:clamp(24px,6vw,50px) minmax(0,1fr);align-items:center;gap:8px;width:100%;box-sizing:border-box;border:solid transparent;border-width:9px 14px;border-image:url('../assets/farm/leaderboard/leaderboard_reward_banner.png') 24 50 fill / 9px 14px stretch;padding:1px 1px;}
+.farm-ranking-reward-banner>img{width:100%;height:auto;}
+.farm-ranking-note{background:none;border:0;border-radius:0;margin:0;padding:0;font-size:clamp(10px,2.5vw,15px);line-height:1.6;color:#65452b;overflow-wrap:anywhere;}
+.farm-ranking-refresh{display:block;width:54%;max-width:325px;min-height:44px;border:0;padding:0;background:none;}
+.farm-ranking-refresh img{display:block;width:100%;height:auto;}
+.farm-ranking-panel button:disabled{opacity:.6;cursor:wait;}
+.farm-ranking-panel button:active:not(:disabled){transform:scale(.95);}
+.farm-ranking-panel button:focus-visible,.farm-ranking-content:focus-visible{outline:2px solid #785629;outline-offset:2px;}
+.farm-ranking-grass{position:absolute;bottom:-6px;width:29%;max-width:165px;height:auto;pointer-events:none;z-index:2;}
+.farm-ranking-grass--left{left:-18px;}.farm-ranking-grass--right{right:-18px;}
+@media(max-height:600px){
+ .farm-ranking-overlay{padding-top:max(12px,env(safe-area-inset-top));padding-bottom:max(8px,env(safe-area-inset-bottom));}
+ .farm-ranking-panel{height:calc(100dvh - max(12px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)));border-width:16px;border-image-width:16px;padding-bottom:2px;}
+ .farm-ranking-header{height:55px;margin-top:-20px;margin-bottom:0;}.farm-ranking-header h2{width:190px;max-width:70%;}.farm-ranking-close{width:44px;right:-8px;top:0;}
+ .farm-ranking-tabs{margin-bottom:0;}.farm-ranking-tab{width:180px;}.farm-ranking-period{min-height:40px;font-size:10px;line-height:1.25;border-width:5px 14px;border-image-width:5px 14px;grid-template-columns:20px minmax(0,1fr);}
+ .farm-ranking-status{margin:2px 0;font-size:11px;min-height:16px;}.farm-ranking-content{min-height:35px;}
+ .farm-ranking-footer{padding-top:2px;gap:0;}.farm-ranking-note{font-size:10px;line-height:1.3;}.farm-ranking-reward-banner{border-width:5px 14px;border-image-width:5px 14px;padding:0;grid-template-columns:24px minmax(0,1fr);}.farm-ranking-refresh{width:170px;min-height:44px;}.farm-ranking-grass{max-width:95px;}
+}
