@@ -28,8 +28,8 @@ module.exports = async function checkFarmHud(page) {
         const style=getComputedStyle(node);
         return {background:style.backgroundImage,shadow:style.boxShadow,border:style.borderTopWidth};
     }),{background:'none',shadow:'none',border:'0px'});
-    assert.ok(await page.locator('.farm-hud-panel-art,.farm-hud-dock-art,.farm-hud-mail-art,.farm-hud-countdown>img').evaluateAll(async nodes => {
-        await Promise.all(nodes.map(node => node.decode())); return nodes.length===6 && nodes.every(node=>node.naturalWidth>0);
+    assert.ok(await page.locator('.farm-hud-panel-art,.farm-hud-dock-art,.farm-hud-mail-art').evaluateAll(async nodes => {
+        await Promise.all(nodes.map(node => node.decode())); return nodes.length===5 && nodes.every(node=>node.naturalWidth>0);
     }));
     assert.equal(await dock.locator('.farm-hud-art,svg').count(),0);
     assert.equal(await page.locator('.farm-hud-stat,.farm-hud-settings,.farm-hud-side button,.farm-hud-bottom button,.farm-hud-countdown').count(),13);
@@ -81,7 +81,8 @@ module.exports = async function checkFarmHud(page) {
     assert.ok(Math.abs(releasedWidth/artWidth-1)<.01);
     assert.equal(await guide.evaluate(node=>node.classList.contains('is-selected')),true);
     await page.screenshot({path:'/tmp/farm-hud-button-selected.png'});
-    for (const name of ['每日任務，尚未開放','活動，尚未開放','圖鑑，尚未開放','設定，尚未開放']) {
+    assert.equal(await page.getByRole('button',{name:'每日任務',exact:true}).isEnabled(),true);
+    for (const name of ['活動，尚未開放','圖鑑，尚未開放','設定，尚未開放']) {
         const entry=page.getByRole('button',{name,exact:true});
         assert.equal(await entry.isEnabled(),true);
         await entry.click();
@@ -169,15 +170,13 @@ module.exports = async function checkFarmHud(page) {
             const firstIcon=document.querySelector('.farm-hud-side .farm-hud-art').getBoundingClientRect();
             const eggFrame=document.querySelector('[data-panel=eggs]').getBoundingClientRect();
             const dirtFrame=document.querySelector('[data-panel=cleanliness]').getBoundingClientRect();
-            const ropeY=countdown.top+countdown.width*15/897;
-            const ropeLeft=countdown.left+countdown.width*218/897;
-            const ropeRight=countdown.left+countdown.width*722/897;
-            const expectedWidth=Math.min(490,canvas.width-(side.right-canvas.left)-16)*.5;
+            const timerStyle=getComputedStyle(document.querySelector('.farm-hud-countdown'));
             const panelRects=[...document.querySelectorAll('.farm-hud-stat,.farm-hud-settings')].map(n=>n.getBoundingClientRect());
-            return {sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,
-                countdownClear:countdown.top+countdown.width*90/897>=Math.max(eggFrame.bottom,dirtFrame.bottom) && countdown.left>=firstIcon.right,
-                countdownHalf:Math.abs(countdown.width-expectedWidth)<.1,
-                ropesAttached:ropeLeft>eggFrame.left&&ropeLeft<eggFrame.right&&ropeRight>dirtFrame.left&&ropeRight<dirtFrame.right&&Math.abs(ropeY-(eggFrame.top+eggFrame.height*.954))<2&&Math.abs(ropeY-(dirtFrame.top+dirtFrame.height*.950))<2,
+            const panels=[...document.querySelectorAll('.farm-hud-stat')];
+            const croppedRopes=panels.every(node=>{const style=getComputedStyle(node),art=node.querySelector('img').getBoundingClientRect();return style.overflow==='hidden'&&art.top<node.getBoundingClientRect().top;});
+            return {croppedRopes,topGap:panelRects[0].top-canvas.top,topAligned:panelRects.every(rect=>Math.abs(rect.top-panelRects[0].top)<1),sideGap:firstIcon.top-coin.bottom,sideLeft:side.left-coin.left,scroll:document.documentElement.scrollWidth>innerWidth,clear:Math.abs(canvas.bottom-innerHeight)<2&&dock.top>=canvas.top,
+                countdownClear:countdown.top>=Math.max(eggFrame.bottom,dirtFrame.bottom)&&Math.abs((countdown.left+countdown.right)/2-innerWidth/2)<1&&countdown.right<=innerWidth,
+                simpleTimer:timerStyle.backgroundColor==='rgba(0, 0, 0, 0.5)'&&timerStyle.color==='rgb(255, 255, 255)'&&timerStyle.transform!=='none'&&!document.querySelector('.farm-hud-countdown img'),
                 aligned:panelRects.slice(1).every((r,i)=>r.left>=panelRects[i].right),
                 textFits:[...document.querySelectorAll('[data-hud-value],.farm-hud-countdown>span')].every(n=>n.scrollWidth<=n.clientWidth+1),
                 buttons:[...document.querySelectorAll('.farm-hud-bottom button')].map(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=dock.top&&b.bottom<=innerHeight;})};
@@ -201,7 +200,7 @@ module.exports = async function checkFarmHud(page) {
         assert.equal(sizes.touch,true);
         assert.equal(sizes.scale,.8);
         assert.ok(Math.abs(layout.sideGap-96/2.54*.5)<1); assert.ok(Math.abs(layout.sideLeft)<1);
-        assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.equal(layout.countdownClear,true); assert.equal(layout.countdownHalf,true); assert.equal(layout.ropesAttached,true); assert.equal(layout.aligned,true); assert.equal(layout.textFits,true); assert.ok(layout.buttons.every(Boolean));
+        assert.ok(Math.abs(layout.topGap-96/2.54*.3)<1);assert.equal(layout.topAligned,true);assert.equal(layout.croppedRopes,true);assert.equal(layout.scroll,false); assert.equal(layout.clear,true); assert.equal(layout.countdownClear,true); assert.equal(layout.simpleTimer,true); assert.equal(layout.aligned,true); assert.equal(layout.textFits,true); assert.ok(layout.buttons.every(Boolean));
         await page.evaluate(()=>__farmGame.registry.set('myFarmData',__hudLayoutFarm));
         await page.waitForSelector('.farm-hud-toast',{state:'hidden'});
         await page.screenshot({path:`/tmp/farm-hud-${viewport.width}.png`});

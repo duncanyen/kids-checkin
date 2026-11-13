@@ -104,7 +104,7 @@ export function mountFarmHud(game,{dailyChallenges}={}) {
     });
     const countdown = document.createElement('button'); countdown.type = 'button';
     countdown.className = 'farm-hud-countdown'; countdown.hidden = true;
-    countdown.innerHTML = `<img src="${assetV2('egg_countdown_dynamic_base.png')}" alt="" decoding="async" draggable="false"><span class="farm-hud-countdown-label"></span><span class="farm-hud-countdown-time"></span>`;
+    countdown.innerHTML = `<span class="farm-hud-countdown-label"></span><span class="farm-hud-countdown-time"></span>`;
     // 保留原資訊欄的重試入口；正常計時仍由場景本身更新。
     countdown.addEventListener('click', () => {
         const scene = game.scene.getScenes(true).find(scene => scene.scene.key === 'MyFarmScene');
@@ -117,8 +117,7 @@ export function mountFarmHud(game,{dailyChallenges}={}) {
         timerPresentation = undefined;
     }
     function syncCountdown(scene) {
-        const image = countdown.querySelector('img');
-        const show = scene?.scene.key === 'MyFarmScene' && scene.timerText?.active && image.complete && image.naturalWidth > 0;
+        const show = scene?.scene.key === 'MyFarmScene' && scene.timerText?.active;
         countdown.hidden = !show;
         if (!show) { restoreTimerPresentation(); return; }
         if (timerPresentation?.[0][0] !== scene.timerText) {
@@ -165,18 +164,13 @@ export function mountFarmHud(game,{dailyChallenges}={}) {
         const iconOffset = side.querySelector('.farm-hud-art').getBoundingClientRect().top - side.getBoundingClientRect().top;
         side.style.top = `calc(${coin.bottom - bounds.top - iconOffset}px + 0.5cm)`;
         side.style.left = `${coin.left - bounds.left}px`;
-        const sideRight = side.getBoundingClientRect().right - bounds.left;
-        const width = Math.min(490, bounds.width - sideRight - 16);
-        countdown.style.width = `${Math.max(0, width)}px`;
-        // 原木牌整體縮為 50%；以原圖吊繩端點定位，讓兩條繩子接住上方框線。
-        // 原圖為 897×235，繩心 x=218/722、頂端 y=15；資源圖透明留白不算外框。
+        const width = Math.min(490, bounds.width - 16);
+        // 倒數以整個遊戲視窗為中心，並留在資源列下方。
+        countdown.style.maxWidth = `${Math.max(0, width)}px`;
         const eggs = top.querySelector('[data-panel="eggs"]').getBoundingClientRect();
         const dirt = top.querySelector('[data-panel="cleanliness"]').getBoundingClientRect();
-        const renderedWidth = Math.max(0, width) * .5;
-        const anchorCenter = (eggs.left + eggs.width / 2 + dirt.left + dirt.width / 2) / 2;
-        const frameBottom = Math.min(eggs.top + eggs.height * .954, dirt.top + dirt.height * .950);
-        countdown.style.left = `${anchorCenter - bounds.left - renderedWidth * 470 / 897}px`;
-        countdown.style.top = `${frameBottom - bounds.top - renderedWidth * 15 / 897 - .75}px`;
+        countdown.style.left = '50%';
+        countdown.style.top = `${Math.max(eggs.bottom, dirt.bottom) - bounds.top + 6}px`;
         const dockHeight = bottom.getBoundingClientRect().height;
         if (dockHeight) root.style.setProperty('--farm-dock-height', `${dockHeight + 8}px`);
         top.querySelectorAll('[data-hud-value]').forEach(fitHudText);
