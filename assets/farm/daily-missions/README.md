@@ -17,3 +17,10 @@ python scripts/extract-daily-ui-assets.py \
   assets/farm/daily-missions/source/T1.png \
   assets/farm/daily-missions/source/T2.png
 ```
+
+
+## 固定圖片快取
+
+`farm-daily-sw.js` 只控制 `farmgame.html` 文件，且只攔截本資料夾 `v2/` 的 PNG GET。原始素材表、程式、登入、Firebase、每日狀態與領獎 API 不進此快取。
+
+**每次修改 v2 切圖後，必須同步更新 `js/farm/daily-assets-cache.js` 的 `DAILY_ART_REVISION`。** 新版本會建立獨立快取；既有遊戲離開後才啟用新版本，避免遊玩途中換掉圖片。只清除此功能舊版快取，不刪除其他功能的資料。瀏覽器禁用 Service Worker、儲存空間不足或清除網站資料時，會回到一般 HTTP 載入。

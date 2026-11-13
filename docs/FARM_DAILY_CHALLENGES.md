@@ -209,3 +209,42 @@ npx firebase-tools emulators:exec --config game-admin/firebase.test.json \
 每日簽到預設改為 `[100,100,100,100,100,100,1000]`，預設設定版本為 `v2-checkin-100`；每日任務金額不變。同步更新後端預設、設定範例與既有七日／冪等性／瀏覽器驗證。
 
 正式環境若已建立 `ops_daily_configs/current`，該文件優先於程式預設，需同步更新其 `checkin.rewards` 與 `version`，保留其他欄位。已建立的當日日快照依既有機制保留原金額，從新建立的日快照套用；不改寫已領紀錄或重複補發。僅推送前端不會更新正式 Functions／設定。
+
+
+## 2026-11-13：每日任務再次進入的等待優化
+
+### 已確認的等待來源
+
+原本離開遊戲再進入會重建 in-memory Firebase Auth 連線，依序做 `photoSession`、custom-token 登入與每日狀態查詢。沒有跨頁面狀態預覽；每次 render 也會清除並重建圖片節點。因此即使 HTTP 圖片快取命中，仍會等待狀態回來才顯示完整七日內容。未在正式裝置量測各階段耗時，不能把所有等待都歸因於圖片下載。
+
+### 本次調整
+
+1. **固定 PNG 版本快取**：`farm-daily-sw.js` 使用 Cache Storage 保存 37 張每日任務圖，約 1.9 MB。scope 限定 `farmgame.html`；fetch 僅處理同源 `assets/farm/daily-missions/v2/*.png` 的 GET。沒有快取主頁、Phaser 場景、原始素材表、HTML、JS、Firestore、Auth 或任何 API。
+2. **遊戲準備好再背景預載**：自家村落與存檔 ready 後等待約 1.2 秒，再於 idle 階段預備圖片、解碼並查詢每日狀態。主遊戲不等待預載完成。背景 status 如同開啟視窗，會依既有後端流程初始化當日獎勵快照，不會自行領取金幣。
+3. **只讀畫面預覽**：`daily-preview-cache.js` 依 accountId＋groupId 保存最近一次狀態，最多保留至估算的伺服器台灣午夜且不超過 24 小時；不保存憑證或 Auth Token。切換帳號、群組、資料損壞、時間倒退或跨日均不採用舊預覽。
+4. **先顯示，再確認**：重進遊戲時可先看到最近畫面，但按鈕顯示「確認今日狀態…」且停用，收到真正後端 status 才可操作。更新失敗保留畫面、顯示重試，仍不得領獎。預覽的 canClaim 一律為 false。
+5. **同頁短時間重開**：已驗證且未跨日的 30 秒內狀態可重用，不再重複查詢；每次實際 claim 仍經原有後端原子交易。重新顯示頁面或 `dailyChallengeChanged` 訊號會重新確認，訊號不能自行累計進度。
+6. **共用請求與節點**：背景查詢與開窗共用同一個請求；關窗不丟棄已在途的狀態查詢。相同分頁、相同內容時保留 DOM 圖片，不因 loading／按鈕更新而重建。destroy 仍取消計時器、idle callback 與事件處理器，晚到結果不會重繪已銷毀的視窗。
+7. **素材更新規則**：切圖改版須更新 `DAILY_ART_REVISION`。新快取準備好後在離開既有遊戲時切換；只清除此功能舊快取。瀏覽器不支援、儲存權限受限或使用者清除快取時，安全回退到一般載入，不保證永久零下載。
+
+### 驗證結果
+
+- 真實 Service Worker／HTTP 測試，刻意關閉一般 HTTP 快取：首次 37 次 PNG 伺服器請求，再次進入 **0 次**；離開到 Nexus 文件再回遊戲也為 0 次。
+- 確認首頁文件不受此 worker 控制、API 每次仍到伺服器、版本切換下載新圖、其他快取不會被刪除。
+- 預覽隔離與過期單元測試通過：帳號／群組、台灣午夜、裝置時間倒退、損壞資料、私密模式／quota 例外、無憑證存入、無領獎權限。
+- 實際 Phaser 整合測試通過：伺服器尚未回應即顯示快取七張卡；此時領獎按鈕停用；背景查詢先於開窗；開窗共用背景請求；短時間重開無新增 status 呼叫；圖片 DOM 節點保留；既有交易、網路重試、版面及場景關閉測試維持通過。
+- [等待後端時的快取畫面](screenshots/daily-challenges/cached-preview-390.png) 是隔離測試截圖，屬上次狀態預覽，不是新一次領獎授權。
+- 未量測正式網路延遲、iPhone／iPad 真機效能；第一次使用／清除資料／素材新版仍需要載入。登入及後端冷啟動可能讓按鈕短暫維持確認中。
+
+指令：
+
+```bash
+node --test tests/farm-daily-preview.test.cjs tests/farm-daily-worker.test.cjs
+node tests/farm-daily-assets-browser.cjs
+# 本機靜態伺服器 8012 埠啟動後
+node tests/farm-daily-browser.cjs
+```
+
+本次新增：`farm-daily-sw.js`、`js/farm/daily-assets-cache.js`、`js/farm/daily-preview-cache.js`、上述三個新測試。調整 `daily-ui.js`、既有瀏覽器測試及交接文件。沒有修改 Functions、獎勵金額、Firebase Rules、正式資料或任務事件來源；發布此快取優化不需部署 Firebase，只需發布前端。任務事件未接通的限制仍保留。
+
+快取讀取被拒或 quota 寫入失敗時仍使用成功的 HTTP 圖片回應，另有 worker 單元測試驗證；固定 PNG 快取不可用不會讓原本可載入的圖片失效。

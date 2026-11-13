@@ -8,7 +8,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  const backend=await fixture(),start=Date.parse('2026-11-13T04:00:00Z');backend.clock(start);
  await backend.db.doc('users/self').set({accountId:'self',name:'測試玩家',role:'child'});
  await backend.db.doc('groups/dragon-test').set({members:['self','neighbor']});
- let releaseStatus,holdStatus=false,releaseClaim,holdClaim=false,failStatus=false,layoutService=null;
+ let releaseStatus,holdStatus=false,releaseClaim,holdClaim=false,failStatus=false,layoutService=null,statusRequests=0;
  const req=(action,payload={})=>({auth:{uid:'self',token:{photoAccountId:'self',photoGroupId:'dragon-test'}},data:{groupId:'dragon-test',action,...payload}});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
@@ -16,6 +16,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  page.on('response',r=>{if(r.url().includes('/daily-missions/')&&r.status()>=400)assetErrors.push(r.url());});
  page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message);});page.on('dialog',d=>d.accept());
  await page.exposeFunction('__dailyApi',async(action,payload)=>{
+  if(action==='status')statusRequests++;
   if(action==='status'&&holdStatus){holdStatus=false;await new Promise(r=>releaseStatus=r);}
   if(action==='status'&&failStatus)throw Error('測試網路中斷');
   if(action==='claim'&&holdClaim){holdClaim=false;await new Promise(r=>releaseClaim=r);}
@@ -66,12 +67,17 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  assert.equal((await backend.db.doc('groups/dragon-test/users/self').get()).data().farm.coins,250);
  await tasks.click();await page.waitForFunction(()=>document.querySelector('.farm-daily-claim').textContent==='今日已領取');
  assert.equal(await page.evaluate(()=>__farmGame.registry.get('myFarmData').coins),250);
+ await page.evaluate(()=>window.__cachedDailyCard=document.querySelector('.farm-daily-card'));
  await page.keyboard.press('Escape');assert.equal(await page.locator('.farm-daily-overlay').isVisible(),false);
+ const beforeFastReopen=statusRequests;
+ await tasks.click();assert.equal(await page.evaluate(()=>window.__cachedDailyCard===document.querySelector('.farm-daily-card')),true,'same-view warm reopen retains image nodes');
+ assert.equal(statusRequests,beforeFastReopen,'fresh warm reopening does not repeat the status API');
+ await page.locator('.farm-daily-close').click();
  // Rapid close and reopen must not strand the UI behind an obsolete load lock.
- holdStatus=true;await tasks.click();while(!releaseStatus)await new Promise(r=>setTimeout(r,10));
+ holdStatus=true;await page.evaluate(()=>__farmGame.events.emit('dailyChallengeChanged'));await tasks.click();while(!releaseStatus)await new Promise(r=>setTimeout(r,10));
  await page.locator('.farm-daily-close').click();await tasks.click();releaseStatus();
  await page.waitForFunction(()=>document.querySelector('.farm-daily-claim').textContent==='今日已領取');
- await page.locator('.farm-daily-close').click();failStatus=true;await tasks.click();
+ await page.locator('.farm-daily-close').click();failStatus=true;await page.evaluate(()=>__farmGame.events.emit('dailyChallengeChanged'));await tasks.click();
  await page.waitForFunction(()=>document.querySelector('.farm-daily-status').textContent.includes('測試網路中斷'));
  assert.equal(await page.locator('.farm-daily-claim').isDisabled(),true);
  failStatus=false;await page.locator('.farm-daily-retry').click();await page.waitForFunction(()=>document.querySelector('.farm-daily-claim').textContent==='今日已領取');
@@ -82,8 +88,18 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
   await backend.service.dailyChallenges(req('claim',{type:'checkin',dateKey:s.dateKey,cycleId:c.cycleId,day:c.day,requestId:require('crypto').randomUUID()}));
  }
  backend.clock(start+6*86400000);
+ holdStatus=true;releaseStatus=null;
  await page.reload();await page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&__farmGame.registry.get('farmLoadState')?.phase==='ready');
- await page.locator('.farm-hud-side button[aria-label="每日任務"]').click();await page.waitForFunction(()=>!document.querySelector('.farm-daily-claim').disabled);
+ while(!releaseStatus)await new Promise(r=>setTimeout(r,10));
+ assert.equal(await page.locator('.farm-daily-overlay').isVisible(),false,'background status starts before the panel opens');
+ const backgroundCount=statusRequests;
+ await page.locator('.farm-hud-side button[aria-label="每日任務"]').click();
+ assert.equal(statusRequests,backgroundCount,'opening shares the pending background request');
+ assert.equal(await page.locator('.farm-daily-card').count(),7,'preview is visible before the new page authenticates');
+ assert.equal(await page.locator('.farm-daily-claim').isDisabled(),true,'preview cannot authorize a claim');
+ await page.screenshot({path:'/tmp/gugu-daily-cached-preview-390.png'});
+ while(!releaseStatus)await new Promise(r=>setTimeout(r,10));releaseStatus();
+ await page.waitForFunction(()=>!document.querySelector('.farm-daily-claim').disabled);
  assert.equal(await page.locator('.farm-daily-card[data-today=true] h3').innerText(),'第 7 天');
  await page.screenshot({path:'/tmp/gugu-daily-day7-390.png'});
  // Encounter/start of visit closes the modal and releases all prior input locks.
@@ -109,6 +125,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  backend.clock(layoutStart+2*86400000);
  for(let i=0;i<3;i++)await event('layout-third-egg-'+i,'COLLECT_EGG_ACTION');
  for(let i=0;i<2;i++)await event('layout-third-clean-'+i,'HELP_CLEAN_OTHER');
+ await page.evaluate(()=>__farmGame.events.emit('dailyChallengeChanged'));
  await page.locator('.farm-hud-side button[aria-label="每日任務"]').click();
  await page.getByRole('tab',{name:'每日任務',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('.farm-daily-count')?.textContent==='3/3');
@@ -124,6 +141,6 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  }
  await page.evaluate(()=>__farmGame.destroy(true));await page.waitForFunction(()=>!document.querySelector('.farm-daily-overlay'));
  assert.deepEqual(errors,[]);assert.deepEqual(assetErrors,[]);
- console.log('PASS: supplied PNGs in real Phaser, existing single HUD entry, two tabs, seven rewards, truthful mission block, atomic check-in/UI balance sync, pending claim close, obsolete-read recovery, network retry, server day 7 persistence, 320/390/430/768 layout, completed/partial/empty mission rows and non-overlapping progress/count/markers, encounter and destroy cleanup.');
+ console.log('PASS: supplied PNGs in real Phaser, existing single HUD entry, two tabs, seven rewards, truthful mission block, atomic check-in/UI balance sync, pending claim close, obsolete-read recovery, network retry, server day 7 persistence, 320/390/430/768 layout, completed/partial/empty mission rows and non-overlapping progress/count/markers; persisted read-only previews, background warmup, shared requests and retained art nodes; encounter and destroy cleanup.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
