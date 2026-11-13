@@ -2,6 +2,7 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),{execFileSync}=require('node:child_process');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createGrowthService}=require('../functions/growth-service.cjs');
 require('../scripts/prepare-growth-forest.cjs');
+const parentRaceOnly=process.env.GROWTH_PARENT_RACE_ONLY==='1';
 const startupOnly=process.env.GROWTH_STARTUP_ONLY==='1';
 const forestNavOnly=process.env.GROWTH_NAV_ONLY==='1';
 const direct=process.env.GROWTH_DIRECT_BROWSER==='1',nineOnly=process.env.GROWTH_NINE_ONLY==='1',memberOnly=process.env.GROWTH_MEMBERS_ONLY==='1',themeOnly=process.env.GROWTH_THEME_ONLY==='1',layoutOnly=process.env.GROWTH_LAYOUT_ONLY==='1';
@@ -10,7 +11,7 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
  const db=new MemoryDB(),now=Date.parse('2026-11-05T04:00:00Z');
  await db.doc('users/alice').set({accountId:'alice',name:'小森林',role:'child'});await db.doc('users/parent').set({accountId:'parent',name:'森林家長',role:'parent'});await db.doc('groups/A').set({name:'森林家庭',members:['alice','parent']});
  const service=createGrowthService({db,now:()=>now,markCutover:!direct}),browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
- const errors=[],network=[];
+ const errors=[],network=[];let heldRead=null;
  try{
  const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Taipei',hasTouch:nineOnly||memberOnly});
  context.on('request',request=>network.push(request.url()));
@@ -40,6 +41,7 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
   });
  }
  await context.exposeFunction('__growthCall',async call=>{
+  if(heldRead&&call.accountId==='parent'&&call.action===heldRead.action&&(!heldRead.kind||call.payload.kind===heldRead.kind)){const hold=heldRead;heldRead=null;hold.started();await hold.wait;}
   if(startupOnly&&call.action==='snapshot')await new Promise(resolve=>setTimeout(resolve,800));
   try{const data=await service.handle({auth:{uid:call.accountId,token:{photoAccountId:call.accountId,photoGroupId:call.groupId}},data:{groupId:call.groupId,action:call.action,payload:call.payload,requestId:call.requestId}});
    if(!['snapshot','list','legacyList','overview'].includes(call.action))for(const p of context.pages())p.evaluate(()=>{setTimeout(()=>window.__growthRefresh?.(),250);}).catch(()=>{});
@@ -48,6 +50,23 @@ const base=process.env.GROWTH_BASE_URL||'http://127.0.0.1:8030';
  });
  async function open(accountId){const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.setDefaultTimeout(15000);const wait=p.waitForFunction.bind(p);p.waitForFunction=(fn,arg,opts)=>wait(fn,arg,{timeout:15000,...opts});await p.clock.setFixedTime(new Date(now));await p.addInitScript(accountId=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId,name:'舊顯示',role:'child',groupId:'B'}));localStorage.setItem('lastGroupId','A');},accountId);await p.goto(base+'/wishwall.html'+(process.env.GROWTH_NAV_ENTRY==='1'?'?nav=1':''));await p.waitForFunction(()=>document.querySelector('#pointsBalance').textContent!=='—');return p;}
  async function clickPlot(page,index){await page.waitForFunction(()=>document.querySelector('#forestGame').getAttribute('aria-busy')==='false');await page.locator('#forestGame canvas').scrollIntoViewIfNeeded();const box=await page.locator('#forestGame canvas').boundingBox(),local=index%9;await page.mouse.click(box.x+(190+(local%3)*200)/780*box.width,box.y+(535+Math.floor(local/3)*175-3)/1000*box.height);}
+ if(parentRaceOnly){
+  const page=await open('parent');await page.click('#parentNav');await page.waitForSelector('#parentRecordSection');
+  for(const {tab,action,kind}of [{tab:'overview',action:'overview'},{tab:'requests',action:'list',kind:'requests'},{tab:'migration',action:'snapshot'},{tab:'records',action:'list',kind:'records'},{tab:'transactions',action:'list',kind:'transactions'}]){
+   let release,started;const began=new Promise(resolve=>started=resolve),wait=new Promise(resolve=>release=resolve);heldRead={action,kind,wait,started};
+   await page.click('[data-parent='+tab+']');await began;
+   await page.click('[data-parent=settings]');await page.waitForSelector('#settingsForm');await page.fill('[name=readingCoins]','777');
+   release();await page.waitForTimeout(150);
+   assert.equal(await page.locator('#settingsForm').count(),1,'late '+tab+' must not replace reward rules');
+   assert.equal(await page.inputValue('[name=readingCoins]'),'777','late '+tab+' must not reset edits');
+   assert.equal(await page.locator('#status').getAttribute('class'),'success','no stale handler errors after '+tab);
+   assert.equal(await page.locator('[role=tab][aria-selected=true]').getAttribute('data-parent'),'settings');
+  }
+  await page.click('#settingsForm button[type=submit]');await page.waitForFunction(()=>document.querySelector('#settingsForm button[type=submit]')?.disabled===false);assert.equal((await db.doc('groups/A/growthSettings/main').get()).data().reading.coins,777);
+  await page.click('[data-parent=overview]');await page.waitForSelector('#manualReward');await page.click('#manualReward');await page.waitForSelector('#manualForm');await page.click('#closeSheet');
+  await page.click('[data-parent=requests]');await page.waitForSelector('#oldParentRequests');await page.click('#oldParentRequests');await page.waitForSelector('.requests-rows');
+  assert.deepEqual(errors,[]);console.log('PASS delayed overview/requests/migration/records/transactions cannot overwrite settings or bind detached controls; rules save and management actions work.');return;
+ }
  if(startupOnly){
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',groupId:'A'}));localStorage.setItem('lastGroupId','A');});

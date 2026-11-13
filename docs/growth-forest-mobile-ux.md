@@ -60,3 +60,15 @@ GROWTH_DIRECT_BROWSER=1 node tests/growth-forest-browser.cjs
 - 個人／家長紀錄的開始及結束日期，寬度對齊狀態欄位，高度固定 44px；調整 WebKit 原生日期控制項的內部 padding，保留原生日期選擇行為。
 - 新增真實 Phaser 回歸：種植後切到審核，切換三種成員選項並向隱藏場景發送 pointerup，均不開植物視窗；回森林後仍能正常點花。驗證 320／390／768／1440px，兩處日期與狀態的實際邊界框等寬等高。
 - 未進行 iPhone／iPad 真機驗收，未修改 Firebase 或遊戲獎勵規則。
+
+## 後續修正：獎勵規則分頁的非同步競態
+
+已以延遲成長概覽回應的隔離瀏覽器測試重現：切到獎勵規則後，舊 renderParent 仍向已移除的 manualReward 綁定 onclick，造成 null 錯誤。原程式也可能在 await 之後依新的 parentMode 繼續執行其他分頁分支。
+
+修正方式：渲染開始時固定 mode／accountId，使用 parentGeneration 與 panel.isConnected 確認非同步回應仍屬於目前畫面，並使舊紀錄查詢失效。概覽、申請、明細與資料銜接不再更新已離開的分頁；事件綁定使用該次渲染的區域元素，避免誤綁其他分頁。同時保護申請與積分清單的過期回應及分頁載入。
+
+驗證：新增測試先確認舊版本失敗；修正後將概覽、申請、資料銜接、紀錄與明細回應分別延遲，切到獎勵規則並編輯金額，再釋放回應，確認沒有錯誤、表單不被覆寫，仍可儲存規則及使用概覽／申請操作。測試採隔離 Firebase fixture，未修改正式設定或獎勵數值。
+
+```sh
+GROWTH_PARENT_RACE_ONLY=1 node tests/growth-forest-browser.cjs
+```
