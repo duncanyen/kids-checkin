@@ -1,3 +1,4 @@
+import { reportingCounterPatch } from './reporting-config.js';
 import { maybeStartGiant, giantBlocksFarm } from './giant-trigger.js';
 import { outdoorHens } from './poultry-housing.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
@@ -656,6 +657,7 @@ export default class VisitScene extends Phaser.Scene {
                     const egg = takePoultryEgg(target, eggRoll);
                     const itemKey = BREEDS[egg.breed].eggKey;
                     updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
+                    Object.assign(updates, reportingCounterPatch(own, 'reportStolenEggs', 1));
                     Object.assign(updates, theftRankingPatch(own, { now: rankingClock.now(), publicVillage: isPublicVillage(sourceGroup.data()) }));
                     eggName = BREEDS[egg.breed].eggName;
                     transaction.update(targetRef, egg.patch);

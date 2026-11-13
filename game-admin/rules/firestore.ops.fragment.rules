@@ -16,3 +16,7 @@ match /ops_player_controls/{path=**} { allow read, write: if false; }
 match /ops_game_config/{path=**} { allow read, write: if false; }
 match /ops_events/{path=**} { allow read, write: if false; }
 match /ops_settings/{path=**} { allow read, write: if false; }
+
+// 後端觀測的報表事件與收集起點；只有 Admin SDK 可存取。
+match /ops_farm_report_events/{path=**} { allow read, write: if false; }
+match /ops_report_meta/{path=**} { allow read, write: if false; }

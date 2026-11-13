@@ -123,3 +123,7 @@ API 為 `gameOpsAdmin`、`gameOpsAnnouncements`、`gameOpsRedeem`，區域 asia-
 ## 2026-11-09 商店狀態與護衛犬 API
 
 新增 gameOpsGuardDog，由 Firebase Auth 與後端資格驗證處理租用、啟用、解除及到期。邊牧設定為 200／1,000 金幣且停止新租用；日本長尾雞開賣。正式 Security Rules 尚需取得並合併，不能僅靠 callable 阻止直接 Firestore 寫入。發布順序及驗證見 [商店狀態說明](../docs/farm-shop-availability.md)。
+
+## 跨群組營運報表
+
+新增「營運報表」提供區間活動與目前農場查詢；歷史來源、預設關閉的收蛋／偷蛋累計、部署及正式 Rules 前置請見 [REPORTING.md](REPORTING.md)。

@@ -1,3 +1,4 @@
+import { reportingCounterPatch } from './reporting-config.js';
 import { getUsedSpace } from './inventory-core.js';
 // 純雞種及產蛋規則由自家、拜訪、商店、餵食與戰鬥損失共用。
 export const HOUR = 3600000;
@@ -98,8 +99,10 @@ export function collectPoultry(farm, now = Date.now()) {
         }
     }
     const remaining = Object.values(state.ready).reduce((a, b) => a + b, 0);
-    return { patch: { ...poultryPatch(state), ...inventory }, collected,
-        total: Object.values(collected).reduce((a, b) => a + b, 0), remaining };
+    const total = Object.values(collected).reduce((a, b) => a + b, 0);
+    // 與實際收蛋同筆交易保存累計量，僅供後端觀測區間報表，不影響獎勵或產蛋。
+    Object.assign(inventory, reportingCounterPatch(farm, 'reportHarvestedEggs', total));
+    return { patch: { ...poultryPatch(state), ...inventory }, collected, total, remaining };
 }
 export function takePoultryEgg(farm, roll = 0, now = Date.now()) {
     const state = settlePoultry(farm, now), total = Object.values(state.ready).reduce((a, b) => a + b, 0);

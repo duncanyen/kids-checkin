@@ -1,5 +1,6 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
+const {createReporting}=require('./reporting.cjs');
 const {createManagement}=require('./management.cjs');
 const {createDailyChallenges}=require('./daily-challenges.cjs');
 const COLLECTIONS={announcements:'ops_announcements',notifications:'ops_notifications',gifts:'ops_gifts',redemptions:'ops_redemptions',audit:'ops_audit'};
@@ -14,7 +15,7 @@ const cleanAudit=value=>{
  * @description 每次管理操作核對當前 Auth admin claim；users.role 不授予營運管理權。
  */
 function createService({db,auth,now=Date.now}) {
-    const management=createManagement({db,now});
+    const management=createManagement({db,now}),reporting=createReporting({db,now});
     async function admin(request){
         const uid=D.adminIdentity(request.auth),user=await auth.getUser(uid);
         if(user.disabled||user.customClaims?.role!=='admin')D.fail('permission-denied','管理權限已撤銷，請重新登入');
@@ -125,6 +126,7 @@ function createService({db,auth,now=Date.now}) {
         const uid=await admin(request),{action,payload={}}=request.data||{};
         await throttle('admin:'+uid,120,60000);
         if(action==='dashboard')return dashboard();
+        if(action==='farmReport')return reporting.report(payload);
         if(action==='list')return list(payload.kind,payload);
         if(action==='catalog')return rewardCatalog();
         if(['dailyConfig','dailyPlayer','dailyGrants'].includes(action))return dailyChallenges.adminRead(action,payload);

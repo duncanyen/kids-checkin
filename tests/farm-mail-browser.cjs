@@ -68,6 +68,8 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         });
         await page.route('https://cdn.jsdelivr.net/**', route => route.fulfill({ contentType: 'text/javascript', body: readFileSync('/tmp/kids-phaser.js', 'utf8') }));
         await page.route('https://www.gstatic.com/**', route => route.fulfill({ contentType: 'text/javascript', body: mock }));
+        // 隔離測試模擬 Rules 已確認後開啟累計，正式預設仍關閉。
+        await page.route('**/js/farm/reporting-config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('FARM_REPORT_COUNTERS_ENABLED = false','FARM_REPORT_COUNTERS_ENABLED = true')});});
         await page.route('**/js/firebase-config.js', route => route.fulfill({ contentType: 'text/javascript', body: 'export const db={};' }));
         await page.route('**/js/farm/main.js', async route => {
             const response = await route.fetch();
@@ -182,6 +184,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         const visitorPrefix = 'groups/A/users/neighbor/farm_notifications/';
         // No active guard: even a high roll succeeds and creates a visitor record.
         assert.equal(Object.keys(docs).filter(path => path.startsWith(visitorPrefix)).length, 1);
+        assert.equal(docs[owner].farm.reportStolenEggs,1,'only a committed successful theft increments report counter');
         docs[owner].farm.villageStealCooldowns = {};
         docs[owner].farm.villageStealBlockedUntil = {};
         // Force a committed failure; the target must not lose an egg or gain mail.
@@ -196,6 +199,7 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         });
         fail = false;
         assert.equal(docs['groups/A/users/neighbor'].farm.eggsReady, eggsBefore);
+        assert.equal(docs[owner].farm.reportStolenEggs,1,'failed theft transaction must not increment report counter');
         assert.equal(Object.keys(docs).filter(path => path.startsWith(visitorPrefix)).length, 1);
         await page.evaluate(async () => {
             const scene = window.__farmGame.scene.getScene('VisitScene');

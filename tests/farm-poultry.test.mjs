@@ -54,13 +54,13 @@ test('sick birds stop producing and death never replaces a sold/dead bird with a
 test('partial collection fills the five free slots and preserves every uncollected breed', () => {
  const farm = {...seed(), warehouseLimit:10, worms:3,earthworms:2, readyEggs:{hen:3,silkie:4,bresse:3, onagadori:0},eggsReady:10};
  const original=structuredClone(farm), result=collectPoultry(farm,0), after=apply(farm,result.patch);
- assert.equal(result.total,5);assert.equal(result.remaining,5);
+ assert.equal(result.total,5);assert.equal(result.remaining,5);assert.equal(result.patch['farm.reportHarvestedEggs'],undefined);
  assert.deepEqual(result.collected,{hen:3,silkie:2,bresse:0, onagadori:0});
  assert.deepEqual(after.readyEggs,{hen:0,silkie:2,bresse:3, onagadori:0});
  assert.equal(after.eggsReady,5);assert.equal(after.inventoryEggs,3);assert.equal(after.silkieEggs,2);
  assert.deepEqual(farm,original);
- const full=collectPoultry(after,0);assert.equal(full.total,0);assert.equal(full.remaining,5);
- const rest=collectPoultry({...after,warehouseLimit:15},0);assert.equal(rest.total,5);assert.equal(rest.remaining,0);
+ const full=collectPoultry(after,0);assert.equal(full.total,0);assert.equal(full.remaining,5);assert.equal(full.patch['farm.reportHarvestedEggs'],undefined);
+ const rest=collectPoultry({...after,warehouseLimit:15},0);assert.equal(rest.total,5);assert.equal(rest.remaining,0);assert.equal(rest.patch['farm.reportHarvestedEggs'],undefined);
  assert.equal(rest.patch['farm.silkieEggs'],4);assert.equal(rest.patch['farm.bresseEggs'],3);
 });
 test('partial collection restarts only freed production clocks and respects overfilled warehouses', () => {
@@ -72,4 +72,9 @@ test('partial collection restarts only freed production clocks and respects over
  const overfilled=collectPoultry({...full,warehouseLimit:1},48*HOUR);
  assert.equal(overfilled.total,0);assert.equal(overfilled.remaining,16);
  assert.ok(overfilled.patch['farm.hensState'].every(h=>h.pausedFull));
+});
+
+test('report counters default off until rules review; enabled quantity accumulation never mutates the farm',async()=>{
+ const {reportingCounterPatch,FARM_REPORT_COUNTERS_ENABLED}=await import('../js/farm/reporting-config.js');assert.equal(FARM_REPORT_COUNTERS_ENABLED,false);
+ const farm={reportHarvestedEggs:5};assert.deepEqual(reportingCounterPatch(farm,'reportHarvestedEggs',3),{});assert.deepEqual(reportingCounterPatch(farm,'reportHarvestedEggs',3,true),{'farm.reportHarvestedEggs':8});assert.deepEqual(reportingCounterPatch(farm,'reportHarvestedEggs',0,true),{});assert.equal(farm.reportHarvestedEggs,5);
 });

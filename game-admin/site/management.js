@@ -1,12 +1,14 @@
+import {createFarmReportUI} from './report.js?v=20261114-report';
 // 管理工作區沿用已驗證的 API 及共用表格／表單樣式。
 /**
- * 掛載四個管理頁，沿用共用表格與表單元件，所有資料經受保護的 API。
+ * 掛載管理頁與跨群組營運報表，沿用共用表格與表單元件，所有資料經受保護的 API。
  * @param {Object} options - root、api、DOM／時間工具、status 及目前管理員 UID。
  * @returns {Object} has、isBusy、open、deactivate 的頁面生命週期介面。
  * @description 操作識別碼按管理員與內容雜湊保存至 sessionStorage，確認成功才移除。
  */
 export function createManagementUI({root,api,node,button,table,formatTime,wallTime,utc,status,getAdminUid}){
-    const views=['players','balance','events','settings'];
+    const views=['players','balance','events','settings','reports'];
+    const report=createFarmReportUI({root,api,node,button,table,formatTime,status});
     const names={draft:'草稿',scheduled:'排程',active:'進行中',ended:'已結束',cancelled:'已取消'};
     const dialog=node('dialog');dialog.id='managementEditor';document.body.append(dialog);
     let view=null,version=0,busy=false,data,pages=[null],page=0,next=null,search='',filter='';
@@ -151,5 +153,5 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
             data=result;next=result.nextCursor||null;root.replaceChildren();({players,balance,events,settings})[selected]();status('');
         }catch(e){if(token===version){root.replaceChildren(node('p',e.message||'管理資料讀取失敗','empty'),button('重試',()=>load()));status(e.message||'讀取失敗',true);}}
     }
-    return{has:key=>views.includes(key),isBusy:()=>busy,open:async key=>{view=key;search='';filter='';pages=[null];page=0;return load();},deactivate:()=>{view=null;version++;if(dialog.open&&!busy)dialog.close();}};
+    return{has:key=>views.includes(key),isBusy:()=>busy||report.isBusy(),open:async key=>{report.deactivate();view=key;if(key==='reports'){version++;return report.open();}search='';filter='';pages=[null];page=0;return load();},deactivate:()=>{report.deactivate();view=null;version++;if(dialog.open&&!busy)dialog.close();}};
 }
