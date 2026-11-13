@@ -6,7 +6,7 @@ const TASKS=[
     {type:'HELP_CLEAN_OTHER',name:'協助其他玩家清潔',target:3,enabled:true},
     {type:'DEFEAT_MONSTER',name:'擊退怪物',target:3,enabled:true}
 ];
-const DEFAULT_CONFIG={version:'v1',checkin:{enabled:true,rewards:[200,400,600,800,1000,1200,2000],missedDayPolicy:'reset'},mission:{enabled:true,rewards:[200,400,600,800,1000,1200,2000],missedDayPolicy:'reset',tasks:TASKS}};
+const DEFAULT_CONFIG={version:'v2-checkin-100',checkin:{enabled:true,rewards:[100,100,100,100,100,100,1000],missedDayPolicy:'reset'},mission:{enabled:true,rewards:[200,400,600,800,1000,1200,2000],missedDayPolicy:'reset',tasks:TASKS}};
 // 這三項目前仍為客戶端 Firestore 交易，不能冒充已有可信任 producer。
 const VERIFIED_PRODUCERS=Object.freeze({});
 const DAY_MS=86400000;

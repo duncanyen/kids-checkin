@@ -1,15 +1,15 @@
 {
-  "version": "v1",
+  "version": "v2-checkin-100",
   "checkin": {
     "enabled": true,
     "rewards": [
-      200,
-      400,
-      600,
-      800,
-      1000,
-      1200,
-      2000
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      1000
     ],
     "missedDayPolicy": "reset"
   },

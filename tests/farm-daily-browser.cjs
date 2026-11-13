@@ -41,7 +41,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  assert.equal(await page.locator('.farm-daily-card').count(),7);
  assert.ok(await page.locator('.farm-daily-title').evaluate(n=>getComputedStyle(n).backgroundImage.includes('/v2/title.png')));
  assert.ok(await page.locator('.farm-daily-close img').evaluate(n=>n.complete&&n.naturalWidth>0&&n.src.includes('/v2/close.png')));
- const amounts=await page.locator('.farm-daily-amount').allTextContents();assert.deepEqual(amounts,['200','400','600','800','1,000','1,200','2,000']);
+ const amounts=await page.locator('.farm-daily-amount').allTextContents();assert.deepEqual(amounts,['100','100','100','100','100','100','1,000']);
  assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').input.enabled),false);
  for(const width of [320,390,430,768]){
   await page.setViewportSize({width,height:width===768?1024:844});
@@ -63,9 +63,9 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene').input.enabled),true);
  while(!releaseClaim)await new Promise(r=>setTimeout(r,10));releaseClaim();
  await page.waitForFunction(()=>document.querySelector('.farm-daily-status').textContent.includes('領取成功'));
- assert.equal((await backend.db.doc('groups/dragon-test/users/self').get()).data().farm.coins,350);
+ assert.equal((await backend.db.doc('groups/dragon-test/users/self').get()).data().farm.coins,250);
  await tasks.click();await page.waitForFunction(()=>document.querySelector('.farm-daily-claim').textContent==='今日已領取');
- assert.equal(await page.evaluate(()=>__farmGame.registry.get('myFarmData').coins),350);
+ assert.equal(await page.evaluate(()=>__farmGame.registry.get('myFarmData').coins),250);
  await page.keyboard.press('Escape');assert.equal(await page.locator('.farm-daily-overlay').isVisible(),false);
  // Rapid close and reopen must not strand the UI behind an obsolete load lock.
  holdStatus=true;await tasks.click();while(!releaseStatus)await new Promise(r=>setTimeout(r,10));

@@ -16,6 +16,7 @@ test('seven-day rewards, server Taiwan midnight, cycle rollover and independent 
   f.clock(start+(day-1)*DAY);const s=await status(f),c=s.challenges.checkin;
   assert.equal(c.day,(day-1)%7+1);assert.equal(s.timeZone,'Asia/Taipei');assert.equal(s.nextResetAt>Date.parse(s.dateKey+'T00:00:00+08:00'),true);
   assert.equal(s.challenges.mission.day,1);
+  assert.deepEqual(s.challenges.mission.rewards,[200,400,600,800,1000,1200,2000]);
   if(day===1)cycle=c.cycleId;if(day===8)assert.notEqual(c.cycleId,cycle);
   const result=await claim(f,'checkin',s);total+=DEFAULT_CONFIG.checkin.rewards[(day-1)%7];
   assert.equal(result.amount,DEFAULT_CONFIG.checkin.rewards[(day-1)%7]);
@@ -30,13 +31,13 @@ test('same-day concurrent devices, altered request ID and cross-group replay gra
  const results=await Promise.all(Array.from({length:8},()=>claim(f,'checkin',s)));
  assert.equal(results.filter(r=>!r.replayed).length,1);assert.equal(new Set(results.map(r=>r.transactionId)).size,1);
  const replay=await claim(f,'checkin',s,'B');assert.equal(replay.replayed,true);assert.equal(replay.groupId,'A');
- assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,300);
+ assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,200);
  assert.equal((await f.db.doc('groups/B/users/alice').get()).data().farm.coins,100);
 });
 test('missed default resets, configurable continue retains streak and snapshot reward is stable',async()=>{
  const f=await setup();await claim(f);f.clock(start+DAY);let s=await status(f);assert.equal(s.challenges.checkin.day,2);
  const c=config();c.checkin.rewards[1]=777;await f.db.doc('ops_daily_configs/current').set(c);
- const paid=await claim(f,'checkin',s);assert.equal(paid.amount,400,'same-day configuration changes cannot silently alter the displayed reward');
+ const paid=await claim(f,'checkin',s);assert.equal(paid.amount,100,'same-day configuration changes cannot silently alter the displayed reward');
  f.clock(start+3*DAY);s=await status(f);assert.equal(s.challenges.checkin.day,1);
  // A distinct fixture verifies changing the missed-day rule before next-day creation.
  const g=await setup();const preserve=config();preserve.checkin.missedDayPolicy='continue';await g.db.doc('ops_daily_configs/current').set(preserve);await claim(g);
@@ -48,7 +49,7 @@ test('failed award is atomic, same request retries, disabled and impossible miss
  assert.equal((await f.db.collection('ops_daily_grants').get()).size,0);assert.equal((await status(f)).challenges.checkin.claimed,false);
  assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,100);
  await claim(f,'checkin',s);
- assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,300);
+ assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,200);
  assert.equal(s.challenges.mission.blocked,true);assert.ok(s.challenges.mission.tasks.every(t=>t.count===0&&!t.verified));
  await assert.rejects(claim(f,'mission',s),{code:'failed-precondition'});
  const g=await setup(),c=config();c.checkin.enabled=false;await g.db.doc('ops_daily_configs/current').set(c);
@@ -59,7 +60,7 @@ test('stale midnight claim, forged time/identity/coins, invalid actions, anonymo
  await assert.rejects(claim(f,'checkin',s),{code:'deadline-exceeded'});
  const current=await status(f),c=current.challenges.checkin;
  const forged=request(f,'claim',{type:'checkin',dateKey:current.dateKey,cycleId:c.cycleId,day:c.day,amount:999999,accountId:'bob',serverNow:0});
- const granted=await f.service.dailyChallenges(forged);assert.equal(granted.amount,200);
+ const granted=await f.service.dailyChallenges(forged);assert.equal(granted.amount,100);
  assert.equal((await f.db.doc('groups/A/users/bob').get()).data().farm.coins,100);
  await assert.rejects(f.service.dailyChallenges({data:{action:'status',groupId:'A'}}),{code:'unauthenticated'});
  await assert.rejects(f.service.dailyChallenges(request(f,'recordEvent',{progress:{DEFEAT_MONSTER:3}})),{code:'invalid-argument'});
@@ -101,9 +102,9 @@ test('future trusted events from an earlier Taiwan date cannot retroactively gra
 });
 test('admin-only config, per-player state and paginated grant lookup use real records',async()=>{
  const f=await setup();await claim(f);
- const c=await f.admin('dailyConfig');assert.deepEqual(c.config.checkin.rewards,[200,400,600,800,1000,1200,2000]);assert.deepEqual(c.verifiedProducers,{});
+ const c=await f.admin('dailyConfig');assert.deepEqual(c.config.checkin.rewards,[100,100,100,100,100,100,1000]);assert.deepEqual(c.verifiedProducers,{});
  const p=await f.admin('dailyPlayer',{uid:'alice'});assert.equal(p.rows.find(r=>r.type==='checkin').day.grantId.length,64);
- const list=await f.admin('dailyGrants',{uid:'alice',pageSize:1});assert.equal(list.rows.length,1);assert.equal(list.rows[0].response.amount,200);
+ const list=await f.admin('dailyGrants',{uid:'alice',pageSize:1});assert.equal(list.rows.length,1);assert.equal(list.rows[0].response.amount,100);
  await assert.rejects(f.service.adminAPI({...f.request(),data:{action:'dailyGrants',payload:{uid:'alice'}}}),{code:'permission-denied'});
 });
 test('disabling all tasks cannot accidentally turn the mission into a free reward',async()=>{

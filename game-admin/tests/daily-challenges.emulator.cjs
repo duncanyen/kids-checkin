@@ -18,7 +18,7 @@ test('concurrent Firestore transactions create exactly one daily grant and one i
  const claim={...request,data:{...request.data,action:'claim',type:'checkin',dateKey:s.dateKey,cycleId:c.cycleId,day:c.day}};
  const results=await Promise.all(Array.from({length:6},()=>f.service.dailyChallenges(claim)));
  assert.equal(results.filter(r=>!r.replayed).length,1);assert.equal((await db.collection('ops_daily_grants').get()).size,1);
- assert.equal((await db.doc('groups/A/users/alice').get()).data().farm.coins,300);
+ assert.equal((await db.doc('groups/A/users/alice').get()).data().farm.coins,200);
 });
 test('private state, grants, config and source events cannot be read, forged or deleted by anonymous, player or admin browser clients',async()=>{
  for(const context of [env.unauthenticatedContext(),env.authenticatedContext('alice',{photoAccountId:'alice',photoGroupId:'A'}),env.authenticatedContext('admin',{role:'admin'})]){
