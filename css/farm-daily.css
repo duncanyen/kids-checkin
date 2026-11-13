@@ -1,0 +1,77 @@
+/* T1/T2 原圖切片；木框、吊牌、節點、按鈕及圖示皆使用圖片，不以 CSS 重畫。 */
+.farm-daily-overlay[hidden]{display:none!important}
+.farm-daily-overlay{position:fixed;inset:0;z-index:3500;display:grid;place-items:center;padding:max(20px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));box-sizing:border-box;background:#0007;color:#452a13;font-family:system-ui,'Microsoft JhengHei',sans-serif}
+.farm-daily-panel{position:relative;display:flex;flex-direction:column;width:min(96vw,560px);height:min(91dvh,calc(96vw * 1.35),820px);max-height:100%;min-height:0;box-sizing:border-box;padding:12% 5% 6%;background:url('../assets/farm/daily-missions/v2/window.png') center/100% 100% no-repeat}
+.farm-daily-header{position:absolute;left:12%;right:4%;top:-3%;height:14%;display:flex;align-items:flex-start}
+.farm-daily-title{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:88%;height:100%;padding:0 0 0 23%;margin:0;background:url('../assets/farm/daily-missions/v2/title.png') center/contain no-repeat;font-size:clamp(20px,5.5vw,33px);font-weight:900;color:#fff1cf;white-space:nowrap;text-shadow:1px 2px #5a2e0f}
+.farm-daily-overlay button{font-family:inherit;border:0;background-color:transparent;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.farm-daily-overlay button:disabled{cursor:default}
+.farm-daily-overlay button:focus-visible{outline:2px solid #8a551f;outline-offset:2px}
+.farm-daily-close{width:16%;padding:0;margin-top:5%;aspect-ratio:1}
+.farm-daily-close img{display:block;width:100%;height:100%;object-fit:contain}
+.farm-daily-tabs{display:flex;gap:2%;flex-shrink:0;margin:0 0 8px}
+.farm-daily-tab{position:relative;flex:1;min-width:0;height:clamp(34px,10.5vw,58px);padding:0 2% 0 20%;font-size:clamp(12px,3.5vw,21px);font-weight:800;background:center/100% 100% no-repeat}
+#farmDailyTab-checkin{background-image:url('../assets/farm/daily-missions/v2/tab-checkin-inactive.png')}
+#farmDailyTab-checkin[aria-selected=true]{background-image:url('../assets/farm/daily-missions/v2/tab-checkin-active.png')}
+#farmDailyTab-mission{background-image:url('../assets/farm/daily-missions/v2/tab-mission-inactive.png')}
+#farmDailyTab-mission[aria-selected=true]{background-image:url('../assets/farm/daily-missions/v2/tab-mission-active.png')}
+.farm-daily-body{position:relative;touch-action:pan-y;overflow:auto;overscroll-behavior:contain;flex:1;min-height:0;scrollbar-width:thin;padding:0 1px}
+.farm-daily-date,.farm-daily-card-state{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap!important}
+.farm-daily-description{display:grid;place-items:center;box-sizing:border-box;min-height:34px;margin:0 2% 10px;padding:5px 8%;background:url('../assets/farm/daily-missions/v2/ribbon.png') center/100% 100% no-repeat;text-align:center;font-size:clamp(10px,2.7vw,16px);font-weight:700}
+.farm-daily-cards{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;align-items:start;margin:12px 0 8px}
+/* 九宮格延伸原圖空白內頁，保留吊環、皇冠與木框邊角的原始比例。 */
+.farm-daily-card{position:relative;min-width:0;height:clamp(120px,37vw,205px);box-sizing:border-box;border-style:solid;border-color:transparent;border-width:clamp(23px,6.6vw,36px) 4px 6px;border-image-source:var(--daily-card-art);border-image-slice:95 22 30 22 fill;border-image-repeat:stretch}
+.farm-daily-card--seventh{border-image-slice:105 26 30 26 fill}
+.farm-daily-day{position:absolute;left:-3px;right:-3px;top:calc(-1 * clamp(14px,4.2vw,23px));margin:0;color:#fff1cd;white-space:nowrap;text-align:center;font-size:clamp(8px,2.35vw,13px);font-weight:800;text-shadow:0 1px #4a2108}
+.farm-daily-reward-icon{position:absolute;top:12%;left:5%;width:90%;height:36%;object-fit:contain}
+.farm-daily-amount{position:absolute;top:53%;left:-3px;right:-3px;white-space:nowrap;text-align:center;font-size:clamp(10px,2.7vw,15px);font-weight:850}
+.farm-daily-card-status-icon{position:absolute;width:55%;height:23%;bottom:2%;left:22%;object-fit:contain}
+.farm-daily-task-day{display:grid;place-items:center;width:62%;height:clamp(24px,7vw,38px);margin:2px auto 6px;background:url('../assets/farm/daily-missions/v2/wood-label.png') center/100% 100% no-repeat;color:#fff0c9;font-size:clamp(12px,3.4vw,19px);font-weight:800;text-shadow:0 1px #57300e}
+.farm-daily-task-day[hidden]{display:none}
+.farm-daily-panel[data-tab=mission] .farm-daily-cards{grid-template-columns:repeat(8,minmax(0,1fr));gap:2px;margin:2px 2% 7px;align-items:center}
+.farm-daily-panel[data-tab=mission] .farm-daily-cards::before{content:'';position:absolute;z-index:0;left:4%;right:4%;top:44%;height:20%;background:url('../assets/farm/daily-missions/v2/connector.png') center/auto 100% repeat-x}
+.farm-daily-day-node{position:relative;aspect-ratio:1;min-width:0;display:grid;place-items:center}
+.farm-daily-day-node img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.farm-daily-day-node span{position:relative;margin-top:2%;font-size:clamp(12px,3.6vw,20px);font-weight:800}
+.farm-daily-day-node[aria-current=step] span{color:#fff5d3;text-shadow:0 1px #673509}
+.farm-daily-final-chest{position:relative;width:116%;transform:translateX(-7%);height:auto;max-height:64px;object-fit:contain}
+.farm-daily-missions{display:grid;gap:0;margin:0;box-sizing:border-box;border-style:solid;border-color:transparent;border-width:9px 8px 8px;border-image-source:url('../assets/farm/daily-missions/v2/mission-table.png');border-image-slice:22 24 22 24 fill;border-image-repeat:stretch}
+.farm-daily-mission{position:relative;height:clamp(55px,16.2vw,91px);min-height:0}
+.farm-daily-mission:not(:last-child){border-bottom:1px solid #b88e4b55}
+.farm-daily-task-icon{position:absolute;left:2%;top:9%;width:19%;height:82%;object-fit:contain}
+.farm-daily-task-info{position:absolute;left:23%;top:17%;width:49%;height:67%;min-width:0;font-size:clamp(11px,3.3vw,19px);font-weight:700}
+.farm-daily-task-info strong{display:block;font-weight:800;white-space:nowrap}
+.farm-daily-progress{position:absolute;left:0;top:62%;width:100%;height:29%}
+.farm-daily-progress-track,.farm-daily-progress-fill{position:absolute;left:0;top:0;height:100%;width:100%}
+.farm-daily-progress-clip{position:absolute;inset:0 auto 0 0;overflow:hidden}
+.farm-daily-count{position:absolute;left:74%;top:48%;width:11%;text-align:center;font-size:clamp(12px,3.4vw,20px);font-weight:800}
+.farm-daily-task-completed{position:absolute;left:86%;top:19%;width:13%;height:64%;object-fit:contain}
+.farm-daily-notice{font-size:clamp(9px,2.5vw,12px);line-height:1.4;margin:6px 2%;text-align:center}
+.farm-daily-retry{display:block;margin:4px auto;font-size:11px;text-decoration:underline}
+.farm-daily-retry[hidden]{display:none}
+.farm-daily-footer{position:relative;flex-shrink:0;display:grid;grid-template-columns:40% 60%;grid-template-rows:auto auto auto;align-items:center;min-height:clamp(113px,35vw,182px);column-gap:0;padding-top:3px}
+.farm-daily-hen{grid-column:1;grid-row:1/4;width:100%;height:100%;max-height:175px;object-fit:contain;align-self:end}
+.farm-daily-reward-panel{position:relative;grid-column:2;grid-row:1;aspect-ratio:512/147;min-height:53px;background:url('../assets/farm/daily-missions/v2/reward-panel.png') center/100% 100% no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-left:28%;box-sizing:border-box}
+.farm-daily-reward-label{font-size:clamp(10px,2.7vw,15px);white-space:nowrap;font-weight:700}
+.farm-daily-reward-amount{font-size:clamp(17px,4.4vw,26px);white-space:nowrap;font-weight:850}
+.farm-daily-claim{grid-column:2;grid-row:2;width:92%;justify-self:center;height:clamp(39px,11.5vw,66px);padding:3px 8px;font-size:clamp(16px,4.8vw,25px);font-weight:850;line-height:1.1;color:#fff3cb!important;text-shadow:1px 1px #663710;background:url('../assets/farm/daily-missions/v2/button-checkin.png') center/100% 100% no-repeat}
+.farm-daily-claim:disabled{background-image:url('../assets/farm/daily-missions/v2/button-disabled.png');color:#555!important;text-shadow:0 1px #eee}
+.farm-daily-status{grid-column:1/3;grid-row:3;font-size:11px;line-height:1.4;margin:3px 0;max-height:40px;overflow:auto;text-align:center}
+.farm-daily-status:empty{display:none}
+.farm-daily-panel[data-tab=mission] .farm-daily-footer{grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);min-height:67px;gap:5px 9px;padding:5px 1px 0}
+.farm-daily-panel[data-tab=mission] .farm-daily-hen{display:none}
+.farm-daily-panel[data-tab=mission] .farm-daily-reward-panel{grid-column:1;grid-row:1;min-height:54px}
+.farm-daily-panel[data-tab=mission] .farm-daily-claim{grid-column:2;grid-row:1;width:100%;height:clamp(42px,12vw,62px);font-size:clamp(12px,3.8vw,20px);background-image:url('../assets/farm/daily-missions/v2/button-claim.png')}
+.farm-daily-panel[data-tab=mission] .farm-daily-claim:disabled{background-image:url('../assets/farm/daily-missions/v2/button-disabled.png')}
+.farm-daily-panel[data-tab=mission] .farm-daily-status{grid-row:2}
+@media(min-width:600px){.farm-daily-panel{padding:65px 30px 32px}}
+@media(max-height:600px){.farm-daily-panel{height:91dvh}.farm-daily-footer{min-height:108px}.farm-daily-panel[data-tab=mission] .farm-daily-footer{min-height:54px}}
+
+/* 依新版參考圖：共用任務框、放大圖示與完成標記、獎勵與領取鈕並排對齊。 */
+.farm-daily-panel[data-tab=mission]{height:min(91dvh,calc(96vw * 1.45),820px)}
+.farm-daily-panel[data-tab=mission] .farm-daily-description{margin-bottom:10px}
+.farm-daily-panel[data-tab=mission] .farm-daily-cards{margin-bottom:8px}
+.farm-daily-panel[data-tab=mission] .farm-daily-task-day{position:relative;z-index:1;width:58%;margin:5px auto -5px}
+.farm-daily-panel[data-tab=mission] .farm-daily-reward-label{font-size:clamp(10px,2.9vw,17px)}
+.farm-daily-panel[data-tab=mission] .farm-daily-reward-amount{font-size:clamp(18px,4.9vw,28px)}
+@media(max-height:600px){.farm-daily-panel[data-tab=mission]{height:91dvh}}

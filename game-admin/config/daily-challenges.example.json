@@ -1,0 +1,49 @@
+{
+  "version": "v1",
+  "checkin": {
+    "enabled": true,
+    "rewards": [
+      200,
+      400,
+      600,
+      800,
+      1000,
+      1200,
+      2000
+    ],
+    "missedDayPolicy": "reset"
+  },
+  "mission": {
+    "enabled": true,
+    "rewards": [
+      200,
+      400,
+      600,
+      800,
+      1000,
+      1200,
+      2000
+    ],
+    "missedDayPolicy": "reset",
+    "tasks": [
+      {
+        "type": "COLLECT_EGG_ACTION",
+        "name": "收取雞蛋",
+        "target": 3,
+        "enabled": true
+      },
+      {
+        "type": "HELP_CLEAN_OTHER",
+        "name": "協助其他玩家清潔",
+        "target": 3,
+        "enabled": true
+      },
+      {
+        "type": "DEFEAT_MONSTER",
+        "name": "擊退怪物",
+        "target": 3,
+        "enabled": true
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
 const {createManagement}=require('./management.cjs');
+const {createDailyChallenges}=require('./daily-challenges.cjs');
 const COLLECTIONS={announcements:'ops_announcements',notifications:'ops_notifications',gifts:'ops_gifts',redemptions:'ops_redemptions',audit:'ops_audit'};
 const cleanAudit=value=>{
     if(!value)return null;
@@ -126,6 +127,7 @@ function createService({db,auth,now=Date.now}) {
         if(action==='dashboard')return dashboard();
         if(action==='list')return list(payload.kind,payload);
         if(action==='catalog')return rewardCatalog();
+        if(['dailyConfig','dailyPlayer','dailyGrants'].includes(action))return dailyChallenges.adminRead(action,payload);
         if(management.isRead(action))return management.query(action,payload);
         const requestId=D.requestId(request.data.requestId);
         try{
@@ -231,6 +233,7 @@ function createService({db,auth,now=Date.now}) {
             throw error;
         }
     }
-    return{adminAPI,announcements,redeem,rewardCatalog,guardDog};
+    const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle});
+    return{adminAPI,announcements,redeem,rewardCatalog,guardDog,dailyChallenges:dailyChallenges.handle};
 }
 module.exports={createService,COLLECTIONS};

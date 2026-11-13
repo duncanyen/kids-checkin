@@ -3,6 +3,7 @@
  * 每次重建提升 dashboardGeneration；切換群組及 pagehide 應走集中清理入口。
  * @module
  */
+import { photoLoadError } from './gallery-load-error.js';
 import { photoPerson, photoAvatar } from './gallery-profile-core.js';
 import { calendarPerson } from './calendar-identity-core.js';
 import { todoAssignedTo, todoAssigneeProfiles } from './todo-core.js';
@@ -383,7 +384,7 @@ window.checkWidgetData = function(user) {
                 const subtitle = document.getElementById('financeWidgetSub');
                 if (value) value.textContent = '讀取失敗';
                 if (subtitle) subtitle.textContent = '請確認連線與帳本權限設定';
-                console.error('記帳本讀取錯誤:', error.code || 'unknown');
+                console.error('記帳本讀取錯誤:', error);
             }
         });
     }
@@ -446,7 +447,7 @@ window.checkGalleryUnreads = function(user) {
             );
             const snap = await getCountFromServer(q);
             if (active) renderBadge(snap.data().count);
-        } catch (e) {}
+        } catch (e) { console.warn('相簿未讀統計失敗', e); }
         finally { pending = false; }
     };
 
@@ -551,6 +552,7 @@ window.fetchAndRenderPhotoCarousel = function(user) {
         latest = snapshot;
         const section = document.getElementById('photoCarouselSection');
         const container = document.getElementById('photoCarouselContainer');
+        document.getElementById('photoCarouselReadError')?.remove();
         if (snapshot.empty) { section.style.display = 'none'; return; }
         section.style.display = 'block'; let html = '';
         snapshot.forEach(docSnap => {
@@ -584,7 +586,21 @@ window.fetchAndRenderPhotoCarousel = function(user) {
         });
         container.innerHTML = html;
     };
-    carouselUnsubscribe = watchMemberWidget(q, render);
+    carouselUnsubscribe = watchMemberWidget(q, render, error => {
+        if (token !== dashboardGeneration || window.currentGroup?.id !== groupId) return;
+        console.error('首頁相簿讀取失敗', error.code || 'unknown');
+        const section = document.getElementById('photoCarouselSection');
+        const container = document.getElementById('photoCarouselContainer');
+        if (!section || !container) return;
+        section.style.display = 'block';
+        document.getElementById('photoCarouselReadError')?.remove();
+        const notice = document.createElement('div');
+        notice.id = 'photoCarouselReadError'; notice.setAttribute('role', 'status');
+        const message = document.createElement('p'); message.textContent = photoLoadError(error);
+        const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = '重新載入相簿';
+        retry.onclick = () => { notice.remove(); window.fetchAndRenderPhotoCarousel(user); };
+        notice.append(message, retry); container.after(notice);
+    });
     import('./gallery-profiles.js').then(({watchPhotoProfiles}) => {
         if (token !== dashboardGeneration || profileRequest !== carouselProfilesRequest || window.currentGroup?.id !== groupId) return;
         carouselProfilesUnsubscribe = watchPhotoProfiles(db,groupId,user.accountId,next => {

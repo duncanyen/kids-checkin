@@ -1,10 +1,10 @@
 import { GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED, ANNOUNCEMENTS_APP_CHECK_REQUIRED, REDEMPTION_APP_CHECK_REQUIRED, OPERATIONS_APP_CHECK_SITE_KEY } from './operations-config.js?v=20261108-messages-optional';
 export { GAME_OPERATIONS_ENABLED, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-config.js?v=20261108-messages-optional';
 /**
- * 建立公告、護衛犬與兌換客戶端；各模式使用獨立 Firebase App 工作階段。
+ * 建立公告、護衛犬、每日挑戰與兌換客戶端；各模式使用獨立 Firebase App 工作階段。
  * @param {{groupId: string, accountId: string}} context - 固定玩家與群組識別。
  * @param {Object} [options] - timeoutMs 預設 20000 毫秒。
- * @returns {Object} announcements、guardDog 及 redeem 非同步操作。
+ * @returns {Object} announcements、guardDog、dailyChallenges 及 redeem 非同步操作。
  * @description photoSession 橋接取得 Auth；逾時保留請求識別碼，不把未知結果當成失敗重發。
  */
 export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
@@ -18,8 +18,8 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
         finally{clearTimeout(timer);}
     }
     async function connect(mode){
-        if(!(mode==='guard'||(mode==='redeem'?GAME_REDEMPTION_ENABLED:GAME_ANNOUNCEMENTS_ENABLED)))throw Error(mode==='redeem'?'禮包服務尚未啟用。':'公告服務尚未啟用。');
-        const requiresCheck=mode==='guard'?false:mode==='redeem'?REDEMPTION_APP_CHECK_REQUIRED:ANNOUNCEMENTS_APP_CHECK_REQUIRED;
+        if(!(mode==='guard'||mode==='daily'||(mode==='redeem'?GAME_REDEMPTION_ENABLED:GAME_ANNOUNCEMENTS_ENABLED)))throw Error(mode==='redeem'?'禮包服務尚未啟用。':'公告服務尚未啟用。');
+        const requiresCheck=['guard','daily'].includes(mode)?false:mode==='redeem'?REDEMPTION_APP_CHECK_REQUIRED:ANNOUNCEMENTS_APP_CHECK_REQUIRED;
         if(requiresCheck&&!OPERATIONS_APP_CHECK_SITE_KEY)throw Error('玩家 App Check 尚未設定，請稍後再試。');
         if(!connections.has(mode))connections.set(mode,(async()=>{
             const [appSDK,authSDK,functionSDK,config]=await Promise.all([
@@ -29,7 +29,7 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
             ]);
             const user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');
             if(user?.accountId!==context.accountId)throw Error('玩家身分已變更，請重新登入。');
-            const appName=mode==='guard'?'nexus-guard-dogs':mode==='redeem'?'nexus-operations-redeem':'nexus-operations-player';
+            const appName=mode==='daily'?'nexus-daily-challenges':mode==='guard'?'nexus-guard-dogs':mode==='redeem'?'nexus-operations-redeem':'nexus-operations-player';
             const app=appSDK.getApps().find(a=>a.name===appName)||appSDK.initializeApp(config.firebaseConfig,appName);
             if(requiresCheck){const check=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js');check.initializeAppCheck(app,{provider:new check.ReCaptchaEnterpriseProvider(OPERATIONS_APP_CHECK_SITE_KEY),isTokenAutoRefreshEnabled:true});}
             const functions=functionSDK.getFunctions(app,'asia-southeast1'),auth=authSDK.getAuth(app);
@@ -45,6 +45,10 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
         return connections.get(mode);
     }
     return{
+        async dailyChallenges(action,payload={}) {
+            return withDeadline(async()=> (await connect('daily'))('gameOpsDailyChallenges',{...payload,action}),
+                ()=>Object.assign(Error('每日挑戰連線逾時；若已送出領獎，請重新載入確認，重試不會重複發獎。'),{code:'ops/timeout'}));
+        },
         async announcements(cursor,channel='announcements'){return(await connect('announcements'))('gameOpsAnnouncements',{cursor:cursor||null,channel});},
         async guardDog(action,payload={}){
             const key=`nexus.guard.pending:${context.accountId}:${context.groupId}:${action}:${JSON.stringify(payload)}`;

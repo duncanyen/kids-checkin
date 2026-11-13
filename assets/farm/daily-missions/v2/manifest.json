@@ -1,0 +1,559 @@
+{
+  "version": "T1-T2-original-crops",
+  "sources": {
+    "T1": {
+      "sha256": "aa347de8c59479ad38a6eb371e524532b3d90da704d1e8d1b0832b5c19a3aad6",
+      "size": [
+        1448,
+        1086
+      ]
+    },
+    "T2": {
+      "sha256": "a9d7814b33a33439e3c694ebf8acdf91972d8057ebfba1a0f438d98368c8ce36",
+      "size": [
+        1448,
+        1086
+      ]
+    }
+  },
+  "assets": {
+    "title": {
+      "source": "T1",
+      "box": [
+        86,
+        0,
+        654,
+        134
+      ],
+      "file": "title.png",
+      "patches": [
+        {
+          "kind": "supplied-blank-wood-face",
+          "target": [
+            180,
+            17,
+            500,
+            124
+          ],
+          "asset": "wood-label"
+        }
+      ]
+    },
+    "close": {
+      "source": "T1",
+      "box": [
+        679,
+        6,
+        804,
+        134
+      ],
+      "file": "close.png",
+      "patches": []
+    },
+    "tab-checkin-inactive": {
+      "source": "T1",
+      "box": [
+        45,
+        130,
+        378,
+        232
+      ],
+      "file": "tab-checkin-inactive.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            126,
+            26,
+            302,
+            83
+          ],
+          "sample": [
+            25,
+            26,
+            43,
+            83
+          ]
+        }
+      ]
+    },
+    "tab-checkin-active": {
+      "source": "T1",
+      "box": [
+        381,
+        130,
+        712,
+        232
+      ],
+      "file": "tab-checkin-active.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            126,
+            26,
+            302,
+            83
+          ],
+          "sample": [
+            25,
+            26,
+            43,
+            83
+          ]
+        }
+      ]
+    },
+    "tab-mission-inactive": {
+      "source": "T1",
+      "box": [
+        715,
+        130,
+        1044,
+        232
+      ],
+      "file": "tab-mission-inactive.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            125,
+            26,
+            302,
+            83
+          ],
+          "sample": [
+            25,
+            26,
+            43,
+            83
+          ]
+        }
+      ]
+    },
+    "tab-mission-active": {
+      "source": "T1",
+      "box": [
+        1048,
+        130,
+        1392,
+        232
+      ],
+      "file": "tab-mission-active.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            127,
+            26,
+            307,
+            83
+          ],
+          "sample": [
+            25,
+            26,
+            43,
+            83
+          ]
+        }
+      ]
+    },
+    "window": {
+      "source": "T1",
+      "box": [
+        20,
+        238,
+        639,
+        828
+      ],
+      "file": "window.png",
+      "patches": []
+    },
+    "ribbon": {
+      "source": "T1",
+      "box": [
+        698,
+        238,
+        1305,
+        329
+      ],
+      "file": "ribbon.png",
+      "patches": [],
+      "excluded_neighbor_boxes": [
+        [
+          80,
+          80,
+          520,
+          91
+        ]
+      ]
+    },
+    "wood-label": {
+      "source": "T1",
+      "box": [
+        800,
+        321,
+        1185,
+        395
+      ],
+      "file": "wood-label.png",
+      "patches": []
+    },
+    "card-normal": {
+      "source": "T1",
+      "box": [
+        644,
+        570,
+        819,
+        812
+      ],
+      "file": "card-normal.png",
+      "patches": []
+    },
+    "card-today": {
+      "source": "T1",
+      "box": [
+        820,
+        565,
+        1009,
+        817
+      ],
+      "file": "card-today.png",
+      "patches": []
+    },
+    "card-locked": {
+      "source": "T1",
+      "box": [
+        1009,
+        572,
+        1193,
+        813
+      ],
+      "file": "card-locked.png",
+      "patches": []
+    },
+    "card-seventh": {
+      "source": "T1",
+      "box": [
+        1193,
+        568,
+        1417,
+        817
+      ],
+      "file": "card-seventh.png",
+      "patches": []
+    },
+    "button-checkin": {
+      "source": "T1",
+      "box": [
+        55,
+        830,
+        414,
+        934
+      ],
+      "file": "button-checkin.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            72,
+            20,
+            311,
+            79
+          ],
+          "sample": [
+            43,
+            20,
+            52,
+            79
+          ]
+        }
+      ]
+    },
+    "button-claim": {
+      "source": "T1",
+      "box": [
+        432,
+        830,
+        781,
+        937
+      ],
+      "file": "button-claim.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            55,
+            20,
+            298,
+            81
+          ],
+          "sample": [
+            26,
+            20,
+            38,
+            81
+          ]
+        }
+      ]
+    },
+    "button-disabled": {
+      "source": "T1",
+      "box": [
+        788,
+        832,
+        1142,
+        937
+      ],
+      "file": "button-disabled.png",
+      "patches": [
+        {
+          "kind": "copy-original-blank-strip",
+          "target": [
+            54,
+            20,
+            298,
+            81
+          ],
+          "sample": [
+            26,
+            20,
+            38,
+            81
+          ]
+        }
+      ]
+    },
+    "reward-panel": {
+      "source": "T1",
+      "box": [
+        25,
+        938,
+        537,
+        1085
+      ],
+      "file": "reward-panel.png",
+      "patches": []
+    },
+    "connector": {
+      "source": "T1",
+      "box": [
+        793,
+        511,
+        822,
+        541
+      ],
+      "file": "connector.png",
+      "patches": []
+    },
+    "mission-row": {
+      "source": "T2",
+      "box": [
+        24,
+        38,
+        790,
+        199
+      ],
+      "file": "mission-row.png",
+      "patches": []
+    },
+    "mission-table": {
+      "source": "T1",
+      "box": [
+        548,
+        967,
+        1096,
+        1068
+      ],
+      "file": "mission-table.png",
+      "patches": []
+    },
+    "task-empty": {
+      "source": "T2",
+      "box": [
+        665,
+        77,
+        752,
+        167
+      ],
+      "file": "task-empty.png",
+      "patches": []
+    },
+    "track": {
+      "source": "T2",
+      "box": [
+        813,
+        41,
+        1404,
+        99
+      ],
+      "file": "track.png",
+      "patches": []
+    },
+    "fill": {
+      "source": "T2",
+      "box": [
+        813,
+        106,
+        1404,
+        161
+      ],
+      "file": "fill.png",
+      "patches": []
+    },
+    "eggs": {
+      "source": "T2",
+      "box": [
+        810,
+        241,
+        975,
+        372
+      ],
+      "file": "eggs.png",
+      "patches": []
+    },
+    "broom": {
+      "source": "T2",
+      "box": [
+        970,
+        240,
+        1101,
+        383
+      ],
+      "file": "broom.png",
+      "patches": []
+    },
+    "monster": {
+      "source": "T2",
+      "box": [
+        1100,
+        244,
+        1264,
+        373
+      ],
+      "file": "monster.png",
+      "patches": []
+    },
+    "swords": {
+      "source": "T2",
+      "box": [
+        1263,
+        233,
+        1448,
+        381
+      ],
+      "file": "swords.png",
+      "patches": []
+    },
+    "coins": {
+      "source": "T2",
+      "box": [
+        803,
+        397,
+        943,
+        542
+      ],
+      "file": "coins.png",
+      "patches": []
+    },
+    "coin": {
+      "source": "T2",
+      "box": [
+        952,
+        410,
+        1043,
+        501
+      ],
+      "file": "coin.png",
+      "patches": []
+    },
+    "chest": {
+      "source": "T2",
+      "box": [
+        1048,
+        405,
+        1161,
+        501
+      ],
+      "file": "chest.png",
+      "patches": []
+    },
+    "check": {
+      "source": "T2",
+      "box": [
+        1167,
+        411,
+        1255,
+        500
+      ],
+      "file": "check.png",
+      "patches": []
+    },
+    "status-empty": {
+      "source": "T2",
+      "box": [
+        1261,
+        411,
+        1346,
+        498
+      ],
+      "file": "status-empty.png",
+      "patches": []
+    },
+    "node-completed": {
+      "source": "T2",
+      "box": [
+        52,
+        575,
+        161,
+        684
+      ],
+      "file": "node-completed.png",
+      "patches": []
+    },
+    "node-current": {
+      "source": "T2",
+      "box": [
+        193,
+        571,
+        309,
+        688
+      ],
+      "file": "node-current.png",
+      "patches": []
+    },
+    "node-locked": {
+      "source": "T2",
+      "box": [
+        339,
+        572,
+        454,
+        687
+      ],
+      "file": "node-locked.png",
+      "patches": []
+    },
+    "node-empty": {
+      "source": "T2",
+      "box": [
+        1141,
+        569,
+        1235,
+        663
+      ],
+      "file": "node-empty.png",
+      "patches": []
+    },
+    "hen": {
+      "source": "T2",
+      "box": [
+        20,
+        688,
+        274,
+        923
+      ],
+      "file": "hen.png",
+      "patches": []
+    }
+  }
+}

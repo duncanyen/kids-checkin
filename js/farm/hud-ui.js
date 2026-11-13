@@ -43,7 +43,7 @@ export function hasFarmHudEncounter(scene) {
  * 將既有通知與排行榜入口接到固定圖示導覽；生命週期隨 Phaser.Game 結束。
  * @param {Phaser.Game} game - 已掛載通知與排行榜的遊戲實例。
  */
-export function mountFarmHud(game) {
+export function mountFarmHud(game,{dailyChallenges}={}) {
     const root = document.createElement('div'); root.className = 'farm-hud'; root.hidden = true;
     const top = document.createElement('section'); top.className = 'farm-hud-status'; top.setAttribute('aria-label', '農莊資源');
     for (const [kind, label, key] of [['coins','金幣','coins'],['eggs','待採收雞蛋（所有雞種）','eggs'],['cleanliness','雞舍髒亂值','dirt']]) {
@@ -57,7 +57,9 @@ export function mountFarmHud(game) {
     const side = document.createElement('nav'); side.className = 'farm-hud-side'; side.setAttribute('aria-label', '村落活動');
     const ranking = document.querySelector('.farm-ranking-launcher') || button('trophy','排行榜',true);
     ranking.classList.add('farm-hud-button'); ranking.innerHTML = icon('trophy');
-    side.append(button('tasks','每日任務',true), ranking, button('gift','活動',true));
+    const tasks=button('tasks','每日任務',!dailyChallenges);
+    if(dailyChallenges)tasks.addEventListener('click',()=>dailyChallenges.open());
+    side.append(tasks, ranking, button('gift','活動',true));
     const bottom = document.createElement('nav'); bottom.className = 'farm-hud-bottom'; bottom.setAttribute('aria-label', '咕咕村落功能');
     const village = button('village','村落'), shop = button('shop','商店'), warehouse = button('warehouse','倉庫');
     const mail = document.querySelector('.farm-mail-launcher') || button('mail','通知',true);

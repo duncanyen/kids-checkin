@@ -1,0 +1,9 @@
+// 合併至完整正式 Firestore Rules 的 match /databases/{database}/documents 內。
+// 所有讀取、計次與領獎由可信任後端處理；管理查詢也走 admin callable。
+// Firestore allow 為聯集：必須確認其他寬鬆 wildcard 不會授權下列路徑。
+match /ops_daily_configs/{path=**} { allow read, write: if false; }
+match /ops_daily_states/{path=**} { allow read, write: if false; }
+match /ops_daily_days/{path=**} { allow read, write: if false; }
+match /ops_daily_grants/{path=**} { allow read, write: if false; }
+match /ops_daily_events/{path=**} { allow read, write: if false; }
+match /ops_verified_farm_events/{path=**} { allow read, write: if false; }

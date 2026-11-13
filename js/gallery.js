@@ -3,6 +3,7 @@
  * Storage 上傳及 viewer 按需匯入；pagehide 停訂閱，bfcache 恢復時重查帳號與群組。
  * @module
  */
+import { photoLoadError } from './gallery-load-error.js';
 import { photoPerson, photoAvatar } from './gallery-profile-core.js';
 import {
     collection, addDoc, query, orderBy, onSnapshot, where, getDocs, limit, startAfter, endAt,
@@ -141,7 +142,7 @@ function subscribeRange(range, token) {
         if (!active || token !== generation) return;
         console.error('相簿即時更新失敗', error);
         pagingButton.disabled = false;
-        pagingButton.textContent = '即時更新中斷，點此重新連線';
+        pagingButton.textContent = '即時更新中斷：' + photoLoadError(error) + ' 點此重新連線';
         liveRetry = true;
     });
     subscriptions.push(stop);
@@ -174,7 +175,7 @@ async function loadNextPage() {
     } catch (error) {
         if (active && token === generation) {
             console.error('載入相簿失敗：', error);
-            if (!posts.size) feedContainer.textContent = '載入失敗，請檢查網路連線並點下方重試。';
+            if (!posts.size) feedContainer.textContent = photoLoadError(error);
             pagingState('載入失敗，點此重試');
         }
     } finally {

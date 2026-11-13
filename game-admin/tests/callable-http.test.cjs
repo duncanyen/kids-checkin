@@ -6,7 +6,7 @@ const functions=require('../functions/index.cjs');
 
 test('GitHub Pages preflight reaches each callable and anonymous POST stays denied with CORS headers',async()=>{
     const app=express();app.use(express.json());
-    for(const name of ['gameOpsAdmin','gameOpsAnnouncements','gameOpsRedeem']){
+    for(const name of ['gameOpsAdmin','gameOpsAnnouncements','gameOpsRedeem','gameOpsDailyChallenges']){
         const callable=functions[name];
         assert.ok(callable.__endpoint.callableTrigger);
         assert.deepEqual(callable.__endpoint.region,['asia-southeast1']);
@@ -15,7 +15,7 @@ test('GitHub Pages preflight reaches each callable and anonymous POST stays deni
     const server=app.listen(0,'127.0.0.1');
     await new Promise(resolve=>server.once('listening',resolve));
     try{
-        for(const name of ['gameOpsAdmin','gameOpsAnnouncements','gameOpsRedeem']){
+        for(const name of ['gameOpsAdmin','gameOpsAnnouncements','gameOpsRedeem','gameOpsDailyChallenges']){
             const url=`http://127.0.0.1:${server.address().port}/${name}`,origin='https://duncanyen.github.io';
             const preflight=await fetch(url,{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization,content-type,x-firebase-appcheck'}});
             assert.equal(preflight.status,204);

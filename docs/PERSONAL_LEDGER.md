@@ -86,3 +86,23 @@ npx firebase-tools emulators:exec \
 - `tests/personal-ledger-browser.cjs`、`tests/personal-ledger-widget.cjs`：新增功能瀏覽器測試。
 - `tests/personal-ledger-rules.cjs`、`tests/firebase.personal-ledger.json`：隔離 Rules 測試及設定。
 - 本文件。
+
+## 2026-11-13：首頁群組帳索引補齊
+
+首頁的群組帳即時查詢是 `expenses`、`groupId == 當前群組`、當月 `date >= 起日 && date <= 迄日`，未指定排序時日期範圍使用升冪。索引檔先前只有包含 `amount` 的升冪聚合索引及日期降冪的分頁索引，漏列首頁這筆查詢的明確索引。本次補上 `groupId ASC + date ASC`，保留其他索引。
+
+正式環境尚未直接查驗；`failed-precondition` 仍應以完整 FirebaseError.message 確認，不能僅憑錯誤代碼宣稱已查驗正式缺少的索引。可使用下列指令只新增首頁需要的索引，不刪除其他索引、不修改資料：
+
+```bash
+gcloud firestore indexes composite create \
+  --project=homebasedb \
+  --database='(default)' \
+  --collection-group=expenses \
+  --query-scope=collection \
+  --field-config=field-path=groupId,order=ascending \
+  --field-config=field-path=date,order=ascending
+```
+
+`ALREADY_EXISTS` 代表已有相同索引，請確認其狀態為 READY；如 READY 後仍出錯，取得完整 FirebaseError.message（不是僅含代碼的舊版首頁日誌），確認實際失敗的是偏好讀取、群組帳或個人帳。不得把所有 failed-precondition 當成同一種錯誤。
+
+`node --test tests/expense-index.test.cjs` 檢查首頁所需索引以及原有分頁索引均保留。
