@@ -22,8 +22,14 @@ export function farmCommand(action,payload={}){
  if(pending.has(key))return pending.get(key);
  const id=sessionStorage.getItem(key)||crypto.randomUUID();sessionStorage.setItem(key,id);
  const barriers=duringSettlement.has(action)?[]:[...settlements.values()];
- const request=barriers.length?Promise.all(barriers).then(()=>send(action,payload,id)):send(action,payload,id);
+ let started=false;
+ const execute=()=>{started=true;return send(action,payload,id);};
+ const request=barriers.length?Promise.all(barriers).then(execute):execute();
  const work=request.then(result=>{sessionStorage.removeItem(key);return result;}).catch(error=>{
+  // 同一 callable 處理多種交易；只記錄動作與公開錯誤，禁止記錄 payload、收據或登入憑證。
+  console.error('farm-transaction-failure',JSON.stringify({
+   action,stage:started?'request':'waiting-settlement',code:error?.code||'unknown',message:error?.message||'交易未完成'
+  }));
   if(!['ops/timeout','functions/internal','functions/unavailable','functions/unauthenticated','functions/resource-exhausted'].includes(error.code))sessionStorage.removeItem(key);
   throw error;
  }).finally(()=>pending.delete(key));pending.set(key,work);return work;

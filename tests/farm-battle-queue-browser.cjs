@@ -4,7 +4,8 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 (async()=>{
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
-  const page=await browser.newPage(),errors=[],calls=[];
+  const page=await browser.newPage(),errors=[],calls=[],diagnostics=[];
+  page.on('console',message=>{if(message.text().startsWith('farm-transaction-failure '))diagnostics.push(JSON.parse(message.text().slice('farm-transaction-failure '.length)));});
   let release,entered;const gate=new Promise(resolve=>release=resolve),settling=new Promise(resolve=>entered=resolve);
   page.on('pageerror',error=>errors.push(error.message));
   await page.exposeFunction('__battleQueue',async(action,payload,id)=>{
@@ -48,7 +49,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   const failed=await page.evaluate(async()=>{
    const api=window.__battleApi;
    const settlement=api.settleBackendBattle('failure');
-   const clean=api.farmCommand('helpClean',{targetGroupId:'A',targetAccountId:'bob'});
+   const clean=api.farmCommand('helpClean',{targetGroupId:'A',targetAccountId:'bob',token:'private-fixture-token'});
    return(await Promise.allSettled([settlement,clean])).map(result=>({status:result.status,code:result.reason?.code}));
   });
   assert.ok(failed.every(result=>result.status==='rejected'&&result.code==='functions/unavailable'));
@@ -56,6 +57,10 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   await page.evaluate(()=>window.__battleApi.settleBackendBattle('failure').catch(()=>{}));
   const retry=calls.filter(row=>row.action==='battleSettle'&&row.payload.battleId==='failure');
   assert.equal(retry.length,2);assert.equal(retry[0].id,retry[1].id,'失敗重試保留原收據');
+  assert.ok(diagnostics.some(row=>row.action==='battleSettle'&&row.stage==='request'&&row.code==='functions/unavailable'));
+  assert.ok(diagnostics.some(row=>row.action==='helpClean'&&row.stage==='waiting-settlement'));
+  for(const row of diagnostics)assert.deepEqual(Object.keys(row).sort(),['action','code','message','stage']);
+  assert.ok(!JSON.stringify(diagnostics).includes('private-fixture-token'));
   assert.deepEqual(errors,[]);
   console.log('PASS slow settlement queues economic actions, shares settlement, preserves background sync, blocks failed follow-ups and reuses retry receipts');
  }finally{await browser.close();}
