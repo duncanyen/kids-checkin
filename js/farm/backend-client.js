@@ -2,7 +2,7 @@ import { PRIVATE_IDENTITY_ENABLED } from '../private-auth-client.js';
 import { createGameOperationsClient } from './operations-client.js';
 import { readGameContext } from '../game-context.js';
 // 完整遷移、Rules 與隔離驗證通過後才開啟；不能單獨啟用此旗標。
-export const FARM_BACKEND_ENABLED = false;
+export const FARM_BACKEND_ENABLED = true;
 let client,offset=0;
 const pending=new Map(),attacks=new Map();
 export const farmNow=()=>Date.now()+offset;
