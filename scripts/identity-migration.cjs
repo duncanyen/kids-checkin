@@ -7,7 +7,7 @@ async function main(){
  for(let i=0;i<args.length;i++){if(!allowed.has(args[i]))throw Error('不支援的參數');if(args[i]!=='--stage')i++;}
  const project=args.includes('--project')?get('--project'):'';
  if(!/^[a-z][a-z0-9-]{4,60}$/.test(project))throw Error('請明確指定 --project；預設不連接任何專案');
- const admin=require('../functions/node_modules/firebase-admin/app'),{getFirestore}=require('../functions/node_modules/firebase-admin/firestore');
+ const sdk=require('./firebase-admin-sdk.cjs'),admin=sdk('firebase-admin/app'),{getFirestore}=sdk('firebase-admin/firestore');
  const app=admin.initializeApp({projectId:project,credential:admin.applicationDefault()}),db=getFirestore(app);
  const snapshot=await db.collection('users').get(),rows=snapshot.docs.map(doc=>({id:doc.id,data:doc.data()})),plan=planProfiles(rows);
  console.log(JSON.stringify(plan,null,2));

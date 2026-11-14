@@ -1,9 +1,10 @@
 // Run from repository root after setting Application Default Credentials.
 // Preview (read-only): node scripts/backfill-realtime.cjs
 // Apply: node scripts/backfill-realtime.cjs --apply
-const { initializeApp } = require('../functions/node_modules/firebase-admin/app');
-const { getFirestore } = require('../functions/node_modules/firebase-admin/firestore');
-const { getDatabase } = require('../functions/node_modules/firebase-admin/database');
+const sdk = require('./firebase-admin-sdk.cjs');
+const { initializeApp } = sdk('firebase-admin/app');
+const { getFirestore } = sdk('firebase-admin/firestore');
+const { getDatabase } = sdk('firebase-admin/database');
 initializeApp({ projectId: 'homebasedb', databaseURL: 'https://homebasedb-default-rtdb.asia-southeast1.firebasedatabase.app' });
 const firestore = getFirestore(), database = getDatabase(), mirror = require('../functions/mirror.cjs')(firestore, database);
 const apply = process.argv.includes('--apply');
@@ -33,5 +34,5 @@ async function eachPage(query, callback) {
     counts.messages = await eachPage(firestore.collection('messages'), async doc => { if (apply) await mirror.message(doc.id, doc, null); });
     if (apply) await database.ref('nexus/status').update({ farms: true, chat: true, backfilledAt: Date.now() });
     console.log(JSON.stringify({ applied: apply, counts }));
-    await require('../functions/node_modules/firebase-admin/app').deleteApp(require('../functions/node_modules/firebase-admin/app').getApp());
+    await sdk('firebase-admin/app').deleteApp(sdk('firebase-admin/app').getApp());
 })().catch(error => { console.error('Backfill failed; readiness was not advanced:', error.message); process.exit(1); });

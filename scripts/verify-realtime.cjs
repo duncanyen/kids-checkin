@@ -1,7 +1,8 @@
 // Read-only post-backfill checks. Requires Admin SDK credentials for homebasedb.
-const { initializeApp } = require('../functions/node_modules/firebase-admin/app');
-const { getFirestore } = require('../functions/node_modules/firebase-admin/firestore');
-const { getDatabase } = require('../functions/node_modules/firebase-admin/database');
+const sdk = require('./firebase-admin-sdk.cjs');
+const { initializeApp } = sdk('firebase-admin/app');
+const { getFirestore } = sdk('firebase-admin/firestore');
+const { getDatabase } = sdk('firebase-admin/database');
 const { key, wire, epochMicros } = require('../functions/live-model.cjs');
 const assert = require('node:assert/strict');
 initializeApp({ projectId: 'homebasedb', databaseURL: 'https://homebasedb-default-rtdb.asia-southeast1.firebasedatabase.app' });
@@ -36,5 +37,5 @@ const firestore = getFirestore(), database = getDatabase();
     }
     console.log(JSON.stringify({ verified: true, counts }));
     // Admin's RTDB connection would otherwise keep this CLI alive.
-    await require('../functions/node_modules/firebase-admin/app').deleteApp(require('../functions/node_modules/firebase-admin/app').getApp());
+    await sdk('firebase-admin/app').deleteApp(sdk('firebase-admin/app').getApp());
 })().catch(error => { console.error('Verification failed:', error.message); process.exit(1); });

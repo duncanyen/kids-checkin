@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),I=require('../functions/id
 async function main(){
  const argv=process.argv.slice(2),options={};for(let i=0;i<argv.length;i+=2){if(!['--project','--phase','--roles','--attestation','--backup-reference','--storage-bucket','--database-url'].includes(argv[i])||!argv[i+1])throw Error('參數無效');options[argv[i].slice(2)]=argv[i+1];}
  if(!/^[a-z][a-z0-9-]{4,60}$/.test(options.project||''))throw Error('需明確指定 --project');
- const A=require('../functions/node_modules/firebase-admin/app'),{getFirestore}=require('../functions/node_modules/firebase-admin/firestore');const app=A.initializeApp({projectId:options.project,credential:A.applicationDefault()}),db=getFirestore(app);
+ const sdk=require('./firebase-admin-sdk.cjs'),A=sdk('firebase-admin/app'),{getFirestore}=sdk('firebase-admin/firestore');const app=A.initializeApp({projectId:options.project,credential:A.applicationDefault()}),db=getFirestore(app);
  const profiles=(await db.collection('users').get()).docs.map(d=>({id:d.id,data:d.data()})),groups=(await db.collection('groups').get()).docs.map(d=>({id:d.id,data:d.data()}));
  const finalRules=fs.readFileSync(path.join(__dirname,'../rules/firestore.private-farm.candidate.rules'),'utf8'),ruleHash=I.hash(finalRules);
  const assertSource=async expected=>{
