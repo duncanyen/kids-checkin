@@ -16,4 +16,12 @@ const engine = window.Phaser ? Promise.resolve() : new Promise((resolve, reject)
     document.head.append(script);
 });
 engine.then(() => { farmLoading.progress(5, '準備農莊畫面'); return import('./main.js'); })
-    .catch(() => farmLoading.error('遊戲程式載入失敗，請檢查連線後重試。'));
+    .catch(error => {
+        // 動態匯入的例外也會到這裡；保留原因，避免把程式初始化錯誤誤判成斷線。
+        console.error('farm-startup-failure', JSON.stringify({
+            name: error?.name || 'Error',
+            code: error?.code || null,
+            message: error?.message || 'Unknown startup error'
+        }));
+        farmLoading.error('遊戲程式載入失敗，請檢查連線後重試。');
+    });

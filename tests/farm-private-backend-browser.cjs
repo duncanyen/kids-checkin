@@ -12,7 +12,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
   await page.exposeFunction('__saveDb',async op=>{if(op.kind==='get')return structuredClone(db.data.get(op.path));throw Error('Private mode attempted direct Firestore write: '+op.kind);});
   await page.exposeFunction('__privateServer',async(name,data)=>{
    calls.push({name,action:data.action});
@@ -25,7 +25,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
    throw Error('Unexpected callable '+name);
   });
   const old=fs.readFileSync('tests/farm-save-browser.cjs','utf8').match(/const sdk = `([\s\S]*?)`;/)[1];
-  const firestoreSDK=old.replace('l.callback(await getDoc(l.ref))',"l.callback(l.ref.kind==='query'?await getDocs(l.ref):await getDoc(l.ref))")+`\nwindow.__privateEmitAll=async()=>{for(const l of [...listeners])await emit(l);};`;
+  const firestoreSDK="export const getFirestore=()=>({});\n"+old.replace('l.callback(await getDoc(l.ref))',"l.callback(l.ref.kind==='query'?await getDocs(l.ref):await getDoc(l.ref))")+`\nwindow.__privateEmitAll=async()=>{for(const l of [...listeners])await emit(l);};`;
   await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js','utf8')}));
   await page.route('https://www.gstatic.com/**',r=>{
    const url=r.request().url();let body=firestoreSDK;
@@ -34,7 +34,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
    if(url.endsWith('firebase-functions.js'))body=`export const getFunctions=()=>({}),httpsCallable=(_,name)=>async data=>({data:await window.__privateServer(name,data)});`;
    return r.fulfill({contentType:'text/javascript',body});
   });
-  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={},app={},firebaseConfig={};'}));
+  // 使用真正的 firebase-config.js，涵蓋預設 Auth 恢復與模組初始化；SDK 仍完全隔離。
   await page.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=true;'}));
   await page.route('**/js/farm/backend-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('FARM_BACKEND_ENABLED = false','FARM_BACKEND_ENABLED = true')});});
   await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
@@ -65,6 +65,10 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   assert.ok(calls.some(c=>c.action==='battleAttack'));assert.ok(calls.some(c=>c.action==='battleSettle'));
   assert.ok(calls.some(c=>c.action==='stealEgg'));assert.deepEqual(errors,[]);
   await page.screenshot({path:'/tmp/nexus-private-farm-mobile.png'});
+  await page.route('**/js/farm/main.js',r=>r.fulfill({contentType:'text/javascript',body:"throw Object.assign(Error('fixture startup error'),{code:'fixture/module'});"}));
+  await page.reload();
+  await page.waitForFunction(()=>document.querySelector('[data-loading-status]')?.textContent.includes('遊戲程式載入失敗'));
+  assert.ok(startupLogs.some(message=>message.includes('farm-startup-failure')&&message.includes('fixture/module')));
   console.log('PASS real Phaser private-mode harvest, shop, visit cleaning, theft, real boss hits/settlement and daily progress; no client Firestore transaction writes; /tmp/nexus-private-farm-mobile.png');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
