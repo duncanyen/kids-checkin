@@ -79,7 +79,9 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const found=garden.gardenFindForRoll(1+Math.floor(rolls[0]*garden.GARDEN_ROLL_SIZE));result={caught:false,foundType:found};
     if(found&&inventory.getUsedSpace(farm)<(farm.warehouseLimit||10)){patch['farm.'+found]=(farm[found]||0)+1;patch['farm.gardenCatchCount']=(farm.gardenCatchCount||0)+1;result.caught=true;}
    }else if(action==='stealEgg'){
-    const target=await readTarget(p.targetGroupId,p.targetAccountId);if(!session||session.targetGroupId!==target.groupId||session.targetAccountId!==target.accountId||!session.visitPermit&&!session.kind)D.fail('failed-precondition','請先進入此村落並完成怪物事件');if(target.accountId===actor.accountId)D.fail('invalid-argument','不能偷自己的蛋');
+    const target=await readTarget(p.targetGroupId,p.targetAccountId);if(!session||session.targetGroupId!==target.groupId||session.targetAccountId!==target.accountId||!session.visitPermit&&!session.kind)D.fail('failed-precondition','請先進入此村落並完成怪物事件');
+    // 農場以群組＋帳號識別；同一帳號在另一村落的雞舍是獨立存檔，仍適用跨村落偷蛋規則。
+    if(target.groupId===actor.groupId&&target.accountId===actor.accountId)D.fail('invalid-argument','不能偷自己的蛋');
     const key=encodeURIComponent(JSON.stringify([target.groupId,target.accountId])).replaceAll('.', '%2E');
     if(stamp<dogs.stealBlockedUntil(farm,key,target.groupId===actor.groupId?target.accountId:null))D.fail('failed-precondition','這座雞舍仍在禁偷時間內');
     if(!(target.farm.eggsReady>0))D.fail('failed-precondition','手腳太慢，蛋不見了');capacity(1);

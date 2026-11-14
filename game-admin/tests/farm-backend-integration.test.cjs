@@ -63,6 +63,30 @@ test('direct collection and stealing cannot bypass the server encounter check',a
  await f.api.handle(f.req('homeEncounter'));await f.api.handle(f.req('collectEggs'));
  await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}));await f.api.handle(f.req('stealEgg',{targetGroupId:'A',targetAccountId:'bob'}));assert.equal(f.farm().inventoryEggs,4);
 });
+test('same account in another public village is a distinct farm; theft and replay update only the correct farms',async()=>{
+ const f=setup(),targetGroupId='B',targetAccountId='alice';
+ f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});
+ const target={...structuredClone(f.farm()),hensState:[{id:'long',breed:'onagadori',laidAt:Date.parse('2026-11-14T10:00:00+08:00')}],readyEggs:{hen:0,silkie:0,bresse:0,onagadori:2},eggsReady:2};
+ f.db.data.set('groups/B/users/alice',{farm:target});
+ await f.api.handle(f.req('visitEncounter',{targetGroupId,targetAccountId}));
+ const request=f.req('stealEgg',{targetGroupId,targetAccountId});await f.api.handle(request);await f.api.handle(request);
+ assert.equal(f.farm().onagadoriEggs,1);assert.equal(f.farm().eggsReady,3);assert.equal(f.farm().stolenEggs20261109,1);
+ assert.equal(f.db.data.get('groups/B/users/alice').farm.eggsReady,1);assert.equal(f.db.data.get('groups/B/users/alice').farm.onagadoriEggs,undefined);
+ assert.equal([...f.db.data.keys()].filter(path=>path.startsWith('groups/B/users/alice/farm_notifications/')).length,1);
+ await assert.rejects(f.api.handle(f.req('stealEgg',{targetGroupId,targetAccountId})),{code:'failed-precondition'});
+ assert.equal(f.farm().onagadoriEggs,1);
+});
+test('same-group self theft stays forbidden and cross-group self theft keeps membership and public-village checks',async()=>{
+ const f=setup(),before=structuredClone(f.farm());await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'alice'}));
+ await assert.rejects(f.api.handle(f.req('stealEgg',{targetGroupId:'A',targetAccountId:'alice'})),{code:'invalid-argument'});assert.deepEqual(f.farm(),before);
+ f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});f.db.data.set('groups/B/users/alice',{farm:structuredClone(before)});
+ await f.api.handle(f.req('visitEncounter',{targetGroupId:'B',targetAccountId:'alice'}));
+ for(const [group,patch]of [['B',{farmVillageVisibility:'closed'}],['A',{farmVillageVisibility:'closed'}],['B',{members:[]}]]){
+  const original=structuredClone(f.db.data.get('groups/'+group));Object.assign(f.db.data.get('groups/'+group),patch);
+  await assert.rejects(f.api.handle(f.req('stealEgg',{targetGroupId:'B',targetAccountId:'alice'})),{code:'permission-denied'});f.db.data.set('groups/'+group,original);
+ }
+ assert.deepEqual(f.farm(),before);assert.equal(f.db.data.get('groups/B/users/alice').farm.eggsReady,3);
+});
 test('all eight monster settlements keep canonical rewards, penalties and one verified victory',async()=>{
  const D=require('../functions/domain.cjs'),{CONFIG}=require('../functions/farm-combat.cjs');
  for(const [kind,config]of Object.entries(CONFIG)){
