@@ -23,7 +23,8 @@ async function main(){
  }finally{server.kill();}
  if(process.argv.includes('--emulator')){
   const command=process.env.FIREBASE_BIN||'firebase';
-  run(command,['emulators:exec','--config','firebase.private-farm-review.json','--project','demo-nexus-private-farm','--only','firestore,storage,database,auth,functions','node --test --test-concurrency=1 game-admin/tests/private-farm-rules.emulator.cjs game-admin/tests/private-storage.emulator.cjs game-admin/tests/private-realtime.emulator.cjs game-admin/tests/private-callables.emulator.cjs'],{...process.env,NEXUS_PRIVATE_IDENTITY_ENABLED:'true',NEXUS_FARM_BACKEND_ENABLED:'true'});
+  // Cloud Shell 可能繼承正式 GOOGLE_CLOUD_PROJECT；Admin SDK 優先使用它，需與 Emulator 的 demo 專案一致。
+  run(command,['emulators:exec','--config','firebase.private-farm-review.json','--project','demo-nexus-private-farm','--only','firestore,storage,database,auth,functions','node --test --test-concurrency=1 game-admin/tests/private-farm-rules.emulator.cjs game-admin/tests/private-storage.emulator.cjs game-admin/tests/private-realtime.emulator.cjs game-admin/tests/private-callables.emulator.cjs'],{...process.env,GOOGLE_CLOUD_PROJECT:'demo-nexus-private-farm',GCLOUD_PROJECT:'demo-nexus-private-farm',NEXUS_PRIVATE_IDENTITY_ENABLED:'true',NEXUS_FARM_BACKEND_ENABLED:'true'});
   report.emulatorPassed=true;
  }
 }

@@ -15,8 +15,11 @@ test.before(async()=>{
  await db.doc('groups/emulator-group/users/'+accountId).set({farm:{coins:100,hens:1,hensState:[{id:'hen',breed:'hen',laidAt:stamp}],poultryVersion:2,readyEggs:{hen:0,silkie:0,bresse:0,onagadori:0},eggsReady:0,warehouseLimit:100,coopLevel:1}});
 });test.after(async()=>deleteApp(app));
 test('actual custom-token refresh, scoped callable transaction, daily grant and credential revocation work together',async()=>{
- const login=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'old-secret'});assert.equal(login.status,200,'private Functions parameters must be true');assert.equal(login.data.result.profile.pin,undefined);
- const signed=await signIn(login.data.result.token);assert.equal(signed.status,200);assert.equal(signed.data.localId,I.profileUid('emulator-profile'));
+ const login=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'old-secret'});assert.equal(login.status,200,JSON.stringify(login.data.error||{}));assert.equal(login.data.result.profile.pin,undefined);
+ const signed=await signIn(login.data.result.token);assert.equal(signed.status,200,JSON.stringify(signed.data.error||{}));
+ // signInWithCustomToken 的 REST 回覆不保證提供 localId；從 ID Token 核對 UID，後續 callable 再由 Auth 驗證此 Token。
+ const signedClaims=JSON.parse(Buffer.from(signed.data.idToken.split('.')[1],'base64url').toString());
+ assert.equal(signedClaims.sub,I.profileUid('emulator-profile'));assert.equal(signedClaims.nexusProfileId,'emulator-profile');
  const group=await call('nexusIdentity',{action:'groupToken',groupId:'emulator-group'},signed.data.idToken);assert.equal(group.status,200);
  const player=await signIn(group.data.result.token);assert.equal(player.status,200);
  const refresh=await fetch(authBase+'/securetoken.googleapis.com/v1/token?key=demo-key',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:player.data.refreshToken})});assert.equal(refresh.status,200);const refreshed=await refresh.json();
