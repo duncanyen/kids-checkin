@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,identityCall,identityAdminCall} from './private-auth-client.js';
 /**
  * Nexus 玩家站內管理頁：群組成員、功能開放、遊戲權限、通知目標及足跡。
  * 此處 admin／parent 是 users 的舊角色，不是獨立營運站的 Auth Custom Claims。
@@ -25,7 +26,7 @@ let memberListVersion = 0;
 const savedUserStr = sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser');
 const currentUser = savedUserStr ? JSON.parse(savedUserStr) : null;
 
-const isParentOrAdmin = currentUser && (
+let isParentOrAdmin = currentUser && (
     currentUser.role === 'admin' || 
     currentUser.role === 'parent' || 
     currentUser.name === '爸爸' || 
@@ -34,6 +35,8 @@ const isParentOrAdmin = currentUser && (
 
 const groupId = getSelectedGameGroupId(currentUser);
 let lastGroupNameChange = null;
+let privateGroupRoles={};
+if(PRIVATE_IDENTITY_ENABLED){try{const access=await identityCall('groupAdminContext',{groupId});privateGroupRoles=access.roles;isParentOrAdmin=true;}catch{isParentOrAdmin=false;}}
 
 if (!isParentOrAdmin || !groupId) {
     alert("您沒有權限訪問管理者頁面！");
@@ -47,6 +50,7 @@ async function loadSystemMenus() {
     try {
         const snapshot = await getDocs(collection(db, 'system_menus'));
         const menus = snapshot.docs.map(snapshot => ({ ...snapshot.data(), id: snapshot.id }));
+        if(PRIVATE_IDENTITY_ENABLED){systemMenuOptions=(menus.length?menus:DEFAULT_MENUS).sort((a,b)=>(a.order??999)-(b.order??999));return;}
         if (!menus.length) {
             for (const menu of DEFAULT_MENUS) await setDoc(doc(db, 'system_menus', menu.id), menu);
             systemMenuOptions = DEFAULT_MENUS.map(menu => ({ ...menu }));
@@ -191,7 +195,7 @@ async function saveGroupName() {
     }
 
     try {
-        await setDoc(doc(db, "groups", groupId), { 
+        if(PRIVATE_IDENTITY_ENABLED)await identityAdminCall('groupName',{groupId,name:newName});else await setDoc(doc(db, "groups", groupId), {
             name: newName, 
             lastNameChange: serverTimestamp() 
         }, { merge: true });
@@ -264,6 +268,7 @@ window.handleRequest = async function(reqId, actionStatus, targetUserId, targetU
     if (!confirm(`確定要【${actionText}】成員【${targetUserName}】的入群申請嗎？`)) return;
 
     try {
+        if(PRIVATE_IDENTITY_ENABLED){await identityAdminCall('reviewGroupRequest',{groupId,requestId:reqId,status:actionStatus});alert(`已成功${actionText}該申請！`);fetchPendingRequests();loadUsersFromFirebase();return;}
         const requestRef = doc(db, 'group_requests', reqId);
         const request = await getDoc(requestRef);
         if (!request.exists() || request.data().groupId !== groupId) throw new Error('申請不屬於目前群組。');
@@ -342,7 +347,7 @@ async function saveVillageVisibility(visibility) {
     try {
         const group = await getDoc(doc(db, 'groups', groupId));
         if (!group.exists() || !(group.data().members || []).includes(currentUser.accountId)) throw new Error('你已不在此群組。');
-        await updateDoc(doc(db, 'groups', groupId), { farmVillageVisibility: visibility });
+        if(PRIVATE_IDENTITY_ENABLED)await identityAdminCall('groupVisibility',{groupId,visibility});else await updateDoc(doc(db, 'groups', groupId), { farmVillageVisibility: visibility });
         select.dataset.saved = visibility;
         status.textContent = visibility === 'public' ? '已儲存：公開型村落，其他公開群組可拜訪與偷蛋。' : '已儲存：封閉型村落，外部拜訪已停止。';
     } catch (error) {
@@ -505,7 +510,8 @@ async function loadUsersFromFirebase() {
     try {
         const users = await loadGameGroupMembers(groupId, currentUser.accountId, { includeDocumentIds: true });
         if (version !== memberListVersion) return;
-        allUsers = users;
+        if(PRIVATE_IDENTITY_ENABLED){const context=await identityCall('groupAdminContext',{groupId});privateGroupRoles=context.roles;}
+        allUsers = PRIVATE_IDENTITY_ENABLED?users.map(user=>({...user,role:privateGroupRoles[user.accountId]==='owner'?'admin':privateGroupRoles[user.accountId]||'member'})):users;
         const filterSelect = document.getElementById('userFilter');
         const selected = filterSelect.value;
         filterSelect.innerHTML = '<option value="all">全部人員</option>';
@@ -609,6 +615,7 @@ async function addNewUser() {
             avatar: `https://ui-avatars.com/api/?name=${nameInput}&background=random`
         };
 
+        if(PRIVATE_IDENTITY_ENABLED){await identityAdminCall('addGroupUser',{groupId,accountId:idInput,name:nameInput,pin:pinInput,email:emailInput,role:roleInput,menus:selectedMenus});}else {
         if ((await findAccountsById(db, idInput)).length) throw new Error(ACCOUNT_ID_TAKEN);
         const userRef = newAccountRef(db, idInput);
         await runTransaction(db, async transaction => {
@@ -617,6 +624,7 @@ async function addNewUser() {
             transaction.set(userRef, newUser);
             transaction.update(group.ref, { members: [...new Set([...group.members, idInput])] });
         });
+        }
         await logAction('系統操作', `新增了成員：${nameInput} (${idInput})`);
         
         alert(`成功新增成員：${nameInput}！`);
@@ -645,8 +653,10 @@ window.openEditModal = function(docId) {
 
     document.getElementById('editDocId').value = user.docId;
     document.getElementById('editName').value = user.name;
-    document.getElementById('editPin').value = user.pin || user.password || '';
+    document.getElementById('editPin').value = PRIVATE_IDENTITY_ENABLED?'':user.pin || user.password || '';
+    if(PRIVATE_IDENTITY_ENABLED)document.getElementById('editPin').placeholder='留白保留原密碼';
     document.getElementById('editEmail').value = user.email || '';
+    if(PRIVATE_IDENTITY_ENABLED&&privateGroupRoles[currentUser.accountId]==='owner'&&!document.querySelector('#editRole option[value=owner]')){const option=document.createElement('option');option.value='owner';option.textContent='群組擁有者（移轉）';document.getElementById('editRole').append(option);}
     document.getElementById('editRole').value = user.role;
     
     const accountIdInput = document.getElementById('editAccountId');
@@ -679,17 +689,18 @@ async function saveEditUser() {
     const roleInput = document.getElementById('editRole').value;
     const selectedMenus = getCheckedMenus('editMenusContainer');
 
+    if(PRIVATE_IDENTITY_ENABLED&&roleInput==='owner'&&!confirm('確定移轉群組擁有權給這位成員？您將保留群組管理員權限。'))return;
     const targetUser = allUsers.find(user => user.docId === docId);
     if (!targetUser) return alert('成員名單已變更，請重新開啟編輯。');
     if (targetUser.accountId && idInput !== targetUser.accountId) return alert('帳號 ID 設定後不可更改。');
     const originalPin = targetUser.pin || targetUser.password || '';
-    if (!idInput || !nameInput || (!/^\d{4}$/.test(pinInput) && pinInput !== originalPin)) return alert("欄位或密碼格式錯誤！");
+    if (!idInput || !nameInput || (PRIVATE_IDENTITY_ENABLED?!!pinInput&&!/^\d{4}$/.test(pinInput):(!/^\d{4}$/.test(pinInput) && pinInput !== originalPin))) return alert("欄位或密碼格式錯誤！");
     
     if (allUsers.some(u => normalizeAccountId(u.accountId) === normalizeAccountId(idInput) && u.docId !== docId)) return alert("此「帳號 ID」已與其他成員重複！");
     if (nameInput !== targetUser.name && allUsers.some(u => u.name === nameInput && u.docId !== docId)) return alert("家族內「稱呼」不可重複！");
 
     try {
-        await runTransaction(db, async transaction => {
+        await (PRIVATE_IDENTITY_ENABLED?identityAdminCall('editGroupUser',{groupId,profileId:docId,name:nameInput,pin:pinInput,email:emailInput,role:roleInput,menus:selectedMenus}):runTransaction(db, async transaction => {
             const group = await readManagedGroup(transaction);
             if (!group.members.includes(targetUser.accountId)) throw new Error('此成員已離開目前群組。');
             const profileRef=doc(db,'users',docId), profileSnap=await transaction.get(profileRef);
@@ -700,11 +711,11 @@ async function saveEditUser() {
                 accountId: idInput, name: nameInput, pin: pinInput,
                 email: emailInput || null, role: roleInput, menus: selectedMenus
             });
-        });
+        }));
 
         if (currentUser && currentUser.accountId === targetUser.accountId) {
             currentUser.accountId = idInput; currentUser.name = nameInput;
-            currentUser.pin = pinInput; currentUser.role = roleInput;
+            if(!PRIVATE_IDENTITY_ENABLED)currentUser.pin = pinInput; currentUser.role = roleInput;
             currentUser.menus = selectedMenus;
             sessionStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
             if (localStorage.getItem('familyCheckInUser')) localStorage.setItem('familyCheckInUser', JSON.stringify(currentUser));
@@ -716,7 +727,7 @@ async function saveEditUser() {
         await loadUsersFromFirebase();
 
     } catch (error) {
-        alert("更新失敗，請檢視網路。");
+        alert(PRIVATE_IDENTITY_ENABLED?(error.message||"更新失敗，請稍後重試。"):"更新失敗，請檢視網路。");
     }
 }
 
@@ -726,10 +737,10 @@ window.removeUser = async function(docId, targetName) {
     if (user.accountId === currentUser.accountId) return alert('為保護系統安全，您無法將自己退出群組！');
     if (!confirm(`確定要將成員【${user.name}】退出目前群組嗎？\n個人帳號、其他群組資格與歷史紀錄會保留。`)) return;
     try {
-        await runTransaction(db, async transaction => {
+        await (PRIVATE_IDENTITY_ENABLED?identityAdminCall('removeGroupUser',{groupId,profileId:docId}):runTransaction(db, async transaction => {
             const group = await readManagedGroup(transaction);
             transaction.update(group.ref, { members: group.members.filter(id => id !== user.accountId) });
-        });
+        }));
         await logAction('系統操作', `已將成員退出群組：${user.name}`);
         alert(`已成功將【${user.name}】退出群組。`);
         await loadUsersFromFirebase();

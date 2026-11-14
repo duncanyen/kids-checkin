@@ -1,0 +1,11 @@
+// 過渡版候選，尚未部署；保護 ops_ 命名空間，保留其他功能原本的截止時間。
+// 非正式發布就緒規則：users 與 farm 等舊資料在期限前仍開放，不能視為可信任遊戲事件來源。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{rootCollection}/{document=**} {
+      allow read, write: if !rootCollection.matches('ops_.*')
+        && request.time < timestamp.date(2026, 12, 16);
+    }
+  }
+}

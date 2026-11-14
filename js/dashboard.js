@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,identityCall,hasManagementAccess} from './private-auth-client.js';
 /**
  * 首頁資料協調器：依功能權限建立群組小工具，管理快照、成員補載與輪播。
  * 每次重建提升 dashboardGeneration；切換群組及 pagehide 應走集中清理入口。
@@ -105,6 +106,7 @@ window.showDashboard = async function() {
     const isCurrent = () => generation === dashboardGeneration;
 
     const savedGroupId = sessionStorage.getItem('nexus_active_group_id');
+    if(PRIVATE_IDENTITY_ENABLED){const groupId=window.currentGroup?.id||savedGroupId;const result=await identityCall('groupContext',{groupId});if(!isCurrent())return;Object.assign(user,result.profile);sessionStorage.setItem('familyCheckInUser',JSON.stringify(user));}
     if (!window.currentGroup && savedGroupId) {
         window.currentGroup = { id: savedGroupId };
     }
@@ -129,7 +131,7 @@ window.showDashboard = async function() {
     document.getElementById('dashUserName').innerText = user.name;
     document.getElementById('sideAvatar').src = user.avatar;
     document.getElementById('sideUserName').innerText = user.name;
-    document.getElementById('sideUserRole').innerText = (user.role === 'admin' || user.role === 'parent') ? '管理員' : '一般成員';
+    document.getElementById('sideUserRole').innerText = (hasManagementAccess(user)) ? '管理員' : '一般成員';
 
     window.groupMembers = [];
     window.userAvatarMap = {};
@@ -195,7 +197,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
     
     order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
     
-    if (user.role === 'admin' || user.role === 'parent') {
+    if (hasManagementAccess(user)) {
         sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">${icon('admin')}</span>管理者後台</div>`;
     }
     sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">${icon('switch')}</span>切換群組</div>`;

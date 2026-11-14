@@ -6,13 +6,15 @@ const { key, epochMicros, node, newer } = require('./live-model.cjs');
  * @returns {Object} account、group、farm、room、message 等鏡像操作。
  * @description 每個節點以版本交易拒絕過期事件；不是 Firestore／RTDB 跨庫原子交易。
  */
-module.exports = function makeMirror(firestore, database) {
+module.exports = function makeMirror(firestore, database, {privateIdentityEnabled=()=>false}={}) {
     const root = database.ref('nexus');
     const write = (path, value) => root.child(path).transaction(current => newer(current, value), undefined, false);
     async function account(accountId, snapshot, time) {
         if (!accountId) return;
         const data = snapshot?.exists ? snapshot.data() : null;
-        await write(`access/accounts/${key(accountId)}`, { version: epochMicros(snapshot?.updateTime || time), active: !!data && data.accountId === accountId && data.role !== 'removed' });
+        const credential=snapshot?.id?(await firestore.doc('ops_identity_credentials/'+snapshot.id).get()):null,privateData=credential?.data();
+        const version=Math.max(epochMicros(snapshot?.updateTime||time),privateData?epochMicros(credential.updateTime||time):epochMicros(time));
+        await write(`access/accounts/${key(accountId)}`, {version,active:!!data&&data.accountId===accountId&&data.role!=='removed'&&!privateData?.disabled&&(!privateIdentityEnabled()||!!privateData),...(privateData?{authUid:privateData.authUid,sessionVersion:privateData.sessionVersion}:{})});
     }
     async function group(groupId, snapshot, time) {
         const data = snapshot?.exists ? snapshot.data() : null;

@@ -152,6 +152,7 @@
     </div>
 
     <script type="module">
+        import {PRIVATE_IDENTITY_ENABLED,privateUpdateProfile,privateLogout,identityCall} from "./js/private-auth-client.js";
         import { icon } from './js/ui-icons.js';
         import { mountNavigationSettings } from './js/navigation-settings.js';
         import { mountFontSizeSettings } from './js/font-size-settings.js';
@@ -273,6 +274,7 @@
             finally { document.getElementById('loadingView').style.display = 'none'; }
         };
 
+        if(PRIVATE_IDENTITY_ENABLED){const field=document.getElementById('newPin');field.maxLength=1000;field.removeAttribute('pattern');field.removeAttribute('inputmode');field.placeholder='請輸入至少 6 碼新密碼';}
         // ★ 變更基本資料與密碼
         window.saveUserProfile = async function() {
             const newName = document.getElementById('settingsName').value.trim();
@@ -281,16 +283,25 @@
 
             if (!newName) { alert('使用者名稱不可為空白！'); return; }
             if (!oldPin) { alert('請輸入舊密碼以驗證身分！'); return; }
-            if (oldPin !== currentUser.pin) { alert('舊密碼輸入錯誤，請重新輸入。'); return; }
+            if (!PRIVATE_IDENTITY_ENABLED && oldPin !== currentUser.pin) { alert('舊密碼輸入錯誤，請重新輸入。'); return; }
 
             // 如果有填寫新密碼才進行格式驗證
-            if (newPin && !/^\d{4}$/.test(newPin)) {
+            if (!PRIVATE_IDENTITY_ENABLED && newPin && !/^\d{4}$/.test(newPin)) {
                 alert('新密碼必須剛好為「4位數數字」！請重新設定。');
                 return;
             }
 
             document.getElementById('loadingView').style.display = 'flex';
             try {
+                if(PRIVATE_IDENTITY_ENABLED){
+                    const profile=await privateUpdateProfile(newName,oldPin,newPin);
+                    Object.assign(currentUser,profile);delete currentUser.pin;delete currentUser.password;
+                    sessionStorage.setItem('familyCheckInUser',JSON.stringify(currentUser));
+                    localStorage.removeItem('familyCheckInUser');
+                    document.getElementById('settingsDisplayName').textContent=profile.name;
+                    document.getElementById('oldPin').value='';document.getElementById('newPin').value='';
+                    alert('設定更新成功！');return;
+                }
                 const usersRef = collection(db, "users");
 
                 // 若名稱有更改，先檢查是否與他人重複
@@ -359,11 +370,12 @@
             const confirm1 = confirm("警告：刪除帳戶後將無法再進入此群組！\n\n您確定要刪除自己的帳戶嗎？");
             if (!confirm1) return;
             
-            const confirm2 = confirm("這是最後的確認，刪除後若要重新加入，需請管理人員協助新增。\n\n請點擊「確定」以永久刪除此帳戶。");
+            const confirm2 = confirm(PRIVATE_IDENTITY_ENABLED?"這會刪除登入帳戶，群組歷史紀錄仍保留。原帳號 ID 不會重新開放註冊，以保護歷史資料。\n\n確定繼續刪除？":"這是最後的確認，刪除後若要重新加入，需請管理人員協助新增。\n\n請點擊「確定」以永久刪除此帳戶。");
             if (!confirm2) return;
 
             document.getElementById('loadingView').style.display = 'flex';
             try {
+                if(PRIVATE_IDENTITY_ENABLED){await identityCall('deleteAccount');await privateLogout();alert('帳戶已刪除，將返回首頁。');window.location.href='index.html';return;}
                 const usersRef = collection(db, "users");
                 const qUser = query(usersRef, where("accountId", "==", currentUser.accountId));
                 const userSnap = await getDocs(qUser);
@@ -392,8 +404,9 @@
         };
 
         // 登出系統
-        window.logoutSystem = function() {
+        window.logoutSystem = async function() {
             if(confirm("確定要登出系統嗎？")) {
+                if(PRIVATE_IDENTITY_ENABLED)await privateLogout();
                 sessionStorage.removeItem('familyCheckInUser');
                 localStorage.removeItem('familyCheckInUser');
                 window.location.href = 'index.html';

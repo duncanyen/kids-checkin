@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,recordBattleHit,farmNow,routeBackendChallenge} from './backend-client.js';
 import { BossEncounter } from './dragon.js';
 import { MOLE_CONFIG, moleCells, moleDue, nextMoleCells } from './mole-rules.js';
 import { claimMoleEncounter, settleMoleEncounter } from './mole-store.js';
@@ -26,6 +27,7 @@ export async function maybeStartMole(scene) {
             scene.showFloatingText(`上一場地鼠挑戰逾時，扣除 ${claim.result.coinsLost} 金幣`,'#FFD54F',16);
             return true;
         }
+        if(!routeBackendChallenge(scene,claim))return true;
         scene.moleEncounter?.destroy();
         scene.moleEncounter = new MoleEncounter(scene,claim.challenge);
         return true;
@@ -38,10 +40,11 @@ export async function maybeStartMole(scene) {
 
 export class MoleEncounter extends BossEncounter {
     constructor(scene, challenge) {
+        if(FARM_BACKEND_ENABLED)scene.backendChallenge=challenge;
         const first = moleCells(scene.gardenBounds)[0];
         super(scene, {
             key:'mole', name:'菜園地鼠 ×3', size:Math.min(first.width*.95,first.height*1.25),frameSize:314,
-            config:{...MOLE_CONFIG,durationMs:Math.max(1,challenge.deadline-Date.now())},
+            config:{...MOLE_CONFIG,durationMs:Math.max(1,challenge.deadline-(FARM_BACKEND_ENABLED?farmNow():Date.now()))},
             travel:'walk',attack:'idle',attackPhase:'garden',movingLabel:'鑽出菜園',attackLabel:'累計命中・抓蟲暫停',
             reward:'地瓜',salePrice:300,settle:settleMoleEncounter,lossText:'地鼠鑽回地底，挑戰失敗！',
             spawnPoint:()=>first,destination:()=>first
@@ -72,15 +75,15 @@ export class MoleEncounter extends BossEncounter {
     }
     moveInGarden() {
         if(this.destroyed || this.result)return;
-        if(Date.now()>=this.deadline){this.resolve('loss');return;}
+        if((FARM_BACKEND_ENABLED?farmNow():Date.now())>=this.deadline){this.resolve('loss');return;}
         for (const sprite of this.moles) {
-            if (this.deadline-Date.now()<10000 && sprite.anims.currentAnim?.key === 'mole_idle') sprite.play('mole_angry');
+            if (this.deadline-(FARM_BACKEND_ENABLED?farmNow():Date.now())<10000 && sprite.anims.currentAnim?.key === 'mole_idle') sprite.play('mole_angry');
         }
         const cells=moleCells(this.scene.gardenBounds);
-        if(Date.now()>=this.nextMove) {
+        if((FARM_BACKEND_ENABLED?farmNow():Date.now())>=this.nextMove) {
             this.cells=nextMoleCells(this.cells);
             this.cell=this.cells[0];
-            this.nextMove=Date.now()+1400;
+            this.nextMove=(FARM_BACKEND_ENABLED?farmNow():Date.now())+1400;
             if(this.phase==='garden')for (const sprite of this.moles) sprite.play('mole_walk');
         }
         this.moles.forEach((sprite,i)=>{
@@ -91,6 +94,7 @@ export class MoleEncounter extends BossEncounter {
     hit(pointer, sprite = this.sprite) {
         if (this.destroyed || this.result || !this.moles.includes(sprite)) return;
         if (this.expired()) { this.resolve('loss');return; }
+        if(FARM_BACKEND_ENABLED&&this.damage>0)recordBattleHit(this.id,'melee');
         this.health=Math.max(0,this.health-this.damage);
         sprite.play('mole_hit');
         this.scene.tweens.killTweensOf(this.weaponSprite);

@@ -13,3 +13,10 @@ export const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// 私有模式在任何 Firestore 查詢前恢復預設 App 的身分；舊模式不額外載入 Auth SDK。
+const { PRIVATE_IDENTITY_ENABLED } = await import('./identity-config.js');
+if (PRIVATE_IDENTITY_ENABLED) {
+    const {getAuth}=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js');
+    await getAuth(app).authStateReady();
+}

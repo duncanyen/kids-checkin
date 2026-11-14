@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateBridge} from '../private-auth-client.js';
 import {firebaseConfig} from '../firebase-config.js';
 import {initializeApp,getApps} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {getAuth,setPersistence,inMemoryPersistence,signInWithCustomToken,signOut} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
@@ -6,7 +7,7 @@ import {getFirestore,doc,collection,query,where,orderBy,limit,onSnapshot,getDoc}
 import {getStorage,ref,uploadBytes,getBlob,deleteObject} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js';
 export async function connect(context){
  const app=getApps().find(a=>a.name==='nexus-growth')||initializeApp(firebaseConfig,'nexus-growth'),auth=getAuth(app),functions=getFunctions(app,'asia-southeast1'),db=getFirestore(app),storage=getStorage(app);
- const session=await httpsCallable(functions,'photoSession')({accountId:context.accountId,groupId:context.groupId,secret:context.user.password||context.user.pin||''});
+ const session=PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',context.groupId)}:await httpsCallable(functions,'photoSession')({accountId:context.accountId,groupId:context.groupId,secret:context.user.password||context.user.pin||''});
  await setPersistence(auth,inMemoryPersistence);await signInWithCustomToken(auth,session.data.token);
  const assertContext=()=>{const user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');if(user?.accountId!==context.accountId||(localStorage.getItem('lastGroupId')||user.groupId)!==context.groupId)throw Error('帳號或群組已切換，請重新開啟成長森林');};
  return{

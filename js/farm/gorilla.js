@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,settleBackendBattle} from './backend-client.js';
 import { clearPoultryEggs } from './poultry.js';
 import { BossEncounter } from './dragon.js';
 import { GORILLA_CONFIG, GORILLA_FANG_PRICE } from './gorilla-rules.js';
@@ -19,6 +20,7 @@ export function registerGorillaAnimations(scene) {
 
 // Rewards/coins belong to the visitor's source farm; lost eggs belong to the target coop.
 export async function settleGorillaEncounter(id, outcome, targetAccountId = CURRENT_ACCOUNT_ID, targetGroupId = CURRENT_GROUP_ID) {
+    if(FARM_BACKEND_ENABLED)return settleBackendBattle(id);
     if (!['win','loss'].includes(outcome)) throw new Error('無效的戰鬥結果');
     const targetRef = doc(db, 'groups', targetGroupId, 'users', targetAccountId);
     return runTransaction(db, async transaction => {

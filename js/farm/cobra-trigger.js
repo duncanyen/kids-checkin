@@ -1,3 +1,4 @@
+import {routeBackendChallenge} from './backend-client.js';
 import { cobraDue } from './cobra-rules.js';
 import { claimCobraEncounter } from './cobra-store.js';
 import { CobraEncounter } from './cobra.js';
@@ -27,6 +28,7 @@ export async function maybeStartCobra(scene) {
             scene.showFloatingText(`上一場蛇王挑戰已逾時，扣除 ${claim.result.coinsLost} 金幣`, '#F44336', 16);
             return true;
         }
+        if(!routeBackendChallenge(scene,claim))return true;
         scene.cobraEncounter?.destroy();
         scene.cobraEncounter = new CobraEncounter(scene, claim.challenge);
         return true;

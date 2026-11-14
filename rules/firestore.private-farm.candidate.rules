@@ -1,0 +1,76 @@
+// 完整切換候選：須先通過 Emulator、私有憑證／角色遷移及所有前端接線驗證。不得直接覆蓋正式環境。
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function player() {
+   return request.auth != null
+    && request.auth.token.keys().hasAll(['nexusProfileId','nexusAccountId','nexusSessionVersion'])
+    && get(/databases/$(database)/documents/ops_identity_state/global).data.ready == true
+    && exists(/databases/$(database)/documents/users/$(request.auth.token.nexusProfileId))
+    && exists(/databases/$(database)/documents/ops_identity_credentials/$(request.auth.token.nexusProfileId))
+    && get(/databases/$(database)/documents/ops_identity_credentials/$(request.auth.token.nexusProfileId)).data.accountId == request.auth.token.nexusAccountId
+    && get(/databases/$(database)/documents/ops_identity_credentials/$(request.auth.token.nexusProfileId)).data.authUid == request.auth.uid
+    && get(/databases/$(database)/documents/ops_identity_credentials/$(request.auth.token.nexusProfileId)).data.disabled == false
+    && get(/databases/$(database)/documents/ops_identity_credentials/$(request.auth.token.nexusProfileId)).data.sessionVersion == request.auth.token.nexusSessionVersion
+    && get(/databases/$(database)/documents/users/$(request.auth.token.nexusProfileId)).data.accountId == request.auth.token.nexusAccountId
+    && get(/databases/$(database)/documents/users/$(request.auth.token.nexusProfileId)).data.role != 'removed';
+  }
+  function member(groupId) {
+   return player() && exists(/databases/$(database)/documents/groups/$(groupId))
+    && request.auth.token.nexusAccountId in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+  }
+  function farmReader(groupId) {
+   return member(groupId) || (player() && get(/databases/$(database)/documents/groups/$(groupId)).data.farmVillageVisibility == 'public');
+  }
+  function safeAvatar(data,key) {
+   return !(key in data) || (data[key] is string && data[key].size() <= 500000
+    && (data[key] == '' || data[key].matches('https://[^<>"]*')
+      || data[key].matches('data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+')));
+  }
+  match /users/{profileId} {
+   // 切換前須清除所有明文欄位；不能只靠 UI 隱藏它們。
+   allow read: if player();
+   allow update: if player() && profileId == request.auth.token.nexusProfileId
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['avatar','photoURL','avatarUrl'])
+    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['avatar']) || safeAvatar(request.resource.data,'avatar'))
+    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['photoURL']) || safeAvatar(request.resource.data,'photoURL'))
+    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['avatarUrl']) || safeAvatar(request.resource.data,'avatarUrl'));
+   allow create, delete: if false;
+  }
+  match /groups/{groupId} {
+   allow read: if player();
+   allow write: if false;
+   match /users/{accountId} {
+    allow read: if farmReader(groupId);
+    allow create: if member(groupId) && request.auth.token.nexusAccountId == accountId
+      && !request.resource.data.keys().hasAny(['farm','farmMail']);
+    allow update: if member(groupId) && request.auth.token.nexusAccountId == accountId
+      && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['farm','farmMail']);
+    allow delete: if false;
+    match /{subcollection}/{document=**} {
+     allow read: if member(groupId) && request.auth.token.nexusAccountId == accountId;
+     allow write: if member(groupId) && request.auth.token.nexusAccountId == accountId
+      && !(subcollection in ['farm_meta','farm_notifications']);
+    }
+   }
+   match /{subcollection}/{document=**} {
+    allow read, write: if subcollection != 'users' && member(groupId);
+   }
+  }
+  match /group_requests/{requestId} {
+   allow create: if player() && request.resource.data.userId == request.auth.token.nexusProfileId
+    && request.resource.data.accountId == request.auth.token.nexusAccountId && request.resource.data.status == 'pending'
+    && request.resource.data.keys().hasOnly(['userId','accountId','groupId','status','userName','avatar','requestTime','type']);
+   allow read: if player();
+   allow update, delete: if false;
+  }
+  match /system_menus/{id} { allow read: if true; allow write: if false; }
+  // 排除所有受保護根集合，避免 OR 規則讓其他 allow 覆蓋上面的限制。
+  // 其餘模組保留舊期限，只加登入前提；這不是全平台所有資料的最終安全稽核。
+  match /{rootCollection}/{document=**} {
+   allow read, write: if player() && !rootCollection.matches('ops_.*')
+    && !(rootCollection in ['users','groups','group_requests','system_menus'])
+    && request.time < timestamp.date(2026,12,16);
+  }
+ }
+}

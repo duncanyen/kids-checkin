@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateBridge} from '../private-auth-client.js';
 import { GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED, ANNOUNCEMENTS_APP_CHECK_REQUIRED, REDEMPTION_APP_CHECK_REQUIRED, OPERATIONS_APP_CHECK_SITE_KEY } from './operations-config.js?v=20261108-messages-optional';
 export { GAME_OPERATIONS_ENABLED, GAME_ANNOUNCEMENTS_ENABLED, GAME_REDEMPTION_ENABLED } from './operations-config.js?v=20261108-messages-optional';
 /**
@@ -18,8 +19,8 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
         finally{clearTimeout(timer);}
     }
     async function connect(mode){
-        if(!(mode==='guard'||mode==='daily'||(mode==='redeem'?GAME_REDEMPTION_ENABLED:GAME_ANNOUNCEMENTS_ENABLED)))throw Error(mode==='redeem'?'禮包服務尚未啟用。':'公告服務尚未啟用。');
-        const requiresCheck=['guard','daily'].includes(mode)?false:mode==='redeem'?REDEMPTION_APP_CHECK_REQUIRED:ANNOUNCEMENTS_APP_CHECK_REQUIRED;
+        if(!(mode==='farm'||mode==='guard'||mode==='daily'||(mode==='redeem'?GAME_REDEMPTION_ENABLED:GAME_ANNOUNCEMENTS_ENABLED)))throw Error(mode==='redeem'?'禮包服務尚未啟用。':'公告服務尚未啟用。');
+        const requiresCheck=['farm','guard','daily'].includes(mode)?false:mode==='redeem'?REDEMPTION_APP_CHECK_REQUIRED:ANNOUNCEMENTS_APP_CHECK_REQUIRED;
         if(requiresCheck&&!OPERATIONS_APP_CHECK_SITE_KEY)throw Error('玩家 App Check 尚未設定，請稍後再試。');
         if(!connections.has(mode))connections.set(mode,(async()=>{
             const [appSDK,authSDK,functionSDK,config]=await Promise.all([
@@ -29,13 +30,13 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
             ]);
             const user=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');
             if(user?.accountId!==context.accountId)throw Error('玩家身分已變更，請重新登入。');
-            const appName=mode==='daily'?'nexus-daily-challenges':mode==='guard'?'nexus-guard-dogs':mode==='redeem'?'nexus-operations-redeem':'nexus-operations-player';
+            const appName=mode==='farm'?'nexus-farm-transactions':mode==='daily'?'nexus-daily-challenges':mode==='guard'?'nexus-guard-dogs':mode==='redeem'?'nexus-operations-redeem':'nexus-operations-player';
             const app=appSDK.getApps().find(a=>a.name===appName)||appSDK.initializeApp(config.firebaseConfig,appName);
             if(requiresCheck){const check=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js');check.initializeAppCheck(app,{provider:new check.ReCaptchaEnterpriseProvider(OPERATIONS_APP_CHECK_SITE_KEY),isTokenAutoRefreshEnabled:true});}
             const functions=functionSDK.getFunctions(app,'asia-southeast1'),auth=authSDK.getAuth(app);
             // 沿用既有後端驗證的玩家至 Firebase Auth 橋接。
-            const session=await functionSDK.httpsCallable(functions,'photoSession',{timeout:timeoutMs})({accountId:context.accountId,groupId:context.groupId,secret:user.password||user.pin||''});
-            await authSDK.setPersistence(auth,authSDK.inMemoryPersistence);await authSDK.signInWithCustomToken(auth,session.data.token);
+            const session=PRIVATE_IDENTITY_ENABLED?await privateBridge('photoSession',context.groupId):(await functionSDK.httpsCallable(functions,'photoSession',{timeout:timeoutMs})({accountId:context.accountId,groupId:context.groupId,secret:user.password||user.pin||''})).data;
+            await authSDK.setPersistence(auth,authSDK.inMemoryPersistence);await authSDK.signInWithCustomToken(auth,session.token);
             return async(name,payload)=>{
                 const current=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');
                 if(current?.accountId!==context.accountId||(localStorage.getItem('lastGroupId')||current.groupId)!==context.groupId)throw Error('玩家或群組已變更，請重新進入村落。');
@@ -45,6 +46,9 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
         return connections.get(mode);
     }
     return{
+        async farmTransaction(action,payload={},requestId=crypto.randomUUID()){
+            return withDeadline(async()=>(await connect('farm'))('gameOpsFarmTransaction',{...payload,action,requestId}),()=>Object.assign(Error('交易結果尚未確認，請以同一請求重試'),{code:'ops/timeout'}));
+        },
         async dailyChallenges(action,payload={}) {
             return withDeadline(async()=> (await connect('daily'))('gameOpsDailyChallenges',{...payload,action}),
                 ()=>Object.assign(Error('每日挑戰連線逾時；若已送出領獎，請重新載入確認，重試不會重複發獎。'),{code:'ops/timeout'}));

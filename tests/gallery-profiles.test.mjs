@@ -15,7 +15,7 @@ test('stable author/comment IDs select current names even when old names now bel
 test('homepage Photo Dump rerenders current profile labels/avatars without rewriting stored uploader',async()=>{
  const source=await fs.readFile(new URL('../js/dashboard.js',import.meta.url),'utf8');let receive;
  const photo={uploader:'Alice 舊名',uploaderAccountId:'alice',imageUrl:'photo.jpg',timestamp:{toDate:()=>new Date()},likes:[]};
- const container={innerHTML:''},section={style:{}},context={window:{currentGroup:{id:'A'},groupMembers:profiles,userAvatarMap:{}},document:{getElementById:id=>id==='photoCarouselContainer'?container:section},
+ const container={innerHTML:''},section={style:{}},context={window:{currentGroup:{id:'A'},groupMembers:profiles,userAvatarMap:{}},document:{getElementById:id=>id==='photoCarouselContainer'?container:id==='photoCarouselSection'?section:null},
  carouselUnsubscribe:null,carouselProfilesUnsubscribe:null,carouselProfilesRequest:0,dashboardGeneration:1,db:{},collection:()=>({}),where:()=>({}),query:()=>({}),orderBy:()=>({}),limit:()=>({}),photoPerson,photoAvatar,
  photoLikes:()=>({liked:false,count:0}),icon:()=>'',loadPhotoAliases:async()=>[],watchMemberWidget:(_,next)=>{receive=next;return()=>{};},console};
  vm.createContext(context);vm.runInContext(source.slice(source.indexOf('window.fetchAndRenderPhotoCarousel ='),source.indexOf('const pendingPhotoLikes =')),context);

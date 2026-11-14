@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateBridge} from './private-auth-client.js';
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import { getAuth, setPersistence, inMemoryPersistence, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
@@ -12,7 +13,7 @@ async function authenticate(user, groupId) {
     const identity = JSON.stringify([groupId, user.accountId]);
     if (session?.identity !== identity) {
         const promise = (session?.promise || Promise.resolve()).catch(() => {}).then(async () => {
-            const result = await httpsCallable(getFunctions(app, 'asia-southeast1'), 'photoSession')({
+            const result = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',groupId)}:await httpsCallable(getFunctions(app, 'asia-southeast1'), 'photoSession')({
                 accountId: user.accountId, groupId, secret: user.password || user.pin || ''
             });
             await setPersistence(auth, inMemoryPersistence);

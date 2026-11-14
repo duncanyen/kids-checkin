@@ -43,6 +43,7 @@ export async function runTransaction(_,callback){
   if(op.kind==='commit'){if(failCommit)throw Error('offline');for(const w of op.writes)docs[w.path]=structuredClone(w.data);commits++;return;}
   if(op.kind==='release'){unlock();return;}
  });
+ await context.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=false;'}));
  await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:mock}));
  await context.route('**/js/main.js',r=>r.fulfill({contentType:'text/javascript',body:`import './auth.js';window.showActionSection=()=>{window.__action=true;};window.enterGroup=group=>{window.__group=group;};window.showGroupSelectionList=groups=>{window.__groups=groups;};window.showAuthSection();`}));

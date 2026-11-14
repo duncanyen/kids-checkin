@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateLogin,privateRegister} from './private-auth-client.js';
 /**
  * 既有 Nexus 帳號登入、群組選擇及操作足跡入口。
  * 此登入使用 users 的舊制驗證資料，不等同營運中心的 Firebase Auth 管理員登入。
@@ -149,6 +150,12 @@ window.processLogin = async function() {
     if(!loginId || !loginPwd) { alert('請輸入帳號與密碼！'); return; }
     document.getElementById('loadingView').style.display = 'flex';
     try {
+        if(PRIVATE_IDENTITY_ENABLED){
+            const loggedUser=await privateLogin(loginId,loginPwd);
+            if(rememberMe)localStorage.setItem('savedLoginId',loginId);else localStorage.removeItem('savedLoginId');
+            sessionStorage.setItem('familyCheckInUser',JSON.stringify(loggedUser));
+            await window.evaluateUserGroups(loggedUser);return;
+        }
         const matches = await findAccountsById(db, loginId);
         if (matches.length > 1) {
             alert('此帳號存在大小寫重複資料，請聯絡管理員確認。');
@@ -193,6 +200,7 @@ window.processRegistration = async function() {
     if(pwd !== pwdConfirm) { alert('兩次輸入的密碼不一致！'); return; }
     document.getElementById('loadingView').style.display = 'flex';
     try {
+        if(PRIVATE_IDENTITY_ENABLED){const loggedUser=await privateRegister({accountId:regId,name:regName,email:regEmail,secret:pwd});sessionStorage.setItem('familyCheckInUser',JSON.stringify(loggedUser));await window.evaluateUserGroups(loggedUser);return;}
         if ((await findAccountsById(db, regId)).length) throw new Error(ACCOUNT_ID_TAKEN);
         let qName = query(collection(db, "users"), where("name", "==", regName));
         if (!(await getDocs(qName)).empty) { alert('此群組暱稱已被使用，請換一個！'); document.getElementById('loadingView').style.display = 'none'; return; }

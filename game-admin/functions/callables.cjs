@@ -21,6 +21,7 @@ function createCallables(service,{adminAppCheckRequired=false,redemptionAppCheck
         gameOpsAdmin:wrap(service.adminAPI,{enforceAppCheck:!emulator&&adminAppCheckRequired}),
         // 唯讀公告仍核對 Auth、目前成員資格、帳號狀態及公告對象。
         gameOpsAnnouncements:wrap(service.announcements,{enforceAppCheck:false}),
+        gameOpsFarmTransaction:wrap(service.farmTransaction,{enforceAppCheck:false}),
         gameOpsGuardDog:wrap(service.guardDog,{enforceAppCheck:false}),
         gameOpsDailyChallenges:wrap(service.dailyChallenges,{enforceAppCheck:false}),
         gameOpsRedeem:wrap(service.redeem,{enforceAppCheck:!emulator&&redemptionAppCheckRequired})

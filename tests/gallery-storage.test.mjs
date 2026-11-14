@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 
 async function fixture() {
     const events = [], state = { failAt: null };
@@ -9,6 +11,7 @@ async function fixture() {
     const source = readFileSync(new URL('../js/gallery-storage.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
     const mock = `
       const {events,state}=globalThis.__photoStorageTest;
+      const PRIVATE_IDENTITY_ENABLED=false;
       const firebaseConfig={},getApps=()=>[],initializeApp=()=>({}),getAuth=()=>({}),getStorage=()=>({}),getFunctions=()=>({});
       const inMemoryPersistence={},setPersistence=async()=>{},signInWithCustomToken=async()=>({user:{uid:'profile-1'}});
       const httpsCallable=()=>async data=>{events.push(['auth',data]);if(state.failAt==='auth')throw Object.assign(Error('denied'),{code:'functions/permission-denied'});return{data:{token:'test'}}};
@@ -72,6 +75,8 @@ test('photoSession verifies credentials and current membership without accessing
     };
     const exports = {};
     const modules = {
+        './identity-service.cjs': require('../functions/identity-service.cjs'),
+        'firebase-functions/params': { defineBoolean: () => ({ value: () => false }) },
         'firebase-admin/app': { initializeApp() {} },
         'firebase-admin/firestore': { getFirestore: () => firestore },
         'firebase-admin/database': { getDatabase: () => assert.fail('Photo auth must not access RTDB') },

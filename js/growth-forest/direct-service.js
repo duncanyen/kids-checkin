@@ -3,7 +3,7 @@ import * as D from './direct-domain.js';
 const zero=()=>({points:0,water:0,coins:0});
 const cleanMember=(row)=>({accountId:row.accountId,name:row.name||row.accountId,role:row.role||'member'});
 const legacyStatus={申請中:'requested',執行中:'processing',已完成:'completed',已取消:'cancelled',已駁回:'rejected'};
-function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=true}){
+function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=true,resolvePrivateIdentity=null}){
     const ref=(group,kind,id)=>db.doc(`groups/${group}/${kind}/${id}`);
     const collection=(group,kind)=>db.collection(`groups/${group}/${kind}`);
     const read=async(t,source)=>t?t.get(source):source.get();
@@ -12,12 +12,14 @@ function createGrowthService({db,now=Date.now,resolveContext=null,markCutover=tr
         if(resolveContext)return resolveContext(request,t);
         if(!request.auth?.uid)D.fail('unauthenticated','請重新登入 Nexus');
         const groupId=D.id(request.data?.groupId),token=request.auth.token||{};
-        const profile=await read(t,db.doc(`users/${D.id(request.auth.uid)}`));
+        const privateActor=resolvePrivateIdentity?await resolvePrivateIdentity(request,t):null;
+        const profile=await read(t,db.doc(`users/${D.id(privateActor?.profileId||request.auth.uid)}`));
         const actor=profile.data();
         if(!actor||actor.role==='removed'||token.photoAccountId!==actor.accountId||token.photoGroupId!==groupId)D.fail('permission-denied','帳號或群組驗證失敗，請重新登入');
         const group=await read(t,db.doc(`groups/${groupId}`));
         if(!group.exists||!(group.data().members||[]).includes(actor.accountId))D.fail('permission-denied','你已不在這個群組');
-        return{groupId,accountId:actor.accountId,actor:cleanMember(actor),group:group.data(),parent:['admin','parent'].includes(actor.role)};
+        const roles=privateActor?(await read(t,db.doc('ops_group_role_sets/'+groupId))).data()?.roles:null;
+        return{groupId,accountId:actor.accountId,actor:cleanMember(actor),group:group.data(),parent:privateActor?['owner','admin','parent'].includes(roles?.[actor.accountId]):['admin','parent'].includes(actor.role)};
     }
     const parent=c=>{if(!c.parent)D.fail('permission-denied','只有目前群組的家長可執行此操作');};
     const target=(c,value)=>{const accountId=value?D.id(value):c.accountId;if(accountId!==c.accountId)parent(c);if(!c.group.members.includes(accountId))D.fail('permission-denied','帳號不在目前群組');return accountId;};

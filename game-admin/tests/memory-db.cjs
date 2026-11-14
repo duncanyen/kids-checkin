@@ -5,7 +5,7 @@ class Ref{
     constructor(db,path){this.db=db;this.path=path;this.id=path.split('/').at(-1);}
     async get(){return this.db.snapshot(this.path);}
     collection(name){return new Query(this.db,this.path+'/'+name);}
-    async set(value){this.db.data.set(this.path,copy(value));}
+    async set(value,options={}){this.db.data.set(this.path,options.merge?{...this.db.data.get(this.path),...copy(value)}:copy(value));}
     async update(value){if(!this.db.data.has(this.path))throw Error('not found');this.db.data.set(this.path,{...this.db.data.get(this.path),...copy(value)});}
 }
 class Query{
@@ -32,10 +32,10 @@ class MemoryDB{
     runTransaction(callback){
         const promise=this.queue.then(async()=>{
             const writes=[];
-            const result=await callback({get:ref=>{if(writes.length)throw Error('Read after write');return ref.get();},set:(ref,data)=>writes.push(['set',ref,data]),create:(ref,data)=>writes.push(['create',ref,data]),update:(ref,data)=>writes.push(['update',ref,data])});
+            const result=await callback({get:ref=>{if(writes.length)throw Error('Read after write');return ref.get();},set:(ref,data)=>writes.push(['set',ref,data]),create:(ref,data)=>writes.push(['create',ref,data]),update:(ref,data)=>writes.push(['update',ref,data]),delete:ref=>writes.push(['delete',ref])});
             if(this.failAward&&writes.some(([,ref])=>ref.path.startsWith('groups/'))){this.failAward=false;throw Error('simulated storage failure');}
             const next=new Map(this.data);
-            for(const [type,ref,value]of writes){if(type==='create'&&next.has(ref.path))throw Error('already exists');if(type==='update'&&!next.has(ref.path))throw Error('not found');next.set(ref.path,type==='update'?{...next.get(ref.path),...copy(value)}:copy(value));}
+            for(const [type,ref,value]of writes){if(type==='delete'){next.delete(ref.path);continue;}if(type==='create'&&next.has(ref.path))throw Error('already exists');if(type==='update'&&!next.has(ref.path))throw Error('not found');next.set(ref.path,type==='update'?{...next.get(ref.path),...copy(value)}:copy(value));}
             this.data=next;return result;
         });this.queue=promise.catch(()=>{});return promise;
     }

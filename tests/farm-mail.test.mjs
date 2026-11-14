@@ -37,7 +37,7 @@ async function fixture() {
         throw Error('Too many retries');
       }
     `;
-    const source = readFileSync(new URL('../js/farm/mail-store.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
+    const source = 'const FARM_BACKEND_ENABLED=false;\n'+readFileSync(new URL('../js/farm/mail-store.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
     const mod = await import('data:text/javascript;base64,' + Buffer.from(mock + source + `\n// ${Math.random()}`).toString('base64'));
     return { ...mod, docs, state, store: mod.createFarmMailStore({}, { groupId: 'A', accountId: 'alice' }) };
 }

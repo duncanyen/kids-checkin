@@ -30,7 +30,8 @@ async function fixture(existing = farm) {
         throw Error('Too many retries');
       }
     `;
-    const source = readFileSync(new URL('../js/farm/save-store.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
+    const core = readFileSync(new URL('../js/farm/save-core.js', import.meta.url), 'utf8');
+    const source = 'const FARM_BACKEND_ENABLED=false;\n'+core+readFileSync(new URL('../js/farm/save-store.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '').replace(/^export \{.*\} from .*;\n/gm,'');
     const mod = await import('data:text/javascript;base64,' + Buffer.from(mock + source + `\n// ${Math.random()}`).toString('base64'));
     return { ...mod, docs, state, versions, ensure: options => mod.ensureFarmSave({}, { groupId: 'A', accountId: 'alice' }, options) };
 }

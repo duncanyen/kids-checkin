@@ -1,3 +1,4 @@
+import { PRIVATE_IDENTITY_ENABLED, identityCall } from './private-auth-client.js';
 /**
  * 群組建立、邀請、申請及切換流程，依賴 auth.js 與 dashboard.js 的 window 介面。
  * 選定群組同步保存 lastGroupId 與 nexus_active_group_id；members 使用 accountId。
@@ -45,6 +46,12 @@ window.processCreateGroup = async function() {
     document.getElementById('loadingView').style.display = 'flex';
     
     try {
+        if(PRIVATE_IDENTITY_ENABLED){
+            const key='nexus.group.create.pending:'+JSON.stringify([user.accountId,groupName]),requestId=sessionStorage.getItem(key)||crypto.randomUUID();sessionStorage.setItem(key,requestId);
+            const result=await identityCall('createGroup',{name:groupName,icon:window.selectedPresetIcon||'',requestId});sessionStorage.removeItem(key);
+            document.getElementById('loadingView').style.display='none';
+            await window.enterGroup(result.group);return;
+        }
         await updateDoc(doc(db, "users", user.docId), { role: 'admin' });
         user.role = 'admin';
         sessionStorage.setItem('familyCheckInUser', JSON.stringify(user));
@@ -83,6 +90,12 @@ window.processJoinGroup = async function() {
     document.getElementById('loadingView').style.display = 'flex';
     
     try {
+        if(PRIVATE_IDENTITY_ENABLED){
+            const result=await identityCall('joinGroup',{code});
+            localStorage.removeItem('pendingInviteCode');
+            document.getElementById('loadingView').style.display='none';
+            await window.enterGroup(result.group);return;
+        }
         const q = query(collection(db, "groups"), where("inviteCode", "==", code));
         const snap = await getDocs(q);
         
@@ -169,7 +182,8 @@ window.openInviteModal = async function() {
     if (!window.currentGroup) { alert("無法取得群組資訊！"); return; }
     document.getElementById('sidebar').classList.remove('active');
     document.getElementById('sidebarOverlay').classList.remove('active');
-    let code = window.currentGroup.inviteCode;
+    let code = PRIVATE_IDENTITY_ENABLED?(await identityCall('groupInvite',{groupId:window.currentGroup.id})).code:window.currentGroup.inviteCode;
+    if(PRIVATE_IDENTITY_ENABLED)window.currentGroup.inviteCode=code;
     if (!code) {
         code = window.generateInviteCode();
         window.currentGroup.inviteCode = code;

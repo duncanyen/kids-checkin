@@ -11,12 +11,18 @@ const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { timingSafeEqual } = require('node:crypto');
 const { key } = require('./live-model.cjs');
-initializeApp({ databaseURL: 'https://homebasedb-default-rtdb.asia-southeast1.firebasedatabase.app' });
+const demoDatabaseURL=typeof process!=='undefined'&&process.env.FIREBASE_DATABASE_EMULATOR_HOST&&process.env.GCLOUD_PROJECT?.startsWith('demo-')?`https://${process.env.GCLOUD_PROJECT}.firebaseio.com`:null;
+initializeApp({ databaseURL: demoDatabaseURL||'https://homebasedb-default-rtdb.asia-southeast1.firebasedatabase.app' });
 const firestore = getFirestore();
 let mirrorInstance;
 const makeMirror = require('./mirror.cjs');
-const getMirror = () => mirrorInstance ||= makeMirror(firestore, getDatabase());
+const getMirror = () => mirrorInstance ||= makeMirror(firestore, getDatabase(),{privateIdentityEnabled:()=>privateIdentityEnabled.value()});
 const region = 'asia-southeast1';
+const {defineBoolean}=require('firebase-functions/params');
+const privateIdentityEnabled=defineBoolean('NEXUS_PRIVATE_IDENTITY_ENABLED',{default:false});
+const {createIdentityService}=require('./identity-service.cjs');
+const identityService=createIdentityService({db:firestore,auth:getAuth(),enabled:()=>privateIdentityEnabled.value()});
+exports.nexusIdentity=onCall({region,cors:true,maxInstances:5,concurrency:4,memory:'512MiB',timeoutSeconds:30},async request=>{try{return await identityService.handle(request);}catch(error){const allowed=['invalid-argument','unauthenticated','permission-denied','already-exists','failed-precondition','resource-exhausted','not-found'];throw new HttpsError(allowed.includes(error.code)?error.code:'internal',allowed.includes(error.code)?error.message:'登入服務暫時無法使用');}});
 const trigger = document => ({ document, region, retry: true });
 exports.liveFarmMirror = onDocumentWritten(trigger('groups/{groupId}/users/{accountId}'), event => {
     if (JSON.stringify(event.data.before.data()?.farm) === JSON.stringify(event.data.after.data()?.farm)) return;
@@ -30,6 +36,7 @@ exports.liveGroupMirror = onDocumentWritten(trigger('groups/{groupId}'), async e
     await getMirror().group(event.params.groupId, event.data.after, event.time);
     await getMirror().refreshGroupRooms(event.params.groupId, event.time);
 });
+exports.liveIdentityMirror=onDocumentWritten(trigger('ops_identity_credentials/{profileId}'),async event=>{const profile=await firestore.doc('users/'+event.params.profileId).get();if(profile.exists)await getMirror().account(profile.data().accountId,profile,event.time);});
 exports.liveProfileMirror = onDocumentWritten(trigger('users/{profileId}'), async event => {
     const old = event.data.before.data(), current = event.data.after.data();
     if (old && current && ['accountId', 'name', 'role'].every(key => old[key] === current[key]) && JSON.stringify(old.nameHistory) === JSON.stringify(current.nameHistory)) return;
@@ -49,6 +56,7 @@ const same = (a, b) => typeof a === 'string' && typeof b === 'string' && Buffer.
  * @description 不記錄輸入憑證或完整回傳 Token；這是舊登入相容流程。
  */
 async function validateSession(request) {
+    if(identityService.configured()){const actor=await identityService.groupIdentity(request);return{accountId:actor.accountId,groupId:actor.groupId,user:{id:actor.profileId},group:actor.group,privateActor:actor};}
     const { accountId, groupId, secret } = request.data || {};
     if (typeof accountId !== 'string' || typeof groupId !== 'string' || typeof secret !== 'string' || !secret || !groupId || groupId.includes('/') || accountId.length > 500 || groupId.length > 500 || secret.length > 1000) throw new HttpsError('unauthenticated', '請重新登入。');
     const users = await firestore.collection('users').where('accountId', '==', accountId).limit(2).get();
@@ -60,14 +68,16 @@ async function validateSession(request) {
     return { accountId, groupId, user, group };
 }
 exports.photoSession = onCall({ region, cors: true, maxInstances: 5 }, async request => {
-    const { accountId, groupId, user } = await validateSession(request);
+    const { accountId, groupId, user, privateActor } = await validateSession(request);
+    if(privateActor)return{token:await identityService.tokenFor(privateActor,{photoAccountId:accountId,photoGroupId:groupId})};
     const token = await getAuth().createCustomToken(user.id, { photoAccountId: accountId, photoGroupId: groupId });
     return { token };
 });
 exports.liveSession = onCall({ region, cors: true, maxInstances: 5 }, async request => {
-    const { accountId, groupId, user, group } = await validateSession(request);
-    await getMirror().account(accountId, user);
+    const { accountId, groupId, user, group, privateActor } = await validateSession(request);
+    await getMirror().account(accountId, privateActor?await firestore.doc('users/'+privateActor.profileId).get():user);
     await getMirror().group(groupId, group);
+    if(privateActor)return{token:await identityService.tokenFor(privateActor,{accountKey:key(accountId),groupKey:key(groupId)})};
     const token = await getAuth().createCustomToken(user.id, { accountKey: key(accountId), groupKey: key(groupId) });
     return { token };
 });
@@ -75,7 +85,7 @@ exports.liveSession = onCall({ region, cors: true, maxInstances: 5 }, async requ
 // 成長森林沿用既有伺服器驗證的 Nexus custom-token 身分。
 let growthService;
 exports.growthForest=onCall({region,cors:true,maxInstances:10},async request=>{
-    try{growthService ||= require('./growth-service.cjs').createGrowthService({db:firestore});return await growthService.handle(request);}
+    try{growthService ||= require('./growth-service.cjs').createGrowthService({db:firestore,resolvePrivateIdentity:async(request,t)=>{if(!privateIdentityEnabled.value())return null;if(!(await (t?t.get(firestore.doc('ops_identity_state/global')):firestore.doc('ops_identity_state/global').get())).data()?.ready)throw new HttpsError('failed-precondition','私有登入尚未完成切換');return require('./identity-access.cjs').assertIdentity(request,firestore,t);}});return await growthService.handle(request);}
     catch(error){
         const codes=['invalid-argument','unauthenticated','permission-denied','not-found','already-exists','failed-precondition','resource-exhausted'];
         if(codes.includes(error.code))throw new HttpsError(error.code,error.message);

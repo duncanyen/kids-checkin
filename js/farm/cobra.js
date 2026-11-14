@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,recordBattleHit,farmNow} from './backend-client.js';
 import { BossEncounter } from './dragon.js';
 import { COBRA_CONFIG, COBRA_FANG_PRICE } from './cobra-rules.js';
 import { settleCobraEncounter } from './cobra-store.js';
@@ -20,7 +21,8 @@ export function registerCobraAnimations(scene) {
 
 export class CobraEncounter extends BossEncounter {
     constructor(scene, challenge) {
-        const area = predatorPatrolArea(scene), view = farmView(scene), now = Date.now();
+        if(FARM_BACKEND_ENABLED)scene.backendChallenge=challenge;
+        const area = predatorPatrolArea(scene), view = farmView(scene), now = (FARM_BACKEND_ENABLED?farmNow():Date.now());
         super(scene, {
             key: 'cobra', archery: true, name: '毒牙眼鏡蛇王', size: COBRA_CONFIG.size, frameSize: 256,
             config: {
@@ -52,7 +54,7 @@ export class CobraEncounter extends BossEncounter {
     }
 
     refresh() {
-        if (this.deadline && Date.now() >= this.deadline && !this.result) {
+        if (this.deadline && (FARM_BACKEND_ENABLED?farmNow():Date.now()) >= this.deadline && !this.result) {
             this.resolve('loss');
             return;
         }
@@ -62,7 +64,7 @@ export class CobraEncounter extends BossEncounter {
     patrol() {
         if (this.destroyed || this.result || this.phase !== 'patrol') return;
         const area = predatorPatrolArea(this.scene);
-        const t = Math.max(0, (Date.now() - this.approachEndsAt) / 1000);
+        const t = Math.max(0, ((FARM_BACKEND_ENABLED?farmNow():Date.now()) - this.approachEndsAt) / 1000);
         const phase = t % 5, attack = phase >= 4, cycle = Math.floor(t / 5);
         const radius = Math.max(0, (area.right - area.left) / 2);
         const x = (area.left + area.right) / 2 + Math.sin(t * 1.05) * radius;

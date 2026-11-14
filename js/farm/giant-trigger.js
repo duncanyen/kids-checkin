@@ -1,3 +1,4 @@
+import {routeBackendChallenge} from './backend-client.js';
 import { giantDue } from './giant-rules.js';
 import { claimGiantEncounter } from './giant-store.js';
 import { GiantEncounter } from './giant.js';
@@ -23,6 +24,7 @@ export async function maybeStartGiant(scene){
         const claim=await claimGiantEncounter(scene.targetAccountId,scene.targetGroupId);
         if(!active())return true;if(!claim)return false;
         if(claim.expired){scene.showFloatingText(`上一場遠古巨人挑戰已逾時，扣除 ${claim.result.coinsLost} 金幣`,'#F44336',16);return true;}
+        if(!routeBackendChallenge(scene,claim))return true;
         scene.giantEncounter?.destroy();scene.giantEncounter=new GiantEncounter(scene,claim.challenge);return true;
     }catch(error){
         if(active())farmLoading.error('遠古巨人挑戰準備失敗，請重試。',()=>maybeStartGiant(scene));

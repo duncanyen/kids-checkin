@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateBridge} from './private-auth-client.js';
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import { getAuth, setPersistence, inMemoryPersistence, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
@@ -14,7 +15,7 @@ export async function connect(context) {
     const promise = authQueue.catch(() => {}).then(async () => {
         const user = JSON.parse(sessionStorage.getItem('familyCheckInUser') || localStorage.getItem('familyCheckInUser') || 'null');
         if (user?.accountId !== context.accountId) throw Object.assign(new Error('請重新登入'), { code: 'unauthenticated' });
-        const response = await httpsCallable(functions, 'liveSession')({ accountId: context.accountId, groupId: context.groupId, secret: user.password || user.pin || '' });
+        const response = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('liveSession',context.groupId)}:await httpsCallable(functions, 'liveSession')({ accountId: context.accountId, groupId: context.groupId, secret: user.password || user.pin || '' });
         await setPersistence(auth, inMemoryPersistence);
         await signInWithCustomToken(auth, response.data.token);
         const status = (await get(ref(database, 'nexus/status'))).val() || {};

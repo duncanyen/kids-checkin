@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,farmCommand} from './backend-client.js';
 import { doc, collection, onSnapshot, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 export const WELCOME_ID = 'welcome-v1';
@@ -41,6 +42,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
     }
     return {
         ensureWelcome() {
+            if(FARM_BACKEND_ENABLED)return farmCommand('ensureWelcome');
             const now = Date.now();
             return runTransaction(db, async transaction => {
                 const data = await readOwner(transaction);
@@ -59,6 +61,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
             }, fail);
         },
         markRead(ids) {
+            if(FARM_BACKEND_ENABLED)return farmCommand('readMail',{ids});
             const unique = [...new Set(ids)];
             if (unique.length > 100) throw new Error('一次最多讀取 100 則通知');
             const now = Date.now();
@@ -72,6 +75,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
             });
         },
         claim(id) {
+            if(FARM_BACKEND_ENABLED){if(id!==WELCOME_ID)throw Error('此通知沒有獎勵');return farmCommand('claimWelcome');}
             if (id !== WELCOME_ID) throw new Error('此通知沒有可領取的獎勵');
             const now = Date.now();
             return runTransaction(db, async transaction => {
@@ -90,6 +94,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
             });
         },
         removeBatch(ids) {
+            if(FARM_BACKEND_ENABLED)return farmCommand('deleteMail',{ids});
             const unique = [...new Set(ids)];
             if (unique.length > 100) throw new Error('一次最多刪除 100 則通知');
             const refs = unique.map(noticeRef);
@@ -99,6 +104,7 @@ export function createFarmMailStore(db, { groupId, accountId }) {
             });
         },
         remove(id) {
+            if(FARM_BACKEND_ENABLED)return farmCommand('deleteMail',{ids:[id]});
             return runTransaction(db, async transaction => {
                 await readOwner(transaction);
                 transaction.delete(noticeRef(id));

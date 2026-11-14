@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,sanitizeProfile,identityCall,hasManagementAccess} from './private-auth-client.js';
 /**
  * Nexus 首頁入口：載入登入、群組及 dashboard 模組，註冊共用 window 操作。
  * 動態功能依 menus 與 userSettings 建立；首頁訂閱清理由 dashboard.js 管理。
@@ -156,7 +157,7 @@ window.renderDynamicModules = async function(user, isCurrent = () => true) {
     
     order.forEach(modKey => { if (allowedMenus.includes(modKey) && sideMenuTemplates[modKey]) sideList.innerHTML += sideMenuTemplates[modKey]; });
     
-    if (user.role === 'admin' || user.role === 'parent') {
+    if (hasManagementAccess(user)) {
         sideList.innerHTML += `<div class="sidebar-item" onclick="window.navTo('admin.html', '管理者後台')" style="color:#1d4ed8;"><span class="sidebar-icon">${icon('admin')}</span>管理者後台</div>`;
     }
     sideList.innerHTML += `<div class="sidebar-item" onclick="window.switchGroup()" style="color:#f59e0b; font-weight: bold;"><span class="sidebar-icon">${icon('switch')}</span>切換群組</div>`;
@@ -261,7 +262,8 @@ async function initializeAppFlow() {
                 q = query(collection(db, "users"), where("name", "==", savedUser.name));
             }
             
-            const snap = await getDocs(q);
+            const authenticated=PRIVATE_IDENTITY_ENABLED?(await identityCall('profile')).profile:null;
+            const snap = authenticated?{empty:false,docs:[{id:authenticated.docId,data:()=>authenticated}]}:await getDocs(q);
             
             if (snap.empty) {
                 alert("此帳號已失效或被刪除，請重新登入。");
@@ -269,7 +271,7 @@ async function initializeAppFlow() {
                 sessionStorage.removeItem('nexus_active_group_id');
                 if (typeof window.showAuthSection === 'function') window.showAuthSection();
             } else {
-                const latestUser = snap.docs[0].data();
+                const latestUser = PRIVATE_IDENTITY_ENABLED?sanitizeProfile(snap.docs[0].data()):snap.docs[0].data();
                 latestUser.docId = snap.docs[0].id;
                 sessionStorage.setItem('familyCheckInUser', JSON.stringify(latestUser));
 

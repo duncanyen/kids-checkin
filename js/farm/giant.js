@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,recordBattleHit,farmNow} from './backend-client.js';
 import { BossEncounter } from './dragon.js';
 import { GIANT_CONFIG, ANCIENT_STONE_PRICE } from './giant-rules.js';
 import { settleGiantEncounter } from './giant-store.js';
@@ -15,7 +16,8 @@ function arena(scene) {
 }
 export class GiantEncounter extends BossEncounter {
     constructor(scene,challenge) {
-        const view=farmView(scene),area=arena(scene),now=Date.now();
+        if(FARM_BACKEND_ENABLED)scene.backendChallenge=challenge;
+        const view=farmView(scene),area=arena(scene),now=(FARM_BACKEND_ENABLED?farmNow():Date.now());
         super(scene,{
             key:'giant',archery:true,name:'遠古巨人',size:GIANT_CONFIG.size,frameSize:224,
             config:{...GIANT_CONFIG,flightMs:Math.max(0,challenge.approachEndsAt-now),durationMs:Math.max(1,challenge.deadline-now)},
@@ -33,14 +35,14 @@ export class GiantEncounter extends BossEncounter {
         this.flight.stop();this.phase='patrol';this.sprite.play('giant_idle');this.refresh();
     }
     refresh() {
-        if(this.deadline&&Date.now()>=this.deadline&&!this.result){this.resolve('loss');return;}
+        if(this.deadline&&(FARM_BACKEND_ENABLED?farmNow():Date.now())>=this.deadline&&!this.result){this.resolve('loss');return;}
         super.refresh();
     }
     patrol() {
         if(this.destroyed||this.result)return;
         if(this.expired()){this.resolve('loss');return;}
         if(this.phase!=='patrol')return;
-        const now=Date.now(),area=arena(this.scene),t=Math.max(0,(now-this.approachEndsAt)/1000),phase=t%8,cycle=Math.floor(t/8);
+        const now=(FARM_BACKEND_ENABLED?farmNow():Date.now()),area=arena(this.scene),t=Math.max(0,(now-this.approachEndsAt)/1000),phase=t%8,cycle=Math.floor(t/8);
         const walking=phase<4,smash=phase>=4.8&&phase<5.8,throwing=phase>=6.3&&phase<7.3,dodge=phase>=7.3;
         const x=area.x+Math.sin(t*.8)*area.radius+(dodge?Math.sin((phase-7.3)/.7*Math.PI)*18:0);
         let hen=null,distance=Infinity;

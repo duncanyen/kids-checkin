@@ -1,0 +1,45 @@
+{
+  "firestore": {
+    "rules": "rules/firestore.private-farm.candidate.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8092
+    },
+    "singleProjectMode": true,
+    "ui": {
+      "enabled": false
+    },
+    "storage": {
+      "port": 9198
+    },
+    "database": {
+      "port": 9008
+    },
+    "auth": {
+      "port": 9098
+    },
+    "functions": {
+      "port": 5008
+    }
+  },
+  "storage": {
+    "rules": "rules/storage.private-farm.candidate.rules"
+  },
+  "database": {
+    "rules": "rules/database.private-farm.candidate.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "nexus-live",
+      "runtime": "nodejs22"
+    },
+    {
+      "source": "game-admin/functions",
+      "codebase": "nexus-ops",
+      "runtime": "nodejs22"
+    }
+  ]
+}

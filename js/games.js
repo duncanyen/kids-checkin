@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateLogout} from './private-auth-client.js';
 /**
  * 遊戲大廳入口：群組遊戲權限、猜拳與 2048 紀錄及排行。
  * 咕咕村落是獨立 Phaser 頁面；此模組的舊遊戲紀錄仍保留各自文件相容格式。
@@ -574,7 +575,8 @@ if (btnBack) {
     });
 }
 if (btnLogout) {
-    btnLogout.addEventListener('click', () => {
+    btnLogout.addEventListener('click', async () => {
+        if(PRIVATE_IDENTITY_ENABLED)await privateLogout();
         sessionStorage.removeItem('familyCheckInUser');
         localStorage.removeItem('familyCheckInUser');
         window.location.href = 'index.html';

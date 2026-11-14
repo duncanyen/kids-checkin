@@ -17,6 +17,7 @@ export const addDoc=async()=>({id:'log'}),deleteDoc=async()=>{},getFirestore=()=
  try{
  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
+ await page.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=false;'}));
  await page.route('https://www.gstatic.com/**',route=>route.fulfill({contentType:'text/javascript',body:sdk}));
  await page.route('**/js/firebase-config.js',route=>route.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await page.addInitScript(()=>{

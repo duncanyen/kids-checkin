@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow,routeBackendChallenge} from './backend-client.js';
 import { reportingCounterPatch } from './reporting-config.js';
 import { maybeStartGiant, giantBlocksFarm } from './giant-trigger.js';
 import { outdoorHens } from './poultry-housing.js';
@@ -177,7 +178,9 @@ export default class VisitScene extends Phaser.Scene {
         if (this.myFarmData.moleChallenge && await maybeStartMole(this)) return;
         if (await maybeStartCobra(this)) return;
         if (!this.sys.isActive() || this.visitToken !== token) return;
-        const encounter = rollVisitEncounter(this.targetFarmData.coopLevel);
+        const authorized=FARM_BACKEND_ENABLED?await farmCommand('visitEncounter',visitPayload(this)):null;
+        if(FARM_BACKEND_ENABLED){if(!this.sys.isActive()||this.visitToken!==token||!routeBackendChallenge(this,authorized))return;this.backendChallenge=authorized?.challenge||null;}
+        const encounter = FARM_BACKEND_ENABLED?authorized?.kind:rollVisitEncounter(this.targetFarmData.coopLevel);
         if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
         else if (encounter === 'gorilla') this.spawnGorillaEvent();
         else if (encounter === 'dragon') this.spawnDragonEvent();
@@ -220,10 +223,10 @@ export default class VisitScene extends Phaser.Scene {
         if (!farm || this.isUpdatingTargetEggs || !productionChanged(farm, Date.now())) return;
         this.isUpdatingTargetEggs = true;
         try {
-            await this.runVisitTransaction(async transaction => {
+            await farmCommandOrLegacy('settleTarget',visitPayload(this),()=>this.runVisitTransaction(async transaction => {
                 const snap = await transaction.get(targetRef);
                 if (snap.data()?.farm) transaction.update(targetRef, poultryPatch(settlePoultry(snap.data().farm)));
-            });
+            }));
         } catch (e) { console.error('更新目標玩家生蛋進度失敗:', e); }
         finally { this.isUpdatingTargetEggs = false; }
     }
@@ -241,7 +244,7 @@ export default class VisitScene extends Phaser.Scene {
     async cleanTargetFarm() {
         const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
         try {
-            await this.runVisitTransaction(async (t) => {
+            await farmCommandOrLegacy('helpClean',visitPayload(this),()=>this.runVisitTransaction(async (t) => {
                 const targetDoc = await t.get(targetRef);
                 if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
                 const targetClean = targetDoc.data().farm.cleanliness || 0;
@@ -253,7 +256,7 @@ export default class VisitScene extends Phaser.Scene {
 
                 t.update(targetRef, { "farm.cleanliness": newClean });
                 t.update(myFarmRef, { "farm.moral": newMoral });
-            });
+            }));
             this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, 195, 150);
             this.sendSystemNotification(`${playerName}幫${this.targetName}打掃了雞舍`);
         } catch (e) { console.error(e); }
@@ -383,7 +386,7 @@ export default class VisitScene extends Phaser.Scene {
 
     spawnTigerEvent() {
         if(giantBlocksFarm(this))return;
-        this.isTigerDefeated = false; this.tigerHitCount = 0;
+        this.isTigerDefeated = false; this.tigerHitCount = FARM_BACKEND_ENABLED?ENEMY_HEALTH.tiger-(this.backendChallenge?.health??ENEMY_HEALTH.tiger):0;
         const weapon = equippedWeapon(this.myFarmData);
         const damage = weaponDamage(weapon, 'tiger');
         const health = ENEMY_HEALTH.tiger;
@@ -403,12 +406,13 @@ export default class VisitScene extends Phaser.Scene {
 
         this.tiger.moveTween = this.tigerTween;
         // Patrolling and attacking are visual only; keep the original 50s deadline.
-        this.tiger.deadlineTimer = this.time.delayedCall(TIGER_DEADLINE_MS, () => {
+        this.tiger.deadlineTimer = this.time.delayedCall(FARM_BACKEND_ENABLED?Math.max(1,this.backendChallenge.deadline-farmNow()):TIGER_DEADLINE_MS, () => {
             if (!this.isTigerDefeated) this.tigerEscapes();
         });
         this.tiger.on('pointerdown', (pointer) => {
             if (this.isTigerDefeated || !this.tiger.active || this.tiger.getData('resolved')) return;
             this.tigerHitCount += damage;
+            if(FARM_BACKEND_ENABLED)recordBattleHit(this.backendChallenge.id);
             hitPredator(this.tiger);
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
@@ -433,7 +437,7 @@ export default class VisitScene extends Phaser.Scene {
         this.tweens.add({ targets: this.tiger, alpha: 0, y: this.tiger.y - 50, duration: 1500, delay: 1000, onComplete: () => this.tiger.destroy() });
 
         const encounterId = this.tiger.getData('encounterId');
-        this.runVisitTransaction(async (t) => {
+        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id).then(result=>result.hasSpace):this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
@@ -443,7 +447,7 @@ export default class VisitScene extends Phaser.Scene {
             if (hasSpace) updates['farm.tigerPelts'] = (farm.tigerPelts || 0) + 1;
             t.update(myFarmRef, updates);
             return hasSpace;
-        }).then((success) => {
+        })).then((success) => {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1', '#FFF', 20, 195, 422));
                 this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
@@ -456,17 +460,17 @@ export default class VisitScene extends Phaser.Scene {
         this.club.setVisible(false);
         this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
-        this.runVisitTransaction(async (t) => {
+        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id):this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return;
             const farm = snap.data().farm;
             t.update(myFarmRef, { "farm.coins": Math.max(0, (farm.coins || 0) - 5) });
-        }).catch(e => console.error(e));
+        })).catch(e => console.error(e));
     }
 
     spawnWolfEvent() {
         if(giantBlocksFarm(this))return;
-        this.isWolfDefeated = false; this.wolfHitCount = 0;
+        this.isWolfDefeated = false; this.wolfHitCount = FARM_BACKEND_ENABLED?ENEMY_HEALTH.wolf-(this.backendChallenge?.health??ENEMY_HEALTH.wolf):0;
         const weapon = equippedWeapon(this.myFarmData);
         const damage = weaponDamage(weapon, 'wolf');
         const health = ENEMY_HEALTH.wolf;
@@ -485,12 +489,13 @@ export default class VisitScene extends Phaser.Scene {
 
         this.wolf.moveTween = this.wolfTween;
         // Patrol attacks are visual; the original egg-loss deadline stays 60s.
-        this.wolf.deadlineTimer = this.time.delayedCall(WOLF_DEADLINE_MS, () => {
+        this.wolf.deadlineTimer = this.time.delayedCall(FARM_BACKEND_ENABLED?Math.max(1,this.backendChallenge.deadline-farmNow()):WOLF_DEADLINE_MS, () => {
             if (!this.isWolfDefeated) this.wolfEscapes();
         });
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
             this.wolfHitCount += damage;
+            if(FARM_BACKEND_ENABLED)recordBattleHit(this.backendChallenge.id);
             hitPredator(this.wolf);
             
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
@@ -516,7 +521,7 @@ export default class VisitScene extends Phaser.Scene {
         this.tweens.add({ targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000, onComplete: () => this.wolf.destroy() });
 
         const encounterId = this.wolf.getData('encounterId');
-        this.runVisitTransaction(async (t) => {
+        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id).then(result=>result.hasSpace):this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
@@ -526,7 +531,7 @@ export default class VisitScene extends Phaser.Scene {
             if (hasSpace) updates['farm.wolfFangs'] = (farm.wolfFangs || 0) + 1;
             t.update(myFarmRef, updates);
             return hasSpace;
-        }).then((success) => {
+        })).then((success) => {
             if (success) { 
                 this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1', '#FFF', 20, 195, 422));
                 this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
@@ -539,13 +544,13 @@ export default class VisitScene extends Phaser.Scene {
         this.club.setVisible(false);
         this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336', 18, this.wolf.x, this.wolf.y - 30);
         this.tweens.add({ targets: this.wolf, alpha: 0, x: this.wolf.x + 100, duration: 1000, onComplete: () => this.wolf.destroy() });
-        this.runVisitTransaction(async (t) => {
+        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id):this.runVisitTransaction(async (t) => {
             const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
             const targetDoc = await t.get(targetRef);
             if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
             const targetFarm = targetDoc.data().farm;
             if (targetFarm && (targetFarm.eggsReady || 0) > 0) { t.update(targetRef, takePoultryEgg(targetFarm, Math.random()).patch); }
-        }).catch(e => console.error(e));
+        })).catch(e => console.error(e));
     }
 
     async searchCabbage(cabSprite) {
@@ -566,6 +571,11 @@ export default class VisitScene extends Phaser.Scene {
         cabSprite.isAnimating = true;
         this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
 
+        if(FARM_BACKEND_ENABLED){
+            try{const result=await farmCommand('searchGarden',visitPayload(this));if(result.caught&&this.gardenFeedback?.alive)this.gardenFeedback.show(result.foundType,cabSprite.x,cabSprite.y);}
+            catch(error){this.showFloatingText(error.message||'未能收入倉庫，請重試','#F44336',14,cabSprite.x,cabSprite.y);}
+            return;
+        }
         const usedSpace = getUsedSpace(this.myFarmData);
         const limit = this.myFarmData.warehouseLimit || 10;
         const foundType = gardenFindForRoll(Phaser.Math.Between(1, GARDEN_ROLL_SIZE));
@@ -632,8 +642,8 @@ export default class VisitScene extends Phaser.Scene {
         const attemptId = crypto.randomUUID();
         try {
             const rankingClock = holidayClock(this.game);
-            await rankingClock.refresh();
-            const result = await this.runVisitTransaction(async transaction => {
+            if(!FARM_BACKEND_ENABLED)await rankingClock.refresh();
+            const result = await farmCommandOrLegacy('stealEgg',visitPayload(this),()=>this.runVisitTransaction(async transaction => {
                 const targetDoc = await transaction.get(targetRef);
                 const ownDoc = await transaction.get(myFarmRef);
                 const target = targetDoc.data()?.farm, own = ownDoc.data()?.farm;
@@ -666,7 +676,7 @@ export default class VisitScene extends Phaser.Scene {
                 notify?.();
                 transaction.update(myFarmRef, updates);
                 return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0 };
-            });
+            }));
             this.showFloatingText(result.success ? `偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
             if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);

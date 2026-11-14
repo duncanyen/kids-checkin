@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { housingPatch, outdoorCounts } from './poultry-housing.js';
 import { openHousing } from './poultry-housing-ui.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
@@ -186,12 +187,12 @@ export default class WarehouseScene extends Phaser.Scene {
             this.actionPanel.setVisible(false);
             const breed=itemConfig.breed;
             openHousing(this,async counts=>{
-                await runTransaction(db,async t=>{
+                await farmCommandOrLegacy('setHousing',{breed,outdoorCount:counts[breed]},()=>runTransaction(db,async t=>{
                     const snapshot=await t.get(myFarmRef),farm=snapshot.data()?.farm;
                     if(!farm)throw Error('存檔尚未確認');
                     // Preserve other breeds' latest settings across tabs.
                     t.update(myFarmRef,housingPatch(farm,{...outdoorCounts(farm),[breed]:counts[breed]}));
-                });
+                }));
                 this.showMsg('放風數量已儲存，所有雞隻產蛋能力不受影響','#4CAF50');
             },breed);
             return;
@@ -246,7 +247,7 @@ export default class WarehouseScene extends Phaser.Scene {
     async toggleEquipWeapon(key, currentlyEquipped) {
         this.actionPanel.setVisible(false);
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('equipWeapon',{item:key,currentlyEquipped},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if (!farm || !WEAPONS_CONFIG[key] || !(farm[key] > 0)) throw '倉庫已沒有這把武器！';
@@ -254,7 +255,7 @@ export default class WarehouseScene extends Phaser.Scene {
                 if (currentlyEquipped !== (farm[slot] === key)) throw '裝備狀態已變更，請重新選擇！';
                 const next = currentlyEquipped ? (slot === 'equippedBow' ? null : 'club') : key;
                 t.update(myFarmRef, { [`farm.${slot}`]: next });
-            });
+            }));
             this.showMsg(currentlyEquipped ? '已卸下裝備！' : `裝備成功！已換上 [${WEAPONS_CONFIG[key].name}]`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : '配備失敗，請稍後重試', '#F44336'); }
     }
@@ -329,11 +330,11 @@ export default class WarehouseScene extends Phaser.Scene {
         this.isFeeding = true;
         const now = Date.now();
         try {
-            await runTransaction(db, async transaction => {
+            await farmCommandOrLegacy('feedPoultry',{item:key,breed},()=>runTransaction(db, async transaction => {
                 const snap = await transaction.get(myFarmRef), farm = snap.data()?.farm;
                 if (!farm) throw new Error('農場資料不存在');
                 transaction.update(myFarmRef, feedPoultry(farm, key, breed, now));
-            });
+            }));
             this.hen.setTexture(BREEDS[breed].texture, 0).setScale(96 / this.hen.width).play(`${breed}_idle`);
             this.showHeartEffect(key === 'earthworms');
             this.showMsg(`${BREEDS[breed].name}很開心！加速 ${key === 'worms' ? 30 : 60} 分鐘`, '#4CAF50');
@@ -345,7 +346,7 @@ export default class WarehouseScene extends Phaser.Scene {
         if (!this.farmData || (this.farmData[key] || 0) <= 0) return;
         this.actionPanel.setVisible(false);
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('discardItem',{item:key},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if (farm[key] > 0) {
@@ -357,7 +358,7 @@ export default class WarehouseScene extends Phaser.Scene {
                     
                     t.update(myFarmRef, updates);
                 }
-            });
+            }));
             this.showMsg('已丟棄物品！', '#BDBDBD');
         } catch (e) { console.error(e); }
     }

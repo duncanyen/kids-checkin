@@ -14,7 +14,7 @@ const cleanAudit=value=>{
  * @returns {Object} adminAPI、announcements、guardDog、redeem callable 處理介面。
  * @description 每次管理操作核對當前 Auth admin claim；users.role 不授予營運管理權。
  */
-function createService({db,auth,now=Date.now}) {
+function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,farmBackendEnabled=()=>false,farmRandom=Math.random}) {
     const management=createManagement({db,now}),reporting=createReporting({db,now});
     async function admin(request){
         const uid=D.adminIdentity(request.auth),user=await auth.getUser(uid);
@@ -27,18 +27,22 @@ function createService({db,auth,now=Date.now}) {
         const token=request.auth.token||{};
         if(token.photoGroupId!==groupId||typeof token.photoAccountId!=='string')D.fail('permission-denied','玩家工作階段與群組不符，請重新登入');
         const read=ref=>transaction?transaction.get(ref):ref.get();
-        const profileSnap=await read(db.doc(`users/${D.id(request.auth.uid)}`));
+        const privateMode=await privateIdentityEnabled();
+        if(privateMode&&(await read(db.doc('ops_identity_state/global'))).data()?.ready!==true)D.fail('failed-precondition','私有登入尚未完成切換');
+        const privateActor=privateMode?await require('./identity-access.cjs').assertIdentity(request,db,transaction):null;
+        const profileId=privateActor?.profileId||request.auth.uid;
+        const profileSnap=await read(db.doc(`users/${D.id(profileId)}`));
         const profile=profileSnap.data();
         if(!profile||profile.role==='removed'||profile.accountId!==token.photoAccountId)D.fail('permission-denied','玩家帳號無效或已停用');
-        const restriction=await read(db.doc(`ops_player_controls/${D.id(request.auth.uid)}`));
+        const restriction=await read(db.doc(`ops_player_controls/${D.id(profileId)}`));
         if(restriction.data()?.blocked===true)D.fail('permission-denied','此帳號暫停使用營運功能，請聯絡管理員');
         const groupSnap=await read(db.doc(`groups/${groupId}`));
         if(!groupSnap.data()?.members?.includes(profile.accountId))D.fail('permission-denied','已不在此群組');
-        return{uid:request.auth.uid,accountId:profile.accountId,groupId};
+        return{uid:profileId,authUid:request.auth.uid,accountId:profile.accountId,name:profile.name||profile.accountId,groupId};
     }
     async function playerSession(request){
         const identity=await player(request);
-        const user=await auth.getUser(identity.uid);
+        const user=await auth.getUser(identity.authUid||identity.uid);
         if(user.disabled)D.fail('permission-denied','玩家帳號已停用');
         return identity;
     }
@@ -235,7 +239,10 @@ function createService({db,auth,now=Date.now}) {
             throw error;
         }
     }
-    const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle});
-    return{adminAPI,announcements,redeem,rewardCatalog,guardDog,dailyChallenges:dailyChallenges.handle};
+    const trustedReady=async t=>{if(!await privateIdentityEnabled()||!await farmBackendEnabled())return false;const row=(await(t?t.get(db.doc('ops_identity_state/global')):db.doc('ops_identity_state/global').get())).data();return row?.ready===true&&row?.farmReady===true;};
+    const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle,trustedReady});
+    const transactions=require('./farm-transactions.cjs').createFarmTransactions({db,now,player,random:farmRandom,enabled:t=>trustedReady(t),prepareProgress:dailyChallenges.prepareProgress});
+    async function farmTransaction(request){const identity=await playerSession(request);await throttle('farm:'+identity.uid,180,60000);return transactions.handle(request);}
+    return{adminAPI,announcements,redeem,rewardCatalog,guardDog,farmTransaction,dailyChallenges:dailyChallenges.handle};
 }
 module.exports={createService,COLLECTIONS};

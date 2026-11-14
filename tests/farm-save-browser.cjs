@@ -60,7 +60,9 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
                 }
             }
         });
-        await page.route('https://cdn.jsdelivr.net/**', route => route.fulfill({ contentType: 'text/javascript', body: readFileSync('/tmp/kids-phaser.js', 'utf8') }));
+        await page.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=false;'}));
+        await page.route('**/js/farm/backend-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('FARM_BACKEND_ENABLED = true','FARM_BACKEND_ENABLED = false')});});
+        await page.route('https://cdn.jsdelivr.net/**', route => route.fulfill({ contentType: 'text/javascript', body: readFileSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js', 'utf8') }));
         await page.route('https://www.gstatic.com/**', route => route.fulfill({ contentType: 'text/javascript', body: sdk }));
         await page.route('**/js/firebase-config.js', route => route.fulfill({ contentType: 'text/javascript', body: 'export const db={};' }));
         await page.route('**/js/farm/mail-ui.js', route => route.fulfill({ contentType: 'text/javascript', body: 'export function mountFarmMail(){}' }));

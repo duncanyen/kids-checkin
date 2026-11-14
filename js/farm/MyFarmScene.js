@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow,routeBackendChallenge} from './backend-client.js';
 import { maybeStartGiant } from './giant-trigger.js';
 import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
@@ -248,9 +249,9 @@ export default class MyFarmScene extends Phaser.Scene {
     async cleanMyFarm() {
         if (!this.isSaveReady()) return;
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('cleanOwn',{},()=>runTransaction(db, async (t) => {
                 t.update(myFarmRef, { "farm.cleanliness": 0 });
-            });
+            }));
             this.showFloatingText('打掃完成！雞舍煥然一新！', '#4CAF50', 18);
         } catch (e) { console.error(e); }
     }
@@ -327,11 +328,11 @@ export default class MyFarmScene extends Phaser.Scene {
     async cleanupDeadHens(newHensState) {
         if (!this.isSaveReady()) return;
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('settlePoultry',{},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 if (!isFarmSave(snap.data()?.farm)) throw new Error('存檔未確認，停止更新雞隻');
                 t.update(myFarmRef, poultryPatch(settlePoultry(snap.data().farm)));
-            });
+            }));
             this.showFloatingText('有雞隻生病太久不幸離世了...', '#F44336', 16);
         } catch (e) { console.error(e); }
     }
@@ -359,11 +360,11 @@ export default class MyFarmScene extends Phaser.Scene {
         if(!this.isSaveReady()||this.isTreating)return;
         this.isTreating=true;
         try{
-            await runTransaction(db,async t=>{
+            await farmCommandOrLegacy('treatHen',{henId:options.id||null},()=>runTransaction(db,async t=>{
                 const snapshot=await t.get(myFarmRef),farm=snapshot.data()?.farm;
                 if(!isFarmSave(farm))throw Error('存檔尚未確認');
                 t.update(myFarmRef,treatmentPatch(farm,{...options,now:Date.now()}));
-            });
+            }));
             this.treatmentMessage='治療成功！雞隻恢復健康了！';
             this.showFloatingText(this.treatmentMessage,'#4CAF50',18);
         }catch(error){this.treatmentMessage=error.message||'治療失敗，請重試';this.showFloatingText(this.treatmentMessage,'#F44336',16);}
@@ -425,7 +426,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.isUpdatingEggs = true;
             const illnessRolls = Array.from({ length: 20 }, () => Math.random());
             try {
-                await runTransaction(db, async transaction => {
+                await farmCommandOrLegacy('settlePoultry',{},()=>runTransaction(db, async transaction => {
                     const snap = await transaction.get(myFarmRef), farm = snap.data()?.farm;
                     if (!isFarmSave(farm)) throw new Error('存檔未確認，停止更新雞蛋');
                     const state = settlePoultry(farm, now);
@@ -433,7 +434,7 @@ export default class MyFarmScene extends Phaser.Scene {
                     const risk = state.cleanliness > 80 ? 0.5 : state.cleanliness > 50 ? 0.2 : 0;
                     if (added > 0) state.hens.forEach((h, i) => { if (!h.isSick && illnessRolls[i] < risk) { h.isSick = true; h.sickTimestamp = now; } });
                     transaction.update(myFarmRef, poultryPatch(state));
-                });
+                }));
             } catch (e) { console.error('生蛋計時更新失敗:', e); }
             finally { this.isUpdatingEggs = false; }
         };
@@ -460,6 +461,11 @@ export default class MyFarmScene extends Phaser.Scene {
         cabSprite.isAnimating = true;
         this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
 
+        if(FARM_BACKEND_ENABLED){
+            try{const result=await farmCommand('searchGarden',{});if(result.caught&&this.gardenFeedback?.alive)this.gardenFeedback.show(result.foundType,cabSprite.x,cabSprite.y);}
+            catch(error){this.showFloatingText(error.message||'未能收入倉庫，請重試','#F44336',14,cabSprite.x,cabSprite.y);}
+            return;
+        }
         const usedSpace = getUsedSpace(this.farmData);
         const limit = this.farmData.warehouseLimit || 10;
         const foundType = gardenFindForRoll(Phaser.Math.Between(1, GARDEN_ROLL_SIZE));
@@ -530,7 +536,9 @@ export default class MyFarmScene extends Phaser.Scene {
         }
 
         const defended = [this.giantEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
-        const encounter = this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
+        const authorized=FARM_BACKEND_ENABLED?await farmCommand('homeEncounter',{}):null;
+        if(FARM_BACKEND_ENABLED){if(!routeBackendChallenge(this,authorized))return;this.backendChallenge=authorized?.challenge||null;}
+        const encounter = FARM_BACKEND_ENABLED?authorized?.kind:this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
         if (encounter) {
             this.pendingEncounter = encounter;
             this.harvestPreparedEncounter = () => this.harvestEgg();
@@ -557,7 +565,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.isHarvesting = true; 
 
         try {
-            const result = await runTransaction(db, async (transaction) => {
+            const result = await farmCommandOrLegacy('collectEggs',{},()=>runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
                 if (!docSnap.exists() || !docSnap.data().farm) throw new Error('農場資料不存在');
                 const farm = docSnap.data().farm;
@@ -566,7 +574,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 transaction.update(myFarmRef, result.patch);
                 return result;
 
-            });
+            }));
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
             this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
             this.eagle = null; this.dragon = null; this.gorilla = null;

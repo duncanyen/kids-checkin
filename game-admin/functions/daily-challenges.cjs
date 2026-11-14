@@ -9,6 +9,7 @@ const TASKS=[
 const DEFAULT_CONFIG={version:'v2-checkin-100',checkin:{enabled:true,rewards:[100,100,100,100,100,100,1000],missedDayPolicy:'reset'},mission:{enabled:true,rewards:[200,400,600,800,1000,1200,2000],missedDayPolicy:'reset',tasks:TASKS}};
 // 這三項目前仍為客戶端 Firestore 交易，不能冒充已有可信任 producer。
 const VERIFIED_PRODUCERS=Object.freeze({});
+const FARM_PRODUCERS=Object.freeze(Object.fromEntries(TASKS.map(task=>[task.type,'farm-transactions-v1'])));
 const DAY_MS=86400000;
 const dateKey=stamp=>new Date(stamp+8*3600000).toISOString().slice(0,10);
 const previousDate=key=>new Date(Date.parse(key+'T00:00:00Z')-DAY_MS).toISOString().slice(0,10);
@@ -36,7 +37,7 @@ function nextDay(state,today,policy,uid,type){
     const day=continues?state.day%7+1:1;
     return{day,cycleId:day===1?D.hash(`${uid}:${type}:${today}`).slice(0,24):state.cycleId};
 }
-function createDailyChallenges({db,now,player,playerSession,throttle,verifiedProducers=VERIFIED_PRODUCERS}){
+function createDailyChallenges({db,now,player,playerSession,throttle,verifiedProducers=VERIFIED_PRODUCERS,trustedReady=async()=>false}){
     const configRef=db.doc('ops_daily_configs/current');
     const refFor=(collection,uid,type,date)=>db.doc(`${collection}/${D.hash([uid,type,date].filter(Boolean).join(':'))}`);
     async function prepare(t,identity,types,stamp){
@@ -52,12 +53,13 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
                 tasks:type==='mission'?config.mission.tasks:[],progress:{},claimedAt:null,grantId:null,createdAt:stamp};
             rows.push({type,stateRef,dayRef,data,isNew:!snapshot.exists});
         }
-        return{config,today,rows};
+        const producers=await trustedReady(t)?{...verifiedProducers,...FARM_PRODUCERS}:verifiedProducers;
+        return{config,today,rows,producers};
     }
-    function view(row,config){
+    function view(row,config,producers=verifiedProducers){
         const d=row.data,c=config[row.type];
         const tasks=d.tasks.map(task=>({...task,count:Math.min(task.target,d.progress[task.type]||0),
-            verified:!!verifiedProducers[task.type],reason:verifiedProducers[task.type]?'':'目前遊戲操作尚未接上後端驗證，暫不計次'}));
+            verified:!!producers[task.type],reason:producers[task.type]?'':'目前遊戲操作尚未接上後端驗證，暫不計次'}));
         const blocked=tasks.some(task=>task.enabled&&!task.verified);
         const activeTasks=tasks.filter(task=>task.enabled);
         const completed=activeTasks.length>0&&activeTasks.every(task=>(d.progress[task.type]||0)>=task.target);
@@ -77,7 +79,7 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             if(action==='status'){
                 const prepared=await prepare(t,current,TYPES,stamp);
                 initialize(t,prepared.rows);
-                return{serverNow:stamp,nextResetAt:(Math.floor((stamp+8*3600000)/DAY_MS)+1)*DAY_MS-8*3600000,dateKey:prepared.today,timeZone:'Asia/Taipei',challenges:Object.fromEntries(prepared.rows.map(row=>[row.type,view(row,prepared.config)]))};
+                return{serverNow:stamp,nextResetAt:(Math.floor((stamp+8*3600000)/DAY_MS)+1)*DAY_MS-8*3600000,dateKey:prepared.today,timeZone:'Asia/Taipei',challenges:Object.fromEntries(prepared.rows.map(row=>[row.type,view(row,prepared.config,prepared.producers)]))};
             }
             const type=D.enumValue(request.data.type,TYPES);
             D.requestId(request.data.requestId);
@@ -86,7 +88,7 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             if(request.data.cycleId!==d.cycleId||request.data.day!==d.day)D.fail('failed-precondition','挑戰資料已更新，請重新載入');
             const grantRef=refFor('ops_daily_grants',current.uid,type,prepared.today),prior=await t.get(grantRef);
             if(prior.exists)return{...prior.data().response,replayed:true};
-            const status=view(row,prepared.config);
+            const status=view(row,prepared.config,prepared.producers);
             if(!status.canClaim)D.fail('failed-precondition',status.blocked?'任務尚未接上可信任事件，暫不可領取':!status.enabled?'此挑戰目前已停用':'尚未完成今日任務');
             const ownerRef=db.doc(`groups/${current.groupId}/users/${current.accountId}`),owner=await t.get(ownerRef);
             const amount=d.rewards[d.day-1];
@@ -124,8 +126,21 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             return{progress};
         });
     }
+    /** 與遊戲經濟交易共用同一個 Transaction；先完成讀取，回傳最後階段的寫入 closure。 */
+    async function prepareProgress(t,current,event,stamp){
+        if(event.producer!=='farm-transactions-v1'||event.occurredAt!==stamp)D.fail('failed-precondition','遊戲事件來源無效');
+        if(event.type==='COLLECT_EGG_ACTION'&&!(event.collected>0))D.fail('failed-precondition','沒有有效收蛋');
+        if(event.type==='HELP_CLEAN_OTHER'&&(!event.targetAccountId||event.targetAccountId===current.accountId))D.fail('failed-precondition','不是協助其他玩家');
+        const receiptRef=db.doc('ops_daily_events/'+D.id(event.id)),prior=await t.get(receiptRef);
+        if(prior.exists)return()=>{};
+        const prepared=await prepare(t,current,['mission'],stamp),row=prepared.rows[0],task=row.data.tasks.find(task=>task.type===event.type&&task.enabled);
+        if(prepared.producers[event.type]!==event.producer)D.fail('failed-precondition','每日任務尚未完成安全切換');
+        const counted=prepared.config.mission.enabled&&task&&!row.data.grantId;
+        const progress=counted?{...row.data.progress,[event.type]:Math.min(task.target,(row.data.progress[event.type]||0)+1)}:row.data.progress;
+        return()=>{if(counted)t.set(row.dayRef,{...row.data,progress});t.create(receiptRef,{uid:current.uid,accountId:current.accountId,groupId:current.groupId,type:event.type,dateKey:prepared.today,result:counted?'counted':'ignored',createdAt:stamp});};
+    }
     async function adminRead(action,payload={}) {
-        if(action==='dailyConfig')return{config:configValue((await configRef.get()).data()),verifiedProducers};
+        if(action==='dailyConfig')return{config:configValue((await configRef.get()).data()),verifiedProducers:await trustedReady()?{...verifiedProducers,...FARM_PRODUCERS}:verifiedProducers};
         const uid=D.id(payload.uid);
         if(action==='dailyPlayer'){
             const requestedDate=payload.dateKey||dateKey(now());
@@ -139,6 +154,6 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         const snapshot=await query.limit(size+1).get(),rows=snapshot.docs.slice(0,size);
         return{rows:rows.map(row=>({id:row.id,...row.data()})),nextCursor:snapshot.size>size?rows.at(-1).id:null};
     }
-    return{handle,consumeVerifiedEvent,adminRead};
+    return{handle,consumeVerifiedEvent,adminRead,prepareProgress};
 }
 module.exports={createDailyChallenges,DEFAULT_CONFIG,VERIFIED_PRODUCERS,dateKey,configValue};

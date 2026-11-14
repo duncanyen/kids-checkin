@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { MOLE_CONFIG } from './mole-rules.js';
 import { COBRA_FANG_PRICE } from './cobra-rules.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
@@ -366,7 +367,7 @@ export default class ShopScene extends Phaser.Scene {
         if (!config?.buyPrice || !Number.isSafeInteger(qty) || qty <= 0) { this.isProcessing = false; return; }
         const totalPrice = qty * config.buyPrice;
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('buyWeapon',{item:key,quantity:qty},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if (getUsedSpace(farm) + qty > (farm.warehouseLimit || 10)) throw "倉庫容量不足！";
@@ -376,7 +377,7 @@ export default class ShopScene extends Phaser.Scene {
                     "farm.coins": farm.coins - totalPrice, 
                     [`farm.${key}`]: (farm[key] || 0) + qty 
                 });
-            });
+            }));
             this.showMsg(`購買成功！獲得 ${WEAPONS_CONFIG[key]?.name || '武器'} +${qty}`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "購買失敗", '#F44336'); }
         finally { this.isProcessing = false; }
@@ -387,7 +388,7 @@ export default class ShopScene extends Phaser.Scene {
         this.isProcessing = true;
         const totalPrice = qty * 10;
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('buyMedicine',{quantity:qty},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if (getUsedSpace(farm) + qty > (farm.warehouseLimit || 10)) throw "倉庫容量不足！";
@@ -397,7 +398,7 @@ export default class ShopScene extends Phaser.Scene {
                     "farm.coins": farm.coins - totalPrice, 
                     "farm.medicines": (farm.medicines || 0) + qty 
                 });
-            });
+            }));
             this.showMsg(`購買成功！獲得 咕咕活力散 +${qty}`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "購買失敗", '#F44336'); }
         finally { this.isProcessing = false; }
@@ -411,7 +412,7 @@ export default class ShopScene extends Phaser.Scene {
         const egg = Object.values(BREEDS).find(b => b.eggKey === itemKey);
         const totalPrice = qty * (weapon?.sellPrice ?? egg?.eggPrice ?? unitPrice);
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('sellItem',{item:itemKey,quantity:qty},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if (weapon && (farm.equippedWeapon === itemKey || farm.equippedBow === itemKey)) throw '請到倉庫卸下武器，再至商店賣出';
@@ -421,7 +422,7 @@ export default class ShopScene extends Phaser.Scene {
                         "farm.coins": (farm.coins || 0) + totalPrice 
                     });
                 } else throw `${itemName}數量不足！`;
-            });
+            }));
             this.showMsg(`賣出成功！獲得 ${totalPrice} 金幣`, '#4CAF50');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
         finally { this.isProcessing = false; }
@@ -437,11 +438,11 @@ export default class ShopScene extends Phaser.Scene {
         const now = Date.now();
         const ids = Array.from({ length: Number.isSafeInteger(qty) && qty > 0 && qty <= 20 ? qty : 0 }, () => crypto.randomUUID());
         try {
-            await runTransaction(db, async transaction => {
+            await farmCommandOrLegacy('tradePoultry',{breed,quantity:qty,direction:type},()=>runTransaction(db, async transaction => {
                 const snap = await transaction.get(myFarmRef), farm = snap.data()?.farm;
                 if (!farm) throw new Error('農場資料不存在');
                 transaction.update(myFarmRef, tradePoultry(farm, breed, qty, type, now, ids));
-            });
+            }));
             this.showMsg(`${type === 'buy' ? '購買' : '賣出'}成功！${BREEDS[breed].name} ${type === 'buy' ? '+' : '-'}${qty}`, '#FFD54F');
         } catch (e) { this.showMsg(e.message || '交易失敗，請稍後重試', '#F44336'); }
         finally { this.isProcessing = false; }
@@ -452,13 +453,13 @@ export default class ShopScene extends Phaser.Scene {
         if (![2, 3].includes(level)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
         this.isProcessing = true;
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('upgradeCoop',{level},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if ((farm.coopLevel || 1) >= level) throw "已有更高級雞舍！";
                 if ((farm.coins || 0) < price) throw "金幣不足！";
                 t.update(myFarmRef, { "farm.coins": farm.coins - price, "farm.coopLevel": level });
-            });
+            }));
             this.showMsg('升級成功！', '#FFD54F');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); } 
         finally { this.isProcessing = false; }
@@ -469,7 +470,7 @@ export default class ShopScene extends Phaser.Scene {
         this.isProcessing = true;
         const totalPrice = qty * EXPAND_SLOT_PRICE;
         try {
-            await runTransaction(db, async (t) => {
+            await farmCommandOrLegacy('expandWarehouse',{quantity:qty},()=>runTransaction(db, async (t) => {
                 const snap = await t.get(myFarmRef);
                 const farm = snap.data().farm;
                 if ((farm.coins || 0) < totalPrice) throw "金幣不足！";
@@ -477,7 +478,7 @@ export default class ShopScene extends Phaser.Scene {
                     "farm.coins": farm.coins - totalPrice, 
                     "farm.warehouseLimit": (farm.warehouseLimit || 10) + (qty * 10) 
                 });
-            });
+            }));
             this.showMsg(`擴充成功！容量 +${qty * 10}`, '#FFD54F');
         } catch (e) { this.showMsg(typeof e === 'string' ? e : "交易失敗", '#F44336'); }
         finally { this.isProcessing = false; }

@@ -1,3 +1,4 @@
+import {PRIVATE_IDENTITY_ENABLED,privateBridge} from './private-auth-client.js';
 /**
  * 個人記帳使用獨立 Firebase App 的 Auth，避免改變 Nexus 既有 SDK 工作階段。
  * accountId 必須由 photoSession 在伺服器驗證；Firestore Rules 才是資料隔離邊界。
@@ -29,7 +30,7 @@ export async function personalLedgerDatabase(user, groupId) {
         const app = getApps().find(item => item.name === name) || initializeApp(firebaseConfig, name);
         const auth = getAuth(app);
         await setPersistence(auth, inMemoryPersistence);
-        const session = await httpsCallable(getFunctions(app, 'asia-southeast1'), 'photoSession', { timeout: 12000 })({
+        const session = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',groupId)}:await httpsCallable(getFunctions(app, 'asia-southeast1'), 'photoSession', { timeout: 12000 })({
             accountId: user.accountId, groupId, secret: user.password || user.pin || ''
         });
         checkAccount(user);

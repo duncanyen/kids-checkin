@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "unitPassed": true,
+  "browserPassed": true,
+  "emulatorPassed": false,
+  "rulesSha256": "7a11f36306c195c659426b8e01641dc984ebbcb4c6c994710f80bae9cd693a3b",
+  "storageRulesSha256": "88537bf4dbb31bef2c4ced5643867777911ea5fd4837024469bf02fbd0566733",
+  "databaseRulesSha256": "4f74ce8928556e3527bf61cc705189782e284645a48d8ef4754d5aab252fb8f8",
+  "createdAt": "2026-11-14T06:48:56.966Z",
+  "codeSha256": "de426e25f0ac4ed02e08b92f0ab7fd5f21e11cc3e87069fe26c0d977b77aafe2",
+  "validationNotes": [
+    "303 unit tests passed; six isolated browser suites passed.",
+    "Private Phaser browser scenario verifies one active gameplay scene and no direct client Firestore transaction writes.",
+    "Full Emulator verification could not start: Firestore emulator JAR download returned proxy HTTP 403 Domain forbidden.",
+    "storage.googleapis.com is present in the environment draft but not applied to the running environment."
+  ]
+}

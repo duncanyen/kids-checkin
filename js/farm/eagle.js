@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,settleBackendBattle} from './backend-client.js';
 import { BossEncounter } from './dragon.js';
 import { killProgressPatch } from './combat-progress.js';
 import { ENEMY_HEALTH } from './combat-rules.js';
@@ -14,6 +15,7 @@ export function registerEagleAnimations(scene){
     }
 }
 export function settleEagleEncounter(id,outcome,targetAccountId,targetGroupId=CURRENT_GROUP_ID){
+    if(FARM_BACKEND_ENABLED)return settleBackendBattle(id);
     if(!['win','loss'].includes(outcome))throw new Error('無效的戰鬥結果');
     return runTransaction(db,async transaction=>{
         await readVillageAccess(CURRENT_GROUP_ID,targetGroupId,CURRENT_ACCOUNT_ID,ref=>transaction.get(ref),targetAccountId);

@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,farmCommand,settleBackendBattle} from './backend-client.js';
 import { runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { db } from '../firebase-config.js';
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, getUsedSpace } from './constants.js';
@@ -5,6 +6,7 @@ import { readVillageAccess } from './villages.js';
 import { COBRA_CONFIG, nextCobraMilestone, cobraSettlement } from './cobra-rules.js';
 
 export function claimCobraEncounter(targetAccountId = CURRENT_ACCOUNT_ID, targetGroupId = CURRENT_GROUP_ID) {
+    if(FARM_BACKEND_ENABLED)return farmCommand('claimEncounter',{monster:'cobra',targetAccountId:targetAccountId||CURRENT_ACCOUNT_ID,targetGroupId:targetGroupId||CURRENT_GROUP_ID});
     const id = crypto.randomUUID();
     return runTransaction(db, async transaction => {
         await readVillageAccess(CURRENT_GROUP_ID, targetGroupId, CURRENT_ACCOUNT_ID, ref => transaction.get(ref), targetAccountId);
@@ -31,6 +33,7 @@ export function claimCobraEncounter(targetAccountId = CURRENT_ACCOUNT_ID, target
 }
 
 export function settleCobraEncounter(id, outcome) {
+    if(FARM_BACKEND_ENABLED)return settleBackendBattle(id);
     return runTransaction(db, async transaction => {
         // This fight affects the challenger only, even in someone else's farm.
         await readVillageAccess(CURRENT_GROUP_ID, CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, ref => transaction.get(ref), CURRENT_ACCOUNT_ID);

@@ -1,3 +1,4 @@
+import {FARM_BACKEND_ENABLED,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { ArcheryControls } from './archery.js';
 import { clearPoultryEggs } from './poultry.js';
 import { equippedWeapon } from './combat-rules.js';
@@ -34,6 +35,7 @@ export function rollHomeDragonEncounter(level, roll = Phaser.Math.Between) {
 
 // Both the egg loss and coin penalty commit together; retries cannot duplicate loot.
 export async function settleDragonEncounter(id, outcome, targetAccountId, targetGroupId = CURRENT_GROUP_ID) {
+    if(FARM_BACKEND_ENABLED)return settleBackendBattle(id);
     if (!['win', 'loss'].includes(outcome)) throw new Error('無效的戰鬥結果');
     const targetRef = doc(db, 'groups', targetGroupId, 'users', targetAccountId);
     return runTransaction(db, async transaction => {
@@ -81,8 +83,11 @@ export class BossEncounter {
         this.config = spec.config;
         this.targetAccountId = scene.targetAccountId || CURRENT_ACCOUNT_ID;
         this.targetGroupId = scene.targetGroupId || CURRENT_GROUP_ID;
-        this.id = crypto.randomUUID();
-        this.health = this.config.health;
+        const authorized=scene.backendChallenge;
+        if(FARM_BACKEND_ENABLED&&authorized?.kind!==spec.key)throw Error('缺少後端戰鬥會話');
+        this.id = FARM_BACKEND_ENABLED?authorized.id:crypto.randomUUID();
+        if(FARM_BACKEND_ENABLED){this.deadline=authorized.deadline;this.config={...this.config,flightMs:Math.max(0,authorized.approachEndsAt-farmNow()),durationMs:Math.max(1,authorized.deadline-farmNow())};}
+        this.health = FARM_BACKEND_ENABLED?authorized.health:this.config.health;
         this.phase = 'flight';
         this.result = null;
         this.destroyed = false;
@@ -128,7 +133,7 @@ export class BossEncounter {
 
     refresh() {
         if (this.destroyed || this.result) return;
-        const remaining = Math.max(0, Math.ceil((this.deadline ? this.deadline - Date.now() : this.deadlineTimer.getRemaining()) / 1000));
+        const remaining = Math.max(0, Math.ceil((this.deadline ? this.deadline - (FARM_BACKEND_ENABLED?farmNow():Date.now()) : this.deadlineTimer.getRemaining()) / 1000));
         const weapon = this.spec.flying || this.archery?.selected ? this.rangedWeapon : this.weapon;
         const damage = weapon ? bossWeaponDamage(weapon, this.spec.key) : 0;
         this.warning.setText(`${this.spec.name}來襲！${remaining} 秒\n${damage ? `${weapon.name}${weapon.ranged ? '再中' : '再打'} ${Math.ceil(this.health/damage)} ${weapon.ranged ? '箭' : '下'}` : '請切換弓箭（近戰無效）'}・${this.phase === this.spec.attackPhase ? this.spec.attackLabel : this.spec.movingLabel}`);
@@ -156,6 +161,7 @@ export class BossEncounter {
         if (this.destroyed || this.result) return;
         if (this.spec.flying || this.archery?.selected) return; // A pointer tap never counts as an arrow.
         if (this.expired()) { this.resolve('loss'); return; }
+        if(FARM_BACKEND_ENABLED&&this.damage>0)recordBattleHit(this.id,'melee');
         this.health = Math.max(0, this.health - this.damage);
         this.sprite.play(`${this.spec.key}_hit`);
         this.scene.tweens.killTweensOf(this.weaponSprite);
@@ -170,12 +176,13 @@ export class BossEncounter {
         if (this.expired()) { this.resolve('loss'); return; }
         const damage = bossWeaponDamage(weapon, this.spec.key);
         if (!damage) return;
+        if(FARM_BACKEND_ENABLED)recordBattleHit(this.id,'ranged');
         this.health = Math.max(0,this.health-damage);
         this.sprite.play(`${this.spec.key}_hit`);
         if (!this.health) this.resolve('win'); else this.refresh();
     }
 
-    expired() { return this.deadline ? Date.now() >= this.deadline : this.deadlineTimer.getRemaining() <= 0; }
+    expired() { return this.deadline ? (FARM_BACKEND_ENABLED?farmNow():Date.now()) >= this.deadline : this.deadlineTimer.getRemaining() <= 0; }
 
     resolve(outcome) {
         if (this.destroyed || this.result) return;

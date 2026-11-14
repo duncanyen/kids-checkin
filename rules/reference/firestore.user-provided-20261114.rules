@@ -1,0 +1,10 @@
+// 使用者於 2026-11-14 提供的正式匯出內容（移除說明註解，規則語意原樣保留）。
+// 僅供比對，不可當成修正版部署；尚未從 API 獨立覆核正式 release。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 12, 16);
+    }
+  }
+}

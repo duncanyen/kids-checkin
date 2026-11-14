@@ -1,3 +1,11 @@
 .firebase/
 *-debug.log
 .runtimeconfig.json
+
+# Server-only shared identity helpers copied by prepare-game-admin.cjs
+game-admin/functions/identity-domain.cjs
+game-admin/functions/identity-access.cjs
+
+# Local identity migration review / verification evidence (never production credentials)
+*.private-roles.json
+private-roles*.json

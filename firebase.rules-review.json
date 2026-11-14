@@ -1,0 +1,8 @@
+{
+  "firestore": { "rules": "rules/firestore.ops-protection.candidate.rules" },
+  "emulators": {
+    "firestore": { "port": 8091 },
+    "singleProjectMode": true,
+    "ui": { "enabled": false }
+  }
+}

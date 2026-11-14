@@ -4,7 +4,10 @@ const {getAuth}=require('firebase-admin/auth');
 const {createService}=require('./service.cjs');
 const {createCallables}=require('./callables.cjs');
 initializeApp();
-const service=createService({db:getFirestore(),auth:getAuth()});
+const {defineBoolean}=require('firebase-functions/params');
+const privateIdentityEnabled=defineBoolean('NEXUS_PRIVATE_IDENTITY_ENABLED',{default:false});
+const farmBackendEnabled=defineBoolean('NEXUS_FARM_BACKEND_ENABLED',{default:false});
+const service=createService({db:getFirestore(),auth:getAuth(),privateIdentityEnabled:()=>privateIdentityEnabled.value(),farmBackendEnabled:()=>farmBackendEnabled.value()});
 module.exports=createCallables(service);
 
 // 僅觀測已提交的農場資料；不修改玩家存檔，也不對外開放寫入報表的 callable。

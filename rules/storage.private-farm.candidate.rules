@@ -1,0 +1,28 @@
+// 私有登入切換的 Storage 相容規則；沿用既有檔案路徑及大小／格式限制。
+rules_version = '2';
+service firebase.storage {
+ match /b/{bucket}/o {
+  function profileId(){return request.auth.token.nexusProfileId;}
+  function credential(){return firestore.get(/databases/(default)/documents/ops_identity_credentials/$(profileId())).data;}
+  function group(groupId){return firestore.get(/databases/(default)/documents/groups/$(groupId)).data;}
+  // Storage 每次最多兩筆 Firestore 文件存取：憑證與群組；重複 get 由規則快取。
+  function member(groupId){
+   return request.auth != null && request.auth.token.keys().hasAll(['nexusProfileId','nexusAccountId','nexusSessionVersion','photoGroupId','photoAccountId'])
+    && request.auth.token.photoGroupId == groupId && credential().authUid == request.auth.uid && credential().disabled == false
+    && credential().sessionVersion == request.auth.token.nexusSessionVersion && credential().accountId == request.auth.token.nexusAccountId
+    && credential().accountId == request.auth.token.photoAccountId && request.auth.token.photoAccountId in group(groupId).members;
+  }
+  function parent(groupId){return group(groupId).nexusRoles[request.auth.token.photoAccountId] in ['owner','admin','parent'];}
+  match /growth-exams/{groupId}/{accountId}/{fileName}{
+   allow read, delete: if member(groupId) && (request.auth.token.photoAccountId == accountId || parent(groupId));
+   allow create: if member(groupId) && request.auth.token.photoAccountId == accountId
+    && request.resource.size > 0 && request.resource.size <= 5*1024*1024 && request.resource.contentType in ['image/jpeg','image/png','image/webp'] && fileName.matches('[a-zA-Z0-9_-]+[.](jpg|png|webp)');
+  }
+  match /photo-dump/{groupId}/{ownerId}/{postId}/{fileName}{
+   allow read: if member(groupId);
+   allow create: if member(groupId) && request.auth.uid == ownerId && request.resource.size > 0 && request.resource.size <= 5*1024*1024 && request.resource.contentType == 'image/jpeg' && fileName.matches('.*[.]jpg');
+   // 舊檔的 ownerId 是原 profile ID；新檔是 namespace Auth UID，兩者均須為本人或本群組家長。
+   allow delete: if member(groupId) && (request.auth.uid == ownerId || profileId() == ownerId || parent(groupId));
+  }
+ }
+}

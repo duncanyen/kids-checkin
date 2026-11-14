@@ -114,7 +114,7 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
     function scheduleReset(){
         clearTimeout(refreshTimer);if(root.hidden||!state||disposed)return;
         const remaining=state.nextResetAt-state.serverNow-(performance.now()-clockStart);
-        refreshTimer=setTimeout(()=>{if(remaining<=60000)void load();else scheduleReset();},Math.min(60000,Math.max(1000,remaining)));
+        refreshTimer=setTimeout(()=>{if(document.visibilityState==='visible')void load();else scheduleReset();},Math.min(10000,Math.max(1000,remaining)));
     }
     function load(){
         if(disposed||busy)return Promise.resolve();
