@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 (async()=>{
  const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
@@ -20,7 +21,8 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   await page.exposeFunction('__privateServer',async(name,data)=>{
    calls.push({name,action:data.action});
    if(name==='photoSession')return{token:'opaque-'+sequence++};
-   const request={auth,data};
+   const compatibleData={...data};if(legacyHarvestBackend&&data.action==='homeEncounter')delete compatibleData.collectWhenClear;
+   const request={auth,data:compatibleData};
    if(name==='gameOpsFarmTransaction'){if(data.action==='homeEncounter')await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements')return{rows:[],nextCursor:null};
@@ -63,12 +65,14 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eggTick());
   assert.ok((await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').timerText.text)).includes('確認雞舍'),'倒數更新不蓋掉處理中提示');
   releaseHarvest();
-  await page.waitForFunction(()=>document.querySelector('.farm-hud-countdown-label')?.textContent==='收蛋中…');
-  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),true);
+  if(legacyHarvestBackend){
+   await page.waitForFunction(()=>document.querySelector('.farm-hud-countdown-label')?.textContent==='收蛋中…');
+   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),true);
+  }
   releaseCollection();
   await page.evaluate(async()=>{await Promise.all([window.__harvestFirst,window.__harvestRepeated]);await window.__privateEmitAll();});
   assert.equal(calls.filter(call=>call.action==='homeEncounter').length,1);
-  assert.equal(calls.filter(call=>call.action==='collectEggs').length,1);
+  assert.equal(calls.filter(call=>call.action==='collectEggs').length,legacyHarvestBackend?1:0,'新版後端一次收蛋；舊版回傳時才接續 collectEggs');
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),false);
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').timerText.text.includes('收蛋中')),false);
   assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);

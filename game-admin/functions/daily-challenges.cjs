@@ -45,8 +45,8 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         const today=dateKey(stamp),rows=[];
         // 所有讀取先於寫入；status 的日快照鎖定今日金額及任務規格。
         for(const type of types){
-            const stateRef=refFor('ops_daily_states',identity.uid,type),state=(await t.get(stateRef)).data();
-            const dayRef=refFor('ops_daily_days',identity.uid,type,today),snapshot=await t.get(dayRef);
+            const stateRef=refFor('ops_daily_states',identity.uid,type),dayRef=refFor('ops_daily_days',identity.uid,type,today);
+            const [stateSnapshot,snapshot]=await Promise.all([t.get(stateRef),t.get(dayRef)]),state=stateSnapshot.data();
             const data=snapshot.data()||{uid:identity.uid,accountId:identity.accountId,type,dateKey:today,
                 ...nextDay(state,today,config[type].missedDayPolicy,identity.uid,type),
                 rewards:config[type].rewards,policyVersion:config.version,missedDayPolicy:config[type].missedDayPolicy,

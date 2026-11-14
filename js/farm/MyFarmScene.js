@@ -556,7 +556,7 @@ export default class MyFarmScene extends Phaser.Scene {
             }
 
             const defended = [this.giantEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
-            const authorized=FARM_BACKEND_ENABLED?await farmCommand('homeEncounter',{}):null;
+            const authorized=FARM_BACKEND_ENABLED?await farmCommand('homeEncounter',{collectWhenClear:true}):null;
             if (!active()) return;
             if(FARM_BACKEND_ENABLED){if(!routeBackendChallenge(this,authorized))return;this.backendChallenge=authorized?.challenge||null;}
             const encounter = FARM_BACKEND_ENABLED?authorized?.kind:this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
@@ -586,7 +586,8 @@ export default class MyFarmScene extends Phaser.Scene {
             this.harvestStatus = '收蛋中…';
             this.updateEggCountdown();
 
-            const result = await farmCommandOrLegacy('collectEggs',{},()=>runTransaction(db, async (transaction) => {
+            // 舊 Functions 尚未更新時不會回傳 harvest，保留既有兩段流程，避免前後端發布先後造成收蛋中斷。
+            const result = authorized?.harvest || await farmCommandOrLegacy('collectEggs',{},()=>runTransaction(db, async (transaction) => {
                 const docSnap = await transaction.get(myFarmRef);
                 if (!docSnap.exists() || !docSnap.data().farm) throw new Error('農場資料不存在');
                 const farm = docSnap.data().farm;

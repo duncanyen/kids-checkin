@@ -31,12 +31,14 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         if(privateMode&&(await read(db.doc('ops_identity_state/global'))).data()?.ready!==true)D.fail('failed-precondition','私有登入尚未完成切換');
         const privateActor=privateMode?await require('./identity-access.cjs').assertIdentity(request,db,transaction):null;
         const profileId=privateActor?.profileId||request.auth.uid;
-        const profileSnap=await read(db.doc(`users/${D.id(profileId)}`));
-        const profile=profileSnap.data();
+        // 私有驗證已讀取這份 profile；沿用同一次驗證的快照，不再重讀 users。
+        const profile=privateActor?.profile||(await read(db.doc(`users/${D.id(profileId)}`))).data();
         if(!profile||profile.role==='removed'||profile.accountId!==token.photoAccountId)D.fail('permission-denied','玩家帳號無效或已停用');
-        const restriction=await read(db.doc(`ops_player_controls/${D.id(profileId)}`));
+        const [restriction,groupSnap]=await Promise.all([
+            read(db.doc(`ops_player_controls/${D.id(profileId)}`)),
+            read(db.doc(`groups/${groupId}`))
+        ]);
         if(restriction.data()?.blocked===true)D.fail('permission-denied','此帳號暫停使用營運功能，請聯絡管理員');
-        const groupSnap=await read(db.doc(`groups/${groupId}`));
         if(!groupSnap.data()?.members?.includes(profile.accountId))D.fail('permission-denied','已不在此群組');
         return{uid:profileId,authUid:request.auth.uid,accountId:profile.accountId,name:profile.name||profile.accountId,groupId};
     }

@@ -26,7 +26,14 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const token=refreshed.id_token,payload=JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString());assert.equal(payload.nexusSessionVersion,1);assert.equal(payload.photoGroupId,'emulator-group');
  const trade={groupId:'emulator-group',action:'buyMedicine',quantity:2,price:0,requestId:'emulator-trade-001'};
  const first=await call('gameOpsFarmTransaction',trade,token),second=await call('gameOpsFarmTransaction',trade,token);assert.equal(first.status,200);assert.equal(second.data.result.replayed,true);assert.equal((await db.doc('groups/emulator-group/users/emulator_player').get()).data().farm.coins,80);
+ // 固定無怪物的已驗證自家會話，避免合約測試依賴正式亂數；仍走真實 callable 與交易。
+ await db.doc('groups/emulator-group/users/emulator_player').update({'farm.readyEggs.hen':3,'farm.eggsReady':3});
+ await db.doc('ops_farm_active/'+I.hash('emulator-profile:emulator-group')).set({id:'emulator-harvest-clear',groupId:'emulator-group',targetGroupId:'emulator-group',targetAccountId:'emulator_player',harvestPermit:true,harvested:false,result:{outcome:'clear'}});
+ const harvest={groupId:'emulator-group',action:'homeEncounter',collectWhenClear:true,requestId:'emulator-harvest-001'};
+ const collected=await call('gameOpsFarmTransaction',harvest,token);assert.equal(collected.status,200,JSON.stringify(collected.data.error||{}));assert.equal(collected.data.result.result.harvest.total,3);
+ const harvestedAgain=await call('gameOpsFarmTransaction',harvest,token);assert.equal(harvestedAgain.data.result.replayed,true);assert.equal((await db.doc('groups/emulator-group/users/emulator_player').get()).data().farm.inventoryEggs,3);
  const status=await call('gameOpsDailyChallenges',{groupId:'emulator-group',action:'status'},token);assert.equal(status.status,200);assert.ok(status.data.result.challenges.mission.tasks.every(t=>t.verified));
+ assert.equal(status.data.result.challenges.mission.tasks.find(task=>task.type==='COLLECT_EGG_ACTION').count,1);
  const day=status.data.result.challenges.checkin,claim={groupId:'emulator-group',action:'claim',type:'checkin',dateKey:day.dateKey,cycleId:day.cycleId,day:day.day,requestId:'emulator-checkin-001'};
  await call('gameOpsDailyChallenges',claim,token);const replay=await call('gameOpsDailyChallenges',claim,token);assert.equal(replay.data.result.replayed,true);
  const changed=await call('nexusIdentity',{action:'changePassword',currentSecret:'old-secret',newSecret:'new-secret'},signed.data.idToken);assert.equal(changed.status,200);

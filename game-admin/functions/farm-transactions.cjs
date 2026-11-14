@@ -1,6 +1,7 @@
-/** 共用交易核心。只接受操作意圖；價格、時間、身份與結果均由伺服器決定。尚未對外啟用。 */
+/** 共用交易核心。只接受操作意圖；價格、時間、身分與結果均由伺服器決定。 */
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
+const {reuseTransactionReads}=require('./transaction-reads.cjs');
 function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null}){
  let models;
  const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js')]);
@@ -9,12 +10,14 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
  async function handle(request){
   if(!await enabled())D.fail('failed-precondition','共用交易尚未完成安全切換');
   const p=request.data||{},action=D.enumValue(p.action,['collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   const requestId=D.requestId(p.requestId),models=await load(),[P,inventory,combat,housing,,,,,,garden,dogs,ranking,save]=models;
   const qty=['tradePoultry','buyWeapon','buyMedicine','sellItem','expandWarehouse'].includes(action)?positive(p.quantity):null;
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
   const ids=qty&&qty<=20?Array.from({length:qty},()=>crypto.randomUUID()):[];
   const rolls=Array.from({length:20},()=>random());
-  return db.runTransaction(async t=>{
+  return db.runTransaction(async transaction=>{
+   const t=reuseTransactionReads(transaction);
    if(!await enabled(t))D.fail('failed-precondition','共用交易正在維護');
    const actor=await player(request,t),stamp=now();let combatRollIndex=0;
    const receiptRef=db.doc('ops_farm_transactions/'+D.hash(actor.uid+':'+requestId));
@@ -39,17 +42,28 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const allowed=!!group?.members?.includes(accountId)&&!!own?.members?.includes(actor.accountId)&&(groupId===actor.groupId||group.farmVillageVisibility==='public'&&own.farmVillageVisibility==='public');
     if(!allowed&&!battle)D.fail('permission-denied','無法拜訪此村落');
     const ref=db.doc(`groups/${groupId}/users/${accountId}`),data=ref.path===farmRef.path?owner:await t.get(ref);
-    const profiles=await t.get(db.collection('users').where('accountId','==',accountId).limit(2));const name=profiles.size===1?profiles.docs[0].data().name:accountId;
+    // 自家目標名稱已由 player 驗證取得，不需要再做 accountId 查詢。
+    let name=actor.name||accountId;
+    if(accountId!==actor.accountId){const profiles=await t.get(db.collection('users').where('accountId','==',accountId).limit(2));name=profiles.size===1?profiles.docs[0].data().name:accountId;}
     const targetFarm=battle&&!allowed?null:requireFarm(data.data()?.farm);if(targetFarm&&!save.isFarmSave(targetFarm))D.fail('failed-precondition','目標存檔資料不完整');
     return{groupId,accountId,name,group,ref,allowed,farm:targetFarm};
    };
    const spend=amount=>{if(!Number.isSafeInteger(amount)||amount<0||farm.coins<amount)D.fail('failed-precondition','金幣不足');patch['farm.coins']=farm.coins-amount;};
    const capacity=n=>{if(inventory.getUsedSpace(farm)+n>(farm.warehouseLimit||10))D.fail('failed-precondition','倉庫容量不足');};
+   const collect=()=>{
+    if(!nextSession||nextSession.harvested||nextSession.targetGroupId!==actor.groupId||nextSession.targetAccountId!==actor.accountId||!nextSession.harvestPermit&&nextSession.result?.outcome!=='win')D.fail('failed-precondition','請先確認雞舍狀態及完成怪物結算');
+    const collected=P.collectPoultry(farm,stamp);if(!collected.total)D.fail('failed-precondition',collected.remaining?'倉庫空間不足':'沒有可收取的雞蛋');
+    Object.assign(patch,collected.patch,{'farm.reportHarvestedEggs':(farm.reportHarvestedEggs||0)+collected.total});
+    if(nextSession.result)nextSession={...nextSession,harvested:true};
+    event={type:'COLLECT_EGG_ACTION',collected:collected.total};return collected;
+   };
    if(combatActions.includes(action)){
-    const target=session&&!session.result&&!['homeEncounter','visitEncounter','claimEncounter'].includes(action)?await readTarget(session.targetGroupId,session.targetAccountId,true):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
+    const target=action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):session&&!session.result&&!['homeEncounter','visitEncounter','claimEncounter'].includes(action)?await readTarget(session.targetGroupId,session.targetAccountId,true):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
     const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id});
     patch=response.patch;result=response.result;event=response.event;nextSession=response.session;
     if(response.targetFarm){if(target.ref.path===farmRef.path)Object.assign(patch,{'farm.readyEggs':response.targetFarm.readyEggs,'farm.eggsReady':response.targetFarm.eggsReady,'farm.hensState':response.targetFarm.hensState,'farm.hens':response.targetFarm.hens,'farm.poultryVersion':response.targetFarm.poultryVersion,'farm.lastLayTime':response.targetFarm.lastLayTime,'farm.cleanliness':response.targetFarm.cleanliness});else{targetRef=target.ref;targetFarm=response.targetFarm;targetPatch={};}}
+    // 僅將原本可直接收蛋的分支合併。未結束的怪物仍回傳 challenge；逾時／勝利補結算保留原流程及獨立事件。
+    if(action==='homeEncounter'&&p.collectWhenClear===true&&result===null)result={kind:null,harvest:collect()};
    }else if(action==='settleTarget'){
     const target=await readTarget(p.targetGroupId,p.targetAccountId);targetRef=target.ref;targetFarm=target.farm;targetPatch=P.poultryPatch(P.settlePoultry(target.farm,stamp));
    }else if(action==='searchGarden'){
@@ -89,9 +103,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
      mailWrites.push(()=>refs.forEach((ref,i)=>{if(action==='deleteMail')t.delete(ref);else if(snaps[i].exists&&!snaps[i].data().readAt)t.update(ref,{readAt:stamp});}));result=stamp;
     }
    }else if(action==='collectEggs'){
-    if(!session||session.harvested||session.targetGroupId!==actor.groupId||session.targetAccountId!==actor.accountId||!session.harvestPermit&&session.result?.outcome!=='win')D.fail('failed-precondition','請先確認雞舍狀態及完成怪物結算');
-    result=P.collectPoultry(farm,stamp);if(!result.total)D.fail('failed-precondition',result.remaining?'倉庫空間不足':'沒有可收取的雞蛋');
-    patch=result.patch;patch['farm.reportHarvestedEggs']=(farm.reportHarvestedEggs||0)+result.total;if(nextSession?.result)nextSession={...nextSession,harvested:true};event={type:'COLLECT_EGG_ACTION',collected:result.total};
+    result=collect();
    }else if(action==='settlePoultry'){
     const state=P.settlePoultry(farm,stamp),added=Object.values(state.ready).reduce((a,b)=>a+b,0)-(farm.eggsReady||0);
     const risk=state.cleanliness>80?.5:state.cleanliness>50?.2:0;
