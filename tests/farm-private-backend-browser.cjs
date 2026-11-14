@@ -3,7 +3,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 (async()=>{
- const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null;
+ const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection;
+ const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
+ const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
  const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club',worms:2,earthworms:3};
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
@@ -19,7 +21,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
    calls.push({name,action:data.action});
    if(name==='photoSession')return{token:'opaque-'+sequence++};
    const request={auth,data};
-   if(name==='gameOpsFarmTransaction'){if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);if(gate){feedEntered?.();await gate;}return response;}
+   if(name==='gameOpsFarmTransaction'){if(data.action==='homeEncounter')await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements')return{rows:[],nextCursor:null};
    if(name==='gameOpsGuardDog')return service.guardDog(request);
@@ -41,8 +43,37 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
   await page.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',docId:'alice',groupId:'A',name:'Alice'}));localStorage.setItem('lastGroupId','A');sessionStorage.setItem('nexus_active_group_id','A');});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
-  await page.evaluate(async()=>{await window.__farmGame.scene.getScene('MyFarmScene').harvestEgg();await window.__privateEmitAll();});
+  const ownFarm=db.data.get('groups/A/users/alice').farm;
+  ownFarm.cleanliness=74;await page.evaluate(()=>window.__privateEmitAll());
+  await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('MyFarmScene');window.__rubbishBefore=[...scene.rubbishGroup.getChildren()];window.__hensBefore=[...scene.hensGroup];});
+  ownFarm.coins++;await page.evaluate(()=>window.__privateEmitAll());
+  assert.equal(await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('MyFarmScene');return window.__rubbishBefore.length>0&&window.__rubbishBefore.every((item,i)=>item.active&&item===scene.rubbishGroup.getChildren()[i])&&window.__hensBefore.every((item,i)=>item===scene.hensGroup[i]);}),true,'金幣快照保留原垃圾圖像與走動雞隻');
+  ownFarm.coins--;ownFarm.cleanliness=75;await page.evaluate(()=>window.__privateEmitAll());
+  assert.equal(await page.evaluate(()=>window.__rubbishBefore.every(item=>!item.active)),true,'髒亂值改變時仍正常重建');
+  ownFarm.cleanliness=30;await page.evaluate(()=>window.__privateEmitAll());
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').rubbishGroup.getLength()),0);
+  const immediate=await page.evaluate(()=>{
+   const scene=window.__farmGame.scene.getScene('MyFarmScene');
+   window.__harvestFirst=scene.harvestEgg();
+   window.__harvestRepeated=scene.harvestEgg();
+   return{locked:scene.isHarvesting,status:scene.timerText.text};
+  });
+  assert.equal(immediate.locked,true,'第一次 await 前就鎖定收蛋');
+  assert.ok(immediate.status.includes('確認雞舍'));
+  await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').eggTick());
+  assert.ok((await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').timerText.text)).includes('確認雞舍'),'倒數更新不蓋掉處理中提示');
+  releaseHarvest();
+  await page.waitForFunction(()=>document.querySelector('.farm-hud-countdown-label')?.textContent==='收蛋中…');
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),true);
+  releaseCollection();
+  await page.evaluate(async()=>{await Promise.all([window.__harvestFirst,window.__harvestRepeated]);await window.__privateEmitAll();});
+  assert.equal(calls.filter(call=>call.action==='homeEncounter').length,1);
+  assert.equal(calls.filter(call=>call.action==='collectEggs').length,1);
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),false);
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').timerText.text.includes('收蛋中')),false);
   assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);
+  await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').harvestEgg());
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),false,'無蛋分支釋放收蛋鎖');
   await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('ShopScene'));await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('ShopScene').executeBuyMedicine(2);await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.medicines,2);assert.equal(db.data.get('groups/A/users/alice').farm.coins,12325);
   await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('VisitScene',{targetGroupId:'A',targetAccountId:'bob',targetName:'Bob'}));
