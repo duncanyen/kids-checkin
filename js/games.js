@@ -498,6 +498,7 @@ async function loadLeaderboard(tabType) {
 
 // --- 暴露給 window 供 HTML onClick 綁定 ---
 window.selectGame = selectGame;
+export { selectGame };
 window.returnToLobby = returnToLobby;
 window.init2048Game = init2048Game;
 window.openLeaderboard = openLeaderboard;

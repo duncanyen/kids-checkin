@@ -35,9 +35,10 @@
 
 
     <!-- 遊戲選擇大廳 -->
+    <p id="gameLobbyStatus" role="status" hidden></p>
     <div class="game-lobby" id="gameLobby">
         <!-- 咕咕村落 -->
-        <div class="game-card-item" onclick="selectGame('farm')">
+        <div class="game-card-item" data-game="farm">
             <div class="game-card-icon"><span data-ui-icon="hen"></span></div>
             <div class="game-card-info">
                 <div class="game-card-title">咕咕村落</div>
@@ -45,7 +46,7 @@
             </div>
         </div>
         <!-- 剪刀石頭布 -->
-        <div class="game-card-item" onclick="selectGame('rps')">
+        <div class="game-card-item" data-game="rps">
             <div class="game-card-icon"><span data-ui-icon="rock"></span></div>
             <div class="game-card-info">
                 <div class="game-card-title">剪刀石頭布對決</div>
@@ -53,7 +54,7 @@
             </div>
         </div>
         <!-- 2048 -->
-        <div class="game-card-item" onclick="selectGame('g2048')">
+        <div class="game-card-item" data-game="g2048">
             <div class="game-card-icon"><span data-ui-icon="numbers"></span></div>
             <div class="game-card-info">
                 <div class="game-card-title">2048 數字方塊</div>
@@ -132,6 +133,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/games.js"></script>
+    <script type="module" src="js/games-entry.js"></script>
 </body>
 </html>
