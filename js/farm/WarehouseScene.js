@@ -20,6 +20,7 @@ export default class WarehouseScene extends Phaser.Scene {
 
     create() {
         if (!finishSceneAssets(this)) return;
+        const token = this.warehouseToken = Symbol('warehouse');
         configureFarmViewport(this);
         addFarmBackground(this);
         
@@ -71,7 +72,13 @@ export default class WarehouseScene extends Phaser.Scene {
 
         this.initFirebase();
         watchGuardDogInventory(this,()=>this.farmData,()=>this.renderWarehouseItems());
-        onSceneExit(this, () => { if (this.unsubscribe) this.unsubscribe(); });
+        onSceneExit(this, () => {
+            if (this.warehouseToken === token) {
+                this.warehouseToken = null;
+                this.isFeeding = false;
+            }
+            if (this.unsubscribe) this.unsubscribe();
+        });
     }
 
     createActionPanel() {
@@ -328,6 +335,9 @@ export default class WarehouseScene extends Phaser.Scene {
         }
         breed ||= breeds[0];
         this.isFeeding = true;
+        // 同一 Phaser Scene 物件會重啟；只檢查 isActive 不足以區分前一次餵食的回覆。
+        const token = this.warehouseToken;
+        const active = () => this.warehouseToken === token && this.sys.isActive();
         const now = Date.now();
         try {
             await farmCommandOrLegacy('feedPoultry',{item:key,breed},()=>runTransaction(db, async transaction => {
@@ -335,11 +345,12 @@ export default class WarehouseScene extends Phaser.Scene {
                 if (!farm) throw new Error('農場資料不存在');
                 transaction.update(myFarmRef, feedPoultry(farm, key, breed, now));
             }));
+            if (!active()) return;
             this.hen.setTexture(BREEDS[breed].texture, 0).setScale(96 / this.hen.width).play(`${breed}_idle`);
             this.showHeartEffect(key === 'earthworms');
             this.showMsg(`${BREEDS[breed].name}很開心！加速 ${key === 'worms' ? 30 : 60} 分鐘`, '#4CAF50');
-        } catch (e) { this.showMsg(e.message || '餵食失敗，請稍後重試', '#F44336'); }
-        finally { this.isFeeding = false; }
+        } catch (e) { if (active()) this.showMsg(e.message || '餵食失敗，請稍後重試', '#F44336'); }
+        finally { if (this.warehouseToken === token) this.isFeeding = false; }
     }
 
     async discardItem(key) {
@@ -364,6 +375,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     showHeartEffect(isBig) {
+        if (!this.sys.isActive() || !this.hen?.active) return;
         this.tweens.add({ targets: this.hen, y: this.hen.y - 15, duration: 150, yoyo: true });
 
         const size = isBig ? 1 : .7;
@@ -380,6 +392,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     showMsg(msg, color) {
+        if (!this.sys.isActive() || !this.msgText?.active || !this.msgText.frame?.data) return;
         this.msgText.setText(msg).setColor(color).setAlpha(1);
         this.tweens.add({ targets: this.msgText, alpha: 0, duration: 2500, delay: 1000 });
     }

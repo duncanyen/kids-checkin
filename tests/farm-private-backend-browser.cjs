@@ -3,9 +3,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 (async()=>{
- const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement;
+ const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null;
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
- const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club'};
+ const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club',worms:2,earthworms:3};
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
@@ -19,7 +19,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
    calls.push({name,action:data.action});
    if(name==='photoSession')return{token:'opaque-'+sequence++};
    const request={auth,data};
-   if(name==='gameOpsFarmTransaction'){if(data.action==='battleSettle')await settlementGate;return service.farmTransaction(request);}
+   if(name==='gameOpsFarmTransaction'){if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements')return{rows:[],nextCursor:null};
    if(name==='gameOpsGuardDog')return service.guardDog(request);
@@ -54,6 +54,31 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('ShopScene').executeBuyWeapon('battleaxe',1);await window.__privateEmitAll();});
   await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('WarehouseScene'));await page.waitForFunction(()=>window.__farmGame.scene.getScene('WarehouseScene')?.actionPanel);
   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('WarehouseScene').toggleEquipWeapon('battleaxe',false);await window.__privateEmitAll();});
+  await page.evaluate(async()=>{const scene=window.__farmGame.scene.getScene('WarehouseScene');await Promise.all([scene.feedItem('earthworms','hen'),scene.feedItem('earthworms','hen')]);await window.__privateEmitAll();});
+  assert.equal(db.data.get('groups/A/users/alice').farm.earthworms,2,'連點只餵食一次');
+  let releaseFeed;feedGate=new Promise(resolve=>releaseFeed=resolve);
+  await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('WarehouseScene');window.__pendingFeed=scene.feedItem('earthworms','hen').then(()=>null,error=>error.message);scene.scene.start('ShopScene');});
+  await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
+  releaseFeed();assert.equal(await page.evaluate(()=>window.__pendingFeed),null,'離開倉庫後不更新已銷毀的精靈或文字');feedGate=null;
+  assert.equal(db.data.get('groups/A/users/alice').farm.earthworms,1);
+  await page.evaluate(async()=>{await window.__privateEmitAll();window.__farmGame.scene.getScene('ShopScene').scene.start('WarehouseScene');});
+  await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+  let releaseOld,noticeOld;feedGate=new Promise(resolve=>releaseOld=resolve);const oldStarted=new Promise(resolve=>noticeOld=resolve);feedEntered=noticeOld;
+  await page.evaluate(()=>{window.__oldFeed=window.__farmGame.scene.getScene('WarehouseScene').feedItem('earthworms','hen');});
+  await oldStarted;
+  await page.evaluate(()=>window.__farmGame.scene.getScene('WarehouseScene').scene.start('ShopScene'));
+  await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
+  await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('WarehouseScene'));
+  await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+  let releaseNew,noticeNew;feedGate=new Promise(resolve=>releaseNew=resolve);const newStarted=new Promise(resolve=>noticeNew=resolve);feedEntered=noticeNew;
+  await page.evaluate(()=>{window.__newFeed=window.__farmGame.scene.getScene('WarehouseScene').feedItem('worms','hen');});
+  await newStarted;
+  releaseOld();await page.evaluate(()=>window.__oldFeed);
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('WarehouseScene').isFeeding),true,'舊回覆不能解除新場景正在餵食的防連點鎖');
+  releaseNew();await page.evaluate(async()=>{await window.__newFeed;await window.__privateEmitAll();});feedGate=null;feedEntered=null;
+  assert.equal(db.data.get('groups/A/users/alice').farm.earthworms,0);
+  assert.equal(db.data.get('groups/A/users/alice').farm.worms,1);
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('WarehouseScene').isFeeding),false);
   serverRoll=0;
   await page.evaluate(()=>window.__farmGame.scene.getScene('WarehouseScene').scene.start('VisitScene',{targetGroupId:'A',targetAccountId:'bob',targetName:'Bob'}));
   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.gorillaEncounter?.id);
