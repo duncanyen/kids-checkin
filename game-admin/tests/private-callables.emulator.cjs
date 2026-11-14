@@ -26,6 +26,12 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const token=refreshed.id_token,payload=JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString());assert.equal(payload.nexusSessionVersion,1);assert.equal(payload.photoGroupId,'emulator-group');
  const trade={groupId:'emulator-group',action:'buyMedicine',quantity:2,price:0,requestId:'emulator-trade-001'};
  const first=await call('gameOpsFarmTransaction',trade,token),second=await call('gameOpsFarmTransaction',trade,token);assert.equal(first.status,200);assert.equal(second.data.result.replayed,true);assert.equal((await db.doc('groups/emulator-group/users/emulator_player').get()).data().farm.coins,80);
+ const activeRef=db.doc('ops_farm_active/'+I.hash('emulator-profile:emulator-group'));
+ await activeRef.set({id:'emulator-pending-welcome',kind:'gorilla',groupId:'emulator-group',targetGroupId:'emulator-group',targetAccountId:'emulator_player',startedAt:Date.now(),approachEndsAt:Date.now(),deadline:Date.now()+40000,health:1000,attacks:{melee:0,ranged:0}});
+ const welcome=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'ensureWelcome',requestId:'emulator-welcome-001'},token);
+ assert.equal(welcome.status,200,JSON.stringify(welcome.data.error||{}));assert.equal(welcome.data.result.result.pendingBattle.id,'emulator-pending-welcome');
+ assert.equal((await db.doc('groups/emulator-group/users/emulator_player').get()).data().farm.coins,80,'通知準備不自動發放歡迎獎勵');
+ const blockedClaim=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'claimWelcome',requestId:'emulator-welcome-claim-blocked'},token);assert.equal(blockedClaim.status,400);
  // 固定無怪物的已驗證自家會話，避免合約測試依賴正式亂數；仍走真實 callable 與交易。
  await db.doc('groups/emulator-group/users/emulator_player').update({'farm.readyEggs.hen':3,'farm.eggsReady':3});
  await db.doc('ops_farm_active/'+I.hash('emulator-profile:emulator-group')).set({id:'emulator-harvest-clear',groupId:'emulator-group',targetGroupId:'emulator-group',targetAccountId:'emulator_player',harvestPermit:true,harvested:false,result:{outcome:'clear'}});

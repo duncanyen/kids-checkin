@@ -78,7 +78,10 @@ export function mountFarmMail(game, context) {
     async function ensure() {
         if (ensured) return;
         if (!initializing) {
-            initializing = store.ensureWelcome().then(() => { ensured = true; }).finally(() => { initializing = null; });
+            initializing = store.ensureWelcome().then(result => {
+                ensured = true;
+                if(!disposed&&result?.pendingBattle)game.registry.set('farmPendingBattle',result.pendingBattle);
+            }).finally(() => { initializing = null; });
         }
         return initializing;
     }

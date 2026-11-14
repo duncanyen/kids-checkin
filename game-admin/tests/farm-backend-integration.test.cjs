@@ -46,6 +46,18 @@ test('welcome mail awards once across different request IDs; deletion never rese
  assert.equal(f.farm().coins,11000);assert.equal(f.farm().worms,8);await f.api.handle(f.req('deleteMail',{ids:['welcome-v1']}));await f.api.handle(f.req('ensureWelcome'));
  await assert.rejects(f.api.handle(f.req('claimWelcome')),{code:'not-found'});assert.equal(f.farm().coins,11000);
 });
+test('entry welcome preparation is allowed during a battle without granting rewards or bypassing economic locks',async()=>{
+ const f=setup();f.roll(0);
+ const battle=(await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}))).result.challenge;
+ const before=structuredClone(f.farm()),request=f.req('ensureWelcome');
+ const response=await f.api.handle(request);assert.equal(response.result.pendingBattle.id,battle.id);
+ assert.deepEqual(f.farm(),before);assert.ok(f.db.data.get('groups/A/users/alice/farm_notifications/welcome-v1'));
+ const replay=await f.api.handle(request);assert.equal(replay.replayed,true);assert.equal(replay.result.pendingBattle.id,battle.id);
+ for(const action of ['claimWelcome','feedPoultry','collectEggs'])await assert.rejects(f.api.handle(f.req(action,{item:'worms',breed:'hen'})),{code:'failed-precondition'});
+ assert.deepEqual(f.farm(),before);
+ const D=require('../functions/domain.cjs');f.db.data.get('ops_farm_active/'+D.hash('profile:A')).result={outcome:'loss'};
+ const current=await f.api.handle(request);assert.equal(current.result.pendingBattle,null,'重送通知收據不恢復已結束的舊戰鬥');
+});
 test('direct collection and stealing cannot bypass the server encounter check',async()=>{
  const f=setup();await assert.rejects(f.api.handle(f.req('collectEggs')),{code:'failed-precondition'});await assert.rejects(f.api.handle(f.req('stealEgg',{targetGroupId:'A',targetAccountId:'bob'})),{code:'failed-precondition'});
  await f.api.handle(f.req('homeEncounter'));await f.api.handle(f.req('collectEggs'));

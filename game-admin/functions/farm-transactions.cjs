@@ -2,6 +2,7 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
 const {reuseTransactionReads}=require('./transaction-reads.cjs');
+const pendingBattleOf=session=>session&&!session.result?{...session}:null;
 function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null}){
  let models;
  const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js')]);
@@ -23,7 +24,13 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    const receiptRef=db.doc('ops_farm_transactions/'+D.hash(actor.uid+':'+requestId));
    const fingerprint=D.hash(JSON.stringify(Object.fromEntries(Object.keys(p).filter(key=>key!=='requestId').sort().map(key=>[key,p[key]]))));
    const receipt=await t.get(receiptRef);
-   if(receipt.exists){if(receipt.data().fingerprint!==fingerprint)D.fail('already-exists','交易編號已用於其他操作');return{...receipt.data().response,serverNow:stamp,replayed:true};}
+   if(receipt.exists){
+    if(receipt.data().fingerprint!==fingerprint)D.fail('already-exists','交易編號已用於其他操作');
+    const response={...receipt.data().response,serverNow:stamp,replayed:true};
+    // 通知準備的收據仍防重；戰鬥提示須讀取目前狀態，不能重播已結束的舊挑戰。
+    if(action==='ensureWelcome')response.result={...response.result,pendingBattle:pendingBattleOf((await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data())};
+    return response;
+   }
    const farmRef=db.doc(`groups/${actor.groupId}/users/${actor.accountId}`),owner=await t.get(farmRef);
    if(action==='ensureFarm'){
     if(owner.exists){if(!save.isFarmSave(owner.data()?.farm))D.fail('failed-precondition','存檔資料不完整，停止自動初始化');const response={result:owner.data().farm,serverNow:stamp};t.create(receiptRef,{fingerprint,response,createdAt:stamp});return response;}
@@ -36,7 +43,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    const mailWrites=[];
    const apply=(old,changes)=>{const value=structuredClone(old);for(const [path,next]of Object.entries(changes)){const keys=path.split('.').slice(1);let at=value;for(const key of keys.slice(0,-1))at=at[key]||=( {} );at[keys.at(-1)]=next;}return value;};
    const combatActions=['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle'];
-   if(session&&!session.result&&!combatActions.includes(action)&&!['settlePoultry','settleTarget','readMail','deleteMail'].includes(action))D.fail('failed-precondition','請先完成怪物戰鬥結算');
+   if(session&&!session.result&&!combatActions.includes(action)&&!['settlePoultry','settleTarget','ensureWelcome','readMail','deleteMail'].includes(action))D.fail('failed-precondition','請先完成怪物戰鬥結算');
    const readTarget=async(groupId,accountId,battle=false)=>{
     D.id(groupId);D.id(accountId);const group=(await t.get(db.doc('groups/'+groupId))).data(),own=groupId===actor.groupId?group:(await t.get(db.doc('groups/'+actor.groupId))).data();
     const allowed=!!group?.members?.includes(accountId)&&!!own?.members?.includes(actor.accountId)&&(groupId===actor.groupId||group.farmVillageVisibility==='public'&&own.farmVillageVisibility==='public');
@@ -93,6 +100,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }else if(['ensureWelcome','claimWelcome','readMail','deleteMail'].includes(action)){
     const welcomeId='welcome-v1',reward={coins:1000,worms:8,earthworms:4},mail=owner.data().farmMail||{};
     if(action==='ensureWelcome'){
+     // 只準備通知、不發獎。順帶回傳此玩家未完成的戰鬥，讓重新進入村落時恢復原挑戰。
+     result={pendingBattle:pendingBattleOf(session)};
      if(!mail.welcomeCreatedAt&&!mail.welcomeClaimedAt)mailWrites.push(()=>{t.set(db.doc(farmRef.path+'/farm_notifications/'+welcomeId),{type:'system',title:'系統通知',body:'歡迎加入咕咕村落，若您有任何疑問，歡迎隨時與我們連絡，感謝您的支持，祝您遊戲愉快',reward,createdAt:stamp,claimedAt:null,readAt:null});t.update(farmRef,{farmMail:{...mail,welcomeCreatedAt:stamp}});});
     }else if(action==='claimWelcome'){
      const ref=db.doc(farmRef.path+'/farm_notifications/'+welcomeId),notice=(await t.get(ref)).data();if(!notice)D.fail('not-found','通知已刪除，無法領取');result=false;

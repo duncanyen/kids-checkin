@@ -7,6 +7,7 @@ import { farmLoading } from './loading-ui.js';
 
 // Load art before reserving a milestone, so failed downloads consume no time.
 export async function maybeStartCobra(scene) {
+    if(scene.resumingPendingBattle)return true;
     if(scene.preparingGiant || (scene.myFarmData||scene.farmData)?.giantChallenge || (scene.giantEncounter&&!scene.giantEncounter.destroyed&&!scene.giantEncounter.settled))return true;
     if (scene.preparingMole || (scene.myFarmData || scene.farmData)?.moleChallenge || (scene.moleEncounter && !scene.moleEncounter.destroyed && !scene.moleEncounter.settled)) return true;
     if (scene.cobraEncounter && !scene.cobraEncounter.destroyed && !scene.cobraEncounter.settled) return true;
@@ -20,6 +21,7 @@ export async function maybeStartCobra(scene) {
         if (keys.some(key => !scene.textures.exists(key))) farmLoading.begin('毒牙眼鏡蛇王即將現身');
         await ensureAssets(scene, keys, n => farmLoading.progress(n * 95, '準備蛇王挑戰'));
         if (!active()) return true;
+        if(scene.resumingPendingBattle)return true;
         farmLoading.complete(true);
         const claim = await claimCobraEncounter(scene.targetAccountId, scene.targetGroupId);
         if (!active()) return true;

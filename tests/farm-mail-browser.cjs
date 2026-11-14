@@ -71,6 +71,9 @@ const owner = 'groups/A/users/self', welcome = owner + '/farm_notifications/welc
         // 隔離測試模擬 Rules 已確認後開啟累計，正式預設仍關閉。
         await page.route('**/js/farm/reporting-config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('FARM_REPORT_COUNTERS_ENABLED = false','FARM_REPORT_COUNTERS_ENABLED = true')});});
         await page.route('**/js/firebase-config.js', route => route.fulfill({ contentType: 'text/javascript', body: 'export const db={};' }));
+        // 此套使用舊制 Firestore fixture；私有後端通知與恢復另由 farm-private-backend-browser 驗證。
+        await page.route('**/js/identity-config.js',route=>route.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=false;'}));
+        await page.route('**/js/farm/backend-client.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('FARM_BACKEND_ENABLED = true','FARM_BACKEND_ENABLED = false')});});
         await page.route('**/js/farm/main.js', async route => {
             const response = await route.fetch();
             await route.fulfill({ response, body: (await response.text()).replace('const game =', 'const game = window.__farmGame =') });

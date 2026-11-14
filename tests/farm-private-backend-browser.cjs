@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
+const resumeMode=process.env.RESUME_PENDING_BATTLE;
 (async()=>{
  const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
@@ -12,6 +13,8 @@ const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
+ const pendingKey='ops_farm_active/'+I.hash('alice:A');
+ if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -45,6 +48,29 @@ const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
   await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
   await page.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',docId:'alice',groupId:'A',name:'Alice'}));localStorage.setItem('lastGroupId','A');sessionStorage.setItem('nexus_active_group_id','A');});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
+  if(resumeMode){
+   const expectedScene=resumeMode==='visit'?'VisitScene':'MyFarmScene',originalDeadline=db.data.get(pendingKey).deadline;
+   await page.waitForFunction(key=>window.__farmGame.scene.isActive(key)&&window.__farmGame.scene.getScene(key)?.gorillaEncounter?.id==='resume-gorilla',expectedScene);
+   assert.equal(await page.evaluate(key=>window.__farmGame.scene.getScene(key).gorillaEncounter.health,expectedScene),700);
+   assert.equal(await page.evaluate(key=>window.__farmGame.scene.getScene(key).gorillaEncounter.deadline,expectedScene),originalDeadline);
+   assert.equal(calls.filter(call=>call.action==='homeEncounter'||call.action==='collectEggs').length,0,'恢復戰鬥不自動抽怪或收蛋');
+   assert.equal(db.data.get('groups/A/users/alice').farm.coins,12345,'準備通知不發獎也不立即處罰');
+   await page.reload();
+   await page.waitForFunction(key=>window.__farmGame?.scene.isActive(key)&&window.__farmGame.scene.getScene(key)?.gorillaEncounter?.id==='resume-gorilla',expectedScene);
+   assert.equal(await page.evaluate(key=>window.__farmGame.scene.getScene(key).gorillaEncounter.health,expectedScene),700,'重新整理不重設怪物血量');
+   db.data.get(pendingKey).deadline=Date.now()-1;releaseSettlement();await page.reload();
+   const settleDeadline=Date.now()+15000;
+   while(db.data.get(pendingKey)?.result?.outcome!=='loss'&&Date.now()<settleDeadline)await new Promise(resolve=>setTimeout(resolve,50));
+   assert.equal(db.data.get(pendingKey)?.result?.outcome,'loss');
+   assert.equal(db.data.get('groups/A/users/alice').farm.coins,12245);
+   assert.equal(db.data.get('groups/A/users/'+(resumeMode==='visit'?'bob':'alice')).farm.eggsReady,0,'損失仍歸原始戰鬥目標');
+   await page.evaluate(async()=>{await window.__privateEmitAll();const scene=window.__farmGame.scene.getScenes(true).find(s=>['MyFarmScene','VisitScene'].includes(s.scene.key));scene.scene.start('WarehouseScene');});
+   await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+   await page.evaluate(()=>window.__farmGame.scene.getScene('WarehouseScene').feedItem('earthworms','hen'));
+   assert.equal(db.data.get('groups/A/users/alice').farm.earthworms,2,'完成原戰鬥結算後可正常餵食');
+   assert.deepEqual(errors,[]);assert.ok(!startupLogs.some(message=>message.includes('farm-transaction-failure')));
+   console.log('PASS pending '+resumeMode+' battle resumes with original health/deadline, survives reload, settles expired loss once and permits feeding; welcome preparation never returns 400');return;
+  }
   const ownFarm=db.data.get('groups/A/users/alice').farm;
   ownFarm.cleanliness=74;await page.evaluate(()=>window.__privateEmitAll());
   await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('MyFarmScene');window.__rubbishBefore=[...scene.rubbishGroup.getChildren()];window.__hensBefore=[...scene.hensGroup];});

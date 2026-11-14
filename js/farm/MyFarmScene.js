@@ -1,5 +1,6 @@
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow,routeBackendChallenge} from './backend-client.js';
 import { maybeStartGiant } from './giant-trigger.js';
+import { restorePendingBattle } from './pending-battle.js';
 import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
 import { openCoopActions } from './poultry-housing-ui.js';
@@ -36,6 +37,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.farmData = null;
         this.henAssetsPending = false;
         this.preparingEncounter = false;
+        this.resumingPendingBattle = false;
         this.giantEncounter = null; this.preparingGiant = false;
         this.pendingEncounter = null;
         this.preparingCobra = false;
@@ -82,6 +84,10 @@ export default class MyFarmScene extends Phaser.Scene {
         this.timerText.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.game.retryFarmSave?.());
         mountHalloween(this);
         this.createConfirmDialog();
+        const onPendingBattle=()=>this.resumePendingBattle();
+        const onFirstPendingBattle=(_parent,key)=>{if(key==='farmPendingBattle')onPendingBattle();};
+        this.registry.events.on('changedata-farmPendingBattle',onPendingBattle);
+        this.registry.events.on('setdata',onFirstPendingBattle);
         this.initFirebase();
         mountGuardDog(this,()=>this.farmData,true);
         this.layingVisit = new LayingVisit(this);
@@ -90,6 +96,9 @@ export default class MyFarmScene extends Phaser.Scene {
             this.farmSceneToken = null;
             this.isHarvesting = false;
             this.harvestStatus = null;
+            this.resumingPendingBattle = false;
+            this.registry.events.off('changedata-farmPendingBattle',onPendingBattle);
+            this.registry.events.off('setdata',onFirstPendingBattle);
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
@@ -180,6 +189,7 @@ export default class MyFarmScene extends Phaser.Scene {
             if (!this.cobraEntryChecked) {
                 this.cobraEntryChecked = true;
                 this.time.delayedCall(0, async () => {
+                    if(this.resumingPendingBattle||this.preparingEncounter)return;
                     if(this.farmData?.giantChallenge){await maybeStartGiant(this);return;}
                     if(this.farmData?.moleChallenge){await maybeStartMole(this);return;}
                     if(!await maybeStartCobra(this))await maybeStartGiant(this);
@@ -191,6 +201,7 @@ export default class MyFarmScene extends Phaser.Scene {
                 const readyToken=this.farmSceneToken;
                 this.game.events.once('postrender',()=>{if(this.sys.isActive() && this.farmSceneToken===readyToken)farmLoading.complete();});
             } else if(resumedAssets && !this.preparingEncounter) farmLoading.complete(true);
+            this.resumePendingBattle();
         };
         const showState = state => {
             if (state && state.phase !== 'ready' && this.timerText?.active) this.timerText.setText(state.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…');
@@ -221,6 +232,18 @@ export default class MyFarmScene extends Phaser.Scene {
     updateUI() {
         if (!this.farmData) return;
         this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
+    }
+
+    async resumePendingBattle(challenge=this.registry.get('farmPendingBattle')) {
+        if(!FARM_BACKEND_ENABLED||!this.sys.isActive()||!challenge||this.resumingPendingBattle||!this.isSaveReady())return;
+        const token=this.farmSceneToken;
+        this.resumingPendingBattle=true;
+        if(this.registry.get('farmPendingBattle')?.id===challenge.id)this.registry.remove('farmPendingBattle');
+        try{await restorePendingBattle(this,challenge);}
+        catch(error){
+            if(this.sys.isActive()&&this.farmSceneToken===token)farmLoading.error('未完成戰鬥恢復失敗，請點此重試。',()=>this.resumePendingBattle(challenge));
+            console.warn('未完成戰鬥恢復失敗',error.message);
+        }finally{if(this.farmSceneToken===token)this.resumingPendingBattle=false;}
     }
 
     renderCleanlinessVisual() {
@@ -511,7 +534,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (!this.isSaveReady()) return;
-        if (this.isHarvesting || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
+        if (this.isHarvesting || this.resumingPendingBattle || this.preparingEncounter || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
         const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);

@@ -7,7 +7,7 @@ let client,offset=0;
 const pending=new Map(),attacks=new Map(),settlements=new Map();
 export const hasPendingBackendBattle=()=>settlements.size>0;
 // 結算本身與背景資料同步不可排在自己後面；其他經濟操作須等伺服器確認戰鬥已結束。
-const duringSettlement=new Set(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureFarm','settlePoultry','settleTarget','readMail','deleteMail']);
+const duringSettlement=new Set(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureFarm','settlePoultry','settleTarget','ensureWelcome','readMail','deleteMail']);
 export const farmNow=()=>Date.now()+offset;
 async function send(action,payload,id){
  if(!FARM_BACKEND_ENABLED||!PRIVATE_IDENTITY_ENABLED)throw Error('農場共用交易尚未啟用');
