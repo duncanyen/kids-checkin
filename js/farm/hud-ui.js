@@ -43,7 +43,7 @@ export function hasFarmHudEncounter(scene) {
  * 將既有通知與排行榜入口接到固定圖示導覽；生命週期隨 Phaser.Game 結束。
  * @param {Phaser.Game} game - 已掛載通知與排行榜的遊戲實例。
  */
-export function mountFarmHud(game,{dailyChallenges}={}) {
+export function mountFarmHud(game,{dailyChallenges,hasPendingBattle=()=>false}={}) {
     const root = document.createElement('div'); root.className = 'farm-hud'; root.hidden = true;
     const top = document.createElement('section'); top.className = 'farm-hud-status'; top.setAttribute('aria-label', '農莊資源');
     for (const [kind, label, key] of [['coins','金幣','coins'],['eggs','待採收雞蛋（所有雞種）','eggs'],['cleanliness','雞舍髒亂值','dirt']]) {
@@ -194,7 +194,7 @@ export function mountFarmHud(game,{dailyChallenges}={}) {
         positionSide();
     }
     function occupied() {
-        return !game.input.enabled || game.scene.getScenes(true).some(scene => scene.input?.enabled === false || scene.isProcessing || scene.isFeeding || scene.isTreating || hasFarmHudEncounter(scene) || scene.housingDialog || scene.dialogContainer?.visible || scene.tradeContainer?.visible);
+        return hasPendingBattle() || !game.input.enabled || game.scene.getScenes(true).some(scene => scene.input?.enabled === false || scene.isProcessing || scene.isFeeding || scene.isTreating || hasFarmHudEncounter(scene) || scene.housingDialog || scene.dialogContainer?.visible || scene.tradeContainer?.visible);
     }
     const routes = [[village,'LobbyScene'],[shop,'ShopScene'],[warehouse,'WarehouseScene']];
     for (const [node,key] of routes) node.addEventListener('click', () => {
@@ -210,7 +210,7 @@ export function mountFarmHud(game,{dailyChallenges}={}) {
         const scene = game.scene.getScenes(true).find(scene=>['MyFarmScene','LobbyScene','VisitScene','ShopScene','WarehouseScene'].includes(scene.scene.key));
         const key = scene?.scene.key;
         syncCountdown(scene);
-        const inEncounter = game.scene.getScenes(true).some(hasFarmHudEncounter);
+        const inEncounter = hasPendingBattle() || game.scene.getScenes(true).some(hasFarmHudEncounter);
         const sideWasHidden = side.hidden;
         // 導覽只屬於自家農場；拜訪結束或戰鬥結算後，也須回到自家才恢復。
         side.hidden = inEncounter || key !== 'MyFarmScene';

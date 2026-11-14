@@ -4,7 +4,10 @@ import { readGameContext } from '../game-context.js';
 // 完整遷移、Rules 與隔離驗證通過後才開啟；不能單獨啟用此旗標。
 export const FARM_BACKEND_ENABLED = true;
 let client,offset=0;
-const pending=new Map(),attacks=new Map();
+const pending=new Map(),attacks=new Map(),settlements=new Map();
+export const hasPendingBackendBattle=()=>settlements.size>0;
+// 結算本身與背景資料同步不可排在自己後面；其他經濟操作須等伺服器確認戰鬥已結束。
+const duringSettlement=new Set(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureFarm','settlePoultry','settleTarget','readMail','deleteMail']);
 export const farmNow=()=>Date.now()+offset;
 async function send(action,payload,id){
  if(!FARM_BACKEND_ENABLED||!PRIVATE_IDENTITY_ENABLED)throw Error('農場共用交易尚未啟用');
@@ -18,7 +21,9 @@ export function farmCommand(action,payload={}){
  const context=readGameContext(),key='nexus.farm.pending:'+JSON.stringify([context.accountId,context.groupId,action,payload]);
  if(pending.has(key))return pending.get(key);
  const id=sessionStorage.getItem(key)||crypto.randomUUID();sessionStorage.setItem(key,id);
- const work=send(action,payload,id).then(result=>{sessionStorage.removeItem(key);return result;}).catch(error=>{
+ const barriers=duringSettlement.has(action)?[]:[...settlements.values()];
+ const request=barriers.length?Promise.all(barriers).then(()=>send(action,payload,id)):send(action,payload,id);
+ const work=request.then(result=>{sessionStorage.removeItem(key);return result;}).catch(error=>{
   if(!['ops/timeout','functions/internal','functions/unavailable','functions/unauthenticated','functions/resource-exhausted'].includes(error.code))sessionStorage.removeItem(key);
   throw error;
  }).finally(()=>pending.delete(key));pending.set(key,work);return work;
@@ -41,11 +46,15 @@ export function recordBattleHit(id,mode='melee'){
  if(!row.timer)row.timer=setTimeout(()=>{row.timer=null;void flushBattle(id).catch(()=>{});},500);
 }
 /** 每批皆有固定收據。逾時保留原批次，勝負只由伺服器實際接受的攻擊決定。 */
-export async function settleBackendBattle(id){
- const row=rowFor(id);clearTimeout(row.timer);row.timer=null;
- try{if(row.flushing)await row.flushing;while(row.melee||row.ranged||row.batch)await flushBattle(id);}
- catch(error){if(error.code!=='functions/deadline-exceeded')throw error;}
- const result=await farmCommand('battleSettle',{battleId:id});attacks.delete(id);return result;
+export function settleBackendBattle(id){
+ if(settlements.has(id))return settlements.get(id);
+ const work=(async()=>{
+  const row=rowFor(id);clearTimeout(row.timer);row.timer=null;
+  try{if(row.flushing)await row.flushing;while(row.melee||row.ranged||row.batch)await flushBattle(id);}
+  catch(error){if(error.code!=='functions/deadline-exceeded')throw error;}
+  const result=await farmCommand('battleSettle',{battleId:id});attacks.delete(id);return result;
+ })().finally(()=>settlements.delete(id));
+ settlements.set(id,work);return work;
 }
 export const visitPayload=scene=>({targetGroupId:scene.targetGroupId,targetAccountId:scene.targetAccountId});
 

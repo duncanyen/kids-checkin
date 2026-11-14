@@ -10,6 +10,7 @@ import { mountFarmRankings } from './ranking-ui.js';
 import { mountFarmMail } from './mail-ui.js';
 import { mountFarmDaily } from './daily-ui.js';
 import { mountFarmHud } from './hud-ui.js';
+import { hasPendingBackendBattle } from './backend-client.js';
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID } from './constants.js';
 
 // ==========================================
@@ -38,4 +39,4 @@ mountFarmMail(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID }
 
 mountFarmRankings(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
 const dailyChallenges=mountFarmDaily(game,{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
-mountFarmHud(game,{dailyChallenges});
+mountFarmHud(game,{dailyChallenges,hasPendingBattle:hasPendingBackendBattle});

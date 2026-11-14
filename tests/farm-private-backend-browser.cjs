@@ -3,7 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=requ
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 (async()=>{
- const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99;
+ const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement;
+ const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
  const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club'};
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
@@ -18,7 +19,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
    calls.push({name,action:data.action});
    if(name==='photoSession')return{token:'opaque-'+sequence++};
    const request={auth,data};
-   if(name==='gameOpsFarmTransaction')return service.farmTransaction(request);
+   if(name==='gameOpsFarmTransaction'){if(data.action==='battleSettle')await settlementGate;return service.farmTransaction(request);}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements')return{rows:[],nextCursor:null};
    if(name==='gameOpsGuardDog')return service.guardDog(request);
@@ -58,10 +59,17 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.gorillaEncounter?.id);
   await page.waitForTimeout(2500);
   await page.evaluate(()=>{const boss=window.__farmGame.scene.getScene('VisitScene').gorillaEncounter;for(let i=0;i<40;i++)boss.hit({x:195,y:400});});
-  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.gorillaEncounter?.settled===true);
+  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.gorillaEncounter?.result==='win');
+  db.data.get('groups/A/users/bob').farm.cleanliness=30;
+  const previousCleanCalls=calls.filter(call=>call.action==='helpClean').length;
+  await page.evaluate(()=>{window.__queuedClean=window.__farmGame.scene.getScene('VisitScene').cleanTargetFarm().then(()=>window.__cleanAfterBattleDone=true);});
+  assert.equal(calls.filter(call=>call.action==='helpClean').length,previousCleanCalls,'動畫勝利後仍須等待後端結算才送出清潔');
+  releaseSettlement();
+  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.gorillaEncounter?.settled===true&&window.__cleanAfterBattleDone===true);
   assert.equal(db.data.get('groups/A/users/alice').farm.gorillaFangs,1);
+  assert.equal(db.data.get('groups/A/users/bob').farm.cleanliness,0);
   assert.deepEqual(await page.evaluate(()=>window.__farmGame.scene.getScenes(true).filter(s=>['MyFarmScene','VisitScene','ShopScene','WarehouseScene'].includes(s.scene.key)).map(s=>s.scene.key)),['VisitScene']);
-  const completed=await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}});assert.equal(completed.challenges.mission.tasks[2].count,1);
+  const completed=await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}});assert.equal(completed.challenges.mission.tasks[2].count,1);assert.equal(completed.challenges.mission.tasks[1].count,2);
   assert.ok(calls.some(c=>c.action==='battleAttack'));assert.ok(calls.some(c=>c.action==='battleSettle'));
   assert.ok(calls.some(c=>c.action==='stealEgg'));assert.deepEqual(errors,[]);
   await page.screenshot({path:'/tmp/nexus-private-farm-mobile.png'});
