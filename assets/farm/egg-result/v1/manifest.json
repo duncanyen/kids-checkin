@@ -1,0 +1,93 @@
+{
+  "source": "可愛農場收蛋完成介面素材人體藝術.png",
+  "artwork_type": "AI-generated composite artwork; manually separated PNG assets",
+  "asset_count": 12,
+  "assets": {
+    "egg_result_panel.png": {
+      "pixels": [
+        602,
+        684
+      ],
+      "role": "empty frame/background panel"
+    },
+    "egg_result_title.png": {
+      "pixels": [
+        579,
+        158
+      ],
+      "role": "fixed collection-complete heading"
+    },
+    "egg_result_close.png": {
+      "pixels": [
+        122,
+        126
+      ],
+      "role": "close icon"
+    },
+    "egg_result_illustration.png": {
+      "pixels": [
+        447,
+        305
+      ],
+      "role": "chicken and egg basket decorative illustration"
+    },
+    "egg_result_total_banner.png": {
+      "pixels": [
+        755,
+        182
+      ],
+      "role": "blank summary banner with egg icon; overlay quantity/text dynamically"
+    },
+    "egg_result_section_title.png": {
+      "pixels": [
+        426,
+        98
+      ],
+      "role": "fixed harvest-details heading"
+    },
+    "egg_result_row.png": {
+      "pixels": [
+        683,
+        115
+      ],
+      "role": "blank reusable row; no leading egg icon or fixed text"
+    },
+    "egg_result_storage_banner.png": {
+      "pixels": [
+        570,
+        119
+      ],
+      "role": "storage-success ribbon with fixed text"
+    },
+    "egg_result_confirm.png": {
+      "pixels": [
+        534,
+        148
+      ],
+      "role": "confirm button with fixed text"
+    },
+    "egg_result_decoration.png": {
+      "pixels": [
+        214,
+        132
+      ],
+      "role": "left/green floral decoration"
+    },
+    "egg_result_decoration_right.png": {
+      "pixels": [
+        204,
+        138
+      ],
+      "role": "right/green floral decoration"
+    },
+    "egg_result_eggs_icon.png": {
+      "pixels": [
+        252,
+        197
+      ],
+      "role": "optional standalone egg cluster decoration"
+    }
+  },
+  "required_files": 10,
+  "note": "Only show storage-success banner after actual inventory update succeeds; do not re-add eggs when closing modal."
+}

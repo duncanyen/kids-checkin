@@ -4,6 +4,7 @@ import { restorePendingBattle } from './pending-battle.js';
 import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
 import { openCoopActions } from './poultry-housing-ui.js';
+import { openEggResult, prepareEggResultAssets } from './egg-result-ui.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { mountHalloween } from './halloween.js';
@@ -33,6 +34,8 @@ export default class MyFarmScene extends Phaser.Scene {
 
     create() {
         configureFarmViewport(this);
+        // 固定收蛋素材背景預熱，不等待圖片就開始遊戲；場景結束由 Phaser 取消延遲工作。
+        this.time.delayedCall(1500, () => { void prepareEggResultAssets().catch(() => {}); });
         const cx = 195;
         this.farmData = null;
         this.henAssetsPending = false;
@@ -534,7 +537,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     async harvestEgg() {
         if (!this.isSaveReady()) return;
-        if (this.isHarvesting || this.resumingPendingBattle || this.preparingEncounter || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
+        if (this.isHarvesting || this.eggResultDialog || this.resumingPendingBattle || this.preparingEncounter || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
         const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
@@ -626,7 +629,14 @@ export default class MyFarmScene extends Phaser.Scene {
             this.eagle = null; this.dragon = null; this.gorilla = null;
             if (this.layingVisit?.task && result.collected[this.layingVisit.task.breed] > 0 && Date.now() >= this.layingVisit.task.dueAt) this.layingVisit.cancel();
             const warning = result.remaining ? `\n倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
-            this.showFloatingText((Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key].eggName} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning, '#FFD54F', result.remaining ? 14 : 18);
+            const summary = (Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key]?.eggName || key} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning;
+            // 此處交易已成功；圖片或 DOM 失敗只能退回文字提示，不得重送收蛋或提示交易失敗。
+            try {
+                if (!await openEggResult(this, result) && active()) this.showFloatingText(summary, '#FFD54F', result.remaining ? 14 : 18);
+            } catch {
+                console.error('farm-egg-result-display-failure', { total: result?.total });
+                if (active()) this.showFloatingText(summary, '#FFD54F', result.remaining ? 14 : 18);
+            }
         } catch (e) { if (active()) this.showFloatingText(e.message || '收蛋失敗，請稍後重試', '#F44336', 16); }
         finally {
             if (active()) {

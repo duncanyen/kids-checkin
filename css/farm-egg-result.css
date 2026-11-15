@@ -1,0 +1,26 @@
+/* 原始 PNG 九宮格延伸空白內頁；邊角、木框、圖示及按鈕均來自使用者素材。 */
+.farm-egg-result-overlay{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:calc(24px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px));box-sizing:border-box;background:#0009;overscroll-behavior:contain;touch-action:pan-y;animation:egg-shade-in .15s ease-out}
+.farm-egg-result-panel:focus{outline:none}
+.farm-egg-result-panel{position:relative;width:min(94vw,520px,calc((100dvh - 64px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * .66));aspect-ratio:.66;container-type:inline-size;color:#442407;font-family:system-ui,sans-serif;isolation:isolate;animation:egg-panel-in .18s ease-out}
+.farm-egg-result-panel::before{content:'';position:absolute;inset:0;z-index:-1;border:solid transparent;border-width:45px 30px 42px;border-image:url('../assets/farm/egg-result/v1/egg_result_panel.png') 100 65 85 fill / 45px 30px 42px stretch;pointer-events:none}
+.farm-egg-result-panel img{display:block;object-fit:contain;pointer-events:none;user-select:none}
+.farm-egg-result-panel>img,.farm-egg-result-panel>button,.farm-egg-result-total,.farm-egg-result-rows,.farm-egg-result-remaining{position:absolute;box-sizing:border-box}
+.farm-egg-result-title{top:-4%;left:13%;width:73%;height:14%}
+.farm-egg-result-panel button{margin:0;padding:0;border:0;background:none;cursor:pointer;touch-action:manipulation;transition:transform .12s}
+.farm-egg-result-panel button:active{transform:scale(.95)}
+.farm-egg-result-panel button:focus-visible,.farm-egg-result-rows:focus-visible{outline:2px solid #eebd54;outline-offset:2px}
+.farm-egg-result-panel button img{width:100%;height:100%}
+.farm-egg-result-close{top:-1%;right:0;width:14%;aspect-ratio:122/126}
+.farm-egg-result-illustration{top:8%;left:14%;width:72%;height:24%}
+.farm-egg-result-total{top:32%;left:7%;width:86%;height:13%;display:flex;align-items:center;justify-content:center;padding:0 2% 0 23%;gap:1%;background:url('../assets/farm/egg-result/v1/egg_result_total_banner.png') center/100% 100% no-repeat;font-size:4.2cqw;font-weight:850;white-space:nowrap}
+.farm-egg-result-total strong{font-size:9cqw;color:#b94d00;animation:egg-number-in .24s ease-out}
+.farm-egg-result-section{top:47%;left:26%;width:48%;height:6%}
+.farm-egg-result-rows{top:54%;left:10%;width:80%;height:24%;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:thin;display:flex;flex-direction:column;gap:5%;}
+.farm-egg-result-row{flex:0 0 28%;min-height:28%;display:grid;place-items:center;padding:1% 4%;box-sizing:border-box;background:url('../assets/farm/egg-result/v1/egg_result_row.png') center/100% 100% no-repeat;font-size:5cqw;font-weight:800;overflow-wrap:anywhere;text-align:center}
+.farm-egg-result-storage{top:79%;left:18%;width:64%;height:8%}
+.farm-egg-result-remaining{top:86%;left:8%;width:84%;margin:0;text-align:center;font-size:2.7cqw;font-weight:700}
+.farm-egg-result-confirm{top:89%;left:22%;width:56%;height:9%}
+@keyframes egg-shade-in{from{opacity:0}to{opacity:1}}
+@keyframes egg-panel-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+@keyframes egg-number-in{from{transform:scale(.85);filter:brightness(1.5)}to{transform:scale(1);filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.farm-egg-result-overlay,.farm-egg-result-panel,.farm-egg-result-total strong{animation:none}.farm-egg-result-panel button{transition:none}}

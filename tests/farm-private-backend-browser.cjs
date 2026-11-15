@@ -4,8 +4,9 @@ const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=re
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 const resumeMode=process.env.RESUME_PENDING_BATTLE;
+const eggResultTests=process.env.EGG_RESULT_TESTS==='1';
 (async()=>{
- const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection;
+ const db=new MemoryDB(),stamp=Date.now(),tokens=new Map(),calls=[],errors=[];let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
@@ -23,6 +24,7 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
   await page.exposeFunction('__saveDb',async op=>{if(op.kind==='get')return structuredClone(db.data.get(op.path));throw Error('Private mode attempted direct Firestore write: '+op.kind);});
   await page.exposeFunction('__privateServer',async(name,data)=>{
    calls.push({name,action:data.action});
+   if(failCollection&&data.action==='homeEncounter')throw Object.assign(Error('隔離測試：收蛋交易失敗'),{code:'functions/failed-precondition'});
    if(name==='photoSession')return{token:'opaque-'+sequence++};
    const compatibleData={...data};if(legacyHarvestBackend&&data.action==='homeEncounter')delete compatibleData.collectWhenClear;
    const request={auth,data:compatibleData};
@@ -71,6 +73,72 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
    assert.deepEqual(errors,[]);assert.ok(!startupLogs.some(message=>message.includes('farm-transaction-failure')));
    console.log('PASS pending '+resumeMode+' battle resumes with original health/deadline, survives reload, settles expired loss once and permits feeding; welcome preparation never returns 400');return;
   }
+  if(eggResultTests){
+   releaseHarvest();releaseCollection();
+   // 原有背景 settlePoultry 會更新相容時間欄位；驗收比較所有經濟、雞隻與庫存資料。
+   const savedState=()=>{const state=structuredClone(db.data.get('groups/A/users/alice').farm);delete state.lastLayTime;return state;};
+   const seed=async(ready,limit=20000)=>{
+    const farm=db.data.get('groups/A/users/alice').farm;
+    farm.hensState=Object.entries(ready).flatMap(([breed,n])=>Array.from({length:Math.max(1,Math.ceil(n/6))},(_,i)=>({id:breed+i,breed,laidAt:Date.now(),isSick:false})));
+    farm.hens=farm.hensState.length;farm.readyEggs={hen:0,silkie:0,bresse:0,onagadori:0,...ready};farm.eggsReady=Object.values(ready).reduce((a,b)=>a+b,0);farm.warehouseLimit=limit;
+    await page.evaluate(()=>window.__privateEmitAll());
+    await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').isSaveReady());
+   };
+   const collect=()=>page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');await Promise.all([s.harvestEgg(),s.harvestEgg()]);await window.__privateEmitAll();});
+   const closed=async(button='.farm-egg-result-confirm')=>{
+    const before=savedState(),count=calls.filter(c=>['homeEncounter','collectEggs'].includes(c.action)).length;
+    await page.evaluate(selector=>{const b=document.querySelector(selector);b.click();b.click();},button);
+    assert.equal(await page.locator('.farm-egg-result-overlay').count(),0);
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').input.enabled),true);
+    assert.equal(calls.filter(c=>['homeEncounter','collectEggs'].includes(c.action)).length,count);assert.deepEqual(savedState(),before);
+   };
+   for(const [ready,total,rows]of [[{silkie:1},1,1],[{bresse:3},3,1],[{silkie:4,bresse:3,onagadori:5},12,3],[{hen:120},120,1],[{hen:1,silkie:1,bresse:1,onagadori:1},4,4]]){
+    await seed(ready);await collect();await page.waitForSelector('.farm-egg-result-panel');
+    assert.equal(await page.locator('.farm-egg-result-total strong').textContent(),String(total));
+    assert.equal(await page.locator('.farm-egg-result-row').count(),rows);
+    assert.equal(await page.locator('.farm-egg-result-row img').count(),0);
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').input.enabled),false);
+    assert.equal(db.data.get('groups/A/users/alice').farm.eggsReady,0);
+    if(total===12){
+     for(const [width,height]of [[320,568],[375,667],[390,844],[430,932],[360,800],[768,1024],[844,390]]){
+      await page.setViewportSize({width,height});
+      const layout=await page.evaluate(()=>{const panel=document.querySelector('.farm-egg-result-panel'),button=document.querySelector('.farm-egg-result-confirm'),r=panel.getBoundingClientRect(),b=button.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,buttonBottom:b.bottom,viewport:innerWidth,height:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth};});
+      assert.ok(layout.left>=0&&layout.right<=layout.viewport&&layout.top>=0&&layout.bottom<=layout.height&&layout.buttonBottom<=layout.height,JSON.stringify(layout));assert.equal(layout.overflow,false);
+      if(width===390)await page.screenshot({path:'/tmp/nexus-egg-result-mixed-mobile.png'});
+      if(width===320)await page.screenshot({path:'/tmp/nexus-egg-result-small-mobile.png'});
+     }
+     await page.setViewportSize({width:390,height:844});
+    }
+    if(rows===4){
+     assert.equal(await page.locator('.farm-egg-result-rows').evaluate(n=>n.scrollHeight>n.clientHeight),true);
+     const touch=await page.context().newCDPSession(page),box=await page.locator('.farm-egg-result-rows').boundingBox(),x=box.x+box.width/2,y=box.y+box.height-10;
+     await touch.send('Emulation.setTouchEmulationEnabled',{enabled:true});
+     await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+     for(let step=1;step<=6;step++)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-step*12}]});
+     await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     await page.waitForFunction(()=>document.querySelector('.farm-egg-result-rows').scrollTop>0);
+     await touch.detach();
+    }
+    await closed(total===1?'.farm-egg-result-close':undefined);
+   }
+   const beforeEmpty=calls.filter(c=>['homeEncounter','collectEggs'].includes(c.action)).length;await collect();assert.equal(await page.locator('.farm-egg-result-overlay').count(),0);assert.equal(calls.filter(c=>['homeEncounter','collectEggs'].includes(c.action)).length,beforeEmpty);
+   await seed({hen:2});const beforeFailure=savedState();failCollection=true;await collect();failCollection=false;
+   assert.deepEqual(savedState(),beforeFailure);assert.equal(await page.locator('.farm-egg-result-overlay').count(),0);
+   // 模擬交易已提交後 DOM 建立失敗：不能重送收蛋，也不能把成功交易當作失敗。
+   await page.evaluate(()=>{window.__bodyAppend=document.body.append;document.body.append=function(...nodes){if(nodes.some(n=>n.classList?.contains('farm-egg-result-overlay')))throw Error('fixture UI failure');return window.__bodyAppend.apply(this,nodes);};});
+   const beforeUiFailure=calls.filter(c=>c.action==='homeEncounter').length;await collect();
+   await page.evaluate(()=>document.body.append=window.__bodyAppend);
+   assert.equal(calls.filter(c=>c.action==='homeEncounter').length,beforeUiFailure+1);assert.equal(db.data.get('groups/A/users/alice').farm.eggsReady,0);assert.equal(await page.locator('.farm-egg-result-overlay').count(),0);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').input.enabled),true);
+   const {getUsedSpace}=await import('../js/farm/inventory-core.js');
+   await seed({hen:2},getUsedSpace(db.data.get('groups/A/users/alice').farm)+1);await collect();await page.waitForSelector('.farm-egg-result-panel');
+   assert.equal(await page.locator('.farm-egg-result-total strong').textContent(),'1');assert.ok((await page.locator('.farm-egg-result-remaining').textContent()).includes('1 顆蛋留在雞舍'));assert.equal(db.data.get('groups/A/users/alice').farm.eggsReady,1);await closed();
+   const saved=structuredClone(db.data.get('groups/A/users/alice').farm);await page.reload();await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.inventoryEggs>0);
+   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.inventoryEggs),saved.inventoryEggs);assert.equal(await page.locator('.farm-egg-result-overlay').count(),0);
+   await seed({silkie:2});await collect();await page.waitForSelector('.farm-egg-result-panel');
+   await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('ShopScene'));await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));assert.equal(await page.locator('.farm-egg-result-overlay').count(),0,'離開場景自動清理面板');
+   const daily=await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}});assert.equal(daily.challenges.mission.tasks[0].count,3,'任務仍由有效交易累計並遵守既有上限');
+   assert.deepEqual(errors,[]);console.log('PASS egg results: real Phaser + isolated backend; single/mixed/120 eggs, four scrollable breeds, seven viewports, close/repeated confirmation, empty/failure/UI failure, reload, scene cleanup and daily counter');return;
+  }
   const ownFarm=db.data.get('groups/A/users/alice').farm;
   ownFarm.cleanliness=74;await page.evaluate(()=>window.__privateEmitAll());
   await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('MyFarmScene');window.__rubbishBefore=[...scene.rubbishGroup.getChildren()];window.__hensBefore=[...scene.hensGroup];});
@@ -101,6 +169,17 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
   assert.equal(calls.filter(call=>call.action==='collectEggs').length,legacyHarvestBackend?1:0,'新版後端一次收蛋；舊版回傳時才接續 collectEggs');
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),false);
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').timerText.text.includes('收蛋中')),false);
+  assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);
+  await page.waitForSelector('.farm-egg-result-panel');
+  assert.equal(await page.locator('.farm-egg-result-total strong').textContent(),'3');
+  assert.equal(await page.locator('.farm-egg-result-row').textContent(),'雞蛋 × 3');
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').input.enabled),false);
+  await page.screenshot({path:'/tmp/nexus-egg-result-gameplay-mobile.png'});
+  const collectionCalls=calls.filter(call=>['homeEncounter','collectEggs'].includes(call.action)).length;
+  await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('MyFarmScene');scene.harvestEgg();const button=document.querySelector('.farm-egg-result-confirm');button.click();button.click();});
+  assert.equal(await page.locator('.farm-egg-result-overlay').count(),0);
+  assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').input.enabled),true);
+  assert.equal(calls.filter(call=>['homeEncounter','collectEggs'].includes(call.action)).length,collectionCalls,'結果彈窗及連點確定不重送交易');
   assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);
   await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').harvestEgg());
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),false,'無蛋分支釋放收蛋鎖');

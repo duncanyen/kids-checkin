@@ -107,7 +107,7 @@ export function mountFarmMail(game, context) {
         nextPopupCheck=Date.now()+500;
         if(!game.registry.get('farmInitialReady'))return;
         const scenes=game.scene.getScenes(true);
-        const occupied=scenes.some(scene=>scene.preparingGiant||scene.preparingCobra||scene.preparingMole||scene.preparingEncounter||scene.housingDialog||scene.dialogContainer?.visible||scene.isProcessing||scene.isTreating||
+        const occupied=scenes.some(scene=>scene.isHarvesting||scene.eggResultDialog||scene.preparingGiant||scene.preparingCobra||scene.preparingMole||scene.preparingEncounter||scene.housingDialog||scene.dialogContainer?.visible||scene.isProcessing||scene.isTreating||
             ['giantEncounter','cobraEncounter','moleEncounter','dragonEncounter','gorillaEncounter','eagleEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled)||
             ['wolf','tiger'].some(key=>scene[key]?.active&&!scene[key].getData('resolved')));
         if(occupied||document.querySelector('[data-farm-loading]:not([hidden])')||[...document.querySelectorAll('[role=dialog][aria-modal=true]')].some(dialog=>dialog!==panel&&dialog.getClientRects().length))return;
