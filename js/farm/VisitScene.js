@@ -33,6 +33,12 @@ import { db } from '../firebase-config.js';
 import { doc, onSnapshot, runTransaction, getDoc, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, myFarmRef, STEAL_COOLDOWN_MS, playerName, getUsedSpace } from './constants.js';
 
+let stealResultUI;
+function loadStealResultUI() {
+    if (!stealResultUI) stealResultUI = import('./steal-result-ui.js').catch(error => { stealResultUI = null; throw error; });
+    return stealResultUI;
+}
+
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
 
@@ -70,6 +76,8 @@ export default class VisitScene extends Phaser.Scene {
         this.lastStealBlockedUntil = 0;
         this.henVisualKey = null;
         this.stealFeedback = this.add.text(195, 362, '', { fontSize: '16px', color: '#fff4cc', backgroundColor: '#000a', padding: { x: 10, y: 7 }, align: 'center' }).setOrigin(.5).setDepth(40).setVisible(false);
+        // 結果 UI 為非必要模組，背景預熱，不阻塞拜訪與怪物載入。
+        this.time.delayedCall(100, () => { void loadStealResultUI().then(ui => ui.prepareStealResultAssets()).catch(() => {}); });
         this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this, true);
@@ -658,7 +666,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal() {
-        if (this.isStealing) return;
+        if (this.isStealing || this.eggResultDialog) return;
         if (this.preparingGiant || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.targetFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter)) {
             this.showFloatingText('雞舍確認中，請稍候…', '#FFD54F', 15);
             return;
@@ -736,9 +744,10 @@ export default class VisitScene extends Phaser.Scene {
                 const updates = { [`farm.villageStealCooldowns.${key}`]: now,
                     [`farm.villageStealBlockedUntil.${key}`]: now + (interception?.breed.blockMs || STEAL_COOLDOWN_MS),
                     'farm.moral': Math.max(0, moral - 5) };
-                let eggName;
+                let eggName, selectedEgg;
                 if (!interception) {
                     const egg = takePoultryEgg(target, eggRoll);
+                    selectedEgg = egg;
                     const itemKey = BREEDS[egg.breed].eggKey;
                     updates[`farm.${itemKey}`] = (own[itemKey] || 0) + 1;
                     Object.assign(updates, reportingCounterPatch(own, 'reportStolenEggs', 1));
@@ -749,11 +758,25 @@ export default class VisitScene extends Phaser.Scene {
                 }
                 notify?.();
                 transaction.update(myFarmRef, updates);
-                return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0 };
+                return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0, transactionId: attemptId,
+                    totalEggs: interception ? 0 : selectedEgg.quantity, eggBreed: interception ? null : selectedEgg.breed,
+                    eggSources: interception ? [] : [{ henId: null, breed: selectedEgg.breed, quantity: selectedEgg.quantity }] };
             }));
             if (!this.sys.isActive() || this.visitToken !== token) return;
             if (Number.isFinite(result.blockedUntil)) this.lastStealBlockedUntil = result.blockedUntil;
-            this.showFloatingText(result.success ? `偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
+            let presented = false;
+            if (result.success && result.totalEggs !== 0) {
+                this.stealFeedback.setText('整理收穫…');
+                try {
+                    const ui = await loadStealResultUI();
+                    if (!this.sys.isActive() || this.visitToken !== token) return;
+                    presented = !!await ui.openStealResult(this, result, { accountId: CURRENT_ACCOUNT_ID, groupId: CURRENT_GROUP_ID });
+                } catch {
+                    console.warn('farm-steal-result-display-failure');
+                }
+                if (!this.sys.isActive() || this.visitToken !== token) return;
+            }
+            if (!presented) this.showFloatingText(result.success ? (result.totalEggs === 0 ? '這次沒有偷到雞蛋' : `偷到${result.eggName || '雞蛋'}`) : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
             if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {

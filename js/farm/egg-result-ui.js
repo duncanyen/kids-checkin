@@ -2,10 +2,17 @@ import { eggResultView } from './egg-result.js';
 
 const ASSETS = 'assets/farm/egg-result/v1/';
 const files = ['panel', 'title', 'close', 'illustration', 'total_banner', 'section_title', 'row', 'storage_banner', 'confirm'];
-let prepared;
+const defaultAssets = Object.fromEntries(files.map(file => [file, ASSETS + 'egg_result_' + file + '.png']));
+const prepared = new Map();
 /** 預熱固定素材；只使用瀏覽器圖片快取，不建立 Firebase 讀取或監聽器。 */
 export function prepareEggResultAssets() {
-    if (!prepared) prepared = Promise.all(files.map(file => new Promise((resolve, reject) => {
+    return prepareFarmResultAssets(defaultAssets);
+}
+
+/** 收蛋／偷蛋共用圖片預熱；相同 PNG URL 重用瀏覽器快取。 */
+export function prepareFarmResultAssets(assets) {
+    const urls = [...new Set(Object.values(assets))], key = urls.join('|');
+    if (!prepared.has(key)) prepared.set(key, Promise.all(urls.map(url => new Promise((resolve, reject) => {
         const image = new Image();
         const timer = setTimeout(() => finish(new Error('收蛋結果素材載入逾時')), 8000);
         function finish(error) {
@@ -14,9 +21,9 @@ export function prepareEggResultAssets() {
         }
         image.onload = () => finish();
         image.onerror = () => finish(new Error('收蛋結果素材載入失敗'));
-        image.src = ASSETS + 'egg_result_' + file + '.png';
-    }))).catch(error => { prepared = null; throw error; });
-    return prepared;
+        image.src = url;
+    }))).catch(error => { prepared.delete(key); throw error; }));
+    return prepared.get(key);
 }
 
 /**
@@ -27,9 +34,14 @@ export function prepareEggResultAssets() {
  */
 export async function openEggResult(scene, result) {
     const view = eggResultView(result);
+    return openFarmResult(scene, view);
+}
+
+/** 共用結果容器，只處理顯示與輸入生命週期，不執行遊戲交易。 */
+export async function openFarmResult(scene, view, { assets = defaultAssets, title = '收蛋完成', lead = '本次共收取 ', kind = 'harvest', sourceRows = false, titleOverlay = false } = {}) {
     if (!view) return null;
     if (scene.eggResultDialog) return scene.eggResultDialog;
-    const input = scene.input, before = input.enabled, token = scene.farmSceneToken;
+    const input = scene.input, before = input.enabled, token = scene.farmSceneToken || scene.visitToken;
     const previousFocus = document.activeElement;
     let closed = false, root, dialog;
     const close = () => {
@@ -45,36 +57,49 @@ export async function openEggResult(scene, result) {
     input.enabled = false;
     scene.events.once('shutdown', close); scene.events.once('destroy', close);
     try {
-        await prepareEggResultAssets();
-        if (closed || !scene.sys.isActive() || scene.farmSceneToken !== token) { close(); return null; }
+        await prepareFarmResultAssets(assets);
+        if (closed || !scene.sys.isActive() || (scene.farmSceneToken || scene.visitToken) !== token) { close(); return null; }
         const el = (tag, cls, text) => {
             const node = document.createElement(tag); node.className = cls;
             if (text !== undefined) node.textContent = text;
             return node;
         };
         const art = (file, cls, alt = '') => {
-            const image = el('img', cls); image.src = ASSETS + 'egg_result_' + file + '.png';
+            const image = el('img', cls); image.src = assets[file];
             image.alt = alt; image.draggable = false; return image;
         };
         root = el('div', 'farm-egg-result-overlay');
-        const panel = el('section', 'farm-egg-result-panel');
+        root.dataset.resultKind = kind;
+        const panel = el('section', 'farm-egg-result-panel' + (kind === 'steal' ? ' farm-steal-result-panel' : ''));
         panel.tabIndex = -1;
-        panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-label', '收蛋完成');
+        panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-label', title);
         const button = (file, cls, label) => {
             const node = el('button', cls); node.type = 'button'; node.setAttribute('aria-label', label);
             node.append(art(file, '')); node.onclick = close; return node;
         };
-        const dismiss = button('close', 'farm-egg-result-close', '關閉收蛋完成');
+        const dismiss = button('close', 'farm-egg-result-close', '關閉' + title);
         const confirm = button('confirm', 'farm-egg-result-confirm', '確定');
         const total = el('div', 'farm-egg-result-total');
         const numberText = view.totalEggs.toLocaleString('zh-TW'), number = el('strong', '', numberText);
         number.style.fontSize = Math.min(9, 36 / numberText.length) + 'cqw';
-        total.append(el('span', '', '本次共收取 '), number, el('span', '', ' 顆雞蛋'));
+        total.append(el('span', '', lead), number, el('span', '', ' 顆雞蛋'));
         const rows = el('div', 'farm-egg-result-rows'); rows.setAttribute('aria-label', '本次收穫'); rows.tabIndex = 0;
-        for (const row of view.eggDetails) rows.append(el('div', 'farm-egg-result-row', `${row.eggName} × ${row.quantity.toLocaleString('zh-TW')}`));
+        for (const row of view.eggDetails) {
+            const node = el('div', 'farm-egg-result-row');
+            if (sourceRows) {
+                const label = el('div', 'farm-steal-result-source'), primary = el('span', 'farm-steal-result-name', row.primary);
+                primary.title = row.primary;
+                label.append(primary);
+                node.append(label, el('strong', 'farm-steal-result-quantity', `× ${row.quantity.toLocaleString('zh-TW')}`));
+                node.setAttribute('aria-label', `${row.primary} × ${row.quantity}`);
+            } else node.textContent = `${row.eggName} × ${row.quantity.toLocaleString('zh-TW')}`;
+            rows.append(node);
+        }
         const remaining = el('p', 'farm-egg-result-remaining', view.remaining ? `倉庫空間不足，尚有 ${view.remaining.toLocaleString('zh-TW')} 顆蛋留在雞舍` : '');
         remaining.hidden = !view.remaining;
-        panel.append(art('title', 'farm-egg-result-title', '收蛋完成'), dismiss,
+        const heading = titleOverlay ? el('header', 'farm-egg-result-title') : art('title', 'farm-egg-result-title', title);
+        if (titleOverlay) heading.append(art('title', ''), el('h2', 'farm-steal-result-title-text', title));
+        panel.append(heading, dismiss,
             art('illustration', 'farm-egg-result-illustration'), total,
             art('section_title', 'farm-egg-result-section', '本次收穫'), rows,
             art('storage_banner', 'farm-egg-result-storage', '已放入倉庫'), remaining, confirm);

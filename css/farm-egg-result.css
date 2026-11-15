@@ -5,7 +5,7 @@
 .farm-egg-result-panel::before{content:'';position:absolute;inset:0;z-index:-1;border:solid transparent;border-width:45px 30px 42px;border-image:url('../assets/farm/egg-result/v1/egg_result_panel.png') 100 65 85 fill / 45px 30px 42px stretch;pointer-events:none}
 .farm-egg-result-panel img{display:block;object-fit:contain;pointer-events:none;user-select:none}
 .farm-egg-result-panel>img,.farm-egg-result-panel>button,.farm-egg-result-total,.farm-egg-result-rows,.farm-egg-result-remaining{position:absolute;box-sizing:border-box}
-.farm-egg-result-title{top:-4%;left:13%;width:73%;height:14%}
+.farm-egg-result-title{position:absolute;top:-4%;left:13%;width:73%;height:14%}
 .farm-egg-result-panel button{margin:0;padding:0;border:0;background:none;cursor:pointer;touch-action:manipulation;transition:transform .12s}
 .farm-egg-result-panel button:active{transform:scale(.95)}
 .farm-egg-result-panel button:focus-visible,.farm-egg-result-rows:focus-visible{outline:2px solid #eebd54;outline-offset:2px}
@@ -24,3 +24,14 @@
 @keyframes egg-panel-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 @keyframes egg-number-in{from{transform:scale(.85);filter:brightness(1.5)}to{transform:scale(1);filter:brightness(1)}}
 @media(prefers-reduced-motion:reduce){.farm-egg-result-overlay,.farm-egg-result-panel,.farm-egg-result-total strong{animation:none}.farm-egg-result-panel button{transition:none}}
+
+/* 偷蛋使用相同容器、遮罩與捲動，僅替換附件插畫、空白標題與來源文字列。 */
+.farm-steal-result-panel .farm-egg-result-title{top:-4%;left:6%;width:82%;height:auto;aspect-ratio:1066/233}
+.farm-steal-result-panel .farm-egg-result-title img{width:100%;height:100%}
+.farm-steal-result-title-text{position:absolute;left:56%;top:55%;transform:translate(-50%,-50%);margin:0;white-space:nowrap;color:#fff2cf;font-size:8cqw;font-weight:900;line-height:1.1;text-shadow:1px 2px #632e0b,-1px -1px #632e0b}
+.farm-steal-result-panel .farm-egg-result-total{height:auto;aspect-ratio:755/182}
+.farm-steal-result-panel .farm-egg-result-row{display:flex;justify-content:space-between;gap:5%;text-align:left;flex:0 0 auto;min-height:0;width:100%;aspect-ratio:683/115;padding:1% 5%;font-size:4.6cqw;line-height:1.1}
+.farm-steal-result-source{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
+.farm-steal-result-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.farm-steal-result-breed{font-size:3.2cqw;font-weight:500;line-height:1.15}
+.farm-steal-result-quantity{flex:none;white-space:nowrap;font-size:5cqw}

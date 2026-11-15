@@ -73,9 +73,10 @@ test('rechecking a cleared visit reuses its permit without rerolling; a new visi
 });
 test('combined visit confirmation and theft commits once with the existing scoring, inventory and cooldown rules',async()=>{
  const f=setup(),target={targetGroupId:'A',targetAccountId:'bob'};await f.api.handle(f.req('visitEncounter',target));
- const request=f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true,success:true,quantity:999});
+ const request=f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true,success:true,quantity:999,totalEggs:999,eggSources:[{henId:'forged',henName:'偽造來源',breed:'silkie',quantity:999}]});
  const response=await f.api.handle(request);await f.api.handle(request);
  assert.equal(response.result.steal.success,true);assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261109,1);assert.equal(f.farm().reportStolenEggs,1);
+ assert.equal(response.result.steal.transactionId,response.transactionId);assert.equal(response.result.steal.totalEggs,1);assert.deepEqual(response.result.steal.eggSources,[{henId:null,breed:'hen',quantity:1}]);
  assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,2);
  assert.equal(response.result.steal.blockedUntil,Date.parse('2026-11-14T11:00:00+08:00'));
  await assert.rejects(f.api.handle(f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true})),{code:'failed-precondition'});
@@ -93,6 +94,7 @@ test('combined theft keeps guard-dog randomness independent from the preceding m
  let index=0;f.roll(()=>index++===18?0:.99);
  const response=await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob',stealWhenClear:true}));
  assert.equal(response.result.steal.success,false);assert.equal(response.result.steal.blockMs,4*3600000);assert.equal(f.farm().inventoryEggs,undefined);assert.equal(f.farm().reportStolenEggs,undefined);assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,3);
+ assert.equal(response.result.steal.totalEggs,0);assert.deepEqual(response.result.steal.eggSources,[]);
 });
 test('combined theft preserves private access, warehouse capacity and atomic retry protection',async()=>{
  const target={targetGroupId:'A',targetAccountId:'bob',reusePermit:true,stealWhenClear:true},f=setup();

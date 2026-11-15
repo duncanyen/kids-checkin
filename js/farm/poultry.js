@@ -110,7 +110,7 @@ export function takePoultryEgg(farm, roll = 0, now = Date.now()) {
     let ticket = Math.min(total - 1, Math.floor(Math.max(0, roll) * total)), breed;
     for (const key of Object.keys(BREEDS)) { if (ticket < state.ready[key]) { breed = key; break; } ticket -= state.ready[key]; }
     state.ready[breed]--; releaseFullClocks(state, now);
-    return { breed, patch: poultryPatch(state) };
+    return { breed, quantity: 1, patch: poultryPatch(state) };
 }
 export function tradePoultry(farm, breed, quantity, type, now = Date.now(), ids = []) {
     if (!BREEDS[breed] || !Number.isSafeInteger(quantity) || quantity <= 0 || !['buy', 'sell'].includes(type)) throw new Error('交易內容不正確。');

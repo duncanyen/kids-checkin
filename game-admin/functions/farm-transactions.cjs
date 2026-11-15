@@ -78,13 +78,14 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     if(!(target.farm.eggsReady>0))D.fail('failed-precondition','手腳太慢，蛋不見了');capacity(1);
     const interception=dogs.guardDogInterception(target.farm,rolls[rollOffset],stamp),blockMs=interception?.breed.blockMs||3600000;
     patch={'farm.villageStealCooldowns':{...farm.villageStealCooldowns,[key]:stamp},'farm.villageStealBlockedUntil':{...farm.villageStealBlockedUntil,[key]:stamp+blockMs},'farm.moral':Math.max(0,(farm.moral??100)-5)};
-    result={success:!interception,blockMs:interception?blockMs:0,blockedUntil:stamp+blockMs};
+    result={success:!interception,blockMs:interception?blockMs:0,blockedUntil:stamp+blockMs,transactionId:receiptRef.id,totalEggs:0,eggSources:[]};
     const notice=db.doc(target.ref.path+'/farm_notifications/'+(interception?'guard-':'visit-')+receiptRef.id);
     if(!interception){
      const egg=P.takePoultryEgg(target.farm,rolls[rollOffset+1],stamp),breed=P.BREEDS[egg.breed];targetRef=target.ref;targetFarm=target.farm;targetPatch=egg.patch;
      patch['farm.'+breed.eggKey]=(farm[breed.eggKey]||0)+1;Object.assign(patch,ranking.theftRankingPatch(farm,{now:stamp,publicVillage:(await t.get(db.doc('groups/'+actor.groupId))).data()?.farmVillageVisibility==='public'}));
      patch['farm.reportStolenEggs']=(farm.reportStolenEggs||0)+1;
-     result.eggName=breed.eggName;mailWrites.push(()=>t.create(notice,{type:'visitor',title:'訪客來訪',note:'訪客來偷蛋',createdAt:stamp,readAt:null}));
+     // 待收蛋只按品種存放，沒有蛋→母雞 ID 關聯；只能回傳實際品種，不能從雞群猜來源。
+     result.eggName=breed.eggName;result.eggBreed=egg.breed;result.totalEggs=egg.quantity;result.eggSources=[{henId:null,breed:egg.breed,quantity:egg.quantity}];mailWrites.push(()=>t.create(notice,{type:'visitor',title:'訪客來訪',note:'訪客來偷蛋',createdAt:stamp,readAt:null}));
     }else{
      const body=`${target.name||target.accountId}的${interception.breed.name}成功攔截${actor.name||actor.accountId}偷蛋，保護了雞蛋！對方 ${blockMs/3600000} 小時內無法再偷這座雞舍。`;
      const config=(await t.get(db.doc('groups/'+target.groupId+'/settings/gameConfig'))).data(),roomRef=typeof config?.targetRoomId==='string'&&!config.targetRoomId.includes('/')?db.doc('rooms/'+config.targetRoomId):null,room=roomRef?await t.get(roomRef):null;

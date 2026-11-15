@@ -1,0 +1,108 @@
+{
+  "assets": {
+    "panel": {
+      "file": "steal_result_panel.png",
+      "role": "木質主面板，已含底部兩側花草",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        602,
+        684
+      ]
+    },
+    "close": {
+      "file": "steal_result_close.png",
+      "role": "右上角關閉按鈕",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        122,
+        126
+      ]
+    },
+    "total_banner": {
+      "file": "steal_result_total_banner.png",
+      "role": "金色總數底板，左側已含雞蛋圖示",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        755,
+        182
+      ]
+    },
+    "section_title": {
+      "file": "steal_result_section_title.png",
+      "role": "固定文字「本次收穫」木牌",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        426,
+        98
+      ]
+    },
+    "row": {
+      "file": "steal_result_row.png",
+      "role": "無字無圖明細列",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        683,
+        115
+      ]
+    },
+    "storage_banner": {
+      "file": "steal_result_storage_banner.png",
+      "role": "固定文字「已放入倉庫」",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        570,
+        119
+      ]
+    },
+    "confirm": {
+      "file": "steal_result_confirm.png",
+      "role": "固定文字「確定」",
+      "source": "收蛋完成共用素材",
+      "size_px": [
+        534,
+        148
+      ]
+    },
+    "title": {
+      "file": "steal_result_title.png",
+      "role": "母雞標題木牌，右側留白疊上「偷蛋成功」",
+      "source": "為偷蛋成功頁製作",
+      "size_px": [
+        1066,
+        233
+      ]
+    },
+    "hen": {
+      "file": "steal_result_hen.png",
+      "role": "母雞主插畫，共用裝飾",
+      "source": "為偷蛋成功頁製作",
+      "size_px": [
+        569,
+        616
+      ]
+    }
+  },
+  "overlays": {
+    "title": {
+      "text": "偷蛋成功",
+      "text_center_percent": [
+        56,
+        55
+      ]
+    },
+    "total_banner": {
+      "text": "本次偷到 {totalEggs} 顆雞蛋",
+      "safe_box_xywh_percent": [
+        30,
+        16,
+        65,
+        68
+      ]
+    },
+    "row": {
+      "primary": "henName",
+      "secondary": "breedName",
+      "quantity": "quantity"
+    }
+  }
+}
