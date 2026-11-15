@@ -9,11 +9,17 @@ export const hasPendingBackendBattle=()=>settlements.size>0;
 // 結算本身與背景資料同步不可排在自己後面；其他經濟操作須等伺服器確認戰鬥已結束。
 const duringSettlement=new Set(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureFarm','settlePoultry','settleTarget','ensureWelcome','readMail','deleteMail']);
 export const farmNow=()=>Date.now()+offset;
-async function send(action,payload,id){
+async function send(action,payload,id,context){
  if(!FARM_BACKEND_ENABLED||!PRIVATE_IDENTITY_ENABLED)throw Error('農場共用交易尚未啟用');
  client||=createGameOperationsClient(readGameContext());
  const response=await client.farmTransaction(action,payload,id);
  if(Number.isFinite(response.serverNow))offset=response.serverNow-Date.now();
+ const result=response.result;
+ const legacyProgress=action==='collectEggs'&&result?.total>0||action==='helpClean'||result?.harvest?.total>0||result?.outcome==='win'||result?.result?.outcome==='win';
+ if(response.dailyProgress||legacyProgress){
+  // 只通知相同帳號／群組的 UI；事件不授予發獎權限，真正領獎仍由後端交易驗證。
+  window.dispatchEvent(new CustomEvent('nexus-farm-daily-progress',{detail:{accountId:context.accountId,groupId:context.groupId,progress:response.dailyProgress||null}}));
+ }
  return response.result;
 }
 /** 逾時保留同一 requestId；明確拒絕才釋放，避免下一次不同操作重用收據。 */
@@ -23,7 +29,7 @@ export function farmCommand(action,payload={}){
  const id=sessionStorage.getItem(key)||crypto.randomUUID();sessionStorage.setItem(key,id);
  const barriers=duringSettlement.has(action)?[]:[...settlements.values()];
  let started=false;
- const execute=()=>{started=true;return send(action,payload,id);};
+ const execute=()=>{started=true;return send(action,payload,id,context);};
  const request=barriers.length?Promise.all(barriers).then(execute):execute();
  const work=request.then(result=>{sessionStorage.removeItem(key);return result;}).catch(error=>{
   // 同一 callable 處理多種交易；只記錄動作與公開錯誤，禁止記錄 payload、收據或登入憑證。

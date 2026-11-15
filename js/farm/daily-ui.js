@@ -1,6 +1,6 @@
 import { createGameOperationsClient } from './operations-client.js';
 import { prepareDailyAssets } from './daily-assets-cache.js';
-import { readDailyPreview, writeDailyPreview, removeDailyPreview } from './daily-preview-cache.js';
+import { readDailyPreview, writeDailyPreview, removeDailyPreview, mergeDailyProgress } from './daily-preview-cache.js?v=20261115-read-opt';
 import { hasFarmHudEncounter } from './hud-ui.js';
 const ASSETS='assets/farm/daily-missions/v2/';
 const el=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;};
@@ -114,7 +114,8 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
     function scheduleReset(){
         clearTimeout(refreshTimer);if(root.hidden||!state||disposed)return;
         const remaining=state.nextResetAt-state.serverNow-(performance.now()-clockStart);
-        refreshTimer=setTimeout(()=>{if(document.visibilityState==='visible')void load();else scheduleReset();},Math.min(10000,Math.max(1000,remaining)));
+        // 同裝置交易直接帶回進度；每分鐘保留跨裝置／設定變動確認，午夜仍準時刷新。
+        refreshTimer=setTimeout(()=>{if(document.visibilityState==='visible')void load();else scheduleReset();},Math.min(60000,Math.max(1000,remaining)));
     }
     function load(){
         if(disposed||busy)return Promise.resolve();
@@ -189,10 +190,21 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
     }
     function onVisible(){if(!root.hidden&&document.visibilityState==='visible'){confirmed=false;render();void load();}}
     function onChanged(){changed++;confirmed=false;freshAt=0;removeDailyPreview(context);if(!root.hidden){render();void load();}}
+    function onProgress(event){
+        const detail=event.detail;
+        if(disposed||detail?.accountId!==context.accountId||detail?.groupId!==context.groupId)return;
+        const merged=mergeDailyProgress(state,detail.progress);
+        if(!merged){onChanged();return;}
+        if(merged===state)return;
+        changed++;state=merged;savePreview();
+        if(!root.hidden)render();
+        // 若完整 status 正在途中，load() 的版本檢查會丟棄舊回覆並重新確認，避免倒退。
+    }
     closeButton.addEventListener('click',close);retry.addEventListener('click',()=>void load());claim.addEventListener('click',()=>void claimToday());
     root.addEventListener('click',event=>{if(event.target===root)close();});
     document.addEventListener('keydown',onKey);document.addEventListener('visibilitychange',onVisible);
     game.events.on('step',onStep);game.events.on('dailyChallengeChanged',onChanged);
-    game.events.once('destroy',()=>{close();disposed=true;generation++;clearTimeout(refreshTimer);clearTimeout(warmTimer);if(idleTask&&'cancelIdleCallback' in window)cancelIdleCallback(idleTask);document.removeEventListener('keydown',onKey);document.removeEventListener('visibilitychange',onVisible);game.events.off('step',onStep);game.events.off('dailyChallengeChanged',onChanged);root.remove();});
+    window.addEventListener('nexus-farm-daily-progress',onProgress);
+    game.events.once('destroy',()=>{close();disposed=true;generation++;clearTimeout(refreshTimer);clearTimeout(warmTimer);if(idleTask&&'cancelIdleCallback' in window)cancelIdleCallback(idleTask);document.removeEventListener('keydown',onKey);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('nexus-farm-daily-progress',onProgress);game.events.off('step',onStep);game.events.off('dailyChallengeChanged',onChanged);root.remove();});
     render();return{open,close};
 }

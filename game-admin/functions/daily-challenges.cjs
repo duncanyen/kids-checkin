@@ -1,5 +1,6 @@
 /** 每日挑戰只使用伺服器時間及既有 farm.coins；未驗證的遊戲事件不可累計。 */
 const D=require('./domain.cjs');
+const {reuseTransactionReads}=require('./transaction-reads.cjs');
 const TYPES=['checkin','mission'];
 const TASKS=[
     {type:'COLLECT_EGG_ACTION',name:'收取雞蛋',target:3,enabled:true},
@@ -42,17 +43,18 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
     const refFor=(collection,uid,type,date)=>db.doc(`${collection}/${D.hash([uid,type,date].filter(Boolean).join(':'))}`);
     async function prepare(t,identity,types,stamp){
         const config=configValue((await t.get(configRef)).data());
-        const today=dateKey(stamp),rows=[];
+        const today=dateKey(stamp);
         // 所有讀取先於寫入；status 的日快照鎖定今日金額及任務規格。
-        for(const type of types){
+        const rows=await Promise.all(types.map(async type=>{
             const stateRef=refFor('ops_daily_states',identity.uid,type),dayRef=refFor('ops_daily_days',identity.uid,type,today);
-            const [stateSnapshot,snapshot]=await Promise.all([t.get(stateRef),t.get(dayRef)]),state=stateSnapshot.data();
+            // 今日快照已包含七日循環；只有新的一天才需要讀取上次領獎狀態。
+            const snapshot=await t.get(dayRef),state=snapshot.exists?null:(await t.get(stateRef)).data();
             const data=snapshot.data()||{uid:identity.uid,accountId:identity.accountId,type,dateKey:today,
                 ...nextDay(state,today,config[type].missedDayPolicy,identity.uid,type),
                 rewards:config[type].rewards,policyVersion:config.version,missedDayPolicy:config[type].missedDayPolicy,
                 tasks:type==='mission'?config.mission.tasks:[],progress:{},claimedAt:null,grantId:null,createdAt:stamp};
-            rows.push({type,stateRef,dayRef,data,isNew:!snapshot.exists});
-        }
+            return{type,stateRef,dayRef,data,isNew:!snapshot.exists};
+        }));
         const producers=await trustedReady(t)?{...verifiedProducers,...FARM_PRODUCERS}:verifiedProducers;
         return{config,today,rows,producers};
     }
@@ -74,7 +76,8 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         await throttle('daily:'+identity.uid,60,60000);
         const action=request.data?.action;
         if(!['status','claim'].includes(action))D.fail('invalid-argument','未知的每日挑戰操作');
-        return db.runTransaction(async t=>{
+        return db.runTransaction(async transaction=>{
+            const t=reuseTransactionReads(transaction);
             const current=await player(request,t),stamp=now();
             if(action==='status'){
                 const prepared=await prepare(t,current,TYPES,stamp);
@@ -137,7 +140,11 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         if(prepared.producers[event.type]!==event.producer)D.fail('failed-precondition','每日任務尚未完成安全切換');
         const counted=prepared.config.mission.enabled&&task&&!row.data.grantId;
         const progress=counted?{...row.data.progress,[event.type]:Math.min(task.target,(row.data.progress[event.type]||0)+1)}:row.data.progress;
-        return()=>{if(counted)t.set(row.dayRef,{...row.data,progress});t.create(receiptRef,{uid:current.uid,accountId:current.accountId,groupId:current.groupId,type:event.type,dateKey:prepared.today,result:counted?'counted':'ignored',createdAt:stamp});};
+        const increased=counted&&progress[event.type]>(row.data.progress[event.type]||0);
+        const write=()=>{if(increased)t.set(row.dayRef,{...row.data,progress});t.create(receiptRef,{uid:current.uid,accountId:current.accountId,groupId:current.groupId,type:event.type,dateKey:prepared.today,result:counted?'counted':'ignored',createdAt:stamp});};
+        // 進度與經濟變更同筆提交後才回傳；UI 不必為同一次操作再查詢完整 status。
+        write.dailyProgress={serverNow:stamp,dateKey:prepared.today,mission:view({...row,data:{...row.data,progress}},prepared.config,prepared.producers)};
+        return write;
     }
     async function adminRead(action,payload={}) {
         if(action==='dailyConfig')return{config:configValue((await configRef.get()).data()),verifiedProducers:await trustedReady()?{...verifiedProducers,...FARM_PRODUCERS}:verifiedProducers};

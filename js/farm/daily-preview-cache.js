@@ -38,3 +38,27 @@ export function writeDailyPreview(context,value,{storage,now=Date.now()}={}){
     }catch{ /* Storage limits/private mode must not prevent playing or claiming. */ }
 }
 export function removeDailyPreview(context,{storage}={}){try{storage ||= globalThis.localStorage;storage.removeItem(key(context));}catch{}}
+
+/** 合併同日、同循環的後端交易顯示進度；重送／較慢回覆不能倒退已完成或已領取狀態。 */
+export function mergeDailyProgress(state,update){
+    const current=state?.challenges?.mission,incoming=update?.mission;
+    if(!current||!incoming||typeof update.dateKey!=='string'||!Number.isFinite(update.serverNow))return null;
+    if(update.dateKey<state.dateKey)return state;
+    if(update.dateKey!==state.dateKey||incoming.cycleId!==current.cycleId||incoming.day!==current.day||
+        incoming.policyVersion!==current.policyVersion||incoming.enabled!==current.enabled||incoming.blocked!==current.blocked||
+        !Array.isArray(incoming.tasks)||incoming.tasks.length!==current.tasks.length)return null;
+    const tasks=[];
+    for(const task of current.tasks){
+        const matches=incoming.tasks.filter(row=>row.type===task.type),next=matches[0];
+        if(matches.length!==1||next.target!==task.target||next.enabled!==task.enabled||next.verified!==task.verified||
+            !Number.isSafeInteger(next.count)||next.count<0||next.count>task.target)return null;
+        tasks.push({...task,count:Math.max(task.count,next.count)});
+    }
+    const claimed=!!current.claimed||!!incoming.claimed;
+    const enabledTasks=tasks.filter(task=>task.enabled);
+    const mission={...current,tasks,claimed,grantId:current.grantId||incoming.grantId||null,claimedAt:current.claimedAt||incoming.claimedAt||null,
+        canClaim:current.enabled&&!current.blocked&&!claimed&&enabledTasks.length>0&&enabledTasks.every(task=>task.count>=task.target)};
+    if(tasks.every((task,index)=>task.count===current.tasks[index].count)&&mission.claimed===current.claimed&&
+        mission.grantId===current.grantId&&mission.claimedAt===current.claimedAt&&mission.canClaim===current.canClaim)return state;
+    return{...state,challenges:{...state.challenges,mission}};
+}

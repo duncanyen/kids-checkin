@@ -171,6 +171,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }
    const response={transactionId:receiptRef.id,action,serverNow:stamp,result};
    const progressWrite=event&&prepareProgress?await prepareProgress(t,actor,{...event,id:receiptRef.id,producer:'farm-transactions-v1',occurredAt:stamp},stamp):null;
+   if(progressWrite?.dailyProgress)response.dailyProgress=progressWrite.dailyProgress;
    if(Object.keys(patch).length){const next=apply(farm,patch);if(!Number.isSafeInteger(next.coins)||next.coins<0||inventory.INVENTORY_KEYS.some(key=>key in next&&(!Number.isSafeInteger(next[key])||next[key]<0)))D.fail('failed-precondition','存檔數值不正確，未變更資源');t.update(farmRef,{farm:next});}if(targetRef)t.update(targetRef,{farm:apply(targetFarm,targetPatch)});
    if(nextSession!==session)t.set(sessionRef,nextSession);for(const write of mailWrites)write();progressWrite?.();
    t.create(receiptRef,{uid:actor.uid,accountId:actor.accountId,groupId:actor.groupId,fingerprint,createdAt:stamp,response});

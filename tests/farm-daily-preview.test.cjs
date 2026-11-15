@@ -26,3 +26,17 @@ test('Taiwan midnight, device clock rollback, old/schema-invalid data and privat
  const blocked={getItem(){throw Error('private mode');},setItem(){throw Error('quota');},removeItem(){throw Error('private mode');}};
  assert.equal(readDailyPreview(context,{storage:blocked}),null);assert.doesNotThrow(()=>writeDailyPreview(context,data,{storage:blocked}));
 });
+test('verified progress merges monotonically; stale dates, changed rules and different cycles never overwrite current state',async()=>{
+ const {mergeDailyProgress}=await moduleReady,state=await snapshot();
+ const update={serverNow:state.serverNow,dateKey:state.dateKey,mission:structuredClone(state.challenges.mission)};
+ update.mission.tasks[0].count=2;
+ const merged=mergeDailyProgress(state,update);assert.equal(merged.challenges.mission.tasks[0].count,2);assert.equal(state.challenges.mission.tasks[0].count,0);
+ update.mission.tasks[0].count=1;assert.equal(mergeDailyProgress(merged,update).challenges.mission.tasks[0].count,2);
+ merged.challenges.mission.claimed=true;merged.challenges.mission.grantId='claimed';
+ assert.equal(mergeDailyProgress(merged,update).challenges.mission.claimed,true);
+ assert.equal(mergeDailyProgress(merged,{...update,dateKey:'2026-11-12'}),merged);
+ assert.equal(mergeDailyProgress(merged,{...update,dateKey:'2026-11-14'}),null);
+ for(const mutate of [m=>m.cycleId='other',m=>m.policyVersion='other',m=>m.tasks[0].target++,m=>m.tasks[0].count=-1]){
+  const next=structuredClone(update);mutate(next.mission);assert.equal(mergeDailyProgress(state,next),null);
+ }
+});

@@ -26,6 +26,32 @@ test('combined clear harvest atomically awards eggs and one daily operation; rep
  await assert.rejects(f.service.farmTransaction(f.request('homeEncounter',{collectWhenClear:true})),{code:'failed-precondition'});
  await assert.rejects(f.service.farmTransaction({...request,data:{...request.data,collectWhenClear:false}}),{code:'already-exists'});
 });
+test('warm daily status reads only today snapshots and shares transaction reads without caching authorization across requests',async()=>{
+ const f=fixture();await f.service.dailyChallenges(f.request('status'));f.reads.length=0;
+ await f.service.dailyChallenges(f.request('status'));
+ assert.equal(f.reads.length,14);
+ assert.equal(f.reads.filter(path=>path.startsWith('ops_daily_states/')).length,0);
+ assert.equal(f.reads.filter(path=>path.startsWith('ops_daily_days/')).length,2);
+ assert.equal(f.reads.filter(path=>path==='ops_identity_state/global').length,2,'前置與交易內各自核對；同次交易內共用全域狀態');
+ assert.equal(f.reads.filter(path=>path==='ops_identity_credentials/alice-profile').length,2);
+ f.onAuth(()=>f.db.data.set('ops_player_controls/alice-profile',{blocked:true}));
+ await assert.rejects(f.service.dailyChallenges(f.request('status')),{code:'permission-denied'});
+});
+test('committed game results carry verified progress; capped tasks keep receipts without rewriting the daily document',async()=>{
+ const f=fixture();
+ const collect=async()=>{
+  f.farm().readyEggs.hen=1;f.farm().eggsReady=1;
+  return f.service.farmTransaction(f.request('homeEncounter',{collectWhenClear:true}));
+ };
+ for(let i=1;i<=3;i++){
+  const result=await collect();assert.equal(result.dailyProgress.mission.tasks[0].count,i);
+  assert.equal(result.dailyProgress.dateKey,'2026-11-14');
+ }
+ const [path,before]=[...f.db.data].find(([key])=>key.startsWith('ops_daily_days/'));
+ const fourth=await collect();assert.equal(fourth.dailyProgress.mission.tasks[0].count,3);
+ assert.equal(f.db.data.get(path),before,'達標後不重寫未改變的每日進度');
+ assert.equal([...f.db.data.keys()].filter(key=>key.startsWith('ops_daily_events/')).length,4,'有效事件防重紀錄仍保留');
+});
 test('two-device distinct requests cannot collect the same eggs twice',async()=>{
  const f=fixture(),results=await Promise.allSettled([f.service.farmTransaction(f.request('homeEncounter',{collectWhenClear:true})),f.service.farmTransaction(f.request('homeEncounter',{collectWhenClear:true}))]);
  assert.equal(results.filter(result=>result.status==='fulfilled').length,1);assert.equal(f.farm().inventoryEggs,3);
