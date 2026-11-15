@@ -11,7 +11,7 @@ import { mountHalloween } from './halloween.js';
 import { preloadSceneAssets, finishSceneAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
-import { configureFarmViewport } from './viewport.js';
+import { configureFarmViewport, farmView } from './viewport.js';
 import { visitorNotice } from './mail-store.js';
 import { stealBlockedUntil, guardDogInterception } from './guard-dog-core.js';
 import { prepareGuardDogNotice } from './guard-dog-notices.js';
@@ -67,6 +67,9 @@ export default class VisitScene extends Phaser.Scene {
         this.targetFarmData = null;
         this.myFarmData = null; 
         this.isStealing = false; 
+        this.lastStealBlockedUntil = 0;
+        this.henVisualKey = null;
+        this.stealFeedback = this.add.text(195, 362, '', { fontSize: '16px', color: '#fff4cc', backgroundColor: '#000a', padding: { x: 10, y: 7 }, align: 'center' }).setOrigin(.5).setDepth(40).setVisible(false);
         this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this, true);
@@ -96,9 +99,12 @@ export default class VisitScene extends Phaser.Scene {
         this.createConfirmDialog();
         this.initFirebase();
         mountGuardDog(this,()=>this.targetFarmData);
+        this.resizeStealTargets = () => this.hensGroup.forEach(hen => this.sizeStealTarget(hen));
+        this.events.on('farm-viewport-resize', this.resizeStealTargets);
 
         onSceneExit(this, () => {
             this.visitToken = null;
+            this.events.off('farm-viewport-resize', this.resizeStealTargets);
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             this.groupUnsubscribes?.forEach(unsubscribe => unsubscribe());
@@ -172,7 +178,7 @@ export default class VisitScene extends Phaser.Scene {
         });
     }
 
-    async startVisitEncounter({ verify = false } = {}) {
+    async startVisitEncounter({ verify = false, stealWhenClear = false, onSteal } = {}) {
         if (this.visitEncounterPending) return this.visitEncounterPending;
         if (!this.myFarmData || !this.targetFarmData) return false;
         if (this.hasRolledEncounter && !verify) return this.visitEncounterReady;
@@ -189,11 +195,12 @@ export default class VisitScene extends Phaser.Scene {
                 }
                 if (!active()) return false;
                 const payload = { ...visitPayload(this), reusePermit: !first };
+                if (stealWhenClear && !first) payload.stealWhenClear = true;
                 let authorized = FARM_BACKEND_ENABLED ? await farmCommand('visitEncounter', payload) : null;
                 if (!active()) return false;
                 // 前一次其他雞舍的戰鬥可能在這次請求才結算；先保留原損失，再確認本次目標。
                 if (FARM_BACKEND_ENABLED && authorized?.result && !authorized.challenge) {
-                    authorized = await farmCommand('visitEncounter', { ...visitPayload(this), reusePermit: true });
+                    authorized = await farmCommand('visitEncounter', { ...payload, reusePermit: true });
                     if (!active()) return false;
                 }
                 if (FARM_BACKEND_ENABLED) {
@@ -208,6 +215,7 @@ export default class VisitScene extends Phaser.Scene {
                 else if (encounter === 'wolf') this.spawnWolfEvent();
                 else if (first && await maybeStartGiant(this)) return false;
                 if (active()) this.visitEncounterReady = !encounter;
+                if (this.visitEncounterReady && authorized?.steal && onSteal) onSteal(authorized.steal);
                 return this.visitEncounterReady;
             } catch (error) {
                 if (active()) {
@@ -315,6 +323,10 @@ export default class VisitScene extends Phaser.Scene {
         const henCount = hensState.length;
         const now = Date.now();
         setCoopSize(this.coop, this.targetFarmData.coopLevel);
+        // 蛋數、金幣或冷卻更新不改變雞隻外觀，保留原精靈與點擊事件，避免整群跳動。
+        const visualKey = JSON.stringify(hensState.map(h => [h.id, h.breed, !!h.isSick, h.sickTimestamp || 0, !!(h.isSick && h.sickTimestamp && now - h.sickTimestamp > 24 * 3600000)]));
+        if (visualKey === this.henVisualKey) return;
+        this.henVisualKey = visualKey;
 
         this.hensGroup.forEach(h => {
             h.walkTimer?.remove();
@@ -331,6 +343,7 @@ export default class VisitScene extends Phaser.Scene {
             const { x: cx, y: cy } = randomHenPosition(this);
             // 加入 setScale(2)
             let newHen = addPoultrySprite(this, hensState[i], cx, cy);
+            this.sizeStealTarget(newHen);
 
             const hState = hensState[i] || {};
             newHen.hState = hState;
@@ -346,13 +359,23 @@ export default class VisitScene extends Phaser.Scene {
 
             newHen.on('pointerdown', () => {
                 // 同步放大偷蛋點擊時的比例
-                this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
+                if (!this.isStealing) this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
                 this.attemptSteal(); 
             });
 
             this.hensGroup.push(newHen);
             this.wanderSingleHen(newHen);
         }
+    }
+
+    sizeStealTarget(hen) {
+        if (!hen?.input) return;
+        const zoom = farmView(this).zoom;
+        const width = Math.max(hen.width, 44 / zoom / Math.abs(hen.scaleX));
+        const height = Math.max(hen.height, 44 / zoom / Math.abs(hen.scaleY));
+        hen.input.hitArea = new Phaser.Geom.Rectangle((hen.width - width) / 2, (hen.height - height) / 2, width, height);
+        hen.input.hitAreaCallback = Phaser.Geom.Rectangle.Contains;
+        hen.input.customHitArea = true;
     }
 
     wanderSingleHen(henSprite, fleeing = false) {
@@ -635,7 +658,11 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal() {
-        if (this.preparingGiant || this.isStealing || this.preparingMole || this.preparingCobra || !this.myFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter)) return;
+        if (this.isStealing) return;
+        if (this.preparingGiant || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.targetFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter)) {
+            this.showFloatingText('雞舍確認中，請稍候…', '#FFD54F', 15);
+            return;
+        }
         const predator = [this.wolf, this.tiger].find(sprite => sprite?.active && !sprite.getData('resolved'));
         if (predator) {
             this.showFloatingText('請先擊退怪物並完成結算！', '#FFD54F', 16);
@@ -649,7 +676,7 @@ export default class VisitScene extends Phaser.Scene {
         const safeX = 195, safeY = 422 - 60;
         const key = villageTargetKey(this.targetGroupId, this.targetAccountId);
         const blockedUntil = farm => stealBlockedUntil(farm, key, this.targetGroupId === CURRENT_GROUP_ID ? this.targetAccountId : null);
-        if (Date.now() < blockedUntil(this.myFarmData)) {
+        if (farmNow() < Math.max(blockedUntil(this.myFarmData), this.lastStealBlockedUntil)) {
             this.showFloatingText('剛偷過這座雞舍，請稍後再來！', '#F44336', 15, safeX, safeY);
             return;
         }
@@ -672,6 +699,7 @@ export default class VisitScene extends Phaser.Scene {
         }
         this.emptyClickCount = 0;
         this.isStealing = true;
+        this.stealFeedback.setText('確認雞舍中…').setVisible(true);
         const targetRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId);
         const roll = Math.random(); // A Firestore retry keeps the same attempt outcome.
         const eggRoll = Math.random();
@@ -682,11 +710,14 @@ export default class VisitScene extends Phaser.Scene {
         try {
             // hasRolledEncounter 只代表已開始檢查；慢網路時須等待同一個後端確認工作。
             // 再確認也可恢復被其他分頁／裝置切換的拜訪目標，後端仍驗證怪物及權限。
-            if (FARM_BACKEND_ENABLED && !await this.startVisitEncounter({ verify: true })) return;
+            let combinedSteal;
+            if (FARM_BACKEND_ENABLED && !await this.startVisitEncounter({ verify: true, stealWhenClear: true, onSteal: result => { combinedSteal = result; } })) return;
             if (!this.sys.isActive() || this.visitToken !== token) return;
+            this.stealFeedback.setText('正在偷蛋…');
             const rankingClock = holidayClock(this.game);
             if(!FARM_BACKEND_ENABLED)await rankingClock.refresh();
-            const result = await farmCommandOrLegacy('stealEgg',visitPayload(this),()=>this.runVisitTransaction(async transaction => {
+            // 新後端同一交易完成確認與偷蛋；舊後端／仍在初次確認時保留原直接偷蛋流程。
+            const result = combinedSteal || await farmCommandOrLegacy('stealEgg',visitPayload(this),()=>this.runVisitTransaction(async transaction => {
                 const targetDoc = await transaction.get(targetRef);
                 const ownDoc = await transaction.get(myFarmRef);
                 const target = targetDoc.data()?.farm, own = ownDoc.data()?.farm;
@@ -721,6 +752,7 @@ export default class VisitScene extends Phaser.Scene {
                 return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0 };
             }));
             if (!this.sys.isActive() || this.visitToken !== token) return;
+            if (Number.isFinite(result.blockedUntil)) this.lastStealBlockedUntil = result.blockedUntil;
             this.showFloatingText(result.success ? `偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
             if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
@@ -729,7 +761,7 @@ export default class VisitScene extends Phaser.Scene {
                 this.showFloatingText(`${error.message || error}`, '#F44336', 16, safeX, safeY);
                 this.cameras.main.shake(300, 0.01);
             }
-        } finally { if (this.visitToken === token) this.isStealing = false; }
+        } finally { if (this.visitToken === token) { this.isStealing = false; this.stealFeedback.setVisible(false); } }
     }
 
     createConfirmDialog() {
@@ -757,7 +789,7 @@ export default class VisitScene extends Phaser.Scene {
         this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
-    showFloatingText(msg, color, fontSize = 22, x, y) {
+    showFloatingText(msg, color, fontSize = 22, x = 195, y = 362) {
         const floatTxt = this.add.text(x, y, msg, { fontSize: `${fontSize}px`, fontFamily: 'monospace', color: color, fontStyle: 'bold', stroke: '#000000', strokeThickness: 3, align: 'center' }).setOrigin(0.5).setDepth(20);
         this.tweens.add({ targets: floatTxt, y: floatTxt.y - 40, alpha: 0, duration: 1500, onComplete: () => floatTxt.destroy() });
     }

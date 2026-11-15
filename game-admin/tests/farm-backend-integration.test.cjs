@@ -7,7 +7,7 @@ function setup(){
  for(const id of ['alice','bob'])db.data.set('groups/A/users/'+id,{farm:structuredClone(farm),other:'keep'});
  const player=async r=>{assert.equal(r.auth.uid,'profile');return{uid:'profile',accountId:'alice',groupId:'A'};};
  const daily=createDailyChallenges({db,now:()=>stamp,player,playerSession:player,throttle:async()=>{},trustedReady:async()=>true});
- const api=createFarmTransactions({db,player,now:()=>stamp,random:()=>roll,enabled:()=>true,prepareProgress:daily.prepareProgress});
+ const api=createFarmTransactions({db,player,now:()=>stamp,random:()=>typeof roll==='function'?roll():roll,enabled:()=>true,prepareProgress:daily.prepareProgress});
  const req=(action,p={})=>({auth:{uid:'profile'},data:{groupId:'A',action,requestId:crypto.randomUUID(),...p}});
  return{db,api,daily,req,clock:ms=>stamp+=ms,roll:n=>roll=n,farm:()=>db.data.get('groups/A/users/alice').farm,status:async()=>(await daily.handle(req('status'))).challenges.mission};
 }
@@ -70,6 +70,41 @@ test('rechecking a cleared visit reuses its permit without rerolling; a new visi
  await f.api.handle(f.req('stealEgg',target));assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261109,1);
  const fresh=await f.api.handle(f.req('visitEncounter',target));assert.equal(fresh.result.kind,'gorilla');
  await assert.rejects(f.api.handle(f.req('stealEgg',target)),{code:'failed-precondition'});
+});
+test('combined visit confirmation and theft commits once with the existing scoring, inventory and cooldown rules',async()=>{
+ const f=setup(),target={targetGroupId:'A',targetAccountId:'bob'};await f.api.handle(f.req('visitEncounter',target));
+ const request=f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true,success:true,quantity:999});
+ const response=await f.api.handle(request);await f.api.handle(request);
+ assert.equal(response.result.steal.success,true);assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261109,1);assert.equal(f.farm().reportStolenEggs,1);
+ assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,2);
+ assert.equal(response.result.steal.blockedUntil,Date.parse('2026-11-14T11:00:00+08:00'));
+ await assert.rejects(f.api.handle(f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true})),{code:'failed-precondition'});
+});
+test('combined theft never bypasses an active or expired monster battle',async()=>{
+ const f=setup(),target={targetGroupId:'A',targetAccountId:'bob'};f.roll(0);
+ const request=()=>f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true});
+ const started=await f.api.handle(request());assert.equal(started.result.kind,'gorilla');assert.equal(started.result.steal,undefined);assert.equal(f.farm().inventoryEggs,undefined);
+ const pending=await f.api.handle(request());assert.equal(pending.result.challenge.id,started.result.challenge.id);assert.equal(pending.result.steal,undefined);
+ f.clock(50000);const expired=await f.api.handle(request());assert.equal(expired.result.result.outcome,'loss');assert.equal(expired.result.steal,undefined);assert.equal(f.farm().inventoryEggs,undefined);assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,0);
+});
+test('combined theft keeps guard-dog randomness independent from the preceding monster rolls',async()=>{
+ const f=setup(),stamp=Date.parse('2026-11-14T10:00:00+08:00');
+ f.db.data.get('groups/A/users/bob').farm.guardDogs=[{id:'guard',breedId:'pyrenees',days:1,startedAt:stamp-1000,expiresAt:stamp+86400000}];
+ let index=0;f.roll(()=>index++===18?0:.99);
+ const response=await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob',stealWhenClear:true}));
+ assert.equal(response.result.steal.success,false);assert.equal(response.result.steal.blockMs,4*3600000);assert.equal(f.farm().inventoryEggs,undefined);assert.equal(f.farm().reportStolenEggs,undefined);assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,3);
+});
+test('combined theft preserves private access, warehouse capacity and atomic retry protection',async()=>{
+ const target={targetGroupId:'A',targetAccountId:'bob',reusePermit:true,stealWhenClear:true},f=setup();
+ await assert.rejects(f.api.handle(f.req('visitEncounter',{...target,stealWhenClear:'true'})),{code:'invalid-argument'});
+ await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}));
+ f.farm().warehouseLimit=1;f.farm().inventoryEggs=1;
+ await assert.rejects(f.api.handle(f.req('visitEncounter',target)),{code:'failed-precondition'});assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,3);
+ f.farm().warehouseLimit=100;f.farm().inventoryEggs=0;const request=f.req('visitEncounter',target);f.db.failAward=true;
+ await assert.rejects(f.api.handle(request),/simulated/);assert.equal(f.farm().inventoryEggs,0);assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,3);
+ await f.api.handle(request);await f.api.handle(request);assert.equal(f.farm().inventoryEggs,1);assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,2);
+ f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'closed'});f.db.data.set('groups/B/users/alice',{farm:structuredClone(f.farm())});
+ await assert.rejects(f.api.handle(f.req('visitEncounter',{...target,targetGroupId:'B',targetAccountId:'alice'})),{code:'permission-denied'});
 });
 test('visit recheck cannot reuse another target permit and expired battles keep their original losses',async()=>{
  const f=setup();f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});f.db.data.set('groups/B/users/alice',{farm:structuredClone(f.farm())});

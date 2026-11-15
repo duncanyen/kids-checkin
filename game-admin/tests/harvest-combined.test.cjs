@@ -100,3 +100,15 @@ test('combined harvest uses fewer reads and matches the old two-call farm result
  assert.equal(combined.reads.filter(path=>path==='groups/A/users/alice').length,1);
  console.log('isolated harvest document reads:',JSON.stringify({twoCalls:old.reads.length,combinedCall:combined.reads.length}));
 });
+test('combined visit and theft saves authorization reads while keeping the same final farms',async()=>{
+ const old=fixture(),combined=fixture(),target={targetGroupId:'A',targetAccountId:'bob'};
+ for(const f of [old,combined]){
+  f.db.data.get('groups/A').members.push('bob');f.db.data.set('users/bob-profile',{accountId:'bob',name:'Bob',role:'member'});
+  f.db.data.set('groups/A/users/bob',{farm:structuredClone(f.farm())});await f.service.farmTransaction(f.request('visitEncounter',target));f.reads.length=0;
+ }
+ await old.service.farmTransaction(old.request('visitEncounter',{...target,reusePermit:true}));await old.service.farmTransaction(old.request('stealEgg',target));
+ await combined.service.farmTransaction(combined.request('visitEncounter',{...target,reusePermit:true,stealWhenClear:true}));
+ assert.deepEqual(combined.farm(),old.farm());assert.deepEqual(combined.db.data.get('groups/A/users/bob').farm,old.db.data.get('groups/A/users/bob').farm);assert.ok(combined.reads.length<old.reads.length);
+ assert.equal(combined.reads.filter(path=>path==='ops_identity_credentials/alice-profile').length,2,'前置及交易內仍重新驗證目前憑證');
+ console.log('isolated theft document reads:',JSON.stringify({twoCalls:old.reads.length,combinedCall:combined.reads.length}));
+});

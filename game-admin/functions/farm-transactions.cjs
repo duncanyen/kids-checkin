@@ -12,6 +12,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
   if(!await enabled())D.fail('failed-precondition','共用交易尚未完成安全切換');
   const p=request.data||{},action=D.enumValue(p.action,['collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
+  if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
   const requestId=D.requestId(p.requestId),models=await load(),[P,inventory,combat,housing,,,,,,garden,dogs,ranking,save]=models;
   const qty=['tradePoultry','buyWeapon','buyMedicine','sellItem','expandWarehouse'].includes(action)?positive(p.quantity):null;
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
@@ -64,34 +65,21 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     if(nextSession.result)nextSession={...nextSession,harvested:true};
     event={type:'COLLECT_EGG_ACTION',collected:collected.total};return collected;
    };
-   if(combatActions.includes(action)){
-    // 切換雞舍時仍可能需要先結算舊戰鬥；任何損失都必須使用原戰鬥目標，不能套到新雞舍。
-    const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
-    const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id});
-    patch=response.patch;result=response.result;event=response.event;nextSession=response.session;
-    if(response.targetFarm){if(target.ref.path===farmRef.path)Object.assign(patch,{'farm.readyEggs':response.targetFarm.readyEggs,'farm.eggsReady':response.targetFarm.eggsReady,'farm.hensState':response.targetFarm.hensState,'farm.hens':response.targetFarm.hens,'farm.poultryVersion':response.targetFarm.poultryVersion,'farm.lastLayTime':response.targetFarm.lastLayTime,'farm.cleanliness':response.targetFarm.cleanliness});else{targetRef=target.ref;targetFarm=response.targetFarm;targetPatch={};}}
-    // 僅將原本可直接收蛋的分支合併。未結束的怪物仍回傳 challenge；逾時／勝利補結算保留原流程及獨立事件。
-    if(action==='homeEncounter'&&p.collectWhenClear===true&&result===null)result={kind:null,harvest:collect()};
-   }else if(action==='settleTarget'){
-    const target=await readTarget(p.targetGroupId,p.targetAccountId);targetRef=target.ref;targetFarm=target.farm;targetPatch=P.poultryPatch(P.settlePoultry(target.farm,stamp));
-   }else if(action==='searchGarden'){
-    if(p.targetAccountId)await readTarget(p.targetGroupId,p.targetAccountId);
-    if(farm.moleChallenge)D.fail('failed-precondition','請先擊退地鼠');
-    const found=garden.gardenFindForRoll(1+Math.floor(rolls[0]*garden.GARDEN_ROLL_SIZE));result={caught:false,foundType:found};
-    if(found&&inventory.getUsedSpace(farm)<(farm.warehouseLimit||10)){patch['farm.'+found]=(farm[found]||0)+1;patch['farm.gardenCatchCount']=(farm.gardenCatchCount||0)+1;result.caught=true;}
-   }else if(action==='stealEgg'){
-    const target=await readTarget(p.targetGroupId,p.targetAccountId);if(!session||session.targetGroupId!==target.groupId||session.targetAccountId!==target.accountId||!session.visitPermit&&!session.kind)D.fail('failed-precondition','請先進入此村落並完成怪物事件');
+   // 直接偷蛋與確認後偷蛋共用相同交易邏輯，不接受客戶端指定成功、數量或冷卻。
+   const steal=async(target,rollOffset=0)=>{
+    const session=nextSession;let result;
+    if(!session||session.targetGroupId!==target.groupId||session.targetAccountId!==target.accountId||!session.visitPermit&&!session.kind)D.fail('failed-precondition','請先進入此村落並完成怪物事件');
     // 農場以群組＋帳號識別；同一帳號在另一村落的雞舍是獨立存檔，仍適用跨村落偷蛋規則。
     if(target.groupId===actor.groupId&&target.accountId===actor.accountId)D.fail('invalid-argument','不能偷自己的蛋');
     const key=encodeURIComponent(JSON.stringify([target.groupId,target.accountId])).replaceAll('.', '%2E');
     if(stamp<dogs.stealBlockedUntil(farm,key,target.groupId===actor.groupId?target.accountId:null))D.fail('failed-precondition','這座雞舍仍在禁偷時間內');
     if(!(target.farm.eggsReady>0))D.fail('failed-precondition','手腳太慢，蛋不見了');capacity(1);
-    const interception=dogs.guardDogInterception(target.farm,rolls[0],stamp),blockMs=interception?.breed.blockMs||3600000;
+    const interception=dogs.guardDogInterception(target.farm,rolls[rollOffset],stamp),blockMs=interception?.breed.blockMs||3600000;
     patch={'farm.villageStealCooldowns':{...farm.villageStealCooldowns,[key]:stamp},'farm.villageStealBlockedUntil':{...farm.villageStealBlockedUntil,[key]:stamp+blockMs},'farm.moral':Math.max(0,(farm.moral??100)-5)};
-    result={success:!interception,blockMs:interception?blockMs:0};
+    result={success:!interception,blockMs:interception?blockMs:0,blockedUntil:stamp+blockMs};
     const notice=db.doc(target.ref.path+'/farm_notifications/'+(interception?'guard-':'visit-')+receiptRef.id);
     if(!interception){
-     const egg=P.takePoultryEgg(target.farm,rolls[1],stamp),breed=P.BREEDS[egg.breed];targetRef=target.ref;targetFarm=target.farm;targetPatch=egg.patch;
+     const egg=P.takePoultryEgg(target.farm,rolls[rollOffset+1],stamp),breed=P.BREEDS[egg.breed];targetRef=target.ref;targetFarm=target.farm;targetPatch=egg.patch;
      patch['farm.'+breed.eggKey]=(farm[breed.eggKey]||0)+1;Object.assign(patch,ranking.theftRankingPatch(farm,{now:stamp,publicVillage:(await t.get(db.doc('groups/'+actor.groupId))).data()?.farmVillageVisibility==='public'}));
      patch['farm.reportStolenEggs']=(farm.reportStolenEggs||0)+1;
      result.eggName=breed.eggName;mailWrites.push(()=>t.create(notice,{type:'visitor',title:'訪客來訪',note:'訪客來偷蛋',createdAt:stamp,readAt:null}));
@@ -100,6 +88,27 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
      const config=(await t.get(db.doc('groups/'+target.groupId+'/settings/gameConfig'))).data(),roomRef=typeof config?.targetRoomId==='string'&&!config.targetRoomId.includes('/')?db.doc('rooms/'+config.targetRoomId):null,room=roomRef?await t.get(roomRef):null;
      mailWrites.push(()=>{t.create(notice,{type:'system',title:'護衛犬成功保護雞蛋',body,createdAt:stamp,readAt:null});if(room?.data()?.groupId===target.groupId){t.set(db.doc('messages/guard-'+receiptRef.id),{groupId:target.groupId,roomId:roomRef.id,sender:'村落廣播',text:body,timestamp:new Date(stamp),isSystem:true,time:new Intl.DateTimeFormat('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Taipei'}).format(stamp)});t.update(roomRef,{lastMessage:'村落廣播: '+body,lastMessageTime:new Date(stamp)});}});
     }
+    return result;
+   };
+   if(combatActions.includes(action)){
+    // 切換雞舍時仍可能需要先結算舊戰鬥；任何損失都必須使用原戰鬥目標，不能套到新雞舍。
+    const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
+    const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id});
+    patch=response.patch;result=response.result;event=response.event;nextSession=response.session;
+    if(response.targetFarm){if(target.ref.path===farmRef.path)Object.assign(patch,{'farm.readyEggs':response.targetFarm.readyEggs,'farm.eggsReady':response.targetFarm.eggsReady,'farm.hensState':response.targetFarm.hensState,'farm.hens':response.targetFarm.hens,'farm.poultryVersion':response.targetFarm.poultryVersion,'farm.lastLayTime':response.targetFarm.lastLayTime,'farm.cleanliness':response.targetFarm.cleanliness});else{targetRef=target.ref;targetFarm=response.targetFarm;targetPatch={};}}
+    // 僅將原本可直接收蛋的分支合併。未結束的怪物仍回傳 challenge；逾時／勝利補結算保留原流程及獨立事件。
+    if(action==='homeEncounter'&&p.collectWhenClear===true&&result===null)result={kind:null,harvest:collect()};
+    // 合併模式使用獨立亂數，避免「未抽到怪物」改變護衛犬攔截率或雞蛋種類分布。
+    if(action==='visitEncounter'&&p.stealWhenClear===true&&result===null)result={kind:null,steal:await steal(target,18)};
+   }else if(action==='settleTarget'){
+    const target=await readTarget(p.targetGroupId,p.targetAccountId);targetRef=target.ref;targetFarm=target.farm;targetPatch=P.poultryPatch(P.settlePoultry(target.farm,stamp));
+   }else if(action==='searchGarden'){
+    if(p.targetAccountId)await readTarget(p.targetGroupId,p.targetAccountId);
+    if(farm.moleChallenge)D.fail('failed-precondition','請先擊退地鼠');
+    const found=garden.gardenFindForRoll(1+Math.floor(rolls[0]*garden.GARDEN_ROLL_SIZE));result={caught:false,foundType:found};
+    if(found&&inventory.getUsedSpace(farm)<(farm.warehouseLimit||10)){patch['farm.'+found]=(farm[found]||0)+1;patch['farm.gardenCatchCount']=(farm.gardenCatchCount||0)+1;result.caught=true;}
+   }else if(action==='stealEgg'){
+    result=await steal(await readTarget(p.targetGroupId,p.targetAccountId));
    }else if(['ensureWelcome','claimWelcome','readMail','deleteMail'].includes(action)){
     const welcomeId='welcome-v1',reward={coins:1000,worms:8,earthworms:4},mail=owner.data().farmMail||{};
     if(action==='ensureWelcome'){
