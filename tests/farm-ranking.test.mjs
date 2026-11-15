@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rankFarmPlayers, theftRankingPatch, theftRankingStatus, THEFT_RANKING_START, THEFT_RANKING_END, THEFT_RANKING_FIELD } from '../js/farm/ranking-core.js';
+import { rankFarmPlayers, theftRankingPatch, theftRankingStatus, THEFT_RANKING_START, THEFT_RANKING_END, THEFT_RANKING_FIELD, FARM_RANKINGS } from '../js/farm/ranking-core.js';
 import { readFileSync } from 'node:fs';
 
 test('rankings separate the same account across groups, deduplicate farms and cap at ten', () => {
-    const rows = Array.from({length:15}, (_,i) => ({ groupId:'A', groupName:'同名群組', accountId:`p${String(i).padStart(2,'0')}`,name:`玩家${i}`,farm:{stolenEggs20261109:i} }));
-    rows.push({groupId:'B',groupName:'同名群組',accountId:'p01',name:'玩家1',farm:{stolenEggs20261109:20}},
-        {groupId:'A',accountId:'zero',farm:{}}, {groupId:'A',accountId:'bad',farm:{stolenEggs20261109:Infinity}});
-    const original=structuredClone(rows), result=rankFarmPlayers(rows,'stolenEggs20261109');
+    const rows = Array.from({length:15}, (_,i) => ({ groupId:'A', groupName:'同名群組', accountId:`p${String(i).padStart(2,'0')}`,name:`玩家${i}`,farm:{stolenEggs20261116:i} }));
+    rows.push({groupId:'B',groupName:'同名群組',accountId:'p01',name:'玩家1',farm:{stolenEggs20261116:20}},
+        {groupId:'A',accountId:'zero',farm:{}}, {groupId:'A',accountId:'bad',farm:{stolenEggs20261116:Infinity}});
+    const original=structuredClone(rows), result=rankFarmPlayers(rows,'stolenEggs20261116');
     assert.equal(result.length,10);assert.equal(result[0].accountId,'p01');assert.equal(result[0].score,20);
     assert.equal(result[0].groupId,'B');assert.equal(result[1].score,14);assert.deepEqual(rows,original);
     const farms=[{groupId:'B',groupName:'乙',accountId:'same',name:'玩家',farm:{n:3}}, {groupId:'A',groupName:'甲',accountId:'same',name:'玩家',farm:{n:4}}];
@@ -22,8 +22,8 @@ test('ranking reads exclude closed villages, removed members/profiles and mid-re
     const docs={
         'groups/A':{...groups[0],members:['self','removed']},
         'groups/B':groups[1], 'groups/C':{...groups[2],farmVillageVisibility:'private'},
-        'groups/A/users/self':{farm:{stolenEggs20261109:3}},'groups/B/users/self':{farm:{stolenEggs20261109:4}},
-        'groups/A/users/ex-member':{farm:{stolenEggs20261109:500}},'groups/C/users/other':{farm:{stolenEggs20261109:600}},
+        'groups/A/users/self':{farm:{stolenEggs20261116:3}},'groups/B/users/self':{farm:{stolenEggs20261116:4}},
+        'groups/A/users/ex-member':{farm:{stolenEggs20261116:500}},'groups/C/users/other':{farm:{stolenEggs20261116:600}},
     };
     const profiles=[{accountId:'self',name:'我'},{accountId:'removed',role:'removed'},{accountId:'ex-member'},{accountId:'other'}];
     globalThis.__rankingFixture={groups,docs,profiles};
@@ -43,12 +43,13 @@ test('ranking reads exclude closed villages, removed members/profiles and mid-re
 });
 
 test('fixed Taipei contest dates include the start and exclude the midnight cutoff', () => {
-    assert.equal(THEFT_RANKING_START, Date.parse('2026-11-08T16:00:00Z'));
-    assert.equal(THEFT_RANKING_END, Date.parse('2026-11-15T16:00:00Z'));
+    assert.equal(FARM_RANKINGS.stolenEggs.period, '記錄期間：2026/11/16 08:00:00～2026/11/23 00:00:00（台灣時間）');
+    assert.equal(THEFT_RANKING_START, Date.parse('2026-11-16T00:00:00Z'));
+    assert.equal(THEFT_RANKING_END, Date.parse('2026-11-22T16:00:00Z'));
     const farm = { [THEFT_RANKING_FIELD]: 8, stolenEggsTotal: 999 };
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_START - 1, publicVillage: true }), {});
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_START, publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
-    assert.deepEqual(theftRankingPatch(farm, { now: Date.parse('2026-11-15T00:00:00+08:00'), publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
+    assert.deepEqual(theftRankingPatch(farm, { now: Date.parse('2026-11-22T00:00:00+08:00'), publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_END - 1, publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_END, publicVillage: true }), {});
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_START, publicVillage: false }), {});
@@ -60,12 +61,12 @@ test('fixed Taipei contest dates include the start and exclude the midnight cuto
 });
 
 test('new contest resets every previous participant and only accumulates the new period',()=>{
-    const previous=[1,300,9999].map((score,i)=>({groupId:'A',accountId:'p'+i,farm:{stolenEggs20261102:score,stolenEggsTotal:score+100}}));
+    const previous=[1,300,9999].map((score,i)=>({groupId:'A',accountId:'p'+i,farm:{stolenEggs20261109:score,stolenEggsTotal:score+100}}));
     const original=structuredClone(previous);
-    assert.equal(THEFT_RANKING_FIELD,'stolenEggs20261109');
+    assert.equal(THEFT_RANKING_FIELD,'stolenEggs20261116');
     assert.deepEqual(rankFarmPlayers(previous,THEFT_RANKING_FIELD),[]);
-    for(const row of previous)assert.deepEqual(theftRankingPatch(row.farm,{now:THEFT_RANKING_START,publicVillage:true}),{'farm.stolenEggs20261109':1});
+    for(const row of previous)assert.deepEqual(theftRankingPatch(row.farm,{now:THEFT_RANKING_START,publicVillage:true}),{'farm.stolenEggs20261116':1});
     assert.deepEqual(previous,original,'reading or beginning the new period must not alter the archived scores');
-    const current=[...previous,{groupId:'B',accountId:'new',farm:{stolenEggs20261102:99999,stolenEggs20261109:2}}];
+    const current=[...previous,{groupId:'B',accountId:'new',farm:{stolenEggs20261109:99999,stolenEggs20261116:2}}];
     assert.deepEqual(rankFarmPlayers(current,THEFT_RANKING_FIELD).map(row=>[row.accountId,row.score]),[['new',2]]);
 });

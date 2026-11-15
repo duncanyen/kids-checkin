@@ -1,21 +1,21 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 module.exports=async function checkRankings(page,{docs,owner,errors,probe}){
- await page.clock.setFixedTime(new Date('2026-11-12T04:00:00Z'));
+ await page.clock.setFixedTime(new Date('2026-11-17T04:00:00Z'));
  const launcher=page.getByRole('button',{name:'開啟排行榜',exact:true});
  const panel=page.locator('.farm-ranking-panel');
  const open=async()=>{await launcher.click();await page.waitForFunction(()=>document.querySelector('.farm-ranking-content').getAttribute('aria-busy')==='false');};
  const close=async()=>{await panel.getByRole('button',{name:'關閉',exact:true}).click();};
  const sceneId=await page.evaluate(()=>{window.__rankingOriginalScene=__farmGame.scene.getScene('MyFarmScene');return true;});assert.equal(sceneId,true);
  await open();assert.equal(await page.locator('.farm-ranking-row').count(),0);assert.equal(await page.locator('.farm-ranking-empty').isVisible(),true);assert.match(await page.locator('.farm-ranking-status').innerText(),/記錄中.*公開村落.*Top 10/);await close();
- docs['users/self']={accountId:'self',name:'單人測試'};docs[owner].farm.stolenEggs20261109=23;
+ docs['users/self']={accountId:'self',name:'單人測試'};docs[owner].farm.stolenEggs20261116=23;
  await open();assert.equal(await page.locator('.farm-ranking-row').count(),1);assert.equal(await page.locator('.farm-ranking-row--gold img').count(),1);await close();
- docs['users/neighbor']={accountId:'neighbor',name:'第二位成員'};docs['groups/A/users/neighbor'].farm.stolenEggs20261109=12;
+ docs['users/neighbor']={accountId:'neighbor',name:'第二位成員'};docs['groups/A/users/neighbor'].farm.stolenEggs20261116=12;
  await open();assert.equal(await page.locator('.farm-ranking-row').count(),2);await close();
  const groupName='這是非常非常長的村落名稱用來確認不會破版'.repeat(3);
  docs['groups/Rank']={name:groupName,members:Array.from({length:12},(_,i)=>'rank'+i),farmVillageVisibility:'public'};
- for(let i=0;i<12;i++){docs['users/rank'+i]={accountId:'rank'+i,name:i===0?'非常非常長的玩家名稱'.repeat(8):'測試成員'+i};docs['groups/Rank/users/rank'+i]={farm:{stolenEggs20261109:10000-i*100}};}
- docs['groups/B/users/self'].farm.stolenEggs20261109=999999;
+ for(let i=0;i<12;i++){docs['users/rank'+i]={accountId:'rank'+i,name:i===0?'非常非常長的玩家名稱'.repeat(8):'測試成員'+i};docs['groups/Rank/users/rank'+i]={farm:{stolenEggs20261116:10000-i*100}};}
+ docs['groups/B/users/self'].farm.stolenEggs20261116=999999;
  await open();assert.equal(await page.locator('.farm-ranking-row').count(),10);assert.match(await page.locator('.farm-ranking-score').first().textContent(),/10,000 顆/);assert.equal(await page.locator('.farm-ranking-row--normal .farm-ranking-place-number').allTextContents().then(rows=>rows.join(',')),'4,5,6,7,8,9,10');
  assert.equal(await page.locator('.farm-ranking-person strong').first().evaluate(node=>getComputedStyle(node).textOverflow),'ellipsis');
  assert.equal(await page.evaluate(()=>__farmGame.input.enabled),false);
@@ -43,7 +43,7 @@ module.exports=async function checkRankings(page,{docs,owner,errors,probe}){
  // 快速重開，共用進行中的查詢；關閉後完成不會重新打開或重新鎖定場景。
  let releaseAgain,startedAgain;const beganAgain=new Promise(resolve=>startedAgain=resolve),waitAgain=new Promise(resolve=>releaseAgain=resolve);probe.gate={wait:waitAgain,started:startedAgain};const beforeAgain=probe.reads;
  await launcher.click();await beganAgain;await close();for(let i=0;i<4;i++){await launcher.click();await close();}assert.equal(probe.reads,beforeAgain+1);releaseAgain();await page.waitForTimeout(80);assert.equal(await page.locator('.farm-ranking-overlay').isHidden(),true);assert.equal(await page.evaluate(()=>__farmGame.input.enabled),true);
- await page.clock.setFixedTime(new Date('2026-11-16T04:00:00Z'));await open();assert.match(await page.locator('.farm-ranking-status').textContent(),/已截止/);await page.keyboard.press('Escape');assert.equal(await page.locator('.farm-ranking-overlay').isHidden(),true);
+ await page.clock.setFixedTime(new Date('2026-11-23T04:00:00Z'));await open();assert.match(await page.locator('.farm-ranking-status').textContent(),/已截止/);await page.keyboard.press('Escape');assert.equal(await page.locator('.farm-ranking-overlay').isHidden(),true);
  assert.equal(await page.evaluate(()=>__farmGame.scene.getScene('MyFarmScene')===__rankingOriginalScene),true);assert.deepEqual(errors,[]);
  console.log('PASS ranking V2: empty/1/2/Top10, real query fixture, medal ranks 4–10, long names, 10,000 scores, 8 viewport layouts, scrolling, refresh dedupe, Firebase failure, rapid close/reopen, expired period and unchanged scene.');
 };
