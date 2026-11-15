@@ -81,7 +81,12 @@ test('visit recheck cannot reuse another target permit and expired battles keep 
  await assert.rejects(f.api.handle(f.req('stealEgg',target)),{code:'failed-precondition'});
  f.roll(.99);await f.api.handle(f.req('visitEncounter',target));await f.api.handle(f.req('stealEgg',target));assert.equal(f.farm().inventoryEggs,1);
 });
-test('successful theft after the existing event deadline still updates inventory and lifetime report, not the closed leaderboard',async()=>{
+test('the extended November 15 window increments the existing leaderboard score atomically and replay adds nothing',async()=>{
+ const f=setup();f.clock(24*3600000);f.farm().stolenEggs20261109=7;const target={targetGroupId:'A',targetAccountId:'bob'};
+ await f.api.handle(f.req('visitEncounter',target));const req=f.req('stealEgg',target);await f.api.handle(req);await f.api.handle(req);
+ assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261109,8);
+});
+test('successful theft after the November 16 deadline still updates inventory and lifetime report, not the closed leaderboard',async()=>{
  const f=setup();f.clock(48*3600000);const target={targetGroupId:'A',targetAccountId:'bob'};
  await f.api.handle(f.req('visitEncounter',target));const req=f.req('stealEgg',target);await f.api.handle(req);await f.api.handle(req);
  assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261109,undefined);

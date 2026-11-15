@@ -44,10 +44,11 @@ test('ranking reads exclude closed villages, removed members/profiles and mid-re
 
 test('fixed Taipei contest dates include the start and exclude the midnight cutoff', () => {
     assert.equal(THEFT_RANKING_START, Date.parse('2026-11-08T16:00:00Z'));
-    assert.equal(THEFT_RANKING_END, Date.parse('2026-11-14T16:00:00Z'));
+    assert.equal(THEFT_RANKING_END, Date.parse('2026-11-15T16:00:00Z'));
     const farm = { [THEFT_RANKING_FIELD]: 8, stolenEggsTotal: 999 };
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_START - 1, publicVillage: true }), {});
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_START, publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
+    assert.deepEqual(theftRankingPatch(farm, { now: Date.parse('2026-11-15T00:00:00+08:00'), publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_END - 1, publicVillage: true }), { ['farm.'+THEFT_RANKING_FIELD]: 9 });
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_END, publicVillage: true }), {});
     assert.deepEqual(theftRankingPatch(farm, { now: THEFT_RANKING_START, publicVillage: false }), {});
