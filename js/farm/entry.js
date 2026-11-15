@@ -7,6 +7,7 @@ import { farmLoading } from './loading-ui.js';
 farmLoading.begin();
 // 下載引擎時同步確認成員；constants 不阻塞模組載入，Boot 等 membershipReady 才開放私人場景。
 import('./constants.js').catch(() => farmLoading.error('無法確認群組，請返回重試。'));
+let stage = 'engine';
 const engine = window.Phaser ? Promise.resolve() : new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js';
@@ -15,13 +16,17 @@ const engine = window.Phaser ? Promise.resolve() : new Promise((resolve, reject)
     script.onerror = () => { clearTimeout(timeout); script.remove(); reject(Error('engine failed')); };
     document.head.append(script);
 });
-engine.then(() => { farmLoading.progress(5, '準備農莊畫面'); return import('./main.js'); })
+engine.then(() => { stage = 'game-module'; farmLoading.progress(5, '載入遊戲程式'); return import('./main.js'); })
     .catch(error => {
         // 動態匯入的例外也會到這裡；保留原因，避免把程式初始化錯誤誤判成斷線。
         console.error('farm-startup-failure', JSON.stringify({
+            stage,
             name: error?.name || 'Error',
             code: error?.code || null,
             message: error?.message || 'Unknown startup error'
         }));
-        farmLoading.error('遊戲程式載入失敗，請檢查連線後重試。');
+        const failedDownload = error instanceof TypeError && /fetch|import|load|network/i.test(error.message || '');
+        farmLoading.error(stage === 'engine' ? '遊戲引擎載入失敗，請檢查連線後重試。' :
+            failedDownload ? '遊戲程式載入失敗，部分程式未能下載，請重新載入。' :
+            '遊戲程式載入失敗，初始化發生錯誤，請重新載入；若持續發生，請提供 Console 的 farm-startup-failure 訊息。');
     });

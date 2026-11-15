@@ -114,7 +114,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  await page.waitForFunction(()=>window.__farmGame?.registry.get('farmInitialReady'));
  assert.equal(await page.evaluate(()=>__farmGame.registry.get('myFarmData').coins),3141);
  // A CDN failure is visible even before Phaser exists.
- failEngine=true;await page.reload();await page.waitForFunction(()=>document.querySelector('[data-loading-status]').textContent.includes('遊戲程式載入失敗'));
+ failEngine=true;await page.reload();await page.waitForFunction(()=>document.querySelector('[data-loading-status]').textContent.includes('遊戲引擎載入失敗'));
  assert.equal(await page.evaluate(()=>!!window.__farmGame),false);
  failEngine=false;await Promise.all([page.waitForEvent('domcontentloaded'),page.locator('[data-loading-retry]').click()]);
  await page.waitForFunction(()=>window.__farmGame?.registry.get('farmInitialReady'));

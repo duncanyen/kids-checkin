@@ -51,6 +51,8 @@ export default class VisitScene extends Phaser.Scene {
         this.visitToken = Symbol('visit');
         this.emptyClickCount = 0;
         this.hasRolledEncounter = false;
+        this.visitEncounterPending = null;
+        this.visitEncounterReady = false;
         this.giantEncounter = null; this.preparingGiant = false;
         this.preparingCobra = false;
         this.moleEncounter = null; this.preparingMole = false; this.gardenSearching = false;
@@ -170,23 +172,54 @@ export default class VisitScene extends Phaser.Scene {
         });
     }
 
-    async startVisitEncounter() {
-        if (this.hasRolledEncounter || !this.myFarmData || !this.targetFarmData) return;
+    async startVisitEncounter({ verify = false } = {}) {
+        if (this.visitEncounterPending) return this.visitEncounterPending;
+        if (!this.myFarmData || !this.targetFarmData) return false;
+        if (this.hasRolledEncounter && !verify) return this.visitEncounterReady;
+        const token = this.visitToken, first = !this.hasRolledEncounter;
+        const active = () => this.sys.isActive() && this.visitToken === token;
         this.hasRolledEncounter = true;
-        const token = this.visitToken;
-        if (this.myFarmData.giantChallenge && await maybeStartGiant(this)) return;
-        if (this.myFarmData.moleChallenge && await maybeStartMole(this)) return;
-        if (await maybeStartCobra(this)) return;
-        if (!this.sys.isActive() || this.visitToken !== token) return;
-        const authorized=FARM_BACKEND_ENABLED?await farmCommand('visitEncounter',visitPayload(this)):null;
-        if(FARM_BACKEND_ENABLED){if(!this.sys.isActive()||this.visitToken!==token||!routeBackendChallenge(this,authorized))return;this.backendChallenge=authorized?.challenge||null;}
-        const encounter = FARM_BACKEND_ENABLED?authorized?.kind:rollVisitEncounter(this.targetFarmData.coopLevel);
-        if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
-        else if (encounter === 'gorilla') this.spawnGorillaEvent();
-        else if (encounter === 'dragon') this.spawnDragonEvent();
-        else if (encounter === 'tiger') this.spawnTigerEvent();
-        else if (encounter === 'wolf') this.spawnWolfEvent();
-        else await maybeStartGiant(this);
+        this.visitEncounterReady = false;
+        const work = (async () => {
+            try {
+                if (first) {
+                    if (this.myFarmData.giantChallenge && await maybeStartGiant(this)) return false;
+                    if (this.myFarmData.moleChallenge && await maybeStartMole(this)) return false;
+                    if (await maybeStartCobra(this)) return false;
+                }
+                if (!active()) return false;
+                const payload = { ...visitPayload(this), reusePermit: !first };
+                let authorized = FARM_BACKEND_ENABLED ? await farmCommand('visitEncounter', payload) : null;
+                if (!active()) return false;
+                // 前一次其他雞舍的戰鬥可能在這次請求才結算；先保留原損失，再確認本次目標。
+                if (FARM_BACKEND_ENABLED && authorized?.result && !authorized.challenge) {
+                    authorized = await farmCommand('visitEncounter', { ...visitPayload(this), reusePermit: true });
+                    if (!active()) return false;
+                }
+                if (FARM_BACKEND_ENABLED) {
+                    if (!routeBackendChallenge(this, authorized)) return false;
+                    this.backendChallenge = authorized?.challenge || null;
+                }
+                const encounter = FARM_BACKEND_ENABLED ? authorized?.kind : rollVisitEncounter(this.targetFarmData.coopLevel);
+                if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
+                else if (encounter === 'gorilla') this.spawnGorillaEvent();
+                else if (encounter === 'dragon') this.spawnDragonEvent();
+                else if (encounter === 'tiger') this.spawnTigerEvent();
+                else if (encounter === 'wolf') this.spawnWolfEvent();
+                else if (first && await maybeStartGiant(this)) return false;
+                if (active()) this.visitEncounterReady = !encounter;
+                return this.visitEncounterReady;
+            } catch (error) {
+                if (active()) {
+                    this.hasRolledEncounter = false;
+                    this.showFloatingText(error.message || '村落確認失敗，請再試一次', '#F44336', 16);
+                }
+                return false;
+            }
+        })();
+        this.visitEncounterPending = work;
+        try { return await work; }
+        finally { if (active() && this.visitEncounterPending === work) this.visitEncounterPending = null; }
     }
 
     assertVisitAccess(transaction) {
@@ -602,7 +635,12 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal() {
-        if (this.preparingGiant || this.isStealing || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.hasRolledEncounter) return;
+        if (this.preparingGiant || this.isStealing || this.preparingMole || this.preparingCobra || !this.myFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter)) return;
+        const predator = [this.wolf, this.tiger].find(sprite => sprite?.active && !sprite.getData('resolved'));
+        if (predator) {
+            this.showFloatingText('請先擊退怪物並完成結算！', '#FFD54F', 16);
+            return;
+        }
         const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
@@ -640,7 +678,12 @@ export default class VisitScene extends Phaser.Scene {
         const visitMailRef = doc(db, 'groups', this.targetGroupId, 'users', this.targetAccountId, 'farm_notifications', `visit-${crypto.randomUUID()}`);
         const visitTime = Date.now();
         const attemptId = crypto.randomUUID();
+        const token = this.visitToken;
         try {
+            // hasRolledEncounter 只代表已開始檢查；慢網路時須等待同一個後端確認工作。
+            // 再確認也可恢復被其他分頁／裝置切換的拜訪目標，後端仍驗證怪物及權限。
+            if (FARM_BACKEND_ENABLED && !await this.startVisitEncounter({ verify: true })) return;
+            if (!this.sys.isActive() || this.visitToken !== token) return;
             const rankingClock = holidayClock(this.game);
             if(!FARM_BACKEND_ENABLED)await rankingClock.refresh();
             const result = await farmCommandOrLegacy('stealEgg',visitPayload(this),()=>this.runVisitTransaction(async transaction => {
@@ -677,13 +720,16 @@ export default class VisitScene extends Phaser.Scene {
                 transaction.update(myFarmRef, updates);
                 return { success: !interception, eggName, blockMs: interception?.breed.blockMs || 0 };
             }));
+            if (!this.sys.isActive() || this.visitToken !== token) return;
             this.showFloatingText(result.success ? `偷到${result.eggName || '雞蛋'}` : `被護衛犬攔截！這座雞舍禁偷 ${result.blockMs / 3600000} 小時`, result.success ? '#FFD54F' : '#F44336', 18, safeX, safeY);
             if (!result.success) { this.cameras.main.shake(300, 0.01); this.guardDogController?.bark(); }
             if (result.success) this.sendSystemNotification(`${playerName}在${this.targetGroupName || '群組'}村落偷了${this.targetName}的雞蛋`);
         } catch (error) {
-            this.showFloatingText(`${error.message || error}`, '#F44336', 16, safeX, safeY);
-            this.cameras.main.shake(300, 0.01);
-        } finally { this.isStealing = false; }
+            if (this.sys.isActive() && this.visitToken === token) {
+                this.showFloatingText(`${error.message || error}`, '#F44336', 16, safeX, safeY);
+                this.cameras.main.shake(300, 0.01);
+            }
+        } finally { if (this.visitToken === token) this.isStealing = false; }
     }
 
     createConfirmDialog() {

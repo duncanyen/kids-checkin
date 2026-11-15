@@ -33,10 +33,18 @@ const config = {
 };
 
 // 確保在 HTML 中 <script type="module" src="js/farm/main.js"></script>
-const game = new Phaser.Game(config);
+function initializePart(part, initialize) {
+    try { return initialize(); }
+    catch (error) {
+        // Phaser 的版本橫幅只是啟動訊息；另外記錄實際失敗的初始化元件。
+        console.error('farm-initialization-failure', JSON.stringify({ part, name:error?.name||'Error', code:error?.code||null, message:error?.message||'Unknown initialization error' }));
+        throw error;
+    }
+}
+const game = initializePart('phaser-game', () => new Phaser.Game(config));
 game.events.once('destroy',()=>farmLoading.dispose());
-mountFarmMail(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
+initializePart('mail', () => mountFarmMail(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID }));
 
-mountFarmRankings(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID });
-const dailyChallenges=mountFarmDaily(game,{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
-mountFarmHud(game,{dailyChallenges,hasPendingBattle:hasPendingBackendBattle});
+initializePart('rankings', () => mountFarmRankings(game, { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID }));
+const dailyChallenges=initializePart('daily-challenges', () => mountFarmDaily(game,{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID}));
+initializePart('hud', () => mountFarmHud(game,{dailyChallenges,hasPendingBattle:hasPendingBackendBattle}));

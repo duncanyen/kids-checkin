@@ -63,6 +63,29 @@ test('direct collection and stealing cannot bypass the server encounter check',a
  await f.api.handle(f.req('homeEncounter'));await f.api.handle(f.req('collectEggs'));
  await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}));await f.api.handle(f.req('stealEgg',{targetGroupId:'A',targetAccountId:'bob'}));assert.equal(f.farm().inventoryEggs,4);
 });
+test('rechecking a cleared visit reuses its permit without rerolling; a new visit still rolls normally',async()=>{
+ const f=setup(),target={targetGroupId:'A',targetAccountId:'bob'};
+ await f.api.handle(f.req('visitEncounter',target));f.roll(0);
+ const recheck=await f.api.handle(f.req('visitEncounter',{...target,reusePermit:true}));assert.equal(recheck.result,null);
+ await f.api.handle(f.req('stealEgg',target));assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261109,1);
+ const fresh=await f.api.handle(f.req('visitEncounter',target));assert.equal(fresh.result.kind,'gorilla');
+ await assert.rejects(f.api.handle(f.req('stealEgg',target)),{code:'failed-precondition'});
+});
+test('visit recheck cannot reuse another target permit and expired battles keep their original losses',async()=>{
+ const f=setup();f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});f.db.data.set('groups/B/users/alice',{farm:structuredClone(f.farm())});
+ f.roll(0);const battle=await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}));assert.equal(battle.result.kind,'gorilla');
+ const target={targetGroupId:'B',targetAccountId:'alice',reusePermit:true};
+ const active=await f.api.handle(f.req('visitEncounter',target));assert.equal(active.result.challenge.targetAccountId,'bob');
+ await assert.rejects(f.api.handle(f.req('stealEgg',target)),{code:'failed-precondition'});
+ f.clock(50000);const expired=await f.api.handle(f.req('visitEncounter',target));assert.equal(expired.result.result.outcome,'loss');assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,0);assert.equal(f.db.data.get('groups/B/users/alice').farm.eggsReady,3);
+ await assert.rejects(f.api.handle(f.req('stealEgg',target)),{code:'failed-precondition'});
+ f.roll(.99);await f.api.handle(f.req('visitEncounter',target));await f.api.handle(f.req('stealEgg',target));assert.equal(f.farm().inventoryEggs,1);
+});
+test('successful theft after the existing event deadline still updates inventory and lifetime report, not the closed leaderboard',async()=>{
+ const f=setup();f.clock(48*3600000);const target={targetGroupId:'A',targetAccountId:'bob'};
+ await f.api.handle(f.req('visitEncounter',target));const req=f.req('stealEgg',target);await f.api.handle(req);await f.api.handle(req);
+ assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261109,undefined);
+});
 test('same account in another public village is a distinct farm; theft and replay update only the correct farms',async()=>{
  const f=setup(),targetGroupId='B',targetAccountId='alice';
  f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});

@@ -65,7 +65,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     event={type:'COLLECT_EGG_ACTION',collected:collected.total};return collected;
    };
    if(combatActions.includes(action)){
-    const target=action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):session&&!session.result&&!['homeEncounter','visitEncounter','claimEncounter'].includes(action)?await readTarget(session.targetGroupId,session.targetAccountId,true):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
+    // 切換雞舍時仍可能需要先結算舊戰鬥；任何損失都必須使用原戰鬥目標，不能套到新雞舍。
+    const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
     const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id});
     patch=response.patch;result=response.result;event=response.event;nextSession=response.session;
     if(response.targetFarm){if(target.ref.path===farmRef.path)Object.assign(patch,{'farm.readyEggs':response.targetFarm.readyEggs,'farm.eggsReady':response.targetFarm.eggsReady,'farm.hensState':response.targetFarm.hensState,'farm.hens':response.targetFarm.hens,'farm.poultryVersion':response.targetFarm.poultryVersion,'farm.lastLayTime':response.targetFarm.lastLayTime,'farm.cleanliness':response.targetFarm.cleanliness});else{targetRef=target.ref;targetFarm=response.targetFarm;targetPatch={};}}

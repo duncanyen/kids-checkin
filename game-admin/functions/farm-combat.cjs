@@ -36,6 +36,8 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
  if(['homeEncounter','visitEncounter','claimEncounter'].includes(action)){
   if(action==='claimEncounter'&&next&&!next.result&&next.kind!==p.monster)return{patch,result:null,session:next};
   if(next&&!next.result){if(next.health===0||stamp>=next.deadline)return{patch,result:{expired:next.health!==0,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:next.kind},session:next};}
+  // 偷蛋前可以重新確認目前拜訪。相同目標的已清場／已結算許可直接重用，不能因重試重新抽怪。
+  if(action==='visitEncounter'&&p.reusePermit===true&&next&&next.targetGroupId===target.groupId&&next.targetAccountId===target.accountId&&(next.visitPermit||next.kind))return{patch,result:null,session:next};
   const requested=action==='claimEncounter'?D.enumValue(p.monster,['giant','cobra','mole']):null;
   let kind=requested,milestone;
   if(requested&&farm[requested+'Challenge']&&!next){const old=farm[requested+'Challenge'];next={...old,kind:requested,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,health:CONFIG[requested].health,attacks:{melee:0,ranged:0}};if(stamp>=old.deadline)return{patch,result:{expired:true,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:requested},session:next};}

@@ -4,7 +4,6 @@ import { restorePendingBattle } from './pending-battle.js';
 import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
 import { openCoopActions } from './poultry-housing-ui.js';
-import { openEggResult, prepareEggResultAssets } from './egg-result-ui.js';
 import { maybeStartMole, moleBlocksGarden } from './mole.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { mountHalloween } from './halloween.js';
@@ -29,13 +28,20 @@ import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, CURRENT_GROUP_ID, playerName, getUsedSpace } from './constants.js';
 
+// 結果視窗不是進入遊戲的必要相依；模組或圖片暫時無法下載時，不應阻止整座農場啟動。
+let eggResultUI;
+function loadEggResultUI() {
+    if (!eggResultUI) eggResultUI = import('./egg-result-ui.js').catch(error => { eggResultUI = null; throw error; });
+    return eggResultUI;
+}
+
 export default class MyFarmScene extends Phaser.Scene {
     constructor() { super({ key: 'MyFarmScene' }); }
 
     create() {
         configureFarmViewport(this);
         // 固定收蛋素材背景預熱，不等待圖片就開始遊戲；場景結束由 Phaser 取消延遲工作。
-        this.time.delayedCall(1500, () => { void prepareEggResultAssets().catch(() => {}); });
+        this.time.delayedCall(1500, () => { void loadEggResultUI().then(ui => ui.prepareEggResultAssets()).catch(() => {}); });
         const cx = 195;
         this.farmData = null;
         this.henAssetsPending = false;
@@ -632,7 +638,9 @@ export default class MyFarmScene extends Phaser.Scene {
             const summary = (Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key]?.eggName || key} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning;
             // 此處交易已成功；圖片或 DOM 失敗只能退回文字提示，不得重送收蛋或提示交易失敗。
             try {
-                if (!await openEggResult(this, result) && active()) this.showFloatingText(summary, '#FFD54F', result.remaining ? 14 : 18);
+                const ui = await loadEggResultUI();
+                if (!active()) return;
+                if (!await ui.openEggResult(this, result) && active()) this.showFloatingText(summary, '#FFD54F', result.remaining ? 14 : 18);
             } catch {
                 console.error('farm-egg-result-display-failure', { total: result?.total });
                 if (active()) this.showFloatingText(summary, '#FFD54F', result.remaining ? 14 : 18);
