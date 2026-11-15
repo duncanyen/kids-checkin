@@ -84,7 +84,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(stealResultTests){
    const clickObject=async(sceneKey,find)=>{
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    const point=await page.evaluate(({sceneKey,find})=>{const s=window.__farmGame.scene.getScene(sceneKey),o=find==='public'?s.publicVillageButton:find==='village'?s.content.list.find(o=>o.getData('villageGroupId')==='B'):find==='farm'?s.content.list.find(o=>o.texture?.key==='coop'):s.stealButton;const p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{sceneKey,find});await page.mouse.click(point.x,point.y);
+    const point=await page.evaluate(({sceneKey,find})=>{const s=window.__farmGame.scene.getScene(sceneKey),o=find==='public'?s.publicVillageButton:find==='village'?s.content.list.find(o=>o.getData('villageGroupId')==='B'):find==='farm'?s.content.list.find(o=>o.texture?.key==='coop'):s.hensGroup[0];if(find==='steal'){o.walkTimer?.remove();s.tweens.killTweensOf(o);o.setPosition(180,400);}const p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{sceneKey,find});await page.mouse.click(point.x,point.y);
    };
    if(stealFlowTests){
     await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();
@@ -98,7 +98,6 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    const clickHen=async()=>{
     const point=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),h=s.hensGroup[0];h.walkTimer?.remove();s.tweens.killTweensOf(h);h.setPosition(180,400);const p=s.cameras.main.matrix.transformPoint(h.x-s.cameras.main.scrollX,h.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};});
     await page.mouse.click(point.x,point.y);
-    if(!flowBefore)await clickObject('VisitScene','steal');
    };
    const economyCalls=()=>calls.filter(c=>c.action==='stealEgg'||c.stealWhenClear).length;
    if(flowBench){
@@ -110,7 +109,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
      await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');s.lastStealBlockedUntil=0;window.__flowMeasure=null;return window.__privateEmitAll();});
      await page.evaluate(()=>{
       const s=window.__farmGame.scene.getScene('VisitScene');
-      if(!window.__originalAttempt){window.__originalAttempt=s.attemptSteal.bind(s);s.attemptSteal=function(){if(this.isStealing||this.eggResultDialog)return window.__originalAttempt();const m=window.__flowMeasure={clickAt:performance.now()};requestAnimationFrame(()=>{m.feedbackAt=performance.now();m.feedbackVisible=this.isStealing&&(this.stealFeedback.visible||this.stealButton?.tintTopLeft!==0xffffff);});return window.__originalAttempt();};}
+      if(!window.__originalAttempt){window.__originalAttempt=s.attemptSteal.bind(s);s.attemptSteal=function(){if(this.isStealing||this.eggResultDialog)return window.__originalAttempt();const m=window.__flowMeasure={clickAt:performance.now()};requestAnimationFrame(()=>{m.feedbackAt=performance.now();m.feedbackVisible=this.isStealing&&(this.stealFeedback.visible||this.stealTarget?.isTinted);});return window.__originalAttempt();};}
       const observer=new MutationObserver(()=>{if(!document.querySelector('[data-result-kind=steal]'))return;observer.disconnect();requestAnimationFrame(()=>{if(window.__flowMeasure)window.__flowMeasure.visibleAt=performance.now();});});observer.observe(document.body,{childList:true});
      });
      await clickHen();await page.waitForFunction(()=>!!window.__flowMeasure?.visibleAt);
@@ -122,6 +121,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     fs.writeFileSync('/tmp/gugu-theft-'+(flowBefore?'before':'after')+'.json',JSON.stringify({baseline:flowBefore,viewport:'390x844',environment:'Linux Chromium, real Phaser, MemoryDB callable, injected service delay; warm assets',rows},null,2));
     assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,60);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261109,60);assert.deepEqual(errors,[]);console.log('PASS theft benchmark',flowBefore?'before':'after',rows.length);return;
    }
+   if(stealFlowTests){assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('VisitScene').stealButton),false,'沒有額外偷蛋按鈕');}
    if(stealFlowTests)await page.screenshot({path:'/tmp/gugu-steal-action-mobile.png',animations:'disabled'});
    await clickHen();await page.waitForSelector('[data-result-kind=steal]');await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);
    if(holdStealAssets){assert.ok(heldAssets>0);assert.equal(await page.locator('.farm-egg-result-confirm').isEnabled(),true,'圖片尚未回傳時結果及控制已可用');releaseStealAssets();await page.waitForFunction(()=>[...document.querySelectorAll('[data-result-kind=steal] img')].every(i=>i.complete&&i.naturalWidth>0));}
@@ -167,7 +167,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     const beforeSlow=economyCalls();stealDelay=850;await reset();
     await clickObject('VisitScene','steal');await page.waitForTimeout(180);
     assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').stealFeedback.visible),false,'500ms 內沒有等待文字');
-    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').input.enabled),true,'等待只鎖偷蛋按鈕');
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').input.enabled),true,'等待只防重複偷蛋，其他場景操作不鎖定');
     await clickObject('VisitScene','steal');await page.waitForFunction(()=>{const s=window.__farmGame.scene.getScene('VisitScene');return s.stealFeedback.visible&&s.stealFeedback.text==='正在偷蛋…';});
     await page.waitForSelector('[data-result-kind=steal]');assert.equal(economyCalls(),beforeSlow+1,'連點不多送交易');
     assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').stealFeedback.visible),false);
@@ -183,7 +183,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     await page.locator('.farm-egg-result-close').click();await page.waitForTimeout(400);assert.equal(await page.locator('[data-result-kind=steal]').count(),0,'原回覆晚到不重開');
     // 兩次均未收到明確結果，按「確認結果」仍沿用原 ID，跳過已提交造成的本地冷卻。
     refill();await reset();timeoutStealAlways=true;await clickObject('VisitScene','steal');await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);
-    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').stealButton.label.text),'確認結果');
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').stealFeedback.text),'結果確認中，請再點母雞');
     const unresolved=calls.filter(c=>c.stealWhenClear).at(-1).requestId;timeoutStealAlways=false;
     await page.reload();await page.waitForFunction(expected=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.silkieEggs===expected,beforeEggs+2);
     await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);
@@ -191,7 +191,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     await clickObject('VisitScene','steal');await page.waitForSelector('[data-result-kind=steal]');assert.equal(calls.filter(c=>c.stealWhenClear).at(-1).requestId,unresolved);
     assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,beforeEggs+2);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261109,beforeRank+2);
     await page.screenshot({path:'/tmp/gugu-steal-flow-mobile.png',animations:'disabled'});await page.locator('.farm-egg-result-confirm').click();
-    assert.deepEqual(errors,[]);console.log('PASS original HUD/public village/coop/explicit steal, delayed hint, rapid click, real timeout+late reply, same-ID receipt replay across reload, one inventory/ranking update');return;
+    assert.deepEqual(errors,[]);console.log('PASS original HUD/public village/coop/hen tap, delayed hint, rapid click, real timeout+late reply, same-ID receipt replay across reload, one inventory/ranking update');return;
    }
    await page.reload();await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.silkieEggs===2);
    const duplicate=await page.evaluate(async result=>{const ui=await import('/js/farm/steal-result-ui.js');return(await ui.openStealResult(window.__farmGame.scene.getScene('MyFarmScene'),result,{groupId:'A',accountId:'alice'}))?.duplicate;},actual);assert.equal(duplicate,true);assert.equal(await page.locator('[data-result-kind=steal]').count(),0);
@@ -206,7 +206,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     const original=s.attemptSteal.bind(s);s.attemptSteal=function(){if(this.isStealing)return original();window.__stealStarted=performance.now();const result=original();window.__speedTask=result.then(()=>window.__stealFinished=performance.now());return result;};
     const p=s.cameras.main.matrix.transformPoint(hen.x-s.cameras.main.scrollX,hen.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};
    });
-   await page.mouse.click(point.x,point.y);await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').stealButton.emit('pointerdown'));await page.waitForFunction(()=>!!window.__speedTask);
+   await page.mouse.click(point.x,point.y);await page.waitForFunction(()=>!!window.__speedTask);
    const immediate=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');return{processing:s.isStealing,hint:s.stealFeedback?.visible?s.stealFeedback.text:null};});
    await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').attemptSteal());await page.evaluate(()=>window.__speedTask);
    const metrics=await page.evaluate(()=>({resultMs:Math.round(window.__stealFinished-window.__stealStarted)}));metrics.calls=calls.filter(c=>['visitEncounter','stealEgg'].includes(c.action)).length-before;metrics.immediate=immediate;

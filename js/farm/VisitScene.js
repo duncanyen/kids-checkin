@@ -1,6 +1,5 @@
 import { readGameContext } from '../game-context.js';
 import { confirmStealRequest, isUncertainSteal } from './steal-request.js';
-import { villageButton } from './village-ui.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow,routeBackendChallenge,pendingStealCommand} from './backend-client.js';
 import { reportingCounterPatch } from './reporting-config.js';
 import { maybeStartGiant, giantBlocksFarm } from './giant-trigger.js';
@@ -89,12 +88,7 @@ export default class VisitScene extends Phaser.Scene {
 
         this.coop = addFarmCoop(this, () => this.askCleanTargetFarm());
 
-        this.coopEgg = addFarmEgg(this, () => this.showStealAction());
-        this.stealButton = villageButton(this, 310, 112, '偷蛋', () => this.attemptSteal(), 100).setDepth(40);
-        this.stealButton.label.setDepth(41).setText(pendingStealCommand(visitPayload(this)) ? '確認結果' : '偷蛋');
-        for (const event of ['pointerup', 'pointerout', 'pointerover']) this.stealButton.removeAllListeners(event);
-        const releaseStealButton = () => { if (!this.isStealing) this.stealButton.setDisplaySize(100, 46).clearTint(); };
-        this.stealButton.on('pointerup', releaseStealButton).on('pointerout', releaseStealButton);
+        this.coopEgg = addFarmEgg(this, () => this.attemptSteal(this.coopEgg));
 
         this.hensGroup = []; 
         this.rubbishGroup = this.add.group();
@@ -378,7 +372,7 @@ export default class VisitScene extends Phaser.Scene {
             newHen.on('pointerdown', () => {
                 // 同步放大偷蛋點擊時的比例
                 if (!this.isStealing) this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
-                this.showStealAction();
+                this.attemptSteal(newHen);
             });
 
             this.hensGroup.push(newHen);
@@ -675,13 +669,6 @@ export default class VisitScene extends Phaser.Scene {
         }
     }
 
-    showStealAction() {
-        if (this.isStealing || this.eggResultDialog) return;
-        this.stealButton.setTint(0xffe38a);
-        this.time.delayedCall(180, () => { if (this.stealButton?.active && !this.isStealing) this.stealButton.clearTint(); });
-        this.showFloatingText('點擊「偷蛋」取得雞蛋', '#FFD54F', 14, 260, 155);
-    }
-
     async sendStealRequest(action, payload) {
         const timing = this.stealTiming;
         timing.requestAt ??= performance.now();
@@ -701,7 +688,7 @@ export default class VisitScene extends Phaser.Scene {
         return result;
     }
 
-    async attemptSteal() {
+    async attemptSteal(target = this.coopEgg) {
         if (this.isStealing || this.eggResultDialog) return;
         const recovery = FARM_BACKEND_ENABLED ? pendingStealCommand(visitPayload(this)) : null;
         if (!recovery && (this.preparingGiant || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.targetFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter))) {
@@ -746,8 +733,9 @@ export default class VisitScene extends Phaser.Scene {
         this.isStealing = true;
         const timing = this.stealTiming = { clickAt: performance.now(), token: this.visitToken };
         this.stealUncertain = !!recovery;
-        this.stealButton.setDisplaySize(95, 43.7).setTint(0xbda675);
-        this.stealButton.input.enabled = false;
+        this.stealTarget = target;
+        const previousTint = target?.isTinted ? [target.tintTopLeft, target.tintTopRight, target.tintBottomLeft, target.tintBottomRight] : null;
+        target?.setTint(0xbda675);
         requestAnimationFrame(() => { if (this.stealTiming === timing) timing.feedbackAt = performance.now(); });
         this.stealFeedback.setVisible(false);
         const slowHint = setTimeout(() => {
@@ -836,16 +824,19 @@ export default class VisitScene extends Phaser.Scene {
         } catch (error) {
             if (this.sys.isActive() && this.visitToken === token) {
                 this.stealUncertain = isUncertainSteal(error);
-                this.showFloatingText(this.stealUncertain ? '結果確認中，請點「確認結果」查回原交易' : `${error.message || error}`, '#F44336', 16, safeX, safeY);
+                this.showFloatingText(this.stealUncertain ? '結果確認中，請再點母雞確認原交易' : `${error.message || error}`, '#F44336', 16, safeX, safeY);
                 this.cameras.main.shake(300, 0.01);
             }
         } finally {
             clearTimeout(slowHint);
             if (this.visitToken === token) {
                 this.isStealing = false; this.stealFeedback.setVisible(false);
-                this.stealButton.setDisplaySize(100, 46).clearTint();
-                this.stealButton.input.enabled = true;
-                this.stealButton.label.setText(pendingStealCommand(visitPayload(this)) ? '確認結果' : '偷蛋');
+                if (target?.active) {
+                    if (previousTint) target.setTint(...previousTint);
+                    else target.clearTint();
+                }
+                this.stealTarget = null;
+                if (pendingStealCommand(visitPayload(this))) this.stealFeedback.setText('結果確認中，請再點母雞').setVisible(true);
             }
         }
     }
