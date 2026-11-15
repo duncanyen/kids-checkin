@@ -9,7 +9,7 @@ test('同一母雞合併數量，同品種與同名的不同母雞仍分列', ()
         { henId: 'a', henName: '花花', breed: 'silkie', quantity: 2 }
     ] };
     const before = structuredClone(result), view = stealResultView(result);
-    assert.deepEqual(view.eggDetails.map(row => [row.henId, row.primary, row.quantity]), [['a', '烏骨雞蛋', 3], ['b', '烏骨雞蛋', 1]]);
+    assert.deepEqual(view.eggDetails.map(row => [row.henId, row.primary, row.quantity]), [['a', '花花／烏骨雞蛋', 3], ['b', '花花／烏骨雞蛋', 1]]);
     assert.equal(view.eggDetails.reduce((sum, row) => sum + row.quantity, 0), view.totalEggs);
     assert.deepEqual(result, before);
 });

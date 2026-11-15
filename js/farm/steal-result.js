@@ -2,7 +2,7 @@ import { BREEDS } from './poultry.js';
 
 /**
  * 將成功交易的來源明細轉為顯示資料，不查雞群、不猜個體，也不修改庫存。
- * henId 僅供本次結果分組；畫面只顯示雞蛋名稱，不顯示個體或來源提示。
+ * henId 僅供本次結果分組；有已記錄的個體與公開雞名時一併顯示；沒有來源時只顯示雞蛋名稱。
  * @param {Object} result - 已提交的偷蛋結果：success、totalEggs、eggSources。
  * @returns {Object|null} 共用結果視窗使用的總數及明細；失敗或零顆回傳 null。
  */
@@ -21,7 +21,9 @@ export function stealResultView(result) {
         const key = JSON.stringify([henId ? 'hen' : 'unknown', henId || breed]);
         let row = groups.get(key);
         if (!row) {
-            row = { henId, breed, primary: breed ? BREEDS[breed].eggName : '雞蛋', quantity: 0 };
+            const eggName = breed ? BREEDS[breed].eggName : '雞蛋';
+            const name = henId && typeof source.henName === 'string' ? source.henName.trim() : '';
+            row = { henId, breed, primary: name ? `${name}／${eggName}` : eggName, quantity: 0 };
             groups.set(key, row);
         }
         if (row.breed !== breed) throw new Error('同一母雞的品種資料不一致');

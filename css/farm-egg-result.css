@@ -35,3 +35,6 @@
 .farm-steal-result-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .farm-steal-result-breed{font-size:3.2cqw;font-weight:500;line-height:1.15}
 .farm-steal-result-quantity{flex:none;white-space:nowrap;font-size:5cqw}
+
+/* 偷蛋結果收到即清楚可見，按鈕不等待淡入或面板進場。 */
+.farm-egg-result-overlay[data-result-kind=steal],.farm-steal-result-panel{animation:none}

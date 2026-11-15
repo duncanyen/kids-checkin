@@ -20,7 +20,7 @@ export async function openStealResult(scene, result, context) {
     if (shown.has(key) || history.includes(result.transactionId)) return { duplicate: true };
     if (pending.has(key)) return pending.get(key);
     const work = (async () => {
-        const dialog = await openFarmResult(scene, view, { assets, title: '偷蛋成功', lead: '本次偷到 ', kind: 'steal', sourceRows: true, titleOverlay: true });
+        const dialog = await openFarmResult(scene, view, { assets, title: '偷蛋成功', lead: '本次偷到 ', kind: 'steal', sourceRows: true, titleOverlay: true, waitForAssets: false });
         if (dialog?.root?.isConnected) {
             shown.add(key);
             try { sessionStorage.setItem(storageKey, JSON.stringify([...history, result.transactionId])); } catch { /* 不因儲存失敗影響已提交交易。 */ }

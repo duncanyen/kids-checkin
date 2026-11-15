@@ -38,7 +38,7 @@ export async function openEggResult(scene, result) {
 }
 
 /** 共用結果容器，只處理顯示與輸入生命週期，不執行遊戲交易。 */
-export async function openFarmResult(scene, view, { assets = defaultAssets, title = '收蛋完成', lead = '本次共收取 ', kind = 'harvest', sourceRows = false, titleOverlay = false } = {}) {
+export async function openFarmResult(scene, view, { assets = defaultAssets, title = '收蛋完成', lead = '本次共收取 ', kind = 'harvest', sourceRows = false, titleOverlay = false, waitForAssets = true } = {}) {
     if (!view) return null;
     if (scene.eggResultDialog) return scene.eggResultDialog;
     const input = scene.input, before = input.enabled, token = scene.farmSceneToken || scene.visitToken;
@@ -57,7 +57,8 @@ export async function openFarmResult(scene, view, { assets = defaultAssets, titl
     input.enabled = false;
     scene.events.once('shutdown', close); scene.events.once('destroy', close);
     try {
-        await prepareFarmResultAssets(assets);
+        if (waitForAssets) await prepareFarmResultAssets(assets);
+        else void prepareFarmResultAssets(assets).catch(() => {});
         if (closed || !scene.sys.isActive() || (scene.farmSceneToken || scene.visitToken) !== token) { close(); return null; }
         const el = (tag, cls, text) => {
             const node = document.createElement(tag); node.className = cls;

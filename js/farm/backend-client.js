@@ -1,5 +1,6 @@
 import { PRIVATE_IDENTITY_ENABLED } from '../private-auth-client.js';
 import { createGameOperationsClient } from './operations-client.js';
+import { isUncertainSteal } from './steal-request.js';
 import { readGameContext } from '../game-context.js';
 // 完整遷移、Rules 與隔離驗證通過後才開啟；不能單獨啟用此旗標。
 export const FARM_BACKEND_ENABLED = true;
@@ -40,9 +41,20 @@ export function farmCommand(action,payload={}){
   console.error('farm-transaction-failure',JSON.stringify({
    action,stage:started?'request':'waiting-settlement',code:error?.code||'unknown',message:error?.message||'交易未完成'
   }));
-  if(!['ops/timeout','functions/internal','functions/unavailable','functions/unauthenticated','functions/resource-exhausted'].includes(error.code))sessionStorage.removeItem(key);
+  const theft = action==='stealEgg'||action==='visitEncounter'&&payload.stealWhenClear===true;
+  const uncertain = theft ? isUncertainSteal(error) : ['ops/timeout','functions/internal','functions/unavailable','functions/unauthenticated','functions/resource-exhausted'].includes(error.code);
+  if(!uncertain)sessionStorage.removeItem(key);
   throw error;
  }).finally(()=>pending.delete(key));pending.set(key,work);return work;
+}
+/** 找回此村落尚未確認的偷蛋請求；只重播原 payload，不因快照已更新而另開交易。 */
+export function pendingStealCommand(target) {
+ const context=readGameContext();
+ for(const action of ['visitEncounter','stealEgg'])for(const payload of action==='stealEgg'?[target]:[ {...target,reusePermit:true,stealWhenClear:true}, {...target,reusePermit:false,stealWhenClear:true} ]){
+  const key='nexus.farm.pending:'+JSON.stringify([context.accountId,context.groupId,action,payload]);
+  if(sessionStorage.getItem(key))return {action,payload};
+ }
+ return null;
 }
 export const farmCommandOrLegacy=(action,payload,legacy)=>FARM_BACKEND_ENABLED?farmCommand(action,payload):legacy();
 function rowFor(id){let row=attacks.get(id);if(!row){row={melee:0,ranged:0,batch:null,flushing:null,timer:null};attacks.set(id,row);}return row;}
