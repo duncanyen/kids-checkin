@@ -28,8 +28,13 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         if(token.photoGroupId!==groupId||typeof token.photoAccountId!=='string')D.fail('permission-denied','玩家工作階段與群組不符，請重新登入');
         const read=ref=>transaction?transaction.get(ref):ref.get();
         const privateMode=await privateIdentityEnabled();
-        if(privateMode&&(await read(db.doc('ops_identity_state/global'))).data()?.ready!==true)D.fail('failed-precondition','私有登入尚未完成切換');
-        const privateActor=privateMode?await require('./identity-access.cjs').assertIdentity(request,db,transaction):null;
+        let privateActor=null;
+        if(privateMode){
+            // 身分與全域開關各自驗證，但下載可以平行；仍先檢查切換狀態，保留原錯誤順序。
+            const identityAttempt=Promise.resolve().then(()=>require('./identity-access.cjs').assertIdentity(request,db,transaction)).then(value=>({value}),error=>({error}));
+            if((await read(db.doc('ops_identity_state/global'))).data()?.ready!==true)D.fail('failed-precondition','私有登入尚未完成切換');
+            const attempt=await identityAttempt;if(attempt.error)throw attempt.error;privateActor=attempt.value;
+        }
         const profileId=privateActor?.profileId||request.auth.uid;
         // 私有驗證已讀取這份 profile；沿用同一次驗證的快照，不再重讀 users。
         const profile=privateActor?.profile||(await read(db.doc(`users/${D.id(profileId)}`))).data();
@@ -43,9 +48,15 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         return{uid:profileId,authUid:request.auth.uid,accountId:profile.accountId,name:profile.name||profile.accountId,groupId};
     }
     async function playerSession(request){
+        // 格式與作用域錯誤仍須在任何資料庫／Auth RPC 前拒絕。
+        if(!request.auth?.uid)D.fail('unauthenticated','請重新登入玩家帳號');
+        const groupId=D.id(request.data?.groupId),token=request.auth.token||{};
+        if(token.photoGroupId!==groupId||typeof token.photoAccountId!=='string')D.fail('permission-denied','玩家工作階段與群組不符，請重新登入');
+        // Auth 與 Firestore 判定均不可省略；它們是獨立來源，不必依序等待網路。
+        const lookup=request.auth?.uid?Promise.resolve().then(()=>auth.getUser(request.auth.uid)).then(user=>({user}),error=>({error})):null;
         const identity=await player(request);
-        const user=await auth.getUser(identity.authUid||identity.uid);
-        if(user.disabled)D.fail('permission-denied','玩家帳號已停用');
+        const result=await lookup;if(result.error)throw result.error;
+        if(result.user.disabled)D.fail('permission-denied','玩家帳號已停用');
         return identity;
     }
     async function throttle(key,maximum,windowMs){
@@ -244,7 +255,18 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
     const trustedReady=async t=>{if(!await privateIdentityEnabled()||!await farmBackendEnabled())return false;const row=(await(t?t.get(db.doc('ops_identity_state/global')):db.doc('ops_identity_state/global').get())).data();return row?.ready===true&&row?.farmReady===true;};
     const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle,trustedReady});
     const transactions=require('./farm-transactions.cjs').createFarmTransactions({db,now,player,random:farmRandom,enabled:t=>trustedReady(t),prepareProgress:dailyChallenges.prepareProgress});
-    async function farmTransaction(request){const identity=await playerSession(request);await throttle('farm:'+identity.uid,180,60000);return transactions.handle(request);}
+    async function farmTransaction(request){
+        const started=performance.now(),identity=await playerSession(request),verified=performance.now();
+        await throttle('farm:'+identity.uid,180,60000);const limited=performance.now();
+        const response=await transactions.handle(request),finished=performance.now();
+        if(['visitEncounter','stealEgg'].includes(request.data?.action)){
+            // 不記錄帳號、群組、payload 或憑證；只量測成功請求的處理階段。
+            const timing={identityMs:Math.round(verified-started),rateLimitMs:Math.round(limited-verified),transactionMs:Math.round(finished-limited),handlerMs:Math.round(finished-started)};
+            console.info('farm-theft-timing',{action:request.data.action,combined:request.data.stealWhenClear===true,...timing});
+            return{...response,timing};
+        }
+        return response;
+    }
     return{adminAPI,announcements,redeem,rewardCatalog,guardDog,farmTransaction,dailyChallenges:dailyChallenges.handle};
 }
 module.exports={createService,COLLECTIONS};

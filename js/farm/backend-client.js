@@ -12,7 +12,11 @@ export const farmNow=()=>Date.now()+offset;
 async function send(action,payload,id,context){
  if(!FARM_BACKEND_ENABLED||!PRIVATE_IDENTITY_ENABLED)throw Error('農場共用交易尚未啟用');
  client||=createGameOperationsClient(readGameContext());
+ const started=performance.now();
  const response=await client.farmTransaction(action,payload,id);
+ if(['visitEncounter','stealEgg'].includes(action)){
+  console.info('farm-theft-latency',{action,combined:payload.stealWhenClear===true,roundTripMs:Math.round(performance.now()-started),serverTimingAvailable:!!response.timing,...response.timing});
+ }
  if(Number.isFinite(response.serverNow))offset=response.serverNow-Date.now();
  const result=response.result;
  const legacyProgress=action==='collectEggs'&&result?.total>0||action==='helpClean'||result?.harvest?.total>0||result?.outcome==='win'||result?.result?.outcome==='win';

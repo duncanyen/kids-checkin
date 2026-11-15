@@ -32,13 +32,14 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     if(action==='ensureWelcome')response.result={...response.result,pendingBattle:pendingBattleOf((await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data())};
     return response;
    }
-   const farmRef=db.doc(`groups/${actor.groupId}/users/${actor.accountId}`),owner=await t.get(farmRef);
+   const farmRef=db.doc(`groups/${actor.groupId}/users/${actor.accountId}`),sessionRef=db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId));
+   const [owner,sessionSnapshot]=await Promise.all([t.get(farmRef),action==='ensureFarm'?Promise.resolve(null):t.get(sessionRef)]);
    if(action==='ensureFarm'){
     if(owner.exists){if(!save.isFarmSave(owner.data()?.farm))D.fail('failed-precondition','存檔資料不完整，停止自動初始化');const response={result:owner.data().farm,serverNow:stamp};t.create(receiptRef,{fingerprint,response,createdAt:stamp});return response;}
     const creation=db.doc(farmRef.path+'/farm_meta/creation');if(p.canCreate===false||(await t.get(creation)).exists)D.fail('failed-precondition','原有存檔遺失，禁止重建');
     const fresh=save.initialFarm(stamp),response={result:fresh,serverNow:stamp};t.create(farmRef,{farm:fresh});t.create(creation,{groupId:actor.groupId,accountId:actor.accountId,createdAt:stamp});t.create(receiptRef,{fingerprint,response,createdAt:stamp});return response;
    }
-   const farm=requireFarm(owner.data()?.farm),sessionRef=db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)),session=(await t.get(sessionRef)).data()||null;
+   const farm=requireFarm(owner.data()?.farm),session=sessionSnapshot.data()||null;
    if(!save.isFarmSave(farm))D.fail('failed-precondition','存檔資料不完整，停止交易');
    let patch={},result={},event=null,targetRef=null,targetPatch=null,targetFarm=null,nextSession=session;
    const mailWrites=[];
@@ -49,10 +50,11 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     D.id(groupId);D.id(accountId);const group=(await t.get(db.doc('groups/'+groupId))).data(),own=groupId===actor.groupId?group:(await t.get(db.doc('groups/'+actor.groupId))).data();
     const allowed=!!group?.members?.includes(accountId)&&!!own?.members?.includes(actor.accountId)&&(groupId===actor.groupId||group.farmVillageVisibility==='public'&&own.farmVillageVisibility==='public');
     if(!allowed&&!battle)D.fail('permission-denied','無法拜訪此村落');
-    const ref=db.doc(`groups/${groupId}/users/${accountId}`),data=ref.path===farmRef.path?owner:await t.get(ref);
+    const ref=db.doc(`groups/${groupId}/users/${accountId}`);
+    const [data,profiles]=await Promise.all([ref.path===farmRef.path?Promise.resolve(owner):t.get(ref),accountId!==actor.accountId?t.get(db.collection('users').where('accountId','==',accountId).limit(2)):Promise.resolve(null)]);
     // 自家目標名稱已由 player 驗證取得，不需要再做 accountId 查詢。
     let name=actor.name||accountId;
-    if(accountId!==actor.accountId){const profiles=await t.get(db.collection('users').where('accountId','==',accountId).limit(2));name=profiles.size===1?profiles.docs[0].data().name:accountId;}
+    if(profiles)name=profiles.size===1?profiles.docs[0].data().name:accountId;
     const targetFarm=battle&&!allowed?null:requireFarm(data.data()?.farm);if(targetFarm&&!save.isFarmSave(targetFarm))D.fail('failed-precondition','目標存檔資料不完整');
     return{groupId,accountId,name,group,ref,allowed,farm:targetFarm};
    };

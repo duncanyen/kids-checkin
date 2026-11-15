@@ -34,7 +34,8 @@ test('warm daily status reads only today snapshots and shares transaction reads 
  assert.equal(f.reads.filter(path=>path.startsWith('ops_daily_days/')).length,2);
  assert.equal(f.reads.filter(path=>path==='ops_identity_state/global').length,2,'前置與交易內各自核對；同次交易內共用全域狀態');
  assert.equal(f.reads.filter(path=>path==='ops_identity_credentials/alice-profile').length,2);
- f.onAuth(()=>f.db.data.set('ops_player_controls/alice-profile',{blocked:true}));
+ const run=f.db.runTransaction.bind(f.db);let attempts=0;
+ f.db.runTransaction=callback=>{if(++attempts===2)f.db.data.set('ops_player_controls/alice-profile',{blocked:true});return run(callback);};
  await assert.rejects(f.service.dailyChallenges(f.request('status')),{code:'permission-denied'});
 });
 test('committed game results carry verified progress; capped tasks keep receipts without rewriting the daily document',async()=>{
@@ -89,7 +90,8 @@ test('failed commit can retry the same receipt without losing eggs or duplicatin
  await f.service.farmTransaction(request);await f.service.farmTransaction(request);assert.equal(f.farm().inventoryEggs,3);
 });
 test('credential revocation after preflight is still detected inside the transaction',async()=>{
- const f=fixture();f.onAuth(()=>f.db.data.get('ops_identity_credentials/alice-profile').sessionVersion++);
+ const f=fixture(),run=f.db.runTransaction.bind(f.db);let attempts=0;
+ f.db.runTransaction=callback=>{if(++attempts===2)f.db.data.get('ops_identity_credentials/alice-profile').sessionVersion++;return run(callback);};
  await assert.rejects(f.service.farmTransaction(f.request('homeEncounter',{collectWhenClear:true})),{code:'unauthenticated'});assert.equal(f.farm().eggsReady,3);
 });
 test('combined harvest uses fewer reads and matches the old two-call farm result',async()=>{
@@ -107,7 +109,9 @@ test('combined visit and theft saves authorization reads while keeping the same 
   f.db.data.set('groups/A/users/bob',{farm:structuredClone(f.farm())});await f.service.farmTransaction(f.request('visitEncounter',target));f.reads.length=0;
  }
  await old.service.farmTransaction(old.request('visitEncounter',{...target,reusePermit:true}));await old.service.farmTransaction(old.request('stealEgg',target));
- await combined.service.farmTransaction(combined.request('visitEncounter',{...target,reusePermit:true,stealWhenClear:true}));
+ const response=await combined.service.farmTransaction(combined.request('visitEncounter',{...target,reusePermit:true,stealWhenClear:true}));
+ assert.deepEqual(Object.keys(response.timing).sort(),['handlerMs','identityMs','rateLimitMs','transactionMs']);
+ for(const value of Object.values(response.timing))assert.ok(Number.isSafeInteger(value)&&value>=0);
  assert.deepEqual(combined.farm(),old.farm());assert.deepEqual(combined.db.data.get('groups/A/users/bob').farm,old.db.data.get('groups/A/users/bob').farm);assert.ok(combined.reads.length<old.reads.length);
  assert.equal(combined.reads.filter(path=>path==='ops_identity_credentials/alice-profile').length,2,'前置及交易內仍重新驗證目前憑證');
  console.log('isolated theft document reads:',JSON.stringify({twoCalls:old.reads.length,combinedCall:combined.reads.length}));
