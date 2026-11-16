@@ -28,7 +28,7 @@ export function openCoopCleanConfirm(scene, { context, valid, confirm, uncertain
         yes.onclick = async () => {
             if (busy) return;
             if (!dialog.isCurrent()) { dialog.close(); return; }
-            busy = true; no.disabled = yes.disabled = true; yes.querySelector('span').textContent = '處理中…'; status.textContent = '正在確認打掃結果…';
+            busy = true; no.disabled = yes.disabled = true; yes.querySelector('span').textContent = '處理中…'; status.textContent = '';
             try {
                 const result = await confirm(context);
                 if (!dialog.isCurrent()) { dialog.close(); return; }

@@ -372,7 +372,6 @@ export default class VisitScene extends Phaser.Scene {
                     transaction.update(myFarmRef, { 'farm.moral': Math.min(100, (ownDoc.data().farm.moral ?? 100) + 3) });
                 }));
                 if (active()) {
-                    this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, 195, 150);
                     this.sendSystemNotification(`${playerName}幫${context.name || '村落主人'}打掃了雞舍`);
                 }
                 return { status: 'success' };
