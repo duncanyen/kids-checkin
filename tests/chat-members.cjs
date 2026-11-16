@@ -2,6 +2,8 @@
 // Real chat modules, in-memory Firebase only; no production reads or writes.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+const photoRetractTests=process.env.CHAT_PHOTO_RETRACT_TESTS==='1';
+let cancelNextConfirmation=false,denyRetract=false,retractGate=null,retractEntered;
 const base=process.env.CHAT_BASE_URL||'http://127.0.0.1:8012';
 const docs={
  'groups/A':{members:['alice','bob','charlie','same','removed']},
@@ -20,12 +22,13 @@ export const collection=(_, ...parts)=>({path:parts.join('/'),kind:'query'});
 export const where=(field,op,value)=>({field,op,value});export const query=(ref,...filters)=>({...ref,filters});
 export const orderBy=()=>({});export const limit=()=>({});export const serverTimestamp=()=>Date.now();
 export const increment=value=>({operation:'increment',value});export const arrayUnion=(...values)=>({operation:'union',values});export const arrayRemove=(...values)=>({operation:'remove',values});
-const snapshot=(path,data)=>({id:path.split('/').at(-1),exists:()=>data!==undefined,data:()=>structuredClone(data)});
+const snapshot=(path,data)=>({id:path.split('/').at(-1),exists:()=>data!==undefined,data:()=>{const copy=structuredClone(data);if(copy)for(const key of ['timestamp','lastMessageTime'])if(typeof copy[key]==='number'){const ms=copy[key];copy[key]={toMillis:()=>ms,toDate:()=>new Date(ms)};}return copy;}});
 export const getDoc=async ref=>snapshot(ref.path,await window.__chatDb({...ref,kind:'get'}));
 export const getDocs=async ref=>{const rows=await window.__chatDb({...ref,kind:'query'});const docs=rows.map(r=>snapshot(r.path,r.data));return{docs,empty:!docs.length,forEach:cb=>docs.forEach(cb)};};
 const listeners=new Set();async function emit(l){const s=l.ref.kind==='doc'?await getDoc(l.ref):await getDocs(l.ref);if(listeners.has(l))l.cb(s);}
 export const onSnapshot=(ref,cb,error)=>{const l={ref,cb};listeners.add(l);emit(l).catch(e=>error?.(e));return()=>listeners.delete(l);};
 async function notify(){for(const l of [...listeners])await emit(l);}
+window.__chatNotify=()=>notify();
 export const addDoc=async(ref,data)=>{const id=await window.__chatDb({...ref,kind:'add',data});await notify();return{id};};
 export const updateDoc=async(ref,data)=>{await window.__chatDb({...ref,kind:'update',data});await notify();};
 let queue=Promise.resolve();
@@ -45,6 +48,7 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
   }
   if(op.kind==='add'){if(op.path==='messages'&&op.data.imageUrl){imageAttempts++;if(uploadGate){const gate=uploadGate;uploadGate=null;signalUpload();await gate;}if(imageAttempts===failImageAt)throw Error('photo offline');}const id='new-'+(++counter);docs[op.path+'/'+id]=op.data;writes.push({...op,id});return id;}
   if(op.kind==='update'){
+   if(op.path.startsWith('messages/')&&op.data.isRetracted){if(denyRetract)throw Error('permission denied');if(retractGate){retractEntered();await retractGate;}}
    if(failPhotoSummary&&op.data.lastMessage?.includes('傳送了圖片')){failPhotoSummary=false;throw Error('summary offline');}
    for(const [field,value]of Object.entries(op.data)){
     const bits=field.split('.');let target=docs[op.path];for(const bit of bits.slice(0,-1))target=target[bit]??={};const key=bits.at(-1),old=target[key];
@@ -57,7 +61,7 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
  await context.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'text/javascript',body:mock}));
  await context.route('https://ui-avatars.com/**',r=>r.abort());
  const page=await context.newPage(),errors=[],alerts=[];page.setDefaultTimeout(10000);
- page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{alerts.push(d.message());return d.accept();});
+ page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{alerts.push(d.message());if(d.type()==='confirm'&&cancelNextConfirmation){cancelNextConfirmation=false;return d.dismiss();}return d.accept();});
  await page.addInitScript(()=>{
   sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',name:'小明',groupId:'B'}));
   if(!localStorage.getItem('lastGroupId'))localStorage.setItem('lastGroupId','A');
@@ -75,6 +79,29 @@ export function runTransaction(_,callback){const run=queue.then(async()=>{const 
  await page.locator('#roomListContainer .room-item').first().click();
  // A normal return creates a newline, not a message; composition Enter is safe.
  const messages=()=>Object.entries(docs).filter(([key])=>key.startsWith('messages/'));
+ if(photoRetractTests){
+  const roomId=path.split('/')[1],time=Date.now();
+  for(const [id,sender,stamp]of [['photo-own','alice',time],['photo-other','bob',time-1000],['photo-old','alice',time-25*3600000]])docs['messages/'+id]={roomId,groupId:'A',senderAccountId:sender,sender:sender==='alice'?'小明':"小華's",imageUrl:'/Nexus.png?photo='+id,text:'',timestamp:stamp};
+  docs['messages/text-own']={roomId,groupId:'A',senderAccountId:'alice',sender:'小明',text:'文字收回回歸',timestamp:time-500};
+  await page.evaluate(()=>window.__chatNotify());
+  const photo=id=>page.locator('.chat-photo[data-message-id="'+id+'"]');
+  await photo('photo-other').click();assert.equal(await page.locator('#photoViewerModal').isVisible(),true);assert.equal(await page.locator('#btnRetractPhoto').isVisible(),false);await page.locator('.close-viewer').click();
+  await photo('photo-old').click();assert.equal(await page.locator('#btnRetractPhoto').isVisible(),false);await page.locator('.close-viewer').click();
+  const retracts=()=>writes.filter(w=>w.path.startsWith('messages/')&&w.data.isRetracted);
+  await page.evaluate(({roomId,time})=>{chatCore.openMsgAction('photo-other',true,time,'偽造','[圖片]');chatCore.triggerRetract();},{roomId,time});assert.equal(await page.locator('#btnActionRetract').isVisible(),false);assert.equal(retracts().length,0);await page.locator('#msgActionModal button').last().click();
+  await photo('photo-own').click();assert.equal(await page.locator('#btnRetractPhoto').isVisible(),true);await page.locator('#viewerImage').click();assert.equal(await page.locator('#photoViewerModal').isVisible(),true);
+  await page.screenshot({path:'/tmp/nexus-chat-photo-retract-390.png'});
+  cancelNextConfirmation=true;await page.locator('#btnRetractPhoto').click();assert.equal(retracts().length,0);assert.equal(await page.locator('#photoViewerModal').isVisible(),true);
+  denyRetract=true;await page.locator('#btnRetractPhoto').click();await page.waitForFunction(()=>!document.getElementById('btnRetractPhoto').disabled);assert.match(alerts.at(-1),/收回訊息失敗/);assert.equal(docs['messages/photo-own'].isRetracted,undefined);denyRetract=false;
+  let release;retractGate=new Promise(resolve=>release=resolve);const started=new Promise(resolve=>retractEntered=resolve);
+  await page.evaluate(()=>{const b=document.getElementById('btnRetractPhoto');b.click();b.click();b.click();});await started;assert.equal(await page.locator('#btnRetractPhoto').isDisabled(),true);release();
+  await page.waitForFunction(()=>document.getElementById('photoViewerModal').style.display==='none');retractGate=null;
+  assert.equal(retracts().length,1);assert.equal(docs['messages/photo-own'].isRetracted,true);assert.equal(docs['messages/photo-own'].imageUrl,null);assert.equal(docs['messages/photo-own'].text,'');assert.equal(await photo('photo-own').count(),0);await page.waitForFunction(async path=>(await window.__chatDb({kind:'get',path})).lastMessage?.includes('收回了一則訊息'),path);assert.ok(writes.some(write=>write.path===path&&write.data.lastMessage?.includes('收回了一則訊息')));
+  await page.reload();await page.locator('.room-item[data-room-id="'+roomId+'"]').click();await page.waitForSelector('.msg-retracted');assert.equal(await photo('photo-own').count(),0);assert.equal(await photo('photo-other').count(),1);
+  await page.locator('.chat-msg').filter({hasText:'文字收回回歸'}).click();await page.locator('#btnActionRetract').click();await page.waitForFunction(()=>document.querySelectorAll('.msg-retracted').length===2);assert.equal(docs['messages/text-own'].isRetracted,true);
+  await photo('photo-other').click();await page.locator('#btnBackToList').evaluate(button=>button.click());assert.equal(await page.locator('#photoViewerModal').isVisible(),false);const before=retracts().length;await page.evaluate(()=>chatCore.retractPhoto());assert.equal(retracts().length,before);
+  assert.deepEqual(errors,[]);console.log('PASS original chat room/photo click: own photo recall, others/expired denied, cancel, failure/retry, rapid click once, image cleared and reload retained, room summary, text recall and room-switch guard');return;
+ }
  const beforeReturn=messages().length;
  await page.fill('#chatInput','第一行');await page.locator('#chatInput').press('Enter');await page.locator('#chatInput').type('第二行');
  assert.equal(await page.inputValue('#chatInput'),'第一行\n第二行');assert.equal(messages().length,beforeReturn);

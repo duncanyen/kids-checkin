@@ -774,3 +774,9 @@ body {
 
 .chat-history-control { display:block; margin:8px auto 18px; padding:9px 16px; border:1px solid var(--text-sub); border-radius:18px; background:transparent; color:var(--text-sub); font:inherit; cursor:pointer; }
 .chat-history-control:disabled { border-color:transparent; cursor:default; opacity:.75; }
+
+/* 照片維持點擊放大；可收回的本人照片在預覽底部提供操作入口。 */
+.photo-retract-button { position:absolute; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); min-height:44px; padding:10px 22px; border:1px solid var(--border-color,#ddd); border-radius:12px; background:var(--n-surface,#fff); color:#dc2626; font:inherit; font-weight:700; cursor:pointer; }
+.photo-retract-button[hidden] { display:none; }
+.photo-retract-button:disabled { opacity:.65; cursor:wait; }
+#photoViewerModal[data-retractable="true"] .viewer-content { max-height:calc(100vh - 160px); max-height:calc(100dvh - 160px - env(safe-area-inset-bottom)); }

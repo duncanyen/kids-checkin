@@ -47,6 +47,8 @@ let singleRoomUnsubscribe = null;
 let pendingReplyMsgId = null;
 let pendingReplyData = null;
 let selectedMsgForAction = null; 
+let viewedPhoto = null;
+const retractingMessages = new Set();
 let isFirstLoad = true; 
 window._isChatJustLoaded = false; 
 
@@ -122,6 +124,7 @@ function listenToRooms() {
 async function enterRoom(roomId, roomData) {
     if (roomData.groupId !== currentGroupId || !roomHasMember(roomData,currentUser.accountId,allProfiles)) return;
 
+    closePhotoViewer();
     chatState.activeRoomId = roomId;
     chatState.activeRoomData = roomData;
 
@@ -184,6 +187,7 @@ async function markRoomRead(roomId, force = false) {
 }
 
 document.getElementById('btnBackToList').addEventListener('click', () => {
+    closePhotoViewer();
     markRoomRead(chatState.activeRoomId, true);
     if (messagesUnsubscribe) messagesUnsubscribe();
     if (singleRoomUnsubscribe) singleRoomUnsubscribe(); 
@@ -330,6 +334,12 @@ function renderAllMessages(preserveScroll = false) {
         appendMessageUI(msg.id, msg, msgTimestampMs);
     });
 
+    if (viewedPhoto) {
+        const photo = chatState.currentMessagesList.find(message => message.id === viewedPhoto.id);
+        if (viewedPhoto.roomId !== chatState.activeRoomId || !photo || photo.isRetracted || !photo.imageUrl) closePhotoViewer();
+        else updatePhotoRetract(photo);
+    }
+
     if (isFirstLoad) {
         isFirstLoad = false;
         window._isChatJustLoaded = true; 
@@ -387,7 +397,7 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
     displayText = displayText.replace(/\n/g, '<br>');
 
     let contentHtml = msg.imageUrl 
-        ? `<img src="${msg.imageUrl}" class="chat-photo" onclick="event.stopPropagation(); window.chatCore.openPhotoViewer(this.src);" onload="if(window._isChatJustLoaded) window.chatCore.lockScrollPosition();">` 
+        ? `<img src="${msg.imageUrl}" class="chat-photo" onload="if(window._isChatJustLoaded) window.chatCore.lockScrollPosition();">`
         : `<div>${displayText}</div>`;
     
     let replyHtml = '';
@@ -404,6 +414,11 @@ function appendMessageUI(msgId, msg, msgTimestampMs) {
         <div class="msg-status-row">${isMine ? readHtml : ''}<span class="msg-time">${timeStr}</span></div>
     `;
     wrapper.querySelector('.chat-msg')?.addEventListener('click',()=>openMsgAction(msgId,isMine,msgTimestampMs,senderName,msg.imageUrl?'[圖片]':msg.text||''));
+    const photo = wrapper.querySelector('.chat-photo');
+    if (photo) {
+        photo.dataset.messageId = msgId; photo.alt = '聊天室照片';
+        photo.addEventListener('click', event => { event.stopPropagation(); openPhotoViewer(photo.src, msgId); });
+    }
     document.getElementById('chatMessages').appendChild(wrapper);
 }
 
@@ -569,8 +584,34 @@ chatPhotoInput.addEventListener('change', async event => {
 document.getElementById('btnBackToDashboard').addEventListener('click', () => { window.location.href = 'index.html'; });
 
 // --- 匯出給 HTML 使用的 UI 互動函數 ---
-function openPhotoViewer(src) { document.getElementById('viewerImage').src = src; document.getElementById('photoViewerModal').style.display = 'flex'; }
-function closePhotoViewer() { document.getElementById('photoViewerModal').style.display = 'none'; document.getElementById('viewerImage').src = ''; }
+function canRetractMessage(message) {
+    if (!message || message.isRetracted || !isMyMessage(message)) return false;
+    const timestamp = message.timestamp;
+    const time = timestamp?.toMillis ? timestamp.toMillis() : timestamp?.toDate ? timestamp.toDate().getTime() : typeof timestamp === 'number' ? timestamp : NaN;
+    return Number.isFinite(time) && Date.now() - time < 24 * 60 * 60 * 1000;
+}
+function updatePhotoRetract(message) {
+    const button = document.getElementById('btnRetractPhoto');
+    const eligible = canRetractMessage(message);
+    button.hidden = !eligible;
+    button.disabled = retractingMessages.has(message?.id);
+    button.textContent = button.disabled ? '收回中…' : '收回照片';
+    document.getElementById('photoViewerModal').dataset.retractable = String(eligible);
+}
+function openPhotoViewer(src, messageId) {
+    const message = chatState.currentMessagesList.find(item => item.id === messageId);
+    viewedPhoto = message ? { id: message.id, roomId: chatState.activeRoomId } : null;
+    updatePhotoRetract(message);
+    document.getElementById('viewerImage').src = src;
+    document.getElementById('photoViewerModal').style.display = 'flex';
+}
+function closePhotoViewer() {
+    viewedPhoto = null;
+    document.getElementById('photoViewerModal').style.display = 'none';
+    document.getElementById('viewerImage').src = '';
+    document.getElementById('btnRetractPhoto').hidden = true;
+}
+function retractPhoto() { return triggerRetract(viewedPhoto); }
 
 function insertMention(name) {
     const val = chatInput.value;
@@ -585,9 +626,9 @@ function insertMention(name) {
 }
 
 function openMsgAction(msgId, isMine, timestampMs, sender, text) {
-    selectedMsgForAction = { id: msgId, sender, text, isMine, timestampMs };
-    const hoursPassed = (Date.now() - timestampMs) / (1000 * 60 * 60);
-    document.getElementById('btnActionRetract').style.display = (isMine && hoursPassed < 24) ? 'block' : 'none';
+    selectedMsgForAction = { id: msgId, roomId: chatState.activeRoomId, sender, text, isMine, timestampMs };
+    const message = chatState.currentMessagesList.find(item => item.id === msgId);
+    document.getElementById('btnActionRetract').style.display = canRetractMessage(message) ? 'block' : 'none';
     document.getElementById('msgActionModal').style.display = 'flex';
 }
 function closeMsgActionModal(e) { if (e.target.id === 'msgActionModal' || e.target.tagName === 'BUTTON') document.getElementById('msgActionModal').style.display = 'none'; }
@@ -601,27 +642,36 @@ function triggerReply() {
 }
 function cancelReply() { pendingReplyMsgId = null; pendingReplyData = null; document.getElementById('replyPreviewArea').style.display = 'none'; }
 
-async function triggerRetract() {
-    const message=chatState.currentMessagesList.find(message=>message.id===selectedMsgForAction?.id);
-    if(!message||!isMyMessage(message))return;
-
+async function triggerRetract(selection = selectedMsgForAction) {
+    if (!selection || selection.roomId !== chatState.activeRoomId) return;
+    const message = chatState.currentMessagesList.find(item => item.id === selection.id);
+    if (!canRetractMessage(message) || retractingMessages.has(message.id)) return;
     if (!confirm("確定要收回此訊息嗎？")) return;
-    const history=messageHistory;
-    const messageId=message.id;
+    const history = messageHistory, roomId = chatState.activeRoomId, messageId = message.id;
+    retractingMessages.add(messageId);
+    if (viewedPhoto?.id === messageId) updatePhotoRetract(message);
     try {
         await updateDoc(doc(db, "messages", messageId), { isRetracted: true, text: "", imageUrl: null });
-        if (messageHistory !== history) return;
-        chatState.currentMessagesList=history.merge([{...message,isRetracted:true,text:"",imageUrl:null}]);
+        if (viewedPhoto?.id === messageId && viewedPhoto.roomId === roomId) closePhotoViewer();
+        if (messageHistory !== history || chatState.activeRoomId !== roomId) return;
+        chatState.currentMessagesList = history.merge([{ ...message, isRetracted: true, text: "", imageUrl: null }]);
         renderAllMessages();
-        if (chatState.currentMessagesList.length > 0 && chatState.currentMessagesList[chatState.currentMessagesList.length - 1].id === selectedMsgForAction.id) {
-            await updateDoc(doc(db, "rooms", chatState.activeRoomId), { lastMessage: `${currentUser.name} 收回了一則訊息` });
+        document.getElementById('msgActionModal').style.display = 'none';
+        if (chatState.currentMessagesList.at(-1)?.id === messageId) {
+            try { await updateDoc(doc(db, "rooms", roomId), { lastMessage: `${currentUser.name} 收回了一則訊息` }); }
+            catch (error) { console.warn('訊息已收回，聊天室摘要更新失敗', error.code || 'unknown'); }
         }
-    } catch(e) {}
-    document.getElementById('msgActionModal').style.display = 'none';
+    } catch (error) {
+        console.error('聊天室收回訊息失敗', error.code || 'unknown');
+        alert('收回訊息失敗，請稍後重試。');
+    } finally {
+        retractingMessages.delete(messageId);
+        if (viewedPhoto?.id === messageId) updatePhotoRetract(message);
+    }
 }
 
 window.chatCore = {
-    openPhotoViewer, closePhotoViewer, lockScrollPosition, insertMention, 
+    openPhotoViewer, closePhotoViewer, retractPhoto, lockScrollPosition, insertMention,
     openMsgAction, closeMsgActionModal, triggerReply, cancelReply, triggerRetract
 };
 

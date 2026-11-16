@@ -21,7 +21,7 @@
     <title>Nexus - 聊天室</title>
     <link rel="icon" href="homebase_icon.jpg" type="image/jpeg">
     <!-- 引入抽離的 CSS -->
-    <link rel="stylesheet" href="css/chat.css"> 
+    <link rel="stylesheet" href="css/chat.css?v=20261116-photo-retract">
     <style>
         /* 日期分隔線 (LINE 風格) */
         .date-divider { display: flex; justify-content: center; margin: 16px 0; }
@@ -267,6 +267,8 @@
     <div id="photoViewerModal" class="photo-viewer" onclick="window.chatCore.closePhotoViewer()">
         <span class="close-viewer">✕</span>
         <img class="viewer-content" id="viewerImage" onclick="event.stopPropagation()">
+        <button type="button" id="btnRetractPhoto" class="photo-retract-button" hidden onclick="event.stopPropagation(); window.chatCore.retractPhoto();">收回照片</button>
+
     </div>
 
     <script type="module" src="js/chat-core.js"></script>
