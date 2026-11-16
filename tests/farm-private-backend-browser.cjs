@@ -263,6 +263,14 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    serverRoll=0;await resetCooldown();await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('VisitScene').gorillaEncounter),false);
    serverRoll=.99;db.data.get('groups/A/users/bob').farm.readyEggs.hen=3;db.data.get('groups/A/users/bob').farm.eggsReady=3;
    db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});db.data.set('groups/B/users/alice',{farm:structuredClone(farm)});
+   // 另一分頁在其他雞舍觸發戰鬥：點目前雞隻不能自動傳送或偷其他目標。
+   db.data.set(pendingKey,{id:'other-live-target',kind:'gorilla',groupId:'A',targetGroupId:'B',targetAccountId:'alice',targetName:'另一位玩家',startedAt:Date.now(),approachEndsAt:Date.now()+10000,deadline:Date.now()+40000,health:1000,attacks:{melee:0,ranged:0}});
+   await resetCooldown();
+   const beforeOtherFarm=structuredClone(db.data.get('groups/B/users/alice').farm),beforeCurrentFarm=structuredClone(db.data.get('groups/A/users/bob').farm),beforeOwnFarm=structuredClone(db.data.get('groups/A/users/alice').farm);
+   await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__beforeVisit=s.visitToken;window.__beforeName=s.targetName;return s.attemptSteal();});
+   assert.equal(await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');return s.visitToken===window.__beforeVisit&&s.targetGroupId==='A'&&s.targetAccountId==='bob'&&s.targetName===window.__beforeName&&!s.backendChallenge&&!s.visitEncounterReady;}),true,'拜訪位置與名稱不被其他會話覆蓋');
+   assert.equal(db.data.get(pendingKey).id,'other-live-target');assert.equal(db.data.get(pendingKey).health,1000);
+   assert.deepEqual(db.data.get('groups/B/users/alice').farm,beforeOtherFarm);assert.deepEqual(db.data.get('groups/A/users/bob').farm,beforeCurrentFarm);assert.deepEqual(db.data.get('groups/A/users/alice').farm,beforeOwnFarm,'沒有偷蛋、發獎或扣款');
    db.data.set(pendingKey,{id:'old-target',kind:'gorilla',groupId:'A',targetGroupId:'B',targetAccountId:'alice',startedAt:Date.now()-50000,approachEndsAt:Date.now()-40000,deadline:Date.now()-1000,health:1000,attacks:{melee:0,ranged:0}});
    await resetCooldown();await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});
    assert.equal(db.data.get('groups/B/users/alice').farm.eggsReady,0,'原戰鬥損失留在原雞舍');assert.equal(db.data.get('groups/A/users/bob').farm.eggsReady,2,'確認目前目標後只扣實際偷取的一顆');assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,4);

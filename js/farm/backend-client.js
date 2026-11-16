@@ -86,10 +86,15 @@ export function settleBackendBattle(id){
 }
 export const visitPayload=scene=>({targetGroupId:scene.targetGroupId,targetAccountId:scene.targetAccountId});
 
-/** 後端保留未完成戰鬥的原始目標；切換場景不能把損失改到其他人的雞舍。 */
+/** 後端保留原戰鬥目標；拜訪中遇到其他雞舍的事件只提示，不擅自更換玩家的拜訪位置。 */
 export function routeBackendChallenge(scene,claim){
  if(!FARM_BACKEND_ENABLED||!claim?.challenge)return true;
  const challenge=claim.challenge,context=readGameContext();
  if((scene.targetGroupId||context.groupId)===challenge.targetGroupId&&(scene.targetAccountId||context.accountId)===challenge.targetAccountId){scene.backendChallenge=challenge;return true;}
+ if(scene.scene.key==='VisitScene'){
+  scene.backendChallenge=null;scene.visitEncounterReady=false;
+  scene.showFloatingText('其他雞舍尚有怪物事件未結算，請返回自家農場處理後再試。','#FFD54F',14);
+  return false;
+ }
  scene.scene.start('VisitScene',{targetGroupId:challenge.targetGroupId,targetAccountId:challenge.targetAccountId,targetName:challenge.targetName||challenge.targetAccountId});return false;
 }
