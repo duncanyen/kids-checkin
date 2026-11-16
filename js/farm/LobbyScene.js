@@ -1,3 +1,4 @@
+import { farmLoading } from './loading-ui.js';
 import { mountHalloween } from './halloween.js';
 import { preloadSceneAssets, finishSceneAssets, ensureAssets, ALL_ASSETS } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
@@ -24,6 +25,8 @@ export default class LobbyScene extends Phaser.Scene {
         this.requestId = (this.requestId || 0) + 1;
         this.entering = false;
         this.entryAttempt = null;
+        this.entryLoading = false;
+        this.entryLoadingHandoff = false;
         this.mode = 'own';
         this.page = 1;
         this.groups = [];
@@ -46,8 +49,15 @@ export default class LobbyScene extends Phaser.Scene {
             if (Math.abs(dx) > 65 && Math.abs(dy) < 60) this.showPublic();
             this.swipeStart = null;
         });
-        onSceneExit(this, () => { this.lobbyToken = null; this.requestId++; this.searchResizeObserver.disconnect(); this.searchRoot.remove(); });
+        onSceneExit(this, () => { if (!this.entryLoadingHandoff) this.finishEntryLoading(); this.entryLoading = false; this.lobbyToken = null; this.requestId++; this.searchResizeObserver.disconnect(); this.searchRoot.remove(); });
         this.loadNeighbors();
+    }
+
+    // 共用啟動時的母雞動畫；只結束本場景發起的載入，避免關閉其他流程的遮罩。
+    finishEntryLoading() {
+        if (!this.entryLoading) return;
+        this.entryLoading = false;
+        farmLoading.complete(true);
     }
 
     button(x, y, text, callback, width = 150, container = null) {
@@ -142,6 +152,7 @@ export default class LobbyScene extends Phaser.Scene {
 
     async showPublic() {
         if (!this.publicEnabled) return;
+        this.finishEntryLoading();
         const request = ++this.requestId;
         this.entering = false;
         this.mode = 'public'; this.page = 1; this.hideSuggestions();
@@ -159,6 +170,7 @@ export default class LobbyScene extends Phaser.Scene {
 
     renderPublic() {
         if (!this.scene.isActive()) return;
+        this.finishEntryLoading();
         this.mode = 'public'; this.syncNavigation(); this.titleText.setText('公開村落一覽'); this.content.removeAll(true); this.loadingText.setVisible(false);
         const filtered = filterVillages(this.groups, this.searchInput.value);
         const pages = Math.max(1, Math.ceil(filtered.length / 10)); this.page = Math.min(this.page, pages);
@@ -178,6 +190,7 @@ export default class LobbyScene extends Phaser.Scene {
     }
 
     async showVillage(groupId) {
+        this.finishEntryLoading();
         const request = ++this.requestId;
         this.entering = false;
         this.hideSuggestions(); this.mode = groupId === CURRENT_GROUP_ID ? 'own' : 'village'; this.syncNavigation(); this.page = 1;
@@ -191,6 +204,7 @@ export default class LobbyScene extends Phaser.Scene {
     }
 
     renderFarms() {
+        this.finishEntryLoading();
         this.entering = false; this.entryAttempt = null; this.loadingText.setVisible(false);
         this.content.removeAll(true);
         const pages = Math.max(1, Math.ceil(this.farms.length / 9)); this.page = Math.min(this.page, pages);
@@ -207,7 +221,9 @@ export default class LobbyScene extends Phaser.Scene {
                 let transitioning = false;
                 const active = () => this.scene.isActive() && this.lobbyToken === token && this.entryAttempt === attempt && request === this.requestId && page === this.page;
                 house.setTint(0xffdf91);
-                this.loadingText.setText('正在載入村落…').setDepth(40).setVisible(true);
+                this.loadingText.setVisible(false);
+                this.entryLoading = true; this.entryLoadingHandoff = false;
+                farmLoading.begin('正在載入村落…');
                 try {
                     const groupId = group.id;
                     // 原本進場後的素材與驗證工作移到列表載入階段；不重複下載已完成的紋理。
@@ -220,9 +236,12 @@ export default class LobbyScene extends Phaser.Scene {
                     ]);
                     if (!active()) return;
                     if (!snapshot.exists() || !snapshot.data().farm) throw new Error('這位成員尚未建立雞舍。');
+                    farmLoading.progress(70, '正在準備村落…');
                     const result = backend.FARM_BACKEND_ENABLED ? await preparation.prepareVisitEntry({ targetGroupId: groupId, targetAccountId: member.accountId, ownFarm: this.registry.get('myFarmData') }, { command: backend.farmCommand, active }) : null;
                     if (!active()) return;
                     const preparedEntry = result ? { ...result, sourceGroupId: CURRENT_GROUP_ID, sourceAccountId: CURRENT_ACCOUNT_ID, group: verifiedGroup, farm: snapshot.data().farm } : null;
+                    farmLoading.progress(95, '即將進入村落…');
+                    this.entryLoadingHandoff = true;
                     transitioning = true;
                     this.scene.start('VisitScene', { targetGroupId: groupId, targetGroupName: verifiedGroup.name, targetAccountId: member.accountId, targetName: member.name, preparedEntry });
                 } catch (error) {
@@ -230,6 +249,7 @@ export default class LobbyScene extends Phaser.Scene {
                     if (active()) this.showFloatingText(195, 185, error.message || '村落載入失敗，請再點雞舍重試。', '#FFCDD2');
                 } finally {
                     if (this.lobbyToken === token && this.entryAttempt === attempt && !transitioning) {
+                        this.finishEntryLoading();
                         const ownsLoading = active();
                         this.entering = false; this.entryAttempt = null;
                         if (ownsLoading && this.loadingText.active) this.loadingText.setVisible(false);

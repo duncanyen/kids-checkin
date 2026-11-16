@@ -2,7 +2,7 @@
 
 ## 調整後流程
 
-點選玩家雞舍 → 列表顯示「正在載入村落…」與選取回饋 → 既有素材、群組權限、目標存檔與伺服器怪物判定完成 → 才切入拜訪場景。
+點選玩家雞舍 → 顯示既有母雞走路過場動畫與「正在載入村落…」 → 既有素材、群組權限、目標存檔與伺服器怪物判定完成 → 才切入拜訪場景。
 
 `LobbyScene` 將原本的資料讀取與 VisitScene 全素材預載平行處理，素材完成後才呼叫既有進場／里程碑 API，避免把怪物倒數耗在下載素材上。未新增 Firebase API 或寫入類型，也沒有在載入階段收蛋、偷蛋或增加任務進度。
 
@@ -41,7 +41,7 @@ COOP_CLEAN_TESTS=1 PHASER_FIXTURE=/tmp/nexus-phaser-3.60.0.js node tests/farm-pr
 STEAL_FLOW_TESTS=1 PHASER_FIXTURE=/tmp/nexus-phaser-3.60.0.js node tests/farm-private-backend-browser.cjs
 ```
 
-需先啟動 8032 靜態伺服器並提供 Phaser fixture。沒有修改或部署 Functions、Rules、索引或正式資料。本次只需發布前端；與先前完成的打掃視窗變更一起保留在工作目錄，尚未推送 GitHub。
+需先啟動 8032 靜態伺服器並提供 Phaser fixture。沒有修改或部署 Functions、Rules、索引或正式資料。本次只需發布前端；前次進場優化與打掃視窗已於 `8520535` 推送；本次母雞過場調整尚未推送。
 
 ## 修改檔案
 
@@ -50,3 +50,9 @@ STEAL_FLOW_TESTS=1 PHASER_FIXTURE=/tmp/nexus-phaser-3.60.0.js node tests/farm-pr
 - `js/farm/VisitScene.js`：一次性交接資料與結果，保留背景監聽與直接進場備援。
 - `tests/farm-visit-entry.test.mjs`、`tests/farm-private-backend-browser.cjs`。
 - 本報告及 `docs/verification/visit-preparation/`。
+
+## 母雞載入過場追加驗證
+
+沿用 `loading-ui.js` 與已載入的母雞 Atlas，沒有新增動畫素材或固定等待時間。資料與素材完成後顯示 70%，進場驗證完成後顯示 95%，場景就緒即關閉；這些是完成階段比例，不是網路下載百分比。離開、切換選擇與載入失敗會清除本次過場，成功時由既有進場完成流程收起。
+
+本次重新執行 3 項進場單元測試與 `VISIT_PRELOAD_TESTS=1` 真實 Phaser 瀏覽器流程，均通過；額外檢查母雞 canvas 可見、慢請求期間遮罩持續顯示、到達及取消後遮罩消失。未重跑上次完整 353 項測試。
