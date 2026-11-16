@@ -89,3 +89,13 @@ PHASER_FIXTURE=/tmp/nexus-phaser-3.60.0.js node tests/farm-private-backend-brows
 - 本文件及 `docs/verification/coop-clean/` 四張截圖。
 
 尚未執行 GitHub 推送或正式部署。本次前端發布即可，不需重新部署 Functions、Rules 或索引。
+
+## 跨群組同帳號打掃修正
+
+後端 helpClean 原先僅比較 targetAccountId 與目前 accountId，誤將不同群組的獨立雞舍當成自家目前雞舍。改為同時比較群組與帳號；跨群組同帳號沿用既有拜訪權限與髒亂值判定，目標減少 30 髒亂，來源農場沿用 +3 道德值（上限 100），同一收據重送不重複更新。
+
+每日任務仍要求其他帳號：同帳號跨群組清潔不產生 HELP_CLEAN_OTHER 任務事件，不放寬每日任務的原有驗證。清潔他人仍正常累計。公開村落、成員資格、怪物結算及已乾淨拒絕等條件不變。
+
+驗證：363 項 Node 測試通過；新增原子交易／重送／群組隔離／封閉村落／缺少成員／空髒亂／自家目前雞舍／怪物阻擋及任務資格測試。`CROSS_GROUP_SELF_CLEAN_TESTS=1` 真實 Phaser 隔離瀏覽器模式從原 HUD、公開村落、同帳號雞舍及確認入口操作，取消不送出、三次快速確認只一筆有效交易，70→40 且來源髒亂仍 30，任務進度維持 0。原 COOP_CLEAN_TESTS 六尺寸、錯誤、逾時收據確認與切換村落回歸通過。測試不存取正式玩家資料。
+
+本次變更在 gameOpsFarmTransaction 交易核心，需從 game-admin 部署 `--only functions:nexus-ops:gameOpsFarmTransaction`；既有雙區設定會同時更新台灣與新加坡。每日任務 Functions、Rules 及前端不需因本修正另行部署。尚未執行正式部署。

@@ -6,7 +6,8 @@ const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1';
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
-const coopCleanTests=process.env.COOP_CLEAN_TESTS==='1';
+const crossSelfCleanTests=process.env.CROSS_GROUP_SELF_CLEAN_TESTS==='1';
+const coopCleanTests=process.env.COOP_CLEAN_TESTS==='1'||crossSelfCleanTests;
 const entryEncounterTests=process.env.ENTRY_ENCOUNTER_TESTS==='1';
 const eggResultTests=process.env.EGG_RESULT_TESTS==='1';
 const unavailableEggResult=process.env.EGG_RESULT_UNAVAILABLE;
@@ -36,6 +37,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
  if(stealResultTests||entryEncounterTests||coopCleanTests||visitPreloadTests){db.data.set('groups/B',{name:'另一座公開村落',members:['bob'],farmVillageVisibility:'public'});db.data.set('groups/B/users/bob',{farm:{...structuredClone(farm),hens:2,hensState:[{id:'flower',name:'花花',breed:'silkie',laidAt:stamp},{id:'rice',name:'米粒',breed:'silkie',laidAt:stamp}],readyEggs:{hen:0,silkie:3,bresse:0,onagadori:0}}});}
  if(coopCleanTests||visitPreloadTests){db.data.get('users/bob').name='村長 Bob';db.data.set('groups/C',{name:'另一個公開村落',members:['carol'],farmVillageVisibility:'public'});db.data.set('users/carol',{accountId:'carol',name:'Carol 村長',role:'member'});db.data.set('groups/C/users/carol',{farm:structuredClone(farm)});}
+ if(crossSelfCleanTests){db.data.get('groups/A/users/alice').farm.moral=40;db.data.get('groups/B').members=['alice'];db.data.set('groups/B/users/alice',{farm:{...structuredClone(farm),cleanliness:70}});}
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
@@ -113,6 +115,17 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     }
     await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);await clickScene('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await clickScene('LobbyScene',group);await page.waitForFunction(g=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id===g&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0,group);await clickScene('LobbyScene','farm');if(waitForEntry)await page.waitForFunction(g=>{const s=window.__farmGame.scene.getScene('VisitScene');return s?.targetGroupId===g&&s.entryChecked&&!s.visitEncounterPending;},group);
    };
+   if(crossSelfCleanTests){
+    const taskCount=async()=>((await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}})).challenges.mission.tasks.find(t=>t.type==='HELP_CLEAN_OTHER').count);
+    await enter('B');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').targetAccountId),'alice');
+    await clickScene('VisitScene','coop');await page.locator('.farm-coop-clean-no').waitFor();assert.match(await page.locator('.farm-coop-clean-message').textContent(),/alice/);await page.locator('.farm-coop-clean-no').click();
+    assert.equal(calls.filter(c=>c.action==='helpClean').length,0);assert.equal(db.data.get('groups/B/users/alice').farm.cleanliness,70);
+    await clickScene('VisitScene','coop');await page.locator('.farm-coop-clean-yes').waitFor();await page.evaluate(()=>{const b=document.querySelector('.farm-coop-clean-yes');b.click();b.click();b.click();});
+    await page.waitForFunction(()=>!document.querySelector('[data-result-kind=coop-clean]'));
+    assert.equal(calls.filter(c=>c.action==='helpClean').length,1);assert.equal(db.data.get('groups/B/users/alice').farm.cleanliness,40);assert.equal(db.data.get('groups/A/users/alice').farm.cleanliness,30);assert.equal(db.data.get('groups/A/users/alice').farm.moral,43);assert.equal(await taskCount(),0);
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').targetGroupId),'B');assert.deepEqual(errors,[]);
+    console.log('PASS original HUD/public village/own account in another group/coop confirmation: cancel unchanged, rapid confirm one clean, distinct farms preserved and other-player mission unchanged');return;
+   }
    if(visitPreloadTests){
     let releaseVisit;visitGate=new Promise(resolve=>releaseVisit=resolve);
     await enter('B',false);await page.waitForFunction(()=>window.__farmGame.scene.isActive('LobbyScene')&&window.__farmGame.scene.getScene('LobbyScene').entering);

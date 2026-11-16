@@ -192,3 +192,38 @@ test('all monster deadlines preserve original coin and egg loss rules and never 
   assert.equal((await f.status()).tasks[2].count,0,kind);
  }
 });
+
+test('same account in another public group can be cleaned once without changing other-player mission eligibility',async()=>{
+ const f=setup();f.farm().moral=40;
+ const own=structuredClone(f.farm());
+ f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});
+ f.db.data.set('groups/B/users/alice',{farm:{...structuredClone(own),cleanliness:70},other:'keep'});
+ const req=f.req('helpClean',{targetGroupId:'B',targetAccountId:'alice'});
+ await Promise.all([f.api.handle(req),f.api.handle(req)]);
+ assert.equal(f.db.data.get('groups/B/users/alice').farm.cleanliness,40);
+ assert.equal(f.db.data.get('groups/B/users/alice').other,'keep');
+ assert.deepEqual(f.farm(),{...own,moral:43});
+ assert.equal((await f.status()).tasks.find(t=>t.type==='HELP_CLEAN_OTHER').count,0);
+ assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
+ assert.equal((await f.db.collection('ops_farm_transactions').get()).size,1);
+ await f.api.handle(req);assert.equal(f.db.data.get('groups/B/users/alice').farm.cleanliness,40);assert.equal(f.farm().moral,43);
+ // 真正清潔其他帳號仍計入原任務。
+ await f.api.handle(f.req('helpClean',{targetGroupId:'A',targetAccountId:'bob'}));
+ assert.equal((await f.status()).tasks.find(t=>t.type==='HELP_CLEAN_OTHER').count,1);
+});
+
+test('cross-group self cleaning retains public access, membership, dirt and battle guards',async()=>{
+ const f=setup();f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});
+ f.db.data.set('groups/B/users/alice',{farm:{...structuredClone(f.farm()),cleanliness:70}});
+ const clean=()=>f.api.handle(f.req('helpClean',{targetGroupId:'B',targetAccountId:'alice'}));
+ for(const groupId of ['A','B']){
+  f.db.data.get('groups/'+groupId).farmVillageVisibility='closed';await assert.rejects(clean(),{code:'permission-denied'});f.db.data.get('groups/'+groupId).farmVillageVisibility='public';
+ }
+ f.db.data.get('groups/B').members=[];await assert.rejects(clean(),{code:'permission-denied'});f.db.data.get('groups/B').members=['alice'];
+ assert.equal(f.db.data.get('groups/B/users/alice').farm.cleanliness,70);
+ f.db.data.get('groups/B/users/alice').farm.cleanliness=0;await assert.rejects(clean(),{code:'failed-precondition'});
+ await assert.rejects(f.api.handle(f.req('helpClean',{targetGroupId:'A',targetAccountId:'alice'})),{code:'invalid-argument'});
+ f.db.data.get('groups/B/users/alice').farm.cleanliness=70;f.roll(0);await f.api.handle(f.req('visitEncounter',{targetGroupId:'B',targetAccountId:'alice'}));
+ await assert.rejects(clean(),{code:'failed-precondition'});assert.equal(f.db.data.get('groups/B/users/alice').farm.cleanliness,70);
+ assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
+});

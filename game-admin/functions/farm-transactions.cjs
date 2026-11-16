@@ -138,7 +138,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     if(!(farm.cleanliness>0))D.fail('failed-precondition','雞舍已經乾淨');patch={'farm.cleanliness':0};
    }else if(action==='helpClean'){
     const targetGroupId=D.id(p.targetGroupId),targetAccountId=D.id(p.targetAccountId);
-    if(targetAccountId===actor.accountId)D.fail('invalid-argument','必須協助其他玩家');
+    // 同帳號在不同群組有獨立雞舍；只有同群組同帳號才是自己的目前雞舍。
+    if(targetGroupId===actor.groupId&&targetAccountId===actor.accountId)D.fail('invalid-argument','請在自家雞舍使用清潔功能');
     const group=(await t.get(db.doc('groups/'+targetGroupId))).data();
     const ownGroup=targetGroupId===actor.groupId?group:(await t.get(db.doc('groups/'+actor.groupId))).data();
     if(!group?.members?.includes(targetAccountId)||(targetGroupId!==actor.groupId&&(group.farmVillageVisibility!=='public'||ownGroup?.farmVillageVisibility!=='public')))D.fail('permission-denied','無法拜訪此村落');
@@ -146,7 +147,9 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const target=requireFarm((await t.get(targetRef)).data()?.farm);targetFarm=target;
     if(!(target.cleanliness>0))D.fail('failed-precondition','對方雞舍已經乾淨');
     targetPatch={'farm.cleanliness':Math.max(0,target.cleanliness-30)};
-    patch={'farm.moral':Math.min(100,(farm.moral??100)+3)};event={type:'HELP_CLEAN_OTHER',targetGroupId,targetAccountId};
+    patch={'farm.moral':Math.min(100,(farm.moral??100)+3)};
+    // 任務仍要求其他玩家；跨群組清潔自己的雞舍不產生他人清潔事件。
+    if(targetAccountId!==actor.accountId)event={type:'HELP_CLEAN_OTHER',targetGroupId,targetAccountId};
    }else if(action==='tradePoultry'){
     if(qty>20)D.fail('invalid-argument','雞隻交易數量不正確');
     patch=P.tradePoultry(farm,D.enumValue(p.breed,Object.keys(P.BREEDS)),qty,D.enumValue(p.direction,['buy','sell']),stamp,ids);
