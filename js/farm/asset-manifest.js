@@ -1,5 +1,9 @@
 // Public file descriptions; safe to inspect without Phaser or Firebase.
 export const ASSET_MANIFEST = {
+    scene_default_thumb:{type:'image',image:'scenes/default-thumb.webp'},
+    scene_fuji_thumb:{type:'image',image:'scenes/fuji-thumb.webp'},
+    scene_fuji_portrait:{type:'image',image:'scenes/fuji-portrait.webp'},
+    scene_fuji_landscape:{type:'image',image:'scenes/fuji-landscape.webp'},
     giant: {type:'atlas',image:'giant-sheet.png',json:'giant-sheet.json'},
     ancient_stone: {type:'image',image:'giant-sheet.png',crop:[1552,665,222,222]},
     mole: {type:'atlas',image:'mole-sheet.png',json:'mole-sheet.json'},
@@ -19,4 +23,4 @@ export const ASSET_MANIFEST = {
 // Both map orientations remain ready for immediate mobile/tablet resizing.
 export const CORE_ASSETS = ['hen','farm_map','farm_panorama','ui_parchment','signboard','egg','coin','worm','earthworm'];
 // Seasonal art is demand-loaded only while its explicitly dated event is active.
-export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026');
+export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026' && !['scene_fuji_portrait','scene_fuji_landscape'].includes(key));

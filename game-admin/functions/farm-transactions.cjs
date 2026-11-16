@@ -6,18 +6,18 @@ const {assertBattlePage,changeBattlePage}=require('./battle-page.cjs');
 const pendingBattleOf=session=>session&&!session.result?{...session}:null;
 function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null}){
  let models;
- const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js')]);
+ const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js'),import('./game/farm-scenes-core.js')]);
  const positive=value=>D.integer(value,1,1000);
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
  async function handle(request){
   if(!await enabled())D.fail('failed-precondition','共用交易尚未完成安全切換');
-  const p=request.data||{},action=D.enumValue(p.action,['beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  const p=request.data||{},action=D.enumValue(p.action,['buyScene','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
   if(p.verifyOnly!==undefined&&typeof p.verifyOnly!=='boolean')D.fail('invalid-argument','進場驗證模式不正確');
   if(p.battlePageId!==undefined)D.requestId(p.battlePageId);
   if(['beginBattlePage','abandonBattlePage'].includes(action))D.requestId(p.battlePageId);
-  const requestId=D.requestId(p.requestId),models=await load(),[P,inventory,combat,housing,,,,,,garden,dogs,ranking,save]=models;
+  const requestId=D.requestId(p.requestId),models=await load(),[P,inventory,combat,housing,,,,,,garden,dogs,ranking,save,scenes]=models;
   const qty=['tradePoultry','buyWeapon','buyMedicine','sellItem','expandWarehouse'].includes(action)?positive(p.quantity):null;
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
   const ids=qty&&qty<=20?Array.from({length:qty},()=>crypto.randomUUID()):[];
@@ -148,6 +148,10 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const risk=state.cleanliness>80?.5:state.cleanliness>50?.2:0;
     if(added>0)state.hens.forEach((hen,i)=>{if(!hen.isSick&&rolls[i]<risk){hen.isSick=true;hen.sickTimestamp=stamp;}});
     patch=P.poultryPatch(state);
+   }else if(action==='buyScene'||action==='setScene'){
+    const id=D.enumValue(p.sceneId,Object.keys(scenes.FARM_SCENES));
+    try{patch=action==='buyScene'?scenes.scenePurchasePatch(farm,id):scenes.sceneSelectionPatch(farm,id);}catch(error){D.fail('failed-precondition',error.message);}
+    result={sceneId:id,ownedSceneIds:action==='buyScene'?scenes.ownedSceneIds({...farm,ownedSceneIds:patch['farm.ownedSceneIds']}):scenes.ownedSceneIds(farm),activeSceneId:action==='setScene'?id:scenes.activeSceneId(farm),coins:patch['farm.coins']??farm.coins};
    }else if(action==='cleanOwn'){
     if(!(farm.cleanliness>0))D.fail('failed-precondition','雞舍已經乾淨');patch={'farm.cleanliness':0};
    }else if(action==='helpClean'){

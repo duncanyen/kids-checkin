@@ -1,3 +1,5 @@
+import { FARM_SCENES } from './farm-scenes-core.js';
+import { openScenePurchase } from './farm-scene-ui.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { MOLE_CONFIG } from './mole-rules.js';
 import { COBRA_FANG_PRICE } from './cobra-rules.js';
@@ -76,6 +78,7 @@ export default class ShopScene extends Phaser.Scene {
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
         const buy = this.catalog.buy, sell = this.catalog.sell;
+        for(const item of Object.values(FARM_SCENES).filter(item=>item.price>0)) buy.push([`scene:${item.id}`,item.thumbTexture,`${item.name}\n${item.price.toLocaleString()}金幣`,()=>openScenePurchase(this,item.id)]);
         for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,this.guardDogProductText(breed),()=>openGuardDogRental(this,breedId)]);
         for (const [key, breed] of Object.entries(BREEDS)) {
             buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣${breed.purchasable === false ? '\n尚未開賣' : ''}`, () => breed.purchasable === false ? this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F') : this.openTradeModal('buy', key, breed.name, breed.buy)]);
@@ -201,12 +204,13 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     addShopItem(container, x, y, iconKey, text, color, callback) {
-        const bg = this.add.rectangle(x, y, 170, 80, color, 0.9).setInteractive({ cursor: 'pointer' });
-        const icon = this.add.image(x - 45, y, iconKey);
-        const iconSize = iconKey === 'onagadori' ? 56 : 45;
+        const sceneItem=iconKey.startsWith('scene_');if(sceneItem)y=150;
+        const bg = this.add.rectangle(x, y, 170, sceneItem?250:80, color, 0.9).setInteractive({ cursor: 'pointer' });
+        const icon = this.add.image(sceneItem?x:x - 45, sceneItem?y-25:y, iconKey);
+        const iconSize = sceneItem?156:iconKey === 'onagadori' ? 56 : 45;
         const scale = Math.min(iconSize / icon.width, iconSize / icon.height);
         icon.setScale(scale);
-        const txt = this.add.text(x + 18, y, text, { fontSize: '13px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        const txt = this.add.text(sceneItem?x:x + 18, sceneItem?y+100:y, text, { fontSize: '13px', color: '#fff', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
         bg.on('pointerdown', callback);
         container.add([bg, icon, txt]);
         return [bg, icon, txt];

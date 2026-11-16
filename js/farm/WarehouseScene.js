@@ -1,3 +1,5 @@
+import { FARM_SCENES, ownedSceneIds, activeSceneId } from './farm-scenes-core.js';
+import { openOwnedScene } from './farm-scene-ui.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { housingPatch, outdoorCounts } from './poultry-housing.js';
 import { openHousing } from './poultry-housing-ui.js';
@@ -44,6 +46,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.warehousePages = {};
         this.categoryTabs = addCategoryTabs(this, 250, key => this.selectWarehouseCategory(key));
         this.allConfigItems = [
+            ...Object.values(FARM_SCENES).map(item=>({key:`scene:${item.id}`,name:item.name,icon:item.thumbTexture,type:'scene',sceneId:item.id})),
             ...Object.entries(GUARD_DOG_BREEDS).map(([breedId,breed])=>({key:`guard:${breedId}`,name:breed.name,icon:breed.texture,type:'guardDog',breedId})),
             ...Object.entries(BREEDS).map(([key, breed]) => ({ key: `bird:${key}`, name: breed.name, icon: breed.texture, type: 'bird', breed: key })),
             { key: 'ownedCoop', name: '雞舍', icon: 'coop', type: 'coop' },
@@ -153,18 +156,19 @@ export default class WarehouseScene extends Phaser.Scene {
             const col = index % 2;
             const row = Math.floor(index / 2);
             const x = 100 + col * 190;
-            const y = row * 72;
+            const sceneItem=item.type==='scene',y = sceneItem?110+row*230:row * 72;
             const count = this.warehouseItemCount(item);
 
-            const bg = this.add.rectangle(x, y, 160, 66, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+            const bg = this.add.rectangle(x, y, 160, sceneItem?220:66, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
             
-            const img = this.add.image(x - 45, y, item.icon);
+            const img = this.add.image(sceneItem?x:x - 45, sceneItem?y-20:y, item.icon);
             
-            const scale = Math.min(45 / img.width, 45 / img.height);
+            const scale = Math.min((sceneItem?145:45) / img.width, (sceneItem?145:45) / img.height);
             img.setScale(scale);
 
             let displayTxt = `${item.name}\nx ${count}`;
             if(item.type==='guardDog'){const dog=guardDogLeases(this.farmData).find(dog=>dog.breedId===item.breedId);displayTxt=`${item.name}\n${dog?guardDogStatus(dog):'租期已結束'}`;}
+            if(item.type==='scene')displayTxt=`${item.name}\n${activeSceneId(this.farmData)===item.sceneId?'使用中':'已收藏'}`;
             if (item.type === 'bird') displayTxt = `${item.name}\n雞舍中 × ${count}`;
             if (item.type === 'coop') displayTxt = `${coopName(this.farmData.coopLevel)}\n飼養 ${poultryState(this.farmData).hens.length}/${coopCapacity(this.farmData.coopLevel)}`;
             if (item.type === 'warehouse') displayTxt = `倉庫容量\n${getUsedSpace(this.farmData)}/${this.farmData.warehouseLimit || 10} 格`;
@@ -172,7 +176,7 @@ export default class WarehouseScene extends Phaser.Scene {
                 displayTxt = `[裝備中]\n${displayTxt}`;
             }
 
-            const txt = this.add.text(x + 18, y - 10, displayTxt, { fontSize: item.type==='guardDog'?'11px':'14px', wordWrap: item.type==='guardDog'?{width:96}:undefined, color: '#fff', align: 'center', fontStyle: 'bold' }).setOrigin(0.5);
+            const txt = this.add.text(sceneItem?x:x + 18, sceneItem?y+85:y - 10, displayTxt, { fontSize: item.type==='guardDog'?'11px':'14px', wordWrap: item.type==='guardDog'?{width:96}:undefined, color: '#fff', align: 'center', fontStyle: 'bold' }).setOrigin(0.5);
 
             bg.on('pointerdown', () => this.handleItemClick(item.key, item.name));
             this.itemsPanel.add([bg, img, txt]);
@@ -184,6 +188,7 @@ export default class WarehouseScene extends Phaser.Scene {
         const count = this.farmData[key] || 0;
         
         const itemConfig = this.allConfigItems.find(i => i.key === key);
+        if(itemConfig?.type==='scene'){this.actionPanel.setVisible(false);openOwnedScene(this,itemConfig.sceneId);return;}
         if(itemConfig?.type==='guardDog'){this.actionPanel.setVisible(false);openGuardDogAction(this,itemConfig.breedId);return;}
         if (itemConfig?.type === 'warehouse') {
             this.actionPanel.setVisible(false);
@@ -268,6 +273,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     warehouseItemCount(item) {
+        if(item.type==='scene')return ownedSceneIds(this.farmData).includes(item.sceneId)?1:0;
         if(item.type==='guardDog')return guardDogLeases(this.farmData).some(dog=>dog.breedId===item.breedId)?1:0;
         if (item.type === 'bird') return poultryState(this.farmData).hens.filter(h => h.breed === item.breed).length;
         if (item.type === 'coop' || item.type === 'warehouse') return 1;

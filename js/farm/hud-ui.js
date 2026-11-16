@@ -53,7 +53,7 @@ export function mountFarmHud(game,{dailyChallenges,hasPendingBattle=()=>false}={
         stat.setAttribute('aria-label', label); top.append(stat);
     }
     const settings = document.createElement('button'); settings.type = 'button'; settings.className = 'farm-hud-button farm-hud-settings';
-    settings.innerHTML = icon('settings'); settings.dataset.unavailable = '設定'; settings.setAttribute('aria-label', '設定，尚未開放'); top.append(settings);
+    settings.innerHTML = icon('settings'); settings.setAttribute('aria-label', '設定'); top.append(settings);
     const side = document.createElement('nav'); side.className = 'farm-hud-side'; side.setAttribute('aria-label', '村落活動');
     const ranking = document.querySelector('.farm-ranking-launcher') || button('trophy','排行榜',true);
     ranking.classList.add('farm-hud-button'); ranking.innerHTML = icon('trophy');
@@ -196,6 +196,13 @@ export function mountFarmHud(game,{dailyChallenges,hasPendingBattle=()=>false}={
     function occupied() {
         return hasPendingBattle() || !game.input.enabled || game.scene.getScenes(true).some(scene => scene.input?.enabled === false || scene.isProcessing || scene.isFeeding || scene.isTreating || hasFarmHudEncounter(scene) || scene.housingDialog || scene.dialogContainer?.visible || scene.tradeContainer?.visible);
     }
+    settings.addEventListener('click',async()=>{
+        if(occupied()||game.registry.get('farmLoadState')?.phase!=='ready')return;
+        const scene=game.scene.getScene('MyFarmScene');if(!scene?.sys.isActive())return;
+        settings.disabled=true;
+        try{const {openSceneSettings}=await import('./farm-scene-ui.js');if(!occupied()&&scene.sys.isActive())openSceneSettings(scene);}
+        catch(error){toast.textContent='場景設定載入失敗，請重試';toast.hidden=false;}
+    });
     const routes = [[village,'LobbyScene'],[shop,'ShopScene'],[warehouse,'WarehouseScene']];
     for (const [node,key] of routes) node.addEventListener('click', () => {
         if (occupied() || game.registry.get('farmLoadState')?.phase !== 'ready') return;
@@ -228,6 +235,7 @@ export function mountFarmHud(game,{dailyChallenges,hasPendingBattle=()=>false}={
         if (!side.hidden && sideWasHidden) positionSide();
         const disabled = !scene || game.registry.get('farmLoadState')?.phase !== 'ready' || occupied();
         for (const [node] of routes) node.disabled = disabled;
+        settings.disabled = disabled;
         const mailOpen = document.querySelector('.farm-mail-overlay')?.hidden === false;
         if (mailWasOpen && !mailOpen && selectedDock === mail) selectedDock = null;
         mailWasOpen = mailOpen;

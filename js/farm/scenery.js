@@ -1,3 +1,4 @@
+import { FARM_SCENES, activeSceneId } from './farm-scenes-core.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { farmView } from './viewport.js';
 import { chooseHenPosition, getThreatZones } from './hen-navigation.js';
@@ -6,7 +7,19 @@ import { predatorDestination, reflowPredatorPatrol } from './predators.js';
 // Single continuous panorama: the renderer fills the viewport, not a CSS backdrop.
 export function addFarmBackground(scene, field = false) {
     const image = scene.add.image(0, 0, field ? 'farm_map' : 'farm_background').setOrigin(0, 0).setDepth(-10);
-    let previous;
+    let previous, requested='default', displayed='default', token=0, alive=true;
+    const themeFarm=()=>scene.sys.settings.key==='VisitScene'?scene.targetFarmData:scene.registry.get('myFarmData');
+    const syncTheme=()=>{
+        if(!field)return;
+        const id=activeSceneId(themeFarm());if(id===requested)return;
+        requested=id;const generation=++token,item=FARM_SCENES[id];
+        const show=()=>{if(alive&&generation===token){displayed=id;resize();}};
+        if([item.portrait,item.landscape].every(key=>scene.textures.exists(key)))show();
+        else import('./assets.js').then(({ensureAssets})=>ensureAssets(scene,[item.portrait,item.landscape])).then(show).catch(()=>{
+            // Keep the usable previous background; a later explicit retry can load again.
+            if(alive&&generation===token)console.warn('farm-scene-art-unavailable',id);
+        });
+    };
     const resize = () => {
         const view = farmView(scene);
         if (!field) {
@@ -16,13 +29,17 @@ export function addFarmBackground(scene, field = false) {
             return;
         }
         const map = getFarmMapLayout(scene);
-        image.setTexture(map.texture).setPosition(map.offsetX, map.offsetY).setDisplaySize(map.width * map.artScale, map.height * map.artScale);
+        image.setData('farmSceneId',displayed).setTexture(FARM_SCENES[displayed][map.texture==='farm_map'?'portrait':'landscape']).setPosition(map.offsetX, map.offsetY).setDisplaySize(map.width * map.artScale, map.height * map.artScale);
         if (previous && (previous.texture !== map.texture || previous.artScale !== map.artScale)) reflowFarm(scene, previous, map);
         previous = map;
     };
-    resize();
+    resize();syncTheme();
+    scene.events.on('update',syncTheme);
     scene.events.on('farm-viewport-resize', resize);
-    onSceneExit(scene, () => scene.events.off('farm-viewport-resize', resize));
+    // Explicit retry after an optional art-load failure, without a new subscription.
+    const retryTheme=()=>{requested=null;syncTheme();};
+    scene.events.on('farm-scene-retry',retryTheme);
+    onSceneExit(scene, () => {alive=false;token++;scene.events.off('update',syncTheme);scene.events.off('farm-viewport-resize', resize);scene.events.off('farm-scene-retry',retryTheme);});
     return image;
 }
 

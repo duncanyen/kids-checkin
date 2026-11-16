@@ -1,0 +1,53 @@
+# 咕咕村落場景收藏與切換
+
+## 使用流程
+
+1. 商店 → 場景 → 富士山農莊 → 確認購買，固定 500,000 金幣。
+2. 購買後保存在倉庫 → 場景；初始場景永遠擁有。
+3. 返回自家村落 → 右上設定 → 更換場景 → 使用此場景。
+4. 購買不自動切換；已購買場景永久保存，切換免費、不占物品格，不提供出售。
+5. 只有初始場景時顯示購買說明；其他場景未擁有則不能選用。
+
+收藏與使用中場景沿用既有「群組＋帳號」農場範圍。拜訪時以目標農場的選擇顯示，不套用訪客自己的場景。
+
+## 實作
+
+- 共用純模型 `js/farm/farm-scenes-core.js`：場景目錄、伺服器價格、預設場景、收藏和選擇驗證。
+- `game-admin/functions/farm-transactions.cjs`：沿用既有私有身分、戰鬥限制、原子交易和防重收據，新增 `buyScene`、`setScene`。
+- 僅在既有農場保存 `ownedSceneIds`（購買的永久場景）及 `activeSceneId`；舊存檔不用批次遷移，自動顯示初始場景。
+- `ShopScene.js`、`WarehouseScene.js`、`item-categories.js`：場景分類、縮圖卡片；六分類時縮小間距，隱藏無護衛犬分類後重排。
+- `farm-scene-ui.js`、`hud-ui.js`、`css/farm-scenes.css`、`farmgame.html`：共用 farmDialog 的遮罩、輸入隔離與離場清理；手機安全區、預覽、購買和切換回饋。
+- `asset-manifest.js`、`scenery.js`：完整富士山圖片按需載入，共用 Phaser 紋理快取；預先備妥雙方向再儲存切換。保留原地圖座標、42 個菜園格、雞舍與其他互動規則，不重新建立遊戲場景。
+- `backend-client.js`：場景操作不確定時沿用原請求編號重試。
+- `scripts/prepare-game-admin.cjs`：部署時將共用純模型包入 Functions。
+
+## 素材
+
+`assets/farm/scenes/`：
+
+| 檔案 | 尺寸 | 用途 |
+| --- | --- | --- |
+| default-thumb.webp | 180×320 | 初始場景預覽 |
+| fuji-thumb.webp | 180×320 | 商店、倉庫、設定預覽 |
+| fuji-portrait.webp | 720×1280 | 已生成的富士山直式底圖 |
+| fuji-landscape.webp | 2172×724 | 依富士山直式圖及原全景座標補製的橫向版本 |
+
+完整富士山底圖不加入 CORE_ASSETS 或 ALL_ASSETS。進入商店／倉庫只下載小縮圖，未使用富士山的玩家不必下載完整新場景。橫向圖為同主題補製，並非把直式圖橫向拉寬。WebP 為圖像壓縮與尺寸轉換。
+
+## 驗證環境與結果
+
+隔離 SDK 與 MemoryDB，執行真實 Phaser 3.60.0、現有前端場景及真實 createService / 交易核心。未連正式資料庫或扣正式金幣。
+
+- `node --test tests/*.test.cjs tests/*.test.mjs game-admin/tests/*.test.cjs`：373/373 通過。
+- `PHASER_FIXTURE=/tmp/nexus-phaser-3.60.0.js FARM_SCENE_TESTS=1 node tests/farm-private-backend-browser.cjs`：從 HUD → 商店 → 場景商品 → 確認購買 → 返回 → 倉庫 → 返回 → 設定切換。
+- 驗證金幣不足不扣款、600,000 扣為 100,000、快速兩點只送一次有效購買、既有收藏不再扣款、未擁有拒絕切換、儲存失敗交易回復、收據重播防重、切換免費、刷新保留、場景不占倉庫格、不觸發每日任務、未結束戰鬥拒絕購買及切換。
+- Chromium 視窗：320×568、390×844、430×932、768×1024、1024×768；不是 iPhone Safari 實機驗證。
+- 額外驗證完整場景圖片回傳 503 時不儲存選擇，重試載入成功後才切換；從村落列表拜訪 Bob 時顯示 Bob 的富士山場景，訪客自己的場景仍為初始場景。
+- 原有 `farm-private-backend-browser.cjs` 回歸通過：收蛋、商店、打掃、偷蛋、打怪結算及每日任務進度；未使用前端直接寫入。
+
+截圖（執行環境匯出目錄）：`/workspace/exports/gugu-scenes/`。
+
+## 上線
+
+本次未部署正式 Firebase、未修改 Rules 或正式資料。
+必須先部署包含新交易動作的 `functions:nexus-ops:gameOpsFarmTransaction`，再發布新前端與素材，避免舊後端拒絕新動作。
