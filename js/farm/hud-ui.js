@@ -34,7 +34,7 @@ function button(kind, label, locked = false) {
 /** 怪物準備、戰鬥與尚未成功結算時，暫時收起場景導覽。 */
 export function hasFarmHudEncounter(scene) {
     if (!scene) return false;
-    return !!(scene.preparingEncounter || scene.preparingGiant || scene.preparingCobra || scene.preparingMole ||
+    return !!(scene.checkingEntry || scene.entryChecked === false || scene.preparingEncounter || scene.preparingGiant || scene.preparingCobra || scene.preparingMole ||
         ['giantEncounter','cobraEncounter','moleEncounter','dragonEncounter','gorillaEncounter','eagleEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled) ||
         ['wolf','tiger'].some(key=>scene[key]?.active&&!scene[key].getData('resolved')));
 }

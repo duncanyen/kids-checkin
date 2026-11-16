@@ -50,7 +50,7 @@ export function farmCommand(action,payload={}){
 /** 找回此村落尚未確認的偷蛋請求；只重播原 payload，不因快照已更新而另開交易。 */
 export function pendingStealCommand(target) {
  const context=readGameContext();
- for(const action of ['visitEncounter','stealEgg'])for(const payload of action==='stealEgg'?[target]:[ {...target,reusePermit:true,stealWhenClear:true}, {...target,reusePermit:false,stealWhenClear:true} ]){
+ for(const action of ['visitEncounter','stealEgg'])for(const payload of action==='stealEgg'?[target]:[ {...target,reusePermit:true,verifyOnly:true,stealWhenClear:true}, {...target,reusePermit:false,verifyOnly:true,stealWhenClear:true}, {...target,reusePermit:true,stealWhenClear:true}, {...target,reusePermit:false,stealWhenClear:true} ]){
   const key='nexus.farm.pending:'+JSON.stringify([context.accountId,context.groupId,action,payload]);
   if(sessionStorage.getItem(key))return {action,payload};
  }

@@ -1,16 +1,20 @@
+import { farmLoading } from './loading-ui.js';
+import { GiantEncounter } from './giant.js';
+import { CobraEncounter } from './cobra.js';
+import { farmActionsBlocked } from './entry-encounter.js';
 import { readGameContext } from '../game-context.js';
 import { confirmStealRequest, isUncertainSteal } from './steal-request.js';
-import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow,routeBackendChallenge,pendingStealCommand} from './backend-client.js';
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,hasPendingBackendBattle,farmNow,routeBackendChallenge,pendingStealCommand} from './backend-client.js';
 import { reportingCounterPatch } from './reporting-config.js';
 import { maybeStartGiant, giantBlocksFarm } from './giant-trigger.js';
 import { outdoorHens } from './poultry-housing.js';
-import { maybeStartMole, moleBlocksGarden } from './mole.js';
+import { maybeStartMole, MoleEncounter } from './mole.js';
 import { holidayClock } from './holiday-clock.js';
 import { theftRankingPatch } from './ranking-core.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { killProgressPatch } from './combat-progress.js';
 import { mountHalloween } from './halloween.js';
-import { preloadSceneAssets, finishSceneAssets } from './assets.js';
+import { preloadSceneAssets, finishSceneAssets, ensureAssets, bossAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { EagleEncounter } from './eagle.js';
 import { configureFarmViewport, farmView } from './viewport.js';
@@ -61,6 +65,7 @@ export default class VisitScene extends Phaser.Scene {
         this.hasRolledEncounter = false;
         this.visitEncounterPending = null;
         this.visitEncounterReady = false;
+        this.entryChecked = false;
         this.giantEncounter = null; this.preparingGiant = false;
         this.preparingCobra = false;
         this.moleEncounter = null; this.preparingMole = false; this.gardenSearching = false;
@@ -77,7 +82,7 @@ export default class VisitScene extends Phaser.Scene {
         this.isStealing = false; 
         this.lastStealBlockedUntil = 0;
         this.henVisualKey = null;
-        this.stealFeedback = this.add.text(195, 362, '', { fontSize: '16px', color: '#fff4cc', backgroundColor: '#000a', padding: { x: 10, y: 7 }, align: 'center' }).setOrigin(.5).setDepth(40).setVisible(false);
+        this.stealFeedback = this.add.text(195, 362, '', { fontSize: '16px', color: '#fff4cc', backgroundColor: '#000a', padding: { x: 10, y: 7 }, align: 'center' }).setOrigin(.5).setDepth(40).setText('確認村落中…').setVisible(true);
         // 結果 UI 為非必要模組，背景預熱，不阻塞拜訪與怪物載入。
         this.time.delayedCall(100, () => { void loadStealResultUI().then(ui => ui.prepareStealResultAssets()).catch(() => {}); });
         this.nextHenAvoidanceAt = 0;
@@ -95,6 +100,7 @@ export default class VisitScene extends Phaser.Scene {
 
         addVegetableGarden(this, plant => this.searchCabbage(plant));
         addFarmSign(this, sign => {
+            if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
 
@@ -198,14 +204,25 @@ export default class VisitScene extends Phaser.Scene {
         this.visitEncounterReady = false;
         const work = (async () => {
             try {
-                if (first) {
-                    if (this.myFarmData.giantChallenge && await maybeStartGiant(this)) return false;
-                    if (this.myFarmData.moleChallenge && await maybeStartMole(this)) return false;
-                    if (await maybeStartCobra(this)) return false;
+                if (first && !verify) {
+                    const checks = this.myFarmData.giantChallenge ? [maybeStartGiant] : this.myFarmData.moleChallenge ? [maybeStartMole] : [maybeStartCobra, maybeStartGiant, maybeStartMole];
+                    for (const check of checks) {
+                        if (await check(this)) {
+                            if (!active()) return false;
+                            if (!farmActionsBlocked({ ...this, entryChecked: true })) throw Error('進場挑戰尚未確認');
+                            this.entryChecked = true;
+                            this.stealFeedback.setVisible(false);
+                            farmLoading.complete(true);
+                            return false;
+                        }
+                    }
                 }
                 if (!active()) return false;
                 const payload = recovery?.payload || { ...visitPayload(this), reusePermit: !first };
-                if (stealWhenClear && !first) payload.stealWhenClear = true;
+                if (!recovery) {
+                    if (verify) payload.verifyOnly = true;
+                    if (stealWhenClear) payload.stealWhenClear = true;
+                }
                 const send = body => verify && stealWhenClear ? this.sendStealRequest('visitEncounter', body) : farmCommand('visitEncounter', body);
                 let authorized = FARM_BACKEND_ENABLED ? await send(payload) : null;
                 if (!active()) return false;
@@ -218,20 +235,28 @@ export default class VisitScene extends Phaser.Scene {
                     if (!routeBackendChallenge(this, authorized)) return false;
                     this.backendChallenge = authorized?.challenge || null;
                 }
-                const encounter = FARM_BACKEND_ENABLED ? authorized?.kind : rollVisitEncounter(this.targetFarmData.coopLevel);
-                if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
+                if (verify && authorized?.challenge) {
+                    this.showFloatingText('進場狀態已變更，請重新進入村落確認。', '#FFD54F', 15);
+                    return false;
+                }
+                const encounter = FARM_BACKEND_ENABLED ? authorized?.kind : verify ? null : rollVisitEncounter(this.targetFarmData.coopLevel);
+                if (encounter) { await ensureAssets(this, bossAssets(encounter)); if (!active()) return false; }
+                if (encounter === 'giant') this.giantEncounter = new GiantEncounter(this, authorized.challenge);
+                else if (encounter === 'cobra') this.cobraEncounter = new CobraEncounter(this, authorized.challenge);
+                else if (encounter === 'mole') this.moleEncounter = new MoleEncounter(this, authorized.challenge);
+                else if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
                 else if (encounter === 'gorilla') this.spawnGorillaEvent();
                 else if (encounter === 'dragon') this.spawnDragonEvent();
                 else if (encounter === 'tiger') this.spawnTigerEvent();
                 else if (encounter === 'wolf') this.spawnWolfEvent();
-                else if (first && await maybeStartGiant(this)) return false;
-                if (active()) this.visitEncounterReady = !encounter;
+                if (active()) { this.entryChecked = true; this.visitEncounterReady = !encounter; this.stealFeedback.setVisible(false); if(!verify)farmLoading.complete(true); }
                 if (this.visitEncounterReady && authorized?.steal && onSteal) onSteal(authorized.steal);
                 return this.visitEncounterReady;
             } catch (error) {
                 if (active()) {
                     if (verify) throw error;
                     this.hasRolledEncounter = false;
+                    farmLoading.error('進場怪物確認失敗，請重試；尚未開放村落操作。', () => this.startVisitEncounter());
                     this.showFloatingText(error.message || '村落確認失敗，請再試一次', '#F44336', 16);
                 }
                 return false;
@@ -287,6 +312,7 @@ export default class VisitScene extends Phaser.Scene {
     onMyFarmDataChanged(parent, value) { this.myFarmData = value; this.startVisitEncounter(); }
 
     askCleanTargetFarm() {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
             this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, 195, 150); return;
         }
@@ -295,6 +321,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async cleanTargetFarm() {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
         try {
             await farmCommandOrLegacy('helpClean',visitPayload(this),()=>this.runVisitTransaction(async (t) => {
@@ -370,6 +397,7 @@ export default class VisitScene extends Phaser.Scene {
             }
 
             newHen.on('pointerdown', () => {
+                if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
                 // 同步放大偷蛋點擊時的比例
                 if (!this.isStealing) this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
                 this.attemptSteal(newHen);
@@ -622,19 +650,18 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async searchCabbage(cabSprite) {
-        if (this.gardenSearching || moleBlocksGarden(this)) return;
+        if (farmActionsBlocked(this, hasPendingBackendBattle()) || this.gardenSearching) return;
         const token = this.farmSceneToken || this.visitToken;
         const active = () => this.sys.isActive() && token === (this.farmSceneToken || this.visitToken);
         this.gardenSearching = true;
         try {
-            if (await maybeStartMole(this)) return;
             if (!active()) return;
             await this.searchGardenPlant(cabSprite);
-            if (active()) await maybeStartMole(this);
         } finally { if (active()) this.gardenSearching = false; }
     }
 
     async searchGardenPlant(cabSprite) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (!this.myFarmData || cabSprite.isAnimating) return;
         cabSprite.isAnimating = true;
         this.tweens.add({ targets: cabSprite, y: cabSprite.y - 10, duration: 100, yoyo: true, onComplete: () => cabSprite.isAnimating = false });
@@ -689,7 +716,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal(target = this.coopEgg) {
-        if (this.isStealing || this.eggResultDialog) return;
+        if (farmActionsBlocked(this, hasPendingBackendBattle()) || this.isStealing || this.eggResultDialog || this.visitEncounterPending) return;
         const recovery = FARM_BACKEND_ENABLED ? pendingStealCommand(visitPayload(this)) : null;
         if (!recovery && (this.preparingGiant || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.targetFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter))) {
             this.showFloatingText('雞舍確認中，請稍候…', '#FFD54F', 15);

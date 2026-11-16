@@ -36,6 +36,14 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
  if(['homeEncounter','visitEncounter','claimEncounter'].includes(action)){
   if(action==='claimEncounter'&&next&&!next.result&&next.kind!==p.monster)return{patch,result:null,session:next};
   if(next&&!next.result){if(next.health===0||stamp>=next.deadline)return{patch,result:{expired:next.health!==0,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:next.kind},session:next};}
+  // 操作只確認已清場的進場結果，絕不在收蛋／偷蛋時重新抽怪。
+  if(p.verifyOnly===true){
+   const same=next&&next.targetGroupId===target.groupId&&next.targetAccountId===target.accountId;
+   const cleared=same&&(next.visitPermit||next.harvestPermit||next.result?.outcome==='win'||next.result?.outcome==='loss');
+   if(!cleared)D.fail('failed-precondition','進場確認已失效，請重新進入村落；此次操作未執行');
+   if(action==='homeEncounter')next={...next,harvestPermit:true,harvested:false};
+   return{patch,result:null,session:next};
+  }
   // 偷蛋前可以重新確認目前拜訪。相同目標的已清場／已結算許可直接重用，不能因重試重新抽怪。
   if(action==='visitEncounter'&&p.reusePermit===true&&next&&next.targetGroupId===target.groupId&&next.targetAccountId===target.accountId&&(next.visitPermit||next.kind))return{patch,result:null,session:next};
   const requested=action==='claimEncounter'?D.enumValue(p.monster,['giant','cobra','mole']):null;
@@ -46,7 +54,6 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
    const roll=(min,max)=>min+Math.floor(random()*(max-min+1));
    if(action==='homeEncounter'){
     if(next&&!next.harvested&&next.targetGroupId===actor.groupId&&next.targetAccountId===actor.accountId&&(next.result?.outcome==='win'||next.harvestPermit))return{patch,result:null,session:next};
-    if(!Object.values(P.settlePoultry(farm,stamp).ready).some(n=>n>0)||inventory.getUsedSpace(farm)>=(farm.warehouseLimit||10))return{patch,result:null,session:next};
     kind=G.rollHomeBossEncounter(farm.coopLevel,roll);
    }else{kind=G.rollVisitBossEncounter(targetFarm?.coopLevel,roll,30);if(!kind&&roll(1,30)===1)kind='tiger';if(!kind&&roll(1,10)===1)kind='wolf';}
    if(!kind){if(action==='visitEncounter')next={id,kind:null,targetGroupId:target.groupId,targetAccountId:target.accountId,visitPermit:true,result:{outcome:'clear'}};if(action==='homeEncounter')next={id,kind:null,groupId:actor.groupId,targetGroupId:actor.groupId,targetAccountId:actor.accountId,harvestPermit:true,harvested:false,result:{outcome:'clear'}};return{patch,result:null,session:next};}

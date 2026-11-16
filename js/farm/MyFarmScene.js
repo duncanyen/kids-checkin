@@ -1,10 +1,11 @@
-import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow,routeBackendChallenge} from './backend-client.js';
+import { farmActionsBlocked } from './entry-encounter.js';
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,hasPendingBackendBattle,farmNow,routeBackendChallenge} from './backend-client.js';
 import { maybeStartGiant } from './giant-trigger.js';
 import { restorePendingBattle } from './pending-battle.js';
 import { LayingVisit } from './laying-visit.js';
 import { outdoorHens, treatmentPatch } from './poultry-housing.js';
 import { openCoopActions } from './poultry-housing-ui.js';
-import { maybeStartMole, moleBlocksGarden } from './mole.js';
+import { maybeStartMole } from './mole.js';
 import { maybeStartCobra } from './cobra-trigger.js';
 import { mountHalloween } from './halloween.js';
 import { ensureAssets, bossAssets } from './assets.js';
@@ -46,6 +47,8 @@ export default class MyFarmScene extends Phaser.Scene {
         this.farmData = null;
         this.henAssetsPending = false;
         this.preparingEncounter = false;
+        this.entryChecked = false;
+        this.checkingEntry = false;
         this.resumingPendingBattle = false;
         this.giantEncounter = null; this.preparingGiant = false;
         this.pendingEncounter = null;
@@ -84,6 +87,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
         addVegetableGarden(this, plant => this.searchCabbage(plant));
         addFarmSign(this, sign => {
+            if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
 
@@ -93,10 +97,6 @@ export default class MyFarmScene extends Phaser.Scene {
         this.timerText.setInteractive({ cursor: 'pointer' }).on('pointerdown', () => this.game.retryFarmSave?.());
         mountHalloween(this);
         this.createConfirmDialog();
-        const onPendingBattle=()=>this.resumePendingBattle();
-        const onFirstPendingBattle=(_parent,key)=>{if(key==='farmPendingBattle')onPendingBattle();};
-        this.registry.events.on('changedata-farmPendingBattle',onPendingBattle);
-        this.registry.events.on('setdata',onFirstPendingBattle);
         this.initFirebase();
         mountGuardDog(this,()=>this.farmData,true);
         this.layingVisit = new LayingVisit(this);
@@ -106,8 +106,6 @@ export default class MyFarmScene extends Phaser.Scene {
             this.isHarvesting = false;
             this.harvestStatus = null;
             this.resumingPendingBattle = false;
-            this.registry.events.off('changedata-farmPendingBattle',onPendingBattle);
-            this.registry.events.off('setdata',onFirstPendingBattle);
             this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
@@ -149,7 +147,7 @@ export default class MyFarmScene extends Phaser.Scene {
         const btn = this.add.rectangle(x, y, 80, 36, color, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
         this.add.text(x, y, label, { fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         btn.on('pointerdown', () => {
-            if (!this.isSaveReady()) {
+            if (!this.isSaveReady() || farmActionsBlocked(this, hasPendingBackendBattle())) {
                 this.timerText?.setText('請等待存檔連線完成');
                 return;
             }
@@ -197,20 +195,14 @@ export default class MyFarmScene extends Phaser.Scene {
             this.startEggTimer();
             if (!this.cobraEntryChecked) {
                 this.cobraEntryChecked = true;
-                this.time.delayedCall(0, async () => {
-                    if(this.resumingPendingBattle||this.preparingEncounter)return;
-                    if(this.farmData?.giantChallenge){await maybeStartGiant(this);return;}
-                    if(this.farmData?.moleChallenge){await maybeStartMole(this);return;}
-                    if(!await maybeStartCobra(this))await maybeStartGiant(this);
-                });
+                this.time.delayedCall(0, () => { void this.startEntryEncounter(); });
             }
             if(!this.game.registry.get('farmInitialReady')){
                 this.game.registry.set('farmInitialReady',true);
                 // Let the first populated farm frame render before hiding the shell.
                 const readyToken=this.farmSceneToken;
-                this.game.events.once('postrender',()=>{if(this.sys.isActive() && this.farmSceneToken===readyToken)farmLoading.complete();});
+                this.game.events.once('postrender',()=>{if(this.sys.isActive() && this.farmSceneToken===readyToken && this.entryChecked)farmLoading.complete();});
             } else if(resumedAssets && !this.preparingEncounter) farmLoading.complete(true);
-            this.resumePendingBattle();
         };
         const showState = state => {
             if (state && state.phase !== 'ready' && this.timerText?.active) this.timerText.setText(state.phase === 'error' ? '存檔未確認，點此重試' : '讀取存檔中，請稍候…');
@@ -234,6 +226,51 @@ export default class MyFarmScene extends Phaser.Scene {
         };
     }
 
+    async startEntryEncounter() {
+        if (this.checkingEntry || this.entryChecked || !this.farmData) return;
+        const token = this.farmSceneToken, active = () => this.sys.isActive() && this.farmSceneToken === token;
+        this.checkingEntry = true;
+        try {
+            // 里程碑也只在進場檢查，抓蟲／收蛋及擊倒後不臨時開下一場。
+            for (const start of (this.farmData.giantChallenge ? [maybeStartGiant] : this.farmData.moleChallenge ? [maybeStartMole] : [maybeStartCobra, maybeStartGiant, maybeStartMole])) {
+                if (!active()) return;
+                if (await start(this)) {
+                    if (!active()) return;
+                    if (!farmActionsBlocked({ ...this, entryChecked: true, checkingEntry: false })) throw Error('進場挑戰尚未確認');
+                    this.entryChecked = true;
+                    return;
+                }
+            }
+            let authorized = FARM_BACKEND_ENABLED ? await farmCommand('homeEncounter', {}) : { kind: rollHomeBossEncounter(this.farmData.coopLevel) };
+            if (!active()) return;
+            if (authorized?.result && !authorized.challenge) {
+                authorized = await farmCommand('homeEncounter', {});
+                if (!active()) return;
+            }
+            if (FARM_BACKEND_ENABLED && !routeBackendChallenge(this, authorized)) return;
+            this.backendChallenge = authorized?.challenge || null;
+            // 此次進場的權威回覆取代通知較晚送達的舊會話提示，不另啟動第二條恢復流程。
+            this.registry.remove('farmPendingBattle');
+            const kind = authorized?.kind;
+            if (kind) {
+                this.preparingEncounter = true;
+                await ensureAssets(this, bossAssets(kind));
+                if (!active()) return;
+                // 包含伺服器原有會話；不改血量、期限或原始目標。
+                if (['giant','cobra','mole'].includes(kind)) {
+                    this.preparingEncounter = false;
+                    await restorePendingBattle(this, authorized.challenge);
+                } else if (kind === 'eagle') this.eagleEncounter = new EagleEncounter(this);
+                else if (kind === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
+                else this.dragonEncounter = new DragonEncounter(this);
+            }
+            if (active()) this.entryChecked = true;
+        } catch (error) {
+            if (active()) farmLoading.error('進場怪物確認失敗，請重試；尚未開放農場操作。', () => this.startEntryEncounter());
+            console.warn('farm-entry-encounter-failure', error?.code || error?.name || 'unknown');
+        } finally { if (this.farmSceneToken === token) { this.checkingEntry = false; this.preparingEncounter = false; if(this.entryChecked){this.updateEggCountdown();farmLoading.complete();} } }
+    }
+
     isSaveReady() {
         return !this.preparingGiant && !this.henAssetsPending && !this.preparingEncounter && !!this.farmData && this.registry.get('farmLoadState')?.phase === 'ready';
     }
@@ -241,18 +278,6 @@ export default class MyFarmScene extends Phaser.Scene {
     updateUI() {
         if (!this.farmData) return;
         this.coopEgg.setVisible((this.farmData.eggsReady || 0) > 0);
-    }
-
-    async resumePendingBattle(challenge=this.registry.get('farmPendingBattle')) {
-        if(!FARM_BACKEND_ENABLED||!this.sys.isActive()||!challenge||this.resumingPendingBattle||!this.isSaveReady())return;
-        const token=this.farmSceneToken;
-        this.resumingPendingBattle=true;
-        if(this.registry.get('farmPendingBattle')?.id===challenge.id)this.registry.remove('farmPendingBattle');
-        try{await restorePendingBattle(this,challenge);}
-        catch(error){
-            if(this.sys.isActive()&&this.farmSceneToken===token)farmLoading.error('未完成戰鬥恢復失敗，請點此重試。',()=>this.resumePendingBattle(challenge));
-            console.warn('未完成戰鬥恢復失敗',error.message);
-        }finally{if(this.farmSceneToken===token)this.resumingPendingBattle=false;}
     }
 
     renderCleanlinessVisual() {
@@ -273,6 +298,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     askCleanMyFarm(cleanOnly = false) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (!this.isSaveReady()) return;
         if (!cleanOnly && poultryState(this.farmData).hens.some(h=>h.isSick)) { openCoopActions(this); return; }
         if (!this.farmData || (this.farmData.cleanliness || 0) === 0) {
@@ -286,6 +312,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async cleanMyFarm() {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (!this.isSaveReady()) return;
         try {
             await farmCommandOrLegacy('cleanOwn',{},()=>runTransaction(db, async (t) => {
@@ -351,6 +378,7 @@ export default class MyFarmScene extends Phaser.Scene {
             } else {
                 newHen.play(poultryAnim(newHen, 'idle'), true);
                 newHen.on('pointerdown', () => {
+                if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
                     if (!newHen.nesting && this.emptyClickCount < 4) {
                         // 同步放大點擊時的動畫比例 (原本是 1.1 / 0.9，改成基準值 2 乘上去，也就是 2.2 / 1.8)
                         this.tweens.add({ targets: newHen, y: newHen.y - 15, scaleX: newHen.baseScale * 1.1, scaleY: newHen.baseScale * 0.9, duration: 100, yoyo: true });
@@ -377,6 +405,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     askTreatment(henIndex) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (!this.isSaveReady()) return;
         const meds = this.farmData.medicines || 0;
         if (meds < 1) {
@@ -396,6 +425,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
     async treatRandomSickHen() { return this.performTreatment({roll:Math.random()}); }
     async performTreatment(options) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if(!this.isSaveReady()||this.isTreating)return;
         this.isTreating=true;
         try{
@@ -448,6 +478,7 @@ export default class MyFarmScene extends Phaser.Scene {
 
     updateEggCountdown(now = Date.now()) {
         if (!this.timerText?.active || !this.farmData) return;
+        if (!this.entryChecked) { this.timerText.setText('進入農場確認中…'); return; }
         if (this.isHarvesting) { this.timerText.setText(this.harvestStatus || '收蛋中…'); return; }
         const status = nextEggStatus(this.farmData, now);
         if (!status.hens) this.timerText.setText('雞舍空著，去商店選購雞隻吧！');
@@ -489,19 +520,18 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async searchCabbage(cabSprite) {
-        if (this.gardenSearching || moleBlocksGarden(this)) return;
+        if (farmActionsBlocked(this, hasPendingBackendBattle()) || this.gardenSearching) return;
         const token = this.farmSceneToken || this.visitToken;
         const active = () => this.sys.isActive() && token === (this.farmSceneToken || this.visitToken);
         this.gardenSearching = true;
         try {
-            if (await maybeStartMole(this)) return;
             if (!active()) return;
             await this.searchGardenPlant(cabSprite);
-            if (active()) await maybeStartMole(this);
         } finally { if (active()) this.gardenSearching = false; }
     }
 
     async searchGardenPlant(cabSprite) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (!this.isSaveReady()) return;
         if (!this.farmData || cabSprite.isAnimating) return;
         cabSprite.isAnimating = true;
@@ -542,7 +572,7 @@ export default class MyFarmScene extends Phaser.Scene {
     }
 
     async harvestEgg() {
-        if (!this.isSaveReady()) return;
+        if (!this.isSaveReady() || farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (this.isHarvesting || this.eggResultDialog || this.resumingPendingBattle || this.preparingEncounter || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
         const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
@@ -557,7 +587,6 @@ export default class MyFarmScene extends Phaser.Scene {
         this.harvestStatus = '確認雞舍中…';
         this.updateEggCountdown();
         try {
-            if (await maybeStartCobra(this)) return;
             if (!this.sys.isActive() || this.farmSceneToken !== cobraToken) return;
 
             if (!this.farmData || !Object.values(settlePoultry(this.farmData).ready).some(n => n > 0)) {
@@ -587,33 +616,13 @@ export default class MyFarmScene extends Phaser.Scene {
                 return;
             }
 
-            const defended = [this.giantEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss?.settled && boss.result === 'win');
-            const authorized=FARM_BACKEND_ENABLED?await farmCommand('homeEncounter',{collectWhenClear:true}):null;
+            const authorized = FARM_BACKEND_ENABLED ? await farmCommand('homeEncounter', { verifyOnly: true, collectWhenClear: true }) : null;
             if (!active()) return;
-            if(FARM_BACKEND_ENABLED){if(!routeBackendChallenge(this,authorized))return;this.backendChallenge=authorized?.challenge||null;}
-            const encounter = FARM_BACKEND_ENABLED?authorized?.kind:this.pendingEncounter || (defended ? null : rollHomeBossEncounter(this.farmData.coopLevel));
-            if (encounter) {
-                this.pendingEncounter = encounter;
-                this.harvestPreparedEncounter = () => this.harvestEgg();
-                this.preparingEncounter = true;
-                const currentScene = this.farmSceneToken;
-                if(bossAssets(encounter).some(key=>!this.textures.exists(key)))farmLoading.begin('準備迎戰');
-                try { await ensureAssets(this,bossAssets(encounter),n=>farmLoading.progress(n*95,'準備迎戰')); }
-                catch { if(this.sys.isActive() && this.farmSceneToken===currentScene){this.preparingEncounter=false;farmLoading.error('怪物素材載入失敗，尚未開始戰鬥。',()=>this.harvestPreparedEncounter?.());}return; }
-                if(!this.sys.isActive() || this.farmSceneToken!==currentScene)return;
-                this.preparingEncounter = false;
-                if(!this.isSaveReady()){farmLoading.error('存檔連線尚未確認，請重試。',async()=>{await this.game.retryFarmSave?.();if(this.sys.isActive() && this.farmSceneToken===currentScene)await this.harvestPreparedEncounter?.();});return;}
-                this.pendingEncounter = null;
-                farmLoading.complete(true);
-                this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
-                this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
-                this.eagle = null; this.dragon = null; this.gorilla = null;
-                if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
-                else if (encounter === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
-                else this.dragonEncounter = new DragonEncounter(this);
+            // 其他分頁可能新增戰鬥；操作驗證只攔下操作，不在收蛋中生成怪物。
+            if (authorized?.challenge || authorized?.result) {
+                this.showFloatingText('進場狀態已變更，請重新進入農場確認。', '#FFD54F', 15);
                 return;
             }
-
             this.emptyClickCount = 0;
             this.harvestStatus = '收蛋中…';
             this.updateEggCountdown();

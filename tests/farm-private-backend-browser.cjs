@@ -4,6 +4,7 @@ const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=re
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 const resumeMode=process.env.RESUME_PENDING_BATTLE;
+const entryEncounterTests=process.env.ENTRY_ENCOUNTER_TESTS==='1';
 const eggResultTests=process.env.EGG_RESULT_TESTS==='1';
 const unavailableEggResult=process.env.EGG_RESULT_UNAVAILABLE;
 const visitPermissionTests=process.env.VISIT_PERMISSION_TESTS==='1';
@@ -17,10 +18,11 @@ const stealFlowTests=process.env.STEAL_FLOW_TESTS==='1';
 const stealResultTests=process.env.STEAL_RESULT_TESTS==='1'||stealFlowTests;
 const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 (async()=>{
- const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
+ const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=entryEncounterTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
+ let releaseEntryGate;const entryGate=new Promise(resolve=>releaseEntryGate=resolve);
  const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,lastLayTime:stamp,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club',worms:2,earthworms:3};
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
@@ -28,18 +30,18 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
- if(stealResultTests){db.data.set('groups/B',{name:'另一座公開村落',members:['bob'],farmVillageVisibility:'public'});db.data.set('groups/B/users/bob',{farm:{...structuredClone(farm),hens:2,hensState:[{id:'flower',name:'花花',breed:'silkie',laidAt:stamp},{id:'rice',name:'米粒',breed:'silkie',laidAt:stamp}],readyEggs:{hen:0,silkie:3,bresse:0,onagadori:0}}});}
- const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
+ if(stealResultTests||entryEncounterTests){db.data.set('groups/B',{name:'另一座公開村落',members:['bob'],farmVillageVisibility:'public'});db.data.set('groups/B/users/bob',{farm:{...structuredClone(farm),hens:2,hensState:[{id:'flower',name:'花花',breed:'silkie',laidAt:stamp},{id:'rice',name:'米粒',breed:'silkie',laidAt:stamp}],readyEggs:{hen:0,silkie:3,bresse:0,onagadori:0}}});}
+ const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
   await page.exposeFunction('__saveDb',async op=>{if(op.kind==='query')return [...db.data].filter(([key,value])=>key.startsWith(op.path+'/')&&key.split('/').length===op.path.split('/').length+1&&(op.filters||[]).every(f=>f.op==='in'?f.value.includes(value[f.field]):value[f.field]===f.value)).map(([path,data])=>({path,data}));if(op.kind==='get')return structuredClone(db.data.get(op.path));throw Error('Private mode attempted direct Firestore write: '+op.kind);});
   await page.exposeFunction('__privateServer',async(name,data)=>{
-   calls.push({name,action:data.action,requestId:data.requestId,stealWhenClear:data.stealWhenClear===true});
+   calls.push({name,action:data.action,requestId:data.requestId,verifyOnly:data.verifyOnly===true,collectWhenClear:data.collectWhenClear===true,stealWhenClear:data.stealWhenClear===true});
    if(stealFlowTests&&data.stealWhenClear&&stealDelay)await new Promise(resolve=>setTimeout(resolve,stealDelay));
    if(failSteal&&data.action==='visitEncounter'&&data.stealWhenClear)throw Object.assign(Error('fixture theft denied'),{code:'functions/failed-precondition'});
    if(stealSpeedTests&&['visitEncounter','stealEgg'].includes(data.action))await new Promise(resolve=>setTimeout(resolve,400));
-   if(failCollection&&data.action==='homeEncounter')throw Object.assign(Error('隔離測試：收蛋交易失敗'),{code:'functions/failed-precondition'});
+   if(failCollection&&data.action==='homeEncounter'&&data.collectWhenClear)throw Object.assign(Error('隔離測試：收蛋交易失敗'),{code:'functions/failed-precondition'});
    if(data.action==='visitEncounter'){
     if(failVisitOnce){failVisitOnce=false;throw Object.assign(Error('隔離測試：拜訪驗證暫時失敗'),{code:'functions/failed-precondition'});}
     if(visitGate)await visitGate;
@@ -48,7 +50,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
    const compatibleData={...data};if(legacyHarvestBackend&&data.action==='homeEncounter')delete compatibleData.collectWhenClear;
    if(legacyStealBackend&&data.action==='visitEncounter')delete compatibleData.stealWhenClear;
    const request={auth,data:compatibleData};
-   if(name==='gameOpsFarmTransaction'){if(data.action==='homeEncounter')await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);const steal=response.result?.steal||(data.action==='stealEgg'?response.result:null);if(steal){lastStealResult=structuredClone(steal);if(oldStealResultFields)for(const key of ['transactionId','totalEggs','eggBreed','eggSources'])delete steal[key];}if(stealFlowTests&&data.stealWhenClear&&lateReplyOnce){lateReplyOnce=false;await new Promise(resolve=>setTimeout(resolve,350));}
+   if(name==='gameOpsFarmTransaction'){if(entryEncounterTests&&data.action==='homeEncounter'&&!data.collectWhenClear&&!data.verifyOnly)await entryGate;if(data.action==='homeEncounter'&&data.collectWhenClear)await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);const steal=response.result?.steal||(data.action==='stealEgg'?response.result:null);if(steal){lastStealResult=structuredClone(steal);if(oldStealResultFields)for(const key of ['transactionId','totalEggs','eggBreed','eggSources'])delete steal[key];}if(stealFlowTests&&data.stealWhenClear&&lateReplyOnce){lateReplyOnce=false;await new Promise(resolve=>setTimeout(resolve,350));}
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
@@ -57,7 +59,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    throw Error('Unexpected callable '+name);
   });
   const old=fs.readFileSync('tests/farm-save-browser.cjs','utf8').match(/const sdk = `([\s\S]*?)`;/)[1];
-  const querySDK=stealFlowTests?old.replace('export const getDocs=async()=>({empty:true,docs:[],forEach:()=>{}});',`export const getDocs=async ref=>{const rows=await window.__saveDb({kind:'query',...ref});const docs=rows.map(row=>snap(row.path,row.data));return{empty:!docs.length,docs,forEach:fn=>docs.forEach(fn)};};`):old;
+  const querySDK=stealFlowTests||entryEncounterTests?old.replace('export const getDocs=async()=>({empty:true,docs:[],forEach:()=>{}});',`export const getDocs=async ref=>{const rows=await window.__saveDb({kind:'query',...ref});const docs=rows.map(row=>snap(row.path,row.data));return{empty:!docs.length,docs,forEach:fn=>docs.forEach(fn)};};`):old;
   const firestoreSDK="export const getFirestore=()=>({});\n"+querySDK.replace('l.callback(await getDoc(l.ref))',"l.callback(l.ref.kind==='query'?await getDocs(l.ref):await getDoc(l.ref))")+`\nwindow.__privateEmitAll=async()=>{for(const l of [...listeners])await emit(l);};`;
   await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js','utf8')}));
   await page.route('https://www.gstatic.com/**',r=>{
@@ -79,8 +81,40 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   await page.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',docId:'alice',groupId:'A',name:'Alice'}));localStorage.setItem('lastGroupId','A');sessionStorage.setItem('nexus_active_group_id','A');});
   if(unavailableEggResult==='module')await page.route('**/js/farm/egg-result-ui.js',r=>r.fulfill({status:503,contentType:'text/javascript',body:'fixture optional module unavailable'}));
   if(unavailableEggResult==='image')await page.route('**/assets/farm/egg-result/v1/egg_result_panel.png',r=>r.fulfill({status:503,body:'fixture optional image unavailable'}));
-  if(stealResultTests)await page.clock.setFixedTime(new Date(stamp));
+  if(stealResultTests||entryEncounterTests)await page.clock.setFixedTime(new Date(stamp));
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
+  if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(entryEncounterTests){
+   const economy=()=>calls.filter(c=>c.collectWhenClear||c.stealWhenClear||['collectEggs','stealEgg','cleanOwn','helpClean','searchGarden','treatHen'].includes(c.action));
+   await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').checkingEntry);
+   await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');await s.harvestEgg();await s.cleanMyFarm();s.askCleanMyFarm();await s.searchCabbage(s.gardenPlants[0]);});assert.equal(economy().length,0,'進場回覆未到前不能執行農場操作');releaseEntryGate();await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked);
+   assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter),true,'進入自己的農場即出現怪物');assert.equal(economy().length,0);
+   const blockHome=async()=>page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');await s.harvestEgg();await s.cleanMyFarm();s.askCleanMyFarm();await s.searchCabbage(s.gardenPlants[0]);});
+   await blockHome();assert.equal(economy().length,0,'有怪物時收蛋清潔抓蟲完全不送交易');
+   backendNow=stamp+50000;releaseSettlement();releaseHarvest();releaseCollection();
+   await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');window.__homeMonster=s.gorillaEncounter;s.gorillaEncounter.resolve('loss');});await page.waitForFunction(()=>window.__homeMonster.settled);
+   const f=db.data.get('groups/A/users/alice').farm;f.readyEggs.hen=1;f.eggsReady=1;f.gardenCatchCount=99;await page.evaluate(()=>window.__privateEmitAll());
+   await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').harvestEgg());await page.waitForSelector('[data-result-kind=harvest]');
+   assert.equal(economy().filter(c=>c.collectWhenClear).at(-1).verifyOnly,true);assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,1);await page.locator('.farm-egg-result-confirm').click();
+   await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');await s.cleanMyFarm();await s.searchCabbage(s.gardenPlants[0]);});
+   assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('MyFarmScene').moleEncounter),false,'抓蟲達門檻不臨時生成地鼠');assert.equal(db.data.get('groups/A/users/alice').farm.gardenCatchCount,100);
+   // 從真正 HUD／公開村落卡片進入其他雞舍；進場先有怪物，不能先偷蛋。
+   const click=async(sceneKey,find)=>{
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const point=await page.evaluate(({sceneKey,find})=>{const s=window.__farmGame.scene.getScene(sceneKey),o=find==='public'?s.publicVillageButton:find==='group'?s.content.list.find(o=>o.getData('villageGroupId')==='B'):s.content.list.find(o=>o.texture?.key==='coop'),p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{sceneKey,find});await page.mouse.click(point.x,point.y);
+   };
+   await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);
+   await click('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await click('LobbyScene','group');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='B'&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0);await click('LobbyScene','farm');
+   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.moleEncounter&&window.__farmGame.scene.getScene('VisitScene').entryChecked);
+   assert.equal(economy().some(c=>c.stealWhenClear||c.action==='stealEgg'),false);
+   const before=economy().length;await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('VisitScene');await s.attemptSteal();s.askCleanTargetFarm();await s.cleanTargetFarm();await s.searchCabbage(s.gardenPlants[0]);});assert.equal(economy().length,before);
+   await page.screenshot({path:'/tmp/gugu-entry-monster-visit.png',animations:'disabled'});
+   backendNow+=70000;await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__visitMonster=s.moleEncounter;s.moleEncounter.resolve('loss');});await page.waitForFunction(()=>window.__visitMonster.settled);
+   const t=db.data.get('groups/B/users/bob').farm;t.readyEggs.silkie=1;t.eggsReady=1;await page.evaluate(()=>window.__privateEmitAll());
+   const point=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),h=s.hensGroup[0];h.walkTimer?.remove();s.tweens.killTweensOf(h);h.setPosition(180,400);const p=s.cameras.main.matrix.transformPoint(h.x-s.cameras.main.scrollX,h.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};});await page.mouse.click(point.x,point.y);await page.waitForSelector('[data-result-kind=steal]');
+   assert.equal(economy().filter(c=>c.stealWhenClear).at(-1).verifyOnly,true);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').moleEncounter===window.__visitMonster),true,'偷蛋期間沒有生成新怪物');assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);assert.deepEqual(errors,[]);
+   console.log('PASS entry-only encounters: own login and original public village entry show monsters before actions; harvest/theft/clean/garden blocked in combat; settled entry permits collect and steal without reroll; garden milestone deferred');return;
+  }
   if(stealResultTests){
    const clickObject=async(sceneKey,find)=>{
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
@@ -250,15 +284,18 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    let releaseVisit;visitGate=new Promise(resolve=>releaseVisit=resolve);
    await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('VisitScene',{targetGroupId:'A',targetAccountId:'bob',targetName:'Bob'}));
    await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').visitEncounterPending&&window.__farmGame.scene.getScene('VisitScene').targetFarmData?.eggsReady>0);
-   await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__earlySteal=Promise.all([s.attemptSteal(),s.attemptSteal()]);});
+   await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__earlySteal=Promise.all([s.attemptSteal(),s.attemptSteal(),s.cleanTargetFarm(),s.searchCabbage(s.gardenPlants[0])]);});
    assert.equal(calls.filter(c=>c.action==='stealEgg').length,0,'尚未確認拜訪時不送偷蛋');
    releaseVisit();visitGate=null;
-   await page.evaluate(async()=>{await window.__earlySteal;await window.__privateEmitAll();});
-   assert.equal(calls.filter(c=>c.action==='visitEncounter').length,1,'初始拜訪及快速點擊共用同一個確認工作');assert.equal(calls.filter(c=>c.action==='stealEgg').length,1);assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,1);
+   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').entryChecked);
+   await page.evaluate(async()=>{await window.__earlySteal;await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});
+   assert.equal(calls.filter(c=>c.action==='visitEncounter').length,2,'初始拜訪只有進場確認；完成後才送偷蛋驗證');assert.equal(calls.filter(c=>c.action==='stealEgg').length,0);assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,1);
    const resetCooldown=async()=>{const f=db.data.get('groups/A/users/alice').farm;f.villageStealCooldowns={};f.villageStealBlockedUntil={};await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');s.eggResultDialog?.close();s.lastStealBlockedUntil=0;return window.__privateEmitAll();});};
    // 其他分頁已把共用會話改回自己家：同一拜訪畫面仍會先恢復正確目標。
    db.data.set(pendingKey,{id:'another-tab',targetGroupId:'A',targetAccountId:'alice',kind:null,harvestPermit:true,result:{outcome:'clear'}});
-   await resetCooldown();await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,2);
+   await resetCooldown();await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,1,'失效許可不在偷蛋時抽怪或發蛋');
+   const reenter=async()=>{await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.restart({targetGroupId:'A',targetAccountId:'bob',targetName:'Bob'}));await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').entryChecked&&!window.__farmGame.scene.getScene('VisitScene').visitEncounterPending);};
+   await reenter();await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').attemptSteal());assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,2);
    // 重新確認同一目標不能偷偷重抽怪；0 會在全新拜訪觸發 gorilla。
    serverRoll=0;await resetCooldown();await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('VisitScene').gorillaEncounter),false);
    serverRoll=.99;db.data.get('groups/A/users/bob').farm.readyEggs.hen=3;db.data.get('groups/A/users/bob').farm.eggsReady=3;
@@ -273,13 +310,15 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    assert.deepEqual(db.data.get('groups/B/users/alice').farm,beforeOtherFarm);assert.deepEqual(db.data.get('groups/A/users/bob').farm,beforeCurrentFarm);assert.deepEqual(db.data.get('groups/A/users/alice').farm,beforeOwnFarm,'沒有偷蛋、發獎或扣款');
    db.data.set(pendingKey,{id:'old-target',kind:'gorilla',groupId:'A',targetGroupId:'B',targetAccountId:'alice',startedAt:Date.now()-50000,approachEndsAt:Date.now()-40000,deadline:Date.now()-1000,health:1000,attacks:{melee:0,ranged:0}});
    await resetCooldown();await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});
-   assert.equal(db.data.get('groups/B/users/alice').farm.eggsReady,0,'原戰鬥損失留在原雞舍');assert.equal(db.data.get('groups/A/users/bob').farm.eggsReady,2,'確認目前目標後只扣實際偷取的一顆');assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,4);
+   assert.equal(db.data.get('groups/B/users/alice').farm.eggsReady,0,'原戰鬥損失留在原雞舍');assert.equal(db.data.get('groups/A/users/bob').farm.eggsReady,3,'原戰鬥結算後不在偷蛋中重新抽怪');assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,3);
+   await reenter();await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').attemptSteal());assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,4);
    await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.start('MyFarmScene'));await page.waitForFunction(()=>window.__farmGame.scene.isActive('MyFarmScene'));
    await resetCooldown();failVisitOnce=true;const beforeVisit=calls.filter(c=>c.action==='visitEncounter').length;
    await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('VisitScene',{targetGroupId:'A',targetAccountId:'bob',targetName:'Bob'}));
    await page.waitForFunction(()=>window.__farmGame.scene.isActive('VisitScene')&&window.__farmGame.scene.getScene('VisitScene').targetFarmData&&window.__farmGame.scene.getScene('VisitScene').hasRolledEncounter===false);
    assert.equal(calls.filter(c=>c.action==='visitEncounter').length,beforeVisit+1);
-   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,5,'初始驗證失敗後可再次點擊重試');
+   await page.locator('[data-loading-retry]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').entryChecked);
+   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,5,'進場確認重試成功後才允許偷蛋');
    assert.equal(db.data.get('groups/A/users/alice').farm.reportStolenEggs,5);
    await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.start('MyFarmScene'));await page.waitForFunction(()=>window.__farmGame.scene.isActive('MyFarmScene'));
    serverRoll=.05;db.data.get('groups/A/users/bob').farm.coopLevel=1;
@@ -316,7 +355,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    await page.waitForFunction(key=>window.__farmGame.scene.isActive(key)&&window.__farmGame.scene.getScene(key)?.gorillaEncounter?.id==='resume-gorilla',expectedScene);
    assert.equal(await page.evaluate(key=>window.__farmGame.scene.getScene(key).gorillaEncounter.health,expectedScene),700);
    assert.equal(await page.evaluate(key=>window.__farmGame.scene.getScene(key).gorillaEncounter.deadline,expectedScene),originalDeadline);
-   assert.equal(calls.filter(call=>call.action==='homeEncounter'||call.action==='collectEggs').length,0,'恢復戰鬥不自動抽怪或收蛋');
+   assert.equal(calls.filter(call=>call.collectWhenClear||call.action==='collectEggs').length,0,'恢復戰鬥的進場驗證不自動收蛋，血量與期限不變');
    assert.equal(db.data.get('groups/A/users/alice').farm.coins,12345,'準備通知不發獎也不立即處罰');
    await page.reload();
    await page.waitForFunction(key=>window.__farmGame?.scene.isActive(key)&&window.__farmGame.scene.getScene(key)?.gorillaEncounter?.id==='resume-gorilla',expectedScene);
@@ -426,7 +465,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   }
   releaseCollection();
   await page.evaluate(async()=>{await Promise.all([window.__harvestFirst,window.__harvestRepeated]);await window.__privateEmitAll();});
-  assert.equal(calls.filter(call=>call.action==='homeEncounter').length,1);
+  assert.equal(calls.filter(call=>call.action==='homeEncounter'&&call.collectWhenClear).length,1);
   assert.equal(calls.filter(call=>call.action==='collectEggs').length,legacyHarvestBackend?1:0,'新版後端一次收蛋；舊版回傳時才接續 collectEggs');
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').isHarvesting),false);
   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').timerText.text.includes('收蛋中')),false);
@@ -447,7 +486,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').scene.start('ShopScene'));await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));
   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('ShopScene').executeBuyMedicine(2);await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.medicines,2);assert.equal(db.data.get('groups/A/users/alice').farm.coins,12325);
   await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('VisitScene',{targetGroupId:'A',targetAccountId:'bob',targetName:'Bob'}));
-  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.hasRolledEncounter&&window.__farmGame.scene.getScene('VisitScene')?.targetFarmData);
+  await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.entryChecked&&!window.__farmGame.scene.getScene('VisitScene').visitEncounterPending&&window.__farmGame.scene.getScene('VisitScene')?.targetFarmData);
   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').cleanTargetFarm();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/bob').farm.cleanliness,0);
   await page.evaluate(async()=>{await window.__farmGame.scene.getScene('VisitScene').attemptSteal();await window.__privateEmitAll();});assert.equal(db.data.get('groups/A/users/alice').farm.inventoryEggs,4);
   const status=await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}});assert.equal(status.challenges.mission.tasks[0].count,1);assert.equal(status.challenges.mission.tasks[1].count,1);
@@ -493,6 +532,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   releaseSettlement();
   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.gorillaEncounter?.settled===true&&window.__cleanAfterBattleDone===true);
   assert.equal(db.data.get('groups/A/users/alice').farm.gorillaFangs,1);
+  await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').cleanTargetFarm());
   assert.equal(db.data.get('groups/A/users/bob').farm.cleanliness,0);
   assert.deepEqual(await page.evaluate(()=>window.__farmGame.scene.getScenes(true).filter(s=>['MyFarmScene','VisitScene','ShopScene','WarehouseScene'].includes(s.scene.key)).map(s=>s.scene.key)),['VisitScene']);
   const completed=await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}});assert.equal(completed.challenges.mission.tasks[2].count,1);assert.equal(completed.challenges.mission.tasks[1].count,2);

@@ -13,6 +13,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
   const p=request.data||{},action=D.enumValue(p.action,['collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
+  if(p.verifyOnly!==undefined&&typeof p.verifyOnly!=='boolean')D.fail('invalid-argument','進場驗證模式不正確');
   const requestId=D.requestId(p.requestId),models=await load(),[P,inventory,combat,housing,,,,,,garden,dogs,ranking,save]=models;
   const qty=['tradePoultry','buyWeapon','buyMedicine','sellItem','expandWarehouse'].includes(action)?positive(p.quantity):null;
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
