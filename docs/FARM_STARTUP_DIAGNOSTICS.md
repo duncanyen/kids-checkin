@@ -18,3 +18,13 @@
 - 未在 iPhone 真機驗收；瀏覽器若阻擋原生 alert，頁面詳細資訊仍保留。
 
 前端修改，不需要 Firebase Functions／Rules 部署。正式問題發生後請擷取 alert 或詳細區，才能判定實際原因。
+
+## dragon.js:73 初始化前讀取修正
+
+使用者提供的 iPhone 診斷指向 module scope 的 `DRAGON_SPEC.config: DRAGON_CONFIG`。舊版在 import dragon 時立刻讀取 constants 的 export；該模組又依賴含 Auth 非同步初始化的 Firebase 設定。原生 TDZ 迴歸 fixture 可重現 `Cannot access 'DRAGON_CONFIG' before initialization`，但不將這個合成 fixture 當成實機 Safari 重現。
+
+改為建立 DragonEncounter 時才取 config／salePrice；entry 將 constants module 完成初始化作為 main import 的前置條件。引擎及 constants 下載仍平行，並不提前等待 membershipReady 查詢結果，也不移除 Boot 的成員驗證。怪物數值、機率、傷害、掉落、售價、交易及後端區域不變。
+
+驗證：361 項 Node 測試、實際 entry 延遲 constants 回應測試、原有 startup alert 測試、真實 Phaser 私有後端完整遊戲整合均通過。另以 `DRAGON_STARTUP_TESTS=1` 啟動台灣 region SDK 配置的隔離遊戲，確認原入口成功進入烈火龍戰鬥，health=600、salePrice=200、size=176 與後端 challenge 正確。
+
+WebKit 測試引擎下載失敗，因此未執行 Safari／iPhone 真機測試；使用者需在前端發布後重新開啟遊戲確認。本次不需要部署 Firebase Functions 或 Rules。

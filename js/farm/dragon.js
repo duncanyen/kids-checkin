@@ -69,12 +69,13 @@ export async function settleDragonEncounter(id, outcome, targetAccountId, target
     });
 }
 
-const DRAGON_SPEC = {
+// 載入模組時 constants 可能仍在等待 Auth 初始化；戰鬥建立時才讀設定與售價。
+function dragonSpec() { return {
     key: 'dragon', flying: true, name: '烈火龍', config: DRAGON_CONFIG, size: 176,
     travel: 'fly', attack: 'fire', attackPhase: 'fire',
     movingLabel: '飛近雞舍中', attackLabel: '噴火中', reward: '龍麟',
     salePrice: DRAGON_SCALE_PRICE, settle: settleDragonEncounter,
-};
+}; }
 
 export class BossEncounter {
     constructor(scene, spec) {
@@ -242,5 +243,5 @@ export class BossEncounter {
 }
 
 export class DragonEncounter extends BossEncounter {
-    constructor(scene) { super(scene, { ...DRAGON_SPEC, frameSize: 256 }); }
+    constructor(scene) { super(scene, { ...dragonSpec(), frameSize: 256 }); }
 }

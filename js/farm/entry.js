@@ -5,8 +5,9 @@
  */
 import { farmLoading } from './loading-ui.js';
 farmLoading.begin();
-// 下載引擎時同步確認成員；constants 不阻塞模組載入，Boot 等 membershipReady 才開放私人場景。
-import('./constants.js').catch(error => farmLoading.error('無法確認群組，請返回重試。', undefined, { error, stage: 'membership-module' }));
+// 引擎與帳號常數平行下載；常數 export 初始化後才載入主模組，Boot 另等 membershipReady 才開放私人場景。
+const contextModule = import('./constants.js');
+contextModule.catch(error => farmLoading.error('無法確認群組，請返回重試。', undefined, { error, stage: 'membership-module' }));
 let stage = 'engine';
 window.farmStartupDiagnostics?.stage(stage);
 const engine = window.Phaser ? Promise.resolve() : new Promise((resolve, reject) => {
@@ -17,7 +18,14 @@ const engine = window.Phaser ? Promise.resolve() : new Promise((resolve, reject)
     script.onerror = () => { clearTimeout(timeout); script.remove(); reject(Error('engine failed')); };
     document.head.append(script);
 });
-engine.then(() => { stage = 'game-module'; window.farmStartupDiagnostics?.stage(stage); farmLoading.progress(5, '載入遊戲程式'); return import('./main.js'); })
+engine.then(async () => {
+    // 不等待 membershipReady 的查詢結果，只等帳號／常數 export 初始化；避免平行 dynamic import 的載入競態。
+    stage = 'game-context'; window.farmStartupDiagnostics?.stage(stage);
+    await contextModule;
+    stage = 'game-module'; window.farmStartupDiagnostics?.stage(stage);
+    farmLoading.progress(5, '載入遊戲程式');
+    return import('./main.js');
+})
     .catch(error => {
         // 動態匯入的例外也會到這裡；保留原因，避免把程式初始化錯誤誤判成斷線。
         console.error('farm-startup-failure', JSON.stringify({

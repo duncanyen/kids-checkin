@@ -5,6 +5,7 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1';
+const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const coopCleanTests=process.env.COOP_CLEAN_TESTS==='1';
 const entryEncounterTests=process.env.ENTRY_ENCOUNTER_TESTS==='1';
 const eggResultTests=process.env.EGG_RESULT_TESTS==='1';
@@ -20,12 +21,13 @@ const stealFlowTests=process.env.STEAL_FLOW_TESTS==='1';
 const stealResultTests=process.env.STEAL_RESULT_TESTS==='1'||stealFlowTests;
 const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 (async()=>{
- const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=entryEncounterTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
+ const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=entryEncounterTests||dragonStartupTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
  let releaseEntryGate;const entryGate=new Promise(resolve=>releaseEntryGate=resolve);
  const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,lastLayTime:stamp,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club',worms:2,earthworms:3};
+ if(dragonStartupTests)farm.coopLevel=2;
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
@@ -88,6 +90,14 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(stealResultTests||entryEncounterTests)await page.clock.setFixedTime(new Date(stamp));
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(dragonStartupTests){
+   await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').dragonEncounter?.sprite?.active);
+   const state=await page.evaluate(()=>{const scene=window.__farmGame.scene.getScene('MyFarmScene'),boss=scene.dragonEncounter;return{key:boss.spec.key,health:boss.health,salePrice:boss.spec.salePrice,size:boss.spec.size,ready:scene.entryChecked,kind:scene.backendChallenge.kind};});
+   assert.deepEqual(state,{key:'dragon',health:600,salePrice:200,size:176,ready:true,kind:'dragon'});
+   assert.ok(!startupLogs.some(x=>x.includes('farm-startup-failure')));assert.deepEqual(errors,[]);
+   await page.screenshot({path:'/tmp/nexus-dragon-startup-fixed.png'});
+   console.log('PASS real entry/Phaser with async Firebase Auth initialization: dragon scene starts with original health, sale price and backend challenge; no startup TDZ');return;
+  }
   if(coopCleanTests||visitPreloadTests){
    const cleanCalls=()=>calls.filter(c=>c.action==='helpClean');
    const progress=async()=>(await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}})).challenges.mission.tasks.find(t=>t.type==='HELP_CLEAN_OTHER').count;
