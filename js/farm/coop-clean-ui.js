@@ -7,7 +7,7 @@ export const prepareCoopCleanAssets = () => prepareFarmResultAssets(assets);
 const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls; if (text !== undefined) node.textContent = text; return node; };
 
 /** 只組裝確認視窗。實際清潔由原場景回呼執行，取消及關閉不呼叫交易。 */
-export function openCoopCleanConfirm(scene, { context, valid, confirm, uncertain = false }) {
+export function openCoopCleanConfirm(scene, { context, valid, confirm, uncertain = false, own = false }) {
     if (scene.coopCleanDialog) return scene.coopCleanDialog;
     const dialog = createFarmDialog(scene, { property: 'coopCleanDialog', kind: 'coop-clean', panelClass: 'farm-coop-clean-panel', label: '打掃雞舍', valid });
     const { root, panel } = dialog;
@@ -15,7 +15,7 @@ export function openCoopCleanConfirm(scene, { context, valid, confirm, uncertain
         const art = (key, cls) => { const img = el('img', cls); img.src = assets[key]; img.alt = ''; img.draggable = false; return img; };
         const title = el('header', 'farm-coop-clean-title'); title.append(art('title',''), el('h2','','打掃雞舍'));
         const message = el('div', 'farm-coop-clean-message');
-        message.append(el('strong','',context.name ? `${context.name} 的雞舍有點髒亂，` : '這座雞舍有點髒亂，'), el('span','','是否要幫忙打掃雞舍？'));
+        message.append(el('strong','',own ? '你的雞舍有點髒亂，' : context.name ? `${context.name} 的雞舍有點髒亂，` : '這座雞舍有點髒亂，'), el('span','',own ? '是否要打掃雞舍？' : '是否要幫忙打掃雞舍？'));
         const nameText = message.querySelector('strong'); nameText.tabIndex = 0;
         const no = el('button', 'farm-coop-clean-no'), yes = el('button', 'farm-coop-clean-yes');
         for (const [button, key, label] of [[no,'button_no','否'],[yes,'button_yes','是']]) { button.type='button'; button.append(art(key,''),el('span','',label)); }

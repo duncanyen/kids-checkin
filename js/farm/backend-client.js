@@ -46,7 +46,7 @@ export function farmCommand(action,payload={}){
   console.error('farm-transaction-failure',JSON.stringify({
    action,stage:started?'request':'waiting-settlement',code:error?.code||'unknown',message:error?.message||'交易未完成'
   }));
-  const theft = action==='helpClean'||action==='stealEgg'||action==='visitEncounter'&&payload.stealWhenClear===true;
+  const theft = action==='cleanOwn'||action==='helpClean'||action==='stealEgg'||action==='visitEncounter'&&payload.stealWhenClear===true;
   const uncertain = theft ? isUncertainSteal(error) : ['ops/timeout','functions/internal','functions/unavailable','functions/unauthenticated','functions/resource-exhausted'].includes(error.code);
   if(!uncertain)sessionStorage.removeItem(key);
   throw error;

@@ -99,3 +99,15 @@ PHASER_FIXTURE=/tmp/nexus-phaser-3.60.0.js node tests/farm-private-backend-brows
 驗證：363 項 Node 測試通過；新增原子交易／重送／群組隔離／封閉村落／缺少成員／空髒亂／自家目前雞舍／怪物阻擋及任務資格測試。`CROSS_GROUP_SELF_CLEAN_TESTS=1` 真實 Phaser 隔離瀏覽器模式從原 HUD、公開村落、同帳號雞舍及確認入口操作，取消不送出、三次快速確認只一筆有效交易，70→40 且來源髒亂仍 30，任務進度維持 0。原 COOP_CLEAN_TESTS 六尺寸、錯誤、逾時收據確認與切換村落回歸通過。測試不存取正式玩家資料。
 
 本次變更在 gameOpsFarmTransaction 交易核心，需從 game-admin 部署 `--only functions:nexus-ops:gameOpsFarmTransaction`；既有雙區設定會同時更新台灣與新加坡。每日任務 Functions、Rules 及前端不需因本修正另行部署。尚未執行正式部署。
+
+## 自家雞舍共用確認視窗
+
+依使用者確認，只統一提醒視窗與操作，不調整各自數值：自家 cleanOwn 一次清到 0、不增加道德值；幫別人 helpClean 每次減少 30、幫忙者道德值 +3（上限不變）。原有每日任務資格保持，自家清潔不計入協助他人。
+
+MyFarmScene 點雞舍後共用 coop-clean-ui 的木框、插畫與是／否按鈕，內文為「你的雞舍有點髒亂，是否要打掃雞舍？」。按否不交易、按是同步鎖定並防連點；成功後關閉，不顯示成功浮字或下方正常處理狀態文字。錯誤可重試，逾時保留 cleanOwn 原 requestId，由玩家確認原交易，不自動新增交易。
+
+圖片背景預熱，不阻塞主要遊戲；同場景只一個清潔視窗，離開場景清理遮罩並恢復輸入。有生病母雞時，原雞舍管理／治療入口保留，從「清理雞舍」進入相同木質確認畫面。原治療用 Phaser 視窗不因本次清潔改版而移除。
+
+371 項 Node 測試通過；OWN_COOP_CLEAN_TESTS=1 真實 Phaser、原自家雞舍點擊驗收取消、失敗恢復、快速連點一筆、已乾淨、逾時同收據、切場景清理、生病母雞管理流程及任務不誤計。原他人雞舍確認與完整遊戲回歸通過。測試為 Linux Chromium／隔離 Firebase，不是 iPhone 真機或正式資料驗收。
+
+截圖：[390×844 自家雞舍確認](verification/coop-clean/own-farm-390.png)。本次只改前端與測試，不需部署 Functions 或 Rules。

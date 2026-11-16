@@ -1,4 +1,5 @@
 import { farmActionsBlocked } from './entry-encounter.js';
+import { isUncertainSteal } from './steal-request.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,hasPendingBackendBattle,farmNow,routeBackendChallenge} from './backend-client.js';
 import { maybeStartGiant } from './giant-trigger.js';
 import { restorePendingBattle } from './pending-battle.js';
@@ -27,7 +28,7 @@ import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js
 import { addFarmBackground, addFarmCoop, addFarmSign, addFarmEgg, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
 import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-import { myFarmRef, CURRENT_GROUP_ID, playerName, getUsedSpace } from './constants.js';
+import { myFarmRef, CURRENT_GROUP_ID, CURRENT_ACCOUNT_ID, playerName, getUsedSpace } from './constants.js';
 
 // 結果視窗不是進入遊戲的必要相依；模組或圖片暫時無法下載時，不應阻止整座農場啟動。
 let eggResultUI;
@@ -36,13 +37,20 @@ function loadEggResultUI() {
     return eggResultUI;
 }
 
+let coopCleanUI;
+const loadCoopCleanUI = () => coopCleanUI ||= import('./coop-clean-ui.js').catch(error => { coopCleanUI = null; throw error; });
+const hasPendingOwnClean = () => !!sessionStorage.getItem('nexus.farm.pending:'+JSON.stringify([CURRENT_ACCOUNT_ID,CURRENT_GROUP_ID,'cleanOwn',{}]));
+
 export default class MyFarmScene extends Phaser.Scene {
     constructor() { super({ key: 'MyFarmScene' }); }
 
     create() {
         configureFarmViewport(this);
         // 固定收蛋素材背景預熱，不等待圖片就開始遊戲；場景結束由 Phaser 取消延遲工作。
-        this.time.delayedCall(1500, () => { void loadEggResultUI().then(ui => ui.prepareEggResultAssets()).catch(() => {}); });
+        this.time.delayedCall(1500, () => {
+            void loadEggResultUI().then(ui => ui.prepareEggResultAssets()).catch(() => {});
+            void loadCoopCleanUI().then(ui => ui.prepareCoopCleanAssets()).catch(() => {});
+        });
         const cx = 195;
         this.farmData = null;
         this.henAssetsPending = false;
@@ -64,6 +72,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.emptyClickCount = 0;
         this.isHarvesting = false;
         this.harvestStatus = null;
+        this.coopCleanDialog = null; this.coopCleanOpening = null; this.cleaningRequest = null;
         this.eagleEncounter = null;
         this.eagle = null;
         this.dragonEncounter = null;
@@ -297,29 +306,54 @@ export default class MyFarmScene extends Phaser.Scene {
         }
     }
 
-    askCleanMyFarm(cleanOnly = false) {
-        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
-        if (!this.isSaveReady()) return;
+    async askCleanMyFarm(cleanOnly = false) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle()) || !this.isSaveReady()) return;
+        if (this.eggResultDialog || this.coopCleanDialog || this.coopCleanOpening || this.cleaningRequest || this.housingDialog) return;
         if (!cleanOnly && poultryState(this.farmData).hens.some(h=>h.isSick)) { openCoopActions(this); return; }
-        if (!this.farmData || (this.farmData.cleanliness || 0) === 0) {
-            this.showFloatingText('雞舍非常乾淨，不需要打掃～', '#FFFFFF', 16);
-            return;
+        const uncertain = FARM_BACKEND_ENABLED && hasPendingOwnClean();
+        if (!uncertain && !(this.farmData?.cleanliness > 0)) {
+            this.showFloatingText('雞舍非常乾淨，不需要打掃～', '#FFFFFF', 16); return;
         }
-
-        this.dialogActionType = 'clean';
-        this.dialogText.setText(`雞舍目前的髒亂值為 ${this.farmData.cleanliness}\n是否要開始幫忙打掃？`);
-        this.dialogContainer.setVisible(true);
+        const context = Object.freeze({ groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID, token: this.farmSceneToken });
+        const valid = () => this.sys.isActive() && this.farmSceneToken === context.token;
+        this.coopCleanOpening = context;
+        try {
+            const ui = await loadCoopCleanUI();
+            if (!valid() || farmActionsBlocked(this, hasPendingBackendBattle())) return;
+            return ui.openCoopCleanConfirm(this, { context, own: true, valid, uncertain, confirm: captured => this.cleanMyFarm(captured) });
+        } catch {
+            if (valid()) this.showFloatingText('打掃視窗暫時無法載入，請再點雞舍重試。', '#F44336', 14);
+        } finally { if (this.coopCleanOpening === context) this.coopCleanOpening = null; }
     }
 
-    async cleanMyFarm() {
-        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
-        if (!this.isSaveReady()) return;
-        try {
-            await farmCommandOrLegacy('cleanOwn',{},()=>runTransaction(db, async (t) => {
-                t.update(myFarmRef, { "farm.cleanliness": 0 });
-            }));
-            this.showFloatingText('打掃完成！雞舍煥然一新！', '#4CAF50', 18);
-        } catch (e) { console.error(e); }
+    cleanMyFarm(context = { groupId: CURRENT_GROUP_ID, accountId: CURRENT_ACCOUNT_ID, token: this.farmSceneToken }) {
+        const active = () => this.sys.isActive() && this.farmSceneToken === context.token;
+        if (!active() || context.groupId !== CURRENT_GROUP_ID || context.accountId !== CURRENT_ACCOUNT_ID) return Promise.resolve({ status: 'error', message: '雞舍已變更，請重新開啟視窗。' });
+        if (farmActionsBlocked(this, hasPendingBackendBattle()) || !this.isSaveReady()) return Promise.resolve({ status: 'error', message: '請先完成進場確認、存檔連線與怪物結算。' });
+        if (this.cleaningRequest) return this.cleaningRequest;
+        const work = (async () => {
+            try {
+                await farmCommandOrLegacy('cleanOwn', {}, () => runTransaction(db, async transaction => {
+                    const farm = (await transaction.get(myFarmRef)).data()?.farm;
+                    if (!farm) throw Error('找不到目前農場。');
+                    if (!(farm.cleanliness > 0)) throw Error('雞舍已經乾淨');
+                    transaction.update(myFarmRef, { 'farm.cleanliness': 0 });
+                }));
+                return { status: 'success' };
+            } catch (error) {
+                const message = error?.message || '打掃失敗，請稍後重試。';
+                if (/已經乾淨/.test(message)) {
+                    if (active()) this.showFloatingText('雞舍已經很乾淨囉！', '#FFFFFF', 16);
+                    return { status: 'already-clean' };
+                }
+                const uncertain = isUncertainSteal(error);
+                if (active() && !this.coopCleanDialog) this.showFloatingText(uncertain ? '打掃結果尚未確認，請再點雞舍確認原交易。' : message, '#F44336', 14);
+                return { status: 'error', uncertain, message };
+            }
+        })();
+        this.cleaningRequest = work;
+        void work.finally(() => { if (this.cleaningRequest === work) this.cleaningRequest = null; });
+        return work;
     }
 
     syncHens() {
