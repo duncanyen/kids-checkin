@@ -19,7 +19,7 @@ const I=require('../functions/identity-domain.cjs');
   await context.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=true;'}));
   await context.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const app={};'}));
   await context.route('https://www.gstatic.com/**/firebase-auth.js',r=>r.fulfill({contentType:'text/javascript',body:`const auth={authStateReady:async()=>{}};export const getAuth=()=>auth,browserSessionPersistence={},setPersistence=async()=>{},signInWithCustomToken=(_,token)=>window.__acceptToken(token),signOut=()=>window.__logout();`}));
-  await context.route('https://www.gstatic.com/**/firebase-functions.js',r=>r.fulfill({contentType:'text/javascript',body:`export const getFunctions=()=>({}),httpsCallable=()=>async data=>({data:await window.__callIdentity(data)});`}));
+  await context.route('https://www.gstatic.com/**/firebase-functions.js',r=>r.fulfill({contentType:'text/javascript',body:`export const getFunctions=(_app,region)=>{(window.__identityRegions||=[]).push(region);return{};},httpsCallable=()=>async data=>({data:await window.__callIdentity(data)});`}));
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto((process.env.AUTH_BASE_URL||'http://127.0.0.1:8032')+'/__identity_test');
   const result=await page.evaluate(async()=>{
@@ -32,6 +32,7 @@ const I=require('../functions/identity-domain.cjs');
    const hydrated=await api.identityCall('profile');await api.privateLogout();
    return{scrubbed,profile,hasToken:!!group.token,renamed,hydrated,cache:sessionStorage.getItem('familyCheckInUser')};
   });
+  assert.deepEqual(await page.evaluate(()=>window.__identityRegions),['asia-east1']);
   assert.equal(result.scrubbed.password,undefined);assert.equal(result.scrubbed.pin,undefined);
   assert.equal(result.profile.accountId,'alice');assert.equal(result.profile.password,undefined);assert.equal(result.hasToken,true);
   assert.equal(result.renamed.name,'Renamed');assert.equal(result.hydrated.profile.name,'Renamed');assert.equal(result.cache,null);assert.equal(currentAuth,null);

@@ -7,7 +7,8 @@ const {onCall,HttpsError}=require('firebase-functions/v2/https');
  * @returns {Object} 五個具名 callable；App Check 選用不代表取消登入或獎勵驗證。
  */
 function createCallables(service,{adminAppCheckRequired=false,redemptionAppCheckRequired=false,emulator=process.env.FUNCTIONS_EMULATOR==='true'}={}) {
-    const options={region:'asia-southeast1',cors:true,maxInstances:10,enforceAppCheck:!emulator};
+    // Emulator 維持既有單區端點；正式 callable 先雙區部署，不遷移背景觸發器。
+    const options={region:emulator?'asia-southeast1':['asia-southeast1','asia-east1'],cors:true,maxInstances:10,enforceAppCheck:!emulator};
     const wrap=(handler,overrides={})=>onCall({...options,...overrides},async request=>{
         try{return await handler(request);}
         catch(error){

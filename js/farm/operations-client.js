@@ -33,7 +33,7 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
             const appName=mode==='farm'?'nexus-farm-transactions':mode==='daily'?'nexus-daily-challenges':mode==='guard'?'nexus-guard-dogs':mode==='redeem'?'nexus-operations-redeem':'nexus-operations-player';
             const app=appSDK.getApps().find(a=>a.name===appName)||appSDK.initializeApp(config.firebaseConfig,appName);
             if(requiresCheck){const check=await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js');check.initializeAppCheck(app,{provider:new check.ReCaptchaEnterpriseProvider(OPERATIONS_APP_CHECK_SITE_KEY),isTokenAutoRefreshEnabled:true});}
-            const functions=functionSDK.getFunctions(app,'asia-southeast1'),auth=authSDK.getAuth(app);
+            const functions=functionSDK.getFunctions(app,'asia-east1'),auth=authSDK.getAuth(app);
             // 沿用既有後端驗證的玩家至 Firebase Auth 橋接。
             const session=PRIVATE_IDENTITY_ENABLED?await privateBridge('photoSession',context.groupId):(await functionSDK.httpsCallable(functions,'photoSession',{timeout:timeoutMs})({accountId:context.accountId,groupId:context.groupId,secret:user.password||user.pin||''})).data;
             await authSDK.setPersistence(auth,authSDK.inMemoryPersistence);await authSDK.signInWithCustomToken(auth,session.token);

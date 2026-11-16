@@ -17,12 +17,15 @@ const firestore = getFirestore();
 let mirrorInstance;
 const makeMirror = require('./mirror.cjs');
 const getMirror = () => mirrorInstance ||= makeMirror(firestore, getDatabase(),{privateIdentityEnabled:()=>privateIdentityEnabled.value()});
+// 背景鏡像維持單區；先只讓 callable 在兩區並存，舊前端仍連新加坡。
 const region = 'asia-southeast1';
+const callableRegions = typeof process !== 'undefined' && process.env.FUNCTIONS_EMULATOR === 'true'
+    ? region : [region, 'asia-east1'];
 const {defineBoolean}=require('firebase-functions/params');
 const privateIdentityEnabled=defineBoolean('NEXUS_PRIVATE_IDENTITY_ENABLED',{default:false});
 const {createIdentityService}=require('./identity-service.cjs');
 const identityService=createIdentityService({db:firestore,auth:getAuth(),enabled:()=>privateIdentityEnabled.value()});
-exports.nexusIdentity=onCall({region,cors:true,maxInstances:5,concurrency:4,memory:'512MiB',timeoutSeconds:30},async request=>{try{return await identityService.handle(request);}catch(error){const allowed=['invalid-argument','unauthenticated','permission-denied','already-exists','failed-precondition','resource-exhausted','not-found'];throw new HttpsError(allowed.includes(error.code)?error.code:'internal',allowed.includes(error.code)?error.message:'登入服務暫時無法使用');}});
+exports.nexusIdentity=onCall({region:callableRegions,cors:true,maxInstances:5,concurrency:4,memory:'512MiB',timeoutSeconds:30},async request=>{try{return await identityService.handle(request);}catch(error){const allowed=['invalid-argument','unauthenticated','permission-denied','already-exists','failed-precondition','resource-exhausted','not-found'];throw new HttpsError(allowed.includes(error.code)?error.code:'internal',allowed.includes(error.code)?error.message:'登入服務暫時無法使用');}});
 const trigger = document => ({ document, region, retry: true });
 exports.liveFarmMirror = onDocumentWritten(trigger('groups/{groupId}/users/{accountId}'), event => {
     if (JSON.stringify(event.data.before.data()?.farm) === JSON.stringify(event.data.after.data()?.farm)) return;
@@ -67,13 +70,13 @@ async function validateSession(request) {
     if (!group.exists || !group.data().members?.includes(accountId)) throw new HttpsError('permission-denied', '你已不在此群組。');
     return { accountId, groupId, user, group };
 }
-exports.photoSession = onCall({ region, cors: true, maxInstances: 5 }, async request => {
+exports.photoSession = onCall({ region: callableRegions, cors: true, maxInstances: 5 }, async request => {
     const { accountId, groupId, user, privateActor } = await validateSession(request);
     if(privateActor)return{token:await identityService.tokenFor(privateActor,{photoAccountId:accountId,photoGroupId:groupId})};
     const token = await getAuth().createCustomToken(user.id, { photoAccountId: accountId, photoGroupId: groupId });
     return { token };
 });
-exports.liveSession = onCall({ region, cors: true, maxInstances: 5 }, async request => {
+exports.liveSession = onCall({ region: callableRegions, cors: true, maxInstances: 5 }, async request => {
     const { accountId, groupId, user, group, privateActor } = await validateSession(request);
     await getMirror().account(accountId, privateActor?await firestore.doc('users/'+privateActor.profileId).get():user);
     await getMirror().group(groupId, group);
@@ -84,7 +87,7 @@ exports.liveSession = onCall({ region, cors: true, maxInstances: 5 }, async requ
 
 // 成長森林沿用既有伺服器驗證的 Nexus custom-token 身分。
 let growthService;
-exports.growthForest=onCall({region,cors:true,maxInstances:10},async request=>{
+exports.growthForest=onCall({region:callableRegions,cors:true,maxInstances:10},async request=>{
     try{growthService ||= require('./growth-service.cjs').createGrowthService({db:firestore,resolvePrivateIdentity:async(request,t)=>{if(!privateIdentityEnabled.value())return null;if(!(await (t?t.get(firestore.doc('ops_identity_state/global')):firestore.doc('ops_identity_state/global').get())).data()?.ready)throw new HttpsError('failed-precondition','私有登入尚未完成切換');return require('./identity-access.cjs').assertIdentity(request,firestore,t);}});return await growthService.handle(request);}
     catch(error){
         const codes=['invalid-argument','unauthenticated','permission-denied','not-found','already-exists','failed-precondition','resource-exhausted'];

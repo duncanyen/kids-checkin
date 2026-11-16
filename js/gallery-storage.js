@@ -13,7 +13,7 @@ async function authenticate(user, groupId) {
     const identity = JSON.stringify([groupId, user.accountId]);
     if (session?.identity !== identity) {
         const promise = (session?.promise || Promise.resolve()).catch(() => {}).then(async () => {
-            const result = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',groupId)}:await httpsCallable(getFunctions(app, 'asia-southeast1'), 'photoSession')({
+            const result = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',groupId)}:await httpsCallable(getFunctions(app, 'asia-east1'), 'photoSession')({
                 accountId: user.accountId, groupId, secret: user.password || user.pin || ''
             });
             await setPersistence(auth, inMemoryPersistence);

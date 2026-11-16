@@ -9,7 +9,7 @@ test('GitHub Pages preflight reaches each callable and anonymous POST stays deni
     for(const name of ['gameOpsAdmin','gameOpsAnnouncements','gameOpsRedeem','gameOpsDailyChallenges']){
         const callable=functions[name];
         assert.ok(callable.__endpoint.callableTrigger);
-        assert.deepEqual(callable.__endpoint.region,['asia-southeast1']);
+        assert.deepEqual(callable.__endpoint.region,process.env.FUNCTIONS_EMULATOR==='true'?['asia-southeast1']:['asia-southeast1','asia-east1']);
         app.all('/'+name,callable);
     }
     const server=app.listen(0,'127.0.0.1');

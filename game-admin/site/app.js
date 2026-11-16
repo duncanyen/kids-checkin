@@ -1,5 +1,5 @@
 import {createManagementUI} from './management.js?v=20261114-report';
-import * as runtime from './runtime.js?v=20261108-admin-auth';
+import * as runtime from './runtime.js?v=20261116-taiwan';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
 const labels={reports:'營運報表',dashboard:'營運總覽',announcements:'使用者公告',notifications:'系統通知',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄',players:'玩家管理',balance:'遊戲數值',events:'活動管理',settings:'系統設定'};

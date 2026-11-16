@@ -3,10 +3,10 @@ import {getAuth,setPersistence,browserSessionPersistence,onAuthStateChanged,sign
 import {getFunctions,httpsCallable,connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
 import {connectAuthEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {initializeAppCheck,ReCaptchaEnterpriseProvider,getToken} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js';
-import {config} from './config.js?v=20261108-admin-auth';
+import {config} from './config.js?v=20261116-taiwan';
 const adminAppCheckRequired=config.adminAppCheckRequired===true;
 const localEmulator=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).get('emulators')==='1';
-const app=initializeApp({...config,...(localEmulator?{projectId:'demo-nexus-ops'}:{})},'nexus-game-admin'),auth=getAuth(app),functions=getFunctions(app,config.region);
+const app=initializeApp({...config,...(localEmulator?{projectId:'demo-nexus-ops'}:{})},'nexus-game-admin'),auth=getAuth(app),functions=getFunctions(app,localEmulator?'asia-southeast1':config.region);
 let appCheck;
 if(localEmulator){
     connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});connectFunctionsEmulator(functions,'127.0.0.1',5001);

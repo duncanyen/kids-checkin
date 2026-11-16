@@ -30,7 +30,7 @@ export async function personalLedgerDatabase(user, groupId) {
         const app = getApps().find(item => item.name === name) || initializeApp(firebaseConfig, name);
         const auth = getAuth(app);
         await setPersistence(auth, inMemoryPersistence);
-        const session = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',groupId)}:await httpsCallable(getFunctions(app, 'asia-southeast1'), 'photoSession', { timeout: 12000 })({
+        const session = PRIVATE_IDENTITY_ENABLED?{data:await privateBridge('photoSession',groupId)}:await httpsCallable(getFunctions(app, 'asia-east1'), 'photoSession', { timeout: 12000 })({
             accountId: user.accountId, groupId, secret: user.password || user.pin || ''
         });
         checkAccount(user);

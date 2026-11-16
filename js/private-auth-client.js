@@ -5,7 +5,7 @@ const safe=profile=>{const {password,pin,secret,token,...result}=profile;return 
 async function connection(){
  if(!PRIVATE_IDENTITY_ENABLED)throw Error('私有登入尚未啟用');
  if(!connected)connected=Promise.all([import('./firebase-config.js'),import('https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js'),import('https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js')]).then(async([config,authSDK,functionsSDK])=>{
-  const auth=authSDK.getAuth(config.app);await auth.authStateReady();return{auth,authSDK,functionsSDK,functions:functionsSDK.getFunctions(config.app,'asia-southeast1')};
+  const auth=authSDK.getAuth(config.app);await auth.authStateReady();return{auth,authSDK,functionsSDK,functions:functionsSDK.getFunctions(config.app,'asia-east1')};
  }).catch(error=>{connected=null;throw error;});return connected;
 }
 export async function identityCall(action,payload={}){const c=await connection();return(await c.functionsSDK.httpsCallable(c.functions,'nexusIdentity',{timeout:20000})({action,...payload})).data;}

@@ -72,3 +72,16 @@ test('all existing sellable drops use canonical server prices',async()=>{
   f.farm()[item]=1;await f.service.handle(f.req('sellItem',{item,quantity:1,unitPrice:999999}));coins+=price;assert.equal(f.farm().coins,coins);
  }
 });
+
+test('independent regional handlers share committed harvest receipt without duplicate inventory or event',async()=>{
+ const f=fixture();
+ const taiwan=createFarmTransactions({db:f.db,player:f.player,now:()=>1700000000000,random:()=>1,enabled:()=>true});
+ const req=f.req('collectEggs');
+ const first=await f.service.handle(req);
+ const replay=await taiwan.handle(req);
+ assert.deepEqual(replay.result,first.result);
+ assert.equal(f.farm().inventoryEggs,3);
+ assert.equal(f.farm().eggsReady,0);
+ assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,1);
+ assert.equal((await f.db.collection('ops_farm_transactions').get()).size,1);
+});
