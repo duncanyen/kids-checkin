@@ -7,8 +7,8 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
  const patch={},result={};let next=session,event=null,targetChanged=false,targetFarm=target?.farm||null;
  const start=(kind,milestone)=>{
   const config=CONFIG[kind];
-  next={id,kind,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,targetName:target.name||target.accountId,startedAt:stamp,approachEndsAt:stamp+config.flightMs,deadline:stamp+config.durationMs,health:config.health,attacks:{melee:0,ranged:0},milestone:milestone??null};
-  if(milestone!==undefined){patch['farm.'+kind+'LastMilestone']=milestone;patch['farm.'+kind+'Challenge']={id,milestone,startedAt:stamp,approachEndsAt:next.approachEndsAt,deadline:next.deadline};}
+  next={id,kind,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,targetName:target.name||target.accountId,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),startedAt:stamp,approachEndsAt:stamp+config.flightMs,deadline:stamp+config.durationMs,health:config.health,attacks:{melee:0,ranged:0},milestone:milestone??null};
+  if(milestone!==undefined){next.previousMilestone=farm[kind+'LastMilestone']||0;patch['farm.'+kind+'LastMilestone']=milestone;patch['farm.'+kind+'Challenge']={id,milestone,startedAt:stamp,approachEndsAt:next.approachEndsAt,deadline:next.deadline};}
   return{challenge:{...next},kind};
  };
  const resolve=()=>{
@@ -48,7 +48,7 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
   if(action==='visitEncounter'&&p.reusePermit===true&&next&&next.targetGroupId===target.groupId&&next.targetAccountId===target.accountId&&(next.visitPermit||next.kind))return{patch,result:null,session:next};
   const requested=action==='claimEncounter'?D.enumValue(p.monster,['giant','cobra','mole']):null;
   let kind=requested,milestone;
-  if(requested&&farm[requested+'Challenge']&&!next){const old=farm[requested+'Challenge'];next={...old,kind:requested,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,health:CONFIG[requested].health,attacks:{melee:0,ranged:0}};if(stamp>=old.deadline)return{patch,result:{expired:true,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:requested},session:next};}
+  if(requested&&farm[requested+'Challenge']&&!next){const old=farm[requested+'Challenge'];next={...old,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:requested,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,health:CONFIG[requested].health,attacks:{melee:0,ranged:0}};if(stamp>=old.deadline)return{patch,result:{expired:true,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:requested},session:next};}
   if(requested){milestone=requested==='giant'?giant.nextGiantMilestone(farm):requested==='cobra'?cobra.nextCobraMilestone(farm):mole.nextMoleMilestone(farm);if(milestone===null)return{patch,result:null,session:next};}
   else{
    const roll=(min,max)=>min+Math.floor(random()*(max-min+1));
@@ -56,11 +56,11 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
     if(next&&!next.harvested&&next.targetGroupId===actor.groupId&&next.targetAccountId===actor.accountId&&(next.result?.outcome==='win'||next.harvestPermit))return{patch,result:null,session:next};
     kind=G.rollHomeBossEncounter(farm.coopLevel,roll);
    }else{kind=G.rollVisitBossEncounter(targetFarm?.coopLevel,roll,30);if(!kind&&roll(1,30)===1)kind='tiger';if(!kind&&roll(1,10)===1)kind='wolf';}
-   if(!kind){if(action==='visitEncounter')next={id,kind:null,targetGroupId:target.groupId,targetAccountId:target.accountId,visitPermit:true,result:{outcome:'clear'}};if(action==='homeEncounter')next={id,kind:null,groupId:actor.groupId,targetGroupId:actor.groupId,targetAccountId:actor.accountId,harvestPermit:true,harvested:false,result:{outcome:'clear'}};return{patch,result:null,session:next};}
+   if(!kind){if(action==='visitEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,targetGroupId:target.groupId,targetAccountId:target.accountId,visitPermit:true,result:{outcome:'clear'}};if(action==='homeEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,groupId:actor.groupId,targetGroupId:actor.groupId,targetAccountId:actor.accountId,harvestPermit:true,harvested:false,result:{outcome:'clear'}};return{patch,result:null,session:next};}
   }
   return{patch,result:start(kind,milestone),session:next};
  }
- if(!next||p.battleId!==next.id)D.fail('failed-precondition','戰鬥會話已變更');
+ if(!next||!next.id||p.battleId!==next.id)D.fail('failed-precondition','戰鬥會話已變更');
  if(next.result)return{patch,result:next.result,session:next};
  if(action==='battleSettle')return{patch,result:resolve(),session:next,event,targetFarm:targetChanged?targetFarm:null};
  if(stamp>=next.deadline)D.fail('deadline-exceeded','戰鬥時間已到，請結算');

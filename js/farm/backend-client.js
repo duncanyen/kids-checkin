@@ -2,9 +2,14 @@ import { PRIVATE_IDENTITY_ENABLED } from '../private-auth-client.js';
 import { createGameOperationsClient } from './operations-client.js';
 import { isUncertainSteal } from './steal-request.js';
 import { readGameContext } from '../game-context.js';
+import { createBattlePage } from './battle-page-client.js';
 // 完整遷移、Rules 與隔離驗證通過後才開啟；不能單獨啟用此旗標。
 export const FARM_BACKEND_ENABLED = true;
 let client,offset=0;
+const battlePage = FARM_BACKEND_ENABLED ? createBattlePage({
+ request: (action,payload,id) => { client ||= createGameOperationsClient(readGameContext()); return client.farmTransaction(action,payload,id); },
+ storage: sessionStorage, events: window, resume: () => window.location.reload()
+}) : null;
 const pending=new Map(),attacks=new Map(),settlements=new Map();
 export const hasPendingBackendBattle=()=>settlements.size>0;
 // 結算本身與背景資料同步不可排在自己後面；其他經濟操作須等伺服器確認戰鬥已結束。
@@ -14,7 +19,7 @@ async function send(action,payload,id,context){
  if(!FARM_BACKEND_ENABLED||!PRIVATE_IDENTITY_ENABLED)throw Error('農場共用交易尚未啟用');
  client||=createGameOperationsClient(readGameContext());
  const started=performance.now();
- const response=await client.farmTransaction(action,payload,id);
+ const response=await battlePage.execute(action,payload,id);
  if(['visitEncounter','stealEgg'].includes(action)){
   console.info('farm-theft-latency',{action,combined:payload.stealWhenClear===true,roundTripMs:Math.round(performance.now()-started),serverTimingAvailable:!!response.timing,...response.timing});
  }

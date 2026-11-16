@@ -2,6 +2,7 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
 const {reuseTransactionReads}=require('./transaction-reads.cjs');
+const {assertBattlePage,changeBattlePage}=require('./battle-page.cjs');
 const pendingBattleOf=session=>session&&!session.result?{...session}:null;
 function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null}){
  let models;
@@ -10,10 +11,12 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
  async function handle(request){
   if(!await enabled())D.fail('failed-precondition','共用交易尚未完成安全切換');
-  const p=request.data||{},action=D.enumValue(p.action,['collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  const p=request.data||{},action=D.enumValue(p.action,['beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
   if(p.verifyOnly!==undefined&&typeof p.verifyOnly!=='boolean')D.fail('invalid-argument','進場驗證模式不正確');
+  if(p.battlePageId!==undefined)D.requestId(p.battlePageId);
+  if(['beginBattlePage','abandonBattlePage'].includes(action))D.requestId(p.battlePageId);
   const requestId=D.requestId(p.requestId),models=await load(),[P,inventory,combat,housing,,,,,,garden,dogs,ranking,save]=models;
   const qty=['tradePoultry','buyWeapon','buyMedicine','sellItem','expandWarehouse'].includes(action)?positive(p.quantity):null;
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
@@ -24,23 +27,34 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    if(!await enabled(t))D.fail('failed-precondition','共用交易正在維護');
    const actor=await player(request,t),stamp=now();let combatRollIndex=0;
    const receiptRef=db.doc('ops_farm_transactions/'+D.hash(actor.uid+':'+requestId));
-   const fingerprint=D.hash(JSON.stringify(Object.fromEntries(Object.keys(p).filter(key=>key!=='requestId').sort().map(key=>[key,p[key]]))));
+   const fingerprint=D.hash((['beginBattlePage','abandonBattlePage'].includes(action)?p.battlePageId+':':'')+JSON.stringify(Object.fromEntries(Object.keys(p).filter(key=>!['requestId','battlePageId'].includes(key)).sort().map(key=>[key,p[key]]))));
    const receipt=await t.get(receiptRef);
    if(receipt.exists){
     if(receipt.data().fingerprint!==fingerprint)D.fail('already-exists','交易編號已用於其他操作');
     const response={...receipt.data().response,serverNow:stamp,replayed:true};
+    if(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle'].includes(action)&&!response.result?.harvest&&!response.result?.steal){const current=(await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data();assertBattlePage(current,p.battlePageId);if(response.result?.challenge&&current?.id!==response.result.challenge.id)D.fail('failed-precondition','舊戰鬥已作廢，請重新進入村落');}
     // 通知準備的收據仍防重；戰鬥提示須讀取目前狀態，不能重播已結束的舊挑戰。
     if(action==='ensureWelcome')response.result={...response.result,pendingBattle:pendingBattleOf((await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data())};
     return response;
    }
    const farmRef=db.doc(`groups/${actor.groupId}/users/${actor.accountId}`),sessionRef=db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId));
    const [owner,sessionSnapshot]=await Promise.all([t.get(farmRef),action==='ensureFarm'?Promise.resolve(null):t.get(sessionRef)]);
+   if(['beginBattlePage','abandonBattlePage'].includes(action)){
+    const current=sessionSnapshot.data()||null;
+    if(action==='abandonBattlePage')assertBattlePage(current,p.battlePageId);
+    const next=changeBattlePage({farm:owner.data()?.farm,session:current,pageId:p.battlePageId,stamp,close:action==='abandonBattlePage'});
+    if(Object.keys(next.patch).length)t.update(farmRef,next.patch);
+    t.set(sessionRef,next.session);
+    const response={result:{protocolVersion:1,battlePageId:p.battlePageId,abandoned:next.abandoned},serverNow:stamp};
+    t.create(receiptRef,{uid:actor.uid,accountId:actor.accountId,groupId:actor.groupId,fingerprint,createdAt:stamp,response});return response;
+   }
    if(action==='ensureFarm'){
     if(owner.exists){if(!save.isFarmSave(owner.data()?.farm))D.fail('failed-precondition','存檔資料不完整，停止自動初始化');const response={result:owner.data().farm,serverNow:stamp};t.create(receiptRef,{fingerprint,response,createdAt:stamp});return response;}
     const creation=db.doc(farmRef.path+'/farm_meta/creation');if(p.canCreate===false||(await t.get(creation)).exists)D.fail('failed-precondition','原有存檔遺失，禁止重建');
     const fresh=save.initialFarm(stamp),response={result:fresh,serverNow:stamp};t.create(farmRef,{farm:fresh});t.create(creation,{groupId:actor.groupId,accountId:actor.accountId,createdAt:stamp});t.create(receiptRef,{fingerprint,response,createdAt:stamp});return response;
    }
    const farm=requireFarm(owner.data()?.farm),session=sessionSnapshot.data()||null;
+   assertBattlePage(session,p.battlePageId);
    if(!save.isFarmSave(farm))D.fail('failed-precondition','存檔資料不完整，停止交易');
    let patch={},result={},event=null,targetRef=null,targetPatch=null,targetFarm=null,nextSession=session;
    const mailWrites=[];
@@ -116,7 +130,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }else if(['ensureWelcome','claimWelcome','readMail','deleteMail'].includes(action)){
     const welcomeId='welcome-v1',reward={coins:1000,worms:8,earthworms:4},mail=owner.data().farmMail||{};
     if(action==='ensureWelcome'){
-     // 只準備通知、不發獎。順帶回傳此玩家未完成的戰鬥，讓重新進入村落時恢復原挑戰。
+     // 只準備通知、不發獎；回傳目前頁面仍有效的戰鬥，新頁登記已先作廢上一頁會話。
      result={pendingBattle:pendingBattleOf(session)};
      if(!mail.welcomeCreatedAt&&!mail.welcomeClaimedAt)mailWrites.push(()=>{t.set(db.doc(farmRef.path+'/farm_notifications/'+welcomeId),{type:'system',title:'系統通知',body:'歡迎加入咕咕村落，若您有任何疑問，歡迎隨時與我們連絡，感謝您的支持，祝您遊戲愉快',reward,createdAt:stamp,claimedAt:null,readAt:null});t.update(farmRef,{farmMail:{...mail,welcomeCreatedAt:stamp}});});
     }else if(action==='claimWelcome'){

@@ -9,7 +9,7 @@ import {CobraEncounter} from './cobra.js';
 import {MoleEncounter} from './mole.js';
 import {farmLoading} from './loading-ui.js';
 
-/** 恢復伺服器保留的原戰鬥；不抽新怪、不改血量與期限，也不自動收蛋。 */
+/** 僅重建同一頁面仍有效的戰鬥 Scene；新頁面的舊會話已由 beginBattlePage 作廢。 */
 export async function restorePendingBattle(scene,challenge){
  const token=scene.farmSceneToken,active=()=>scene.sys.isActive()&&scene.farmSceneToken===token;
  scene.preparingEncounter=true;

@@ -124,7 +124,16 @@ export default class VisitScene extends Phaser.Scene {
 
         const btnBack = this.add.rectangle(55, 50, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(30);
         this.add.text(55, 50, '溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
-        btnBack.on('pointerdown', () => this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId }));
+        const updateBack = () => {
+            const blocked = farmActionsBlocked(this, hasPendingBackendBattle());
+            btnBack.setAlpha(blocked ? .4 : 1);
+        };
+        btnBack.on('pointerdown', () => {
+            if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
+            this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId });
+        });
+        this.events.on('update', updateBack);
+        onSceneExit(this, () => this.events.off('update', updateBack));
 
         mountHalloween(this);
         this.initFirebase();
