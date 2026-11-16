@@ -1,0 +1,87 @@
+{
+  "assets": {
+    "panel": {
+      "file": "assets/coop_clean_panel.png",
+      "size_px": [
+        602,
+        684
+      ],
+      "description": "木框、米色內頁與下緣花草"
+    },
+    "title": {
+      "file": "assets/coop_clean_title.png",
+      "size_px": [
+        1066,
+        233
+      ],
+      "description": "空白木製標題牌，含母雞裝飾"
+    },
+    "illustration": {
+      "file": "assets/coop_clean_illustration.png",
+      "size_px": [
+        836,
+        610
+      ],
+      "description": "雞舍、母雞與掃帚主插畫"
+    },
+    "button_yes": {
+      "file": "assets/coop_clean_button_yes.png",
+      "size_px": [
+        616,
+        140
+      ],
+      "description": "綠色「是」按鈕底圖"
+    },
+    "button_no": {
+      "file": "assets/coop_clean_button_no.png",
+      "size_px": [
+        616,
+        141
+      ],
+      "description": "淺木色「否」按鈕底圖"
+    }
+  },
+  "reference_canvas_px": [
+    780,
+    1386
+  ],
+  "reference_asset_rects_xywh_px": {
+    "panel": [
+      38,
+      292,
+      704,
+      800
+    ],
+    "title": [
+      96,
+      241,
+      588,
+      129
+    ],
+    "illustration": [
+      210,
+      405,
+      360,
+      263
+    ],
+    "button_no": [
+      131,
+      861,
+      240,
+      55
+    ],
+    "button_yes": [
+      409,
+      861,
+      240,
+      55
+    ]
+  },
+  "text": {
+    "title": "打掃雞舍",
+    "message": "{username}的雞舍有點髒亂，是否要幫忙打掃雞舍？",
+    "button_no": "否",
+    "button_yes": "是"
+  },
+  "note": "座標供設計稿比對。實作時依文字高度、手機安全區與現有彈窗容器響應式排版。"
+}

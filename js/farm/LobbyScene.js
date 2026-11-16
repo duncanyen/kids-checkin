@@ -1,5 +1,5 @@
 import { mountHalloween } from './halloween.js';
-import { preloadSceneAssets, finishSceneAssets } from './assets.js';
+import { preloadSceneAssets, finishSceneAssets, ensureAssets, ALL_ASSETS } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { readFarm } from '../live-reads.js';
@@ -23,6 +23,7 @@ export default class LobbyScene extends Phaser.Scene {
         this.lobbyToken = Symbol('lobby');
         this.requestId = (this.requestId || 0) + 1;
         this.entering = false;
+        this.entryAttempt = null;
         this.mode = 'own';
         this.page = 1;
         this.groups = [];
@@ -190,6 +191,7 @@ export default class LobbyScene extends Phaser.Scene {
     }
 
     renderFarms() {
+        this.entering = false; this.entryAttempt = null; this.loadingText.setVisible(false);
         this.content.removeAll(true);
         const pages = Math.max(1, Math.ceil(this.farms.length / 9)); this.page = Math.min(this.page, pages);
         this.farms.slice((this.page - 1) * 9, this.page * 9).forEach((member, index) => {
@@ -200,15 +202,40 @@ export default class LobbyScene extends Phaser.Scene {
             house.on('pointerdown', async () => {
                 if (this.entering) return;
                 this.entering = true;
-                const request = this.requestId, group = this.displayGroup;
+                const request = this.requestId, group = this.displayGroup, token = this.lobbyToken, page = this.page;
+                const attempt = this.entryAttempt = Symbol('entry');
+                let transitioning = false;
+                const active = () => this.scene.isActive() && this.lobbyToken === token && this.entryAttempt === attempt && request === this.requestId && page === this.page;
+                house.setTint(0xffdf91);
+                this.loadingText.setText('正在載入村落…').setDepth(40).setVisible(true);
                 try {
                     const groupId = group.id;
-                    await readVillageAccess(CURRENT_GROUP_ID, groupId, CURRENT_ACCOUNT_ID, getDoc, member.accountId);
-                    const snapshot = await readFarm(doc(db, 'groups', groupId, 'users', member.accountId));
+                    // 原本進場後的素材與驗證工作移到列表載入階段；不重複下載已完成的紋理。
+                    const [verifiedGroup, snapshot, backend, preparation] = await Promise.all([
+                        readVillageAccess(CURRENT_GROUP_ID, groupId, CURRENT_ACCOUNT_ID, getDoc, member.accountId),
+                        readFarm(doc(db, 'groups', groupId, 'users', member.accountId)),
+                        import('./backend-client.js'),
+                        import('./visit-entry.js'),
+                        ensureAssets(this, ALL_ASSETS),
+                    ]);
+                    if (!active()) return;
                     if (!snapshot.exists() || !snapshot.data().farm) throw new Error('這位成員尚未建立雞舍。');
-                    if (this.scene.isActive() && request === this.requestId) this.scene.start('VisitScene', { targetGroupId: groupId, targetGroupName: group.name, targetAccountId: member.accountId, targetName: member.name });
-                } catch (error) { if (this.scene.isActive() && request === this.requestId) this.showFloatingText(195, 185, error.message, '#FFCDD2'); }
-                finally { if (request === this.requestId) this.entering = false; }
+                    const result = backend.FARM_BACKEND_ENABLED ? await preparation.prepareVisitEntry({ targetGroupId: groupId, targetAccountId: member.accountId, ownFarm: this.registry.get('myFarmData') }, { command: backend.farmCommand, active }) : null;
+                    if (!active()) return;
+                    const preparedEntry = result ? { ...result, sourceGroupId: CURRENT_GROUP_ID, sourceAccountId: CURRENT_ACCOUNT_ID, group: verifiedGroup, farm: snapshot.data().farm } : null;
+                    transitioning = true;
+                    this.scene.start('VisitScene', { targetGroupId: groupId, targetGroupName: verifiedGroup.name, targetAccountId: member.accountId, targetName: member.name, preparedEntry });
+                } catch (error) {
+                    transitioning = false;
+                    if (active()) this.showFloatingText(195, 185, error.message || '村落載入失敗，請再點雞舍重試。', '#FFCDD2');
+                } finally {
+                    if (this.lobbyToken === token && this.entryAttempt === attempt && !transitioning) {
+                        const ownsLoading = active();
+                        this.entering = false; this.entryAttempt = null;
+                        if (ownsLoading && this.loadingText.active) this.loadingText.setVisible(false);
+                    }
+                    if (house.active && !transitioning) house.clearTint();
+                }
             });
             this.content.add([house, bg, name]);
         });

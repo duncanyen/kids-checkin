@@ -53,8 +53,8 @@ const {execFileSync}=require('node:child_process');
    await p.mouse.click(box.x+screen.x,box.y+screen.y);
   };
   await click(map.coop);
-  await p.waitForFunction(key=>window.__farmGame.scene.getScene(key).dialogContainer.visible,key);
-  await p.evaluate(key=>window.__farmGame.scene.getScene(key).dialogContainer.setVisible(false),key);
+  await p.waitForFunction(key=>key==='VisitScene'?!!window.__farmGame.scene.getScene(key).coopCleanDialog:window.__farmGame.scene.getScene(key).dialogContainer.visible,key);
+  await p.evaluate(key=>{const s=window.__farmGame.scene.getScene(key);if(key==='VisitScene')s.coopCleanDialog.close();else s.dialogContainer.setVisible(false);},key);
   await p.evaluate(()=>{Phaser.Math.Between=(min,max)=>max===500?500:Math.ceil((min+max)/2);});
   for(const [index,point]of [[0,map.first],[41,map.last]]){
    await click(point);

@@ -45,6 +45,14 @@ function loadStealResultUI() {
     return stealResultUI;
 }
 
+// 與既有 farmCommand 的 sessionStorage key 相同，只檢查是否有待確認清潔，不送出請求。
+const hasPendingClean = payload => !!sessionStorage.getItem('nexus.farm.pending:'+JSON.stringify([CURRENT_ACCOUNT_ID,CURRENT_GROUP_ID,'helpClean',payload]));
+const usedVisitEntries = new WeakSet();
+let coopCleanUI;
+function loadCoopCleanUI() {
+    return coopCleanUI ||= import('./coop-clean-ui.js').catch(error => { coopCleanUI = null; throw error; });
+}
+
 export default class VisitScene extends Phaser.Scene {
     constructor() { super({ key: 'VisitScene' }); }
 
@@ -55,6 +63,9 @@ export default class VisitScene extends Phaser.Scene {
         this.targetGroupName = data.targetGroupName || '';
         this.targetAccountId = data.targetAccountId; 
         this.targetName = data.targetName;
+        const prepared = data.preparedEntry;
+        this.preparedEntry = prepared && !usedVisitEntries.has(prepared) && prepared.targetGroupId === this.targetGroupId && prepared?.targetAccountId === this.targetAccountId && prepared?.sourceGroupId === CURRENT_GROUP_ID && prepared?.sourceAccountId === CURRENT_ACCOUNT_ID ? prepared : null;
+        if (this.preparedEntry) usedVisitEntries.add(this.preparedEntry);
     }
 
     create() {
@@ -79,12 +90,16 @@ export default class VisitScene extends Phaser.Scene {
         this.gorilla = null;
         this.targetFarmData = null;
         this.myFarmData = null; 
-        this.isStealing = false; 
+        this.isStealing = false;
+        this.coopCleanDialog = null; this.coopCleanOpening = null; this.cleaningRequest = null;
         this.lastStealBlockedUntil = 0;
         this.henVisualKey = null;
-        this.stealFeedback = this.add.text(195, 362, '', { fontSize: '16px', color: '#fff4cc', backgroundColor: '#000a', padding: { x: 10, y: 7 }, align: 'center' }).setOrigin(.5).setDepth(40).setText('確認村落中…').setVisible(true);
+        this.stealFeedback = this.add.text(195, 362, '', { fontSize: '16px', color: '#fff4cc', backgroundColor: '#000a', padding: { x: 10, y: 7 }, align: 'center' }).setOrigin(.5).setDepth(40).setVisible(false);
         // 結果 UI 為非必要模組，背景預熱，不阻塞拜訪與怪物載入。
-        this.time.delayedCall(100, () => { void loadStealResultUI().then(ui => ui.prepareStealResultAssets()).catch(() => {}); });
+        this.time.delayedCall(100, () => {
+            void loadStealResultUI().then(ui => ui.prepareStealResultAssets()).catch(() => {});
+            void loadCoopCleanUI().then(ui => ui.prepareCoopCleanAssets()).catch(() => {});
+        });
         this.nextHenAvoidanceAt = 0;
 
         addFarmBackground(this, true);
@@ -112,7 +127,6 @@ export default class VisitScene extends Phaser.Scene {
         btnBack.on('pointerdown', () => this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId }));
 
         mountHalloween(this);
-        this.createConfirmDialog();
         this.initFirebase();
         mountGuardDog(this,()=>this.targetFarmData);
         this.resizeStealTargets = () => this.hensGroup.forEach(hen => this.sizeStealTarget(hen));
@@ -157,13 +171,13 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async initFirebase() {
-        const token = this.visitToken;
+        const token = this.visitToken, prepared = this.preparedEntry;
         this.myFarmData = this.registry.get('myFarmData');
         this.registry.events.on('changedata-myFarmData', this.onMyFarmDataChanged, this);
 
         try {
-            const group = await this.assertVisitAccess();
-            if (!this.scene.isActive() || this.visitToken !== token) return;
+            const group = prepared?.group || await this.assertVisitAccess();
+            if ((!prepared && !this.scene.isActive()) || this.visitToken !== token) return;
             this.targetGroupName = group.name || this.targetGroupName;
             if (this.targetGroupId !== CURRENT_GROUP_ID) {
                 this.groupUnsubscribes = [CURRENT_GROUP_ID, this.targetGroupId].map(groupId =>
@@ -180,6 +194,12 @@ export default class VisitScene extends Phaser.Scene {
             if (this.scene.isActive() && this.visitToken === token) this.scene.start('LobbyScene', { notice: error.message });
             return;
         }
+        if (prepared) {
+            this.targetFarmData = structuredClone(prepared.farm);
+            this.coopEgg.setVisible((this.targetFarmData.eggsReady || 0) > 0);
+            this.syncTargetHens(); this.renderTargetCleanliness();
+            queueMicrotask(() => { if(this.visitToken===token)void this.startVisitEncounter(); });
+        }
         const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
         this.unsubscribeTarget = watchFarm(targetRef, (docSnap) => {
             if (!this.scene.isActive() || this.visitToken !== token) return;
@@ -195,16 +215,18 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async startVisitEncounter({ verify = false, stealWhenClear = false, onSteal, recovery } = {}) {
+        if (!this.sys.isActive()) return false;
         if (this.visitEncounterPending) return this.visitEncounterPending;
         if (!this.myFarmData || !this.targetFarmData) return false;
         if (this.hasRolledEncounter && !verify) return this.visitEncounterReady;
         const token = this.visitToken, first = !this.hasRolledEncounter;
+        const prepared = first && !verify ? this.preparedEntry : null;
         const active = () => this.sys.isActive() && this.visitToken === token;
         this.hasRolledEncounter = true;
         this.visitEncounterReady = false;
         const work = (async () => {
             try {
-                if (first && !verify) {
+                if (first && !verify && !prepared) {
                     const checks = this.myFarmData.giantChallenge ? [maybeStartGiant] : this.myFarmData.moleChallenge ? [maybeStartMole] : [maybeStartCobra, maybeStartGiant, maybeStartMole];
                     for (const check of checks) {
                         if (await check(this)) {
@@ -224,7 +246,8 @@ export default class VisitScene extends Phaser.Scene {
                     if (stealWhenClear) payload.stealWhenClear = true;
                 }
                 const send = body => verify && stealWhenClear ? this.sendStealRequest('visitEncounter', body) : farmCommand('visitEncounter', body);
-                let authorized = FARM_BACKEND_ENABLED ? await send(payload) : null;
+                let authorized = prepared ? prepared.authorized : FARM_BACKEND_ENABLED ? await send(payload) : null;
+                if(prepared)this.preparedEntry=null;
                 if (!active()) return false;
                 // 前一次其他雞舍的戰鬥可能在這次請求才結算；先保留原損失，再確認本次目標。
                 if (FARM_BACKEND_ENABLED && authorized?.result && !authorized.challenge) {
@@ -311,35 +334,62 @@ export default class VisitScene extends Phaser.Scene {
 
     onMyFarmDataChanged(parent, value) { this.myFarmData = value; this.startVisitEncounter(); }
 
-    askCleanTargetFarm() {
-        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
-        if (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0) {
+    async askCleanTargetFarm() {
+        if (farmActionsBlocked(this, hasPendingBackendBattle()) || this.eggResultDialog || this.coopCleanDialog || this.coopCleanOpening || this.cleaningRequest) return;
+        const context = Object.freeze({ groupId: this.targetGroupId, accountId: this.targetAccountId, name: typeof this.targetName === 'string' ? this.targetName.trim() : '', token: this.visitToken });
+        const payload = { targetGroupId: context.groupId, targetAccountId: context.accountId };
+        const valid = () => this.sys.isActive() && this.visitToken === context.token && this.targetGroupId === context.groupId && this.targetAccountId === context.accountId;
+        const uncertain = FARM_BACKEND_ENABLED && hasPendingClean(payload);
+        if (!uncertain && (!this.targetFarmData || (this.targetFarmData.cleanliness || 0) === 0)) {
             this.showFloatingText('鄰居家已經很乾淨囉！', '#FFFFFF', 16, 195, 150); return;
         }
-        this.dialogText.setText(`[${this.targetName}] 的雞舍有點髒亂\n是否要幫忙打掃雞舍？`);
-        this.dialogContainer.setVisible(true);
+        this.coopCleanOpening = context;
+        try {
+            const ui = await loadCoopCleanUI();
+            if (!valid() || farmActionsBlocked(this, hasPendingBackendBattle())) return;
+            return ui.openCoopCleanConfirm(this, { context, valid, uncertain, confirm: captured => this.cleanTargetFarm(captured) });
+        } catch {
+            if (valid()) this.showFloatingText('打掃視窗暫時無法載入，請再點雞舍重試。', '#F44336', 14, 195, 150);
+        } finally { if (this.coopCleanOpening === context) this.coopCleanOpening = null; }
     }
 
-    async cleanTargetFarm() {
-        if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
-        const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
-        try {
-            await farmCommandOrLegacy('helpClean',visitPayload(this),()=>this.runVisitTransaction(async (t) => {
-                const targetDoc = await t.get(targetRef);
-                if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
-                const targetClean = targetDoc.data().farm.cleanliness || 0;
-                const newClean = Math.max(0, targetClean - 30);
-                const myDoc = await t.get(myFarmRef);
-                if (!myDoc.exists() || !myDoc.data()?.farm) return;
-                const myMoral = myDoc.data().farm.moral !== undefined ? myDoc.data().farm.moral : 100;
-                const newMoral = Math.min(100, myMoral + 3);
-
-                t.update(targetRef, { "farm.cleanliness": newClean });
-                t.update(myFarmRef, { "farm.moral": newMoral });
-            }));
-            this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, 195, 150);
-            this.sendSystemNotification(`${playerName}幫${this.targetName}打掃了雞舍`);
-        } catch (e) { console.error(e); }
+    cleanTargetFarm(context = { groupId: this.targetGroupId, accountId: this.targetAccountId, name: this.targetName, token: this.visitToken }) {
+        if (farmActionsBlocked(this, hasPendingBackendBattle())) return Promise.resolve({ status: 'error', message: '請先完成進場確認與怪物結算。' });
+        const active = () => this.sys.isActive() && this.visitToken === context.token && this.targetGroupId === context.groupId && this.targetAccountId === context.accountId;
+        if (!active()) return Promise.resolve({ status: 'error', message: '拜訪目標已變更，請重新開啟視窗。' });
+        if (this.cleaningRequest) return this.cleaningRequest;
+        const targetRef = doc(db, 'groups', context.groupId, 'users', context.accountId);
+        const work = (async () => {
+            try {
+                await farmCommandOrLegacy('helpClean', { targetGroupId: context.groupId, targetAccountId: context.accountId }, () => this.runVisitTransaction(async transaction => {
+                    const targetDoc = await transaction.get(targetRef);
+                    if (!targetDoc.exists() || !targetDoc.data()?.farm) throw Error('找不到目標雞舍。');
+                    const targetClean = targetDoc.data().farm.cleanliness || 0;
+                    if (!(targetClean > 0)) throw Error('對方雞舍已經乾淨');
+                    const ownDoc = await transaction.get(myFarmRef);
+                    if (!ownDoc.exists() || !ownDoc.data()?.farm) throw Error('找不到目前農場。');
+                    transaction.update(targetRef, { 'farm.cleanliness': Math.max(0, targetClean - 30) });
+                    transaction.update(myFarmRef, { 'farm.moral': Math.min(100, (ownDoc.data().farm.moral ?? 100) + 3) });
+                }));
+                if (active()) {
+                    this.showFloatingText('幫忙打掃完成！', '#81D4FA', 18, 195, 150);
+                    this.sendSystemNotification(`${playerName}幫${context.name || '村落主人'}打掃了雞舍`);
+                }
+                return { status: 'success' };
+            } catch (error) {
+                const message = error?.message || '打掃失敗，請稍後重試。';
+                if (/已經乾淨/.test(message)) {
+                    if (active()) this.showFloatingText('對方雞舍已經乾淨囉！', '#FFFFFF', 16, 195, 150);
+                    return { status: 'already-clean' };
+                }
+                const uncertain = isUncertainSteal(error);
+                if (active() && !this.coopCleanDialog) this.showFloatingText(uncertain ? '打掃結果尚未確認，請再點雞舍確認原交易。' : message, '#F44336', 14, 195, 150);
+                return { status: 'error', uncertain, message };
+            }
+        })();
+        this.cleaningRequest = work;
+        void work.finally(() => { if (this.cleaningRequest === work) this.cleaningRequest = null; });
+        return work;
     }
 
     renderTargetCleanliness() {
@@ -716,7 +766,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     async attemptSteal(target = this.coopEgg) {
-        if (farmActionsBlocked(this, hasPendingBackendBattle()) || this.isStealing || this.eggResultDialog || this.visitEncounterPending) return;
+        if (this.coopCleanDialog || this.coopCleanOpening || this.cleaningRequest || farmActionsBlocked(this, hasPendingBackendBattle()) || this.isStealing || this.eggResultDialog || this.visitEncounterPending) return;
         const recovery = FARM_BACKEND_ENABLED ? pendingStealCommand(visitPayload(this)) : null;
         if (!recovery && (this.preparingGiant || this.preparingMole || this.preparingCobra || !this.myFarmData || !this.targetFarmData || (!FARM_BACKEND_ENABLED && !this.hasRolledEncounter))) {
             this.showFloatingText('雞舍確認中，請稍候…', '#FFD54F', 15);
@@ -866,31 +916,6 @@ export default class VisitScene extends Phaser.Scene {
                 if (pendingStealCommand(visitPayload(this))) this.stealFeedback.setText('結果確認中，請再點母雞').setVisible(true);
             }
         }
-    }
-
-    createConfirmDialog() {
-        this.dialogContainer = this.add.container(0, 0).setDepth(100).setVisible(false);
-        const overlay = this.add.rectangle(195, 422, 390, 844, 0x000000, 0.8).setInteractive(); 
-        const bg = this.add.rectangle(195, 422, 300, 150, 0xffffff, 1).setOrigin(0.5);
-        this.dialogText = this.add.text(195, 380, '', { fontSize: '15px', color: '#000', fontStyle: 'bold', align:'center' }).setOrigin(0.5);
-        
-        const btnYes = this.add.rectangle(130, 450, 90, 36, 0x4CAF50, 1).setInteractive({ cursor: 'pointer' });
-        const textYes = this.add.text(130, 450, '是', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        
-        const btnNo = this.add.rectangle(260, 450, 90, 36, 0xF44336, 1).setInteractive({ cursor: 'pointer' });
-        const textNo = this.add.text(260, 450, '否', { fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-
-        btnNo.on('pointerdown', () => {
-            this.dialogContainer.setVisible(false);
-            this.dialogActionType = null;
-        });
-
-        btnYes.on('pointerdown', () => {
-            this.dialogContainer.setVisible(false);
-            this.cleanTargetFarm();
-        });
-
-        this.dialogContainer.add([overlay, bg, this.dialogText, btnYes, textYes, btnNo, textNo]);
     }
 
     showFloatingText(msg, color, fontSize = 22, x = 195, y = 362) {

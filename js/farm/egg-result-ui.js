@@ -1,3 +1,4 @@
+import { createFarmDialog } from './farm-dialog.js';
 import { eggResultView } from './egg-result.js';
 
 const ASSETS = 'assets/farm/egg-result/v1/';
@@ -41,25 +42,12 @@ export async function openEggResult(scene, result) {
 export async function openFarmResult(scene, view, { assets = defaultAssets, title = '收蛋完成', lead = '本次共收取 ', kind = 'harvest', sourceRows = false, titleOverlay = false, waitForAssets = true } = {}) {
     if (!view) return null;
     if (scene.eggResultDialog) return scene.eggResultDialog;
-    const input = scene.input, before = input.enabled, token = scene.farmSceneToken || scene.visitToken;
-    const previousFocus = document.activeElement;
-    let closed = false, root, dialog;
-    const close = () => {
-        if (closed) return;
-        closed = true; root?.remove();
-        input.enabled = before;
-        scene.events.off('shutdown', close); scene.events.off('destroy', close);
-        if (scene.eggResultDialog === dialog) scene.eggResultDialog = null;
-        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
-    };
-    dialog = { close };
-    scene.eggResultDialog = dialog;
-    input.enabled = false;
-    scene.events.once('shutdown', close); scene.events.once('destroy', close);
+    const dialog = createFarmDialog(scene, { kind, panelClass: kind === 'steal' ? 'farm-steal-result-panel' : '', label: title });
+    const { root, panel, close } = dialog;
     try {
         if (waitForAssets) await prepareFarmResultAssets(assets);
         else void prepareFarmResultAssets(assets).catch(() => {});
-        if (closed || !scene.sys.isActive() || (scene.farmSceneToken || scene.visitToken) !== token) { close(); return null; }
+        if (!dialog.isCurrent()) { close(); return null; }
         const el = (tag, cls, text) => {
             const node = document.createElement(tag); node.className = cls;
             if (text !== undefined) node.textContent = text;
@@ -69,11 +57,6 @@ export async function openFarmResult(scene, view, { assets = defaultAssets, titl
             const image = el('img', cls); image.src = assets[file];
             image.alt = alt; image.draggable = false; return image;
         };
-        root = el('div', 'farm-egg-result-overlay');
-        root.dataset.resultKind = kind;
-        const panel = el('section', 'farm-egg-result-panel' + (kind === 'steal' ? ' farm-steal-result-panel' : ''));
-        panel.tabIndex = -1;
-        panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-label', title);
         const button = (file, cls, label) => {
             const node = el('button', cls); node.type = 'button'; node.setAttribute('aria-label', label);
             node.append(art(file, '')); node.onclick = close; return node;
@@ -104,7 +87,6 @@ export async function openFarmResult(scene, view, { assets = defaultAssets, titl
             art('illustration', 'farm-egg-result-illustration'), total,
             art('section_title', 'farm-egg-result-section', '本次收穫'), rows,
             art('storage_banner', 'farm-egg-result-storage', '已放入倉庫'), remaining, confirm);
-        root.append(panel);
         root.addEventListener('keydown', event => {
             if (event.key === 'Escape') { event.preventDefault(); close(); }
             if (event.key === 'Tab') {
@@ -112,11 +94,8 @@ export async function openFarmResult(scene, view, { assets = defaultAssets, titl
                 event.preventDefault(); nodes[index < 0 ? (event.shiftKey ? nodes.length - 1 : 0) : (index + (event.shiftKey ? 2 : 1)) % nodes.length].focus();
             }
         });
-        // 遮罩攔截手勢，僅明細區容許捲動，不把觸控傳入 Phaser 或背景頁面。
-        root.addEventListener('touchmove', event => { if (!rows.contains(event.target)) event.preventDefault(); }, { passive: false });
-        root.addEventListener('wheel', event => { if (!rows.contains(event.target)) event.preventDefault(); }, { passive: false });
-        document.body.append(root);
-        dialog.root = root; panel.focus({ preventScroll: true });
+        dialog.protectScroll(rows);
+        if (!dialog.mount()) return null;
         return dialog;
     } catch (error) { close(); throw error; }
 }

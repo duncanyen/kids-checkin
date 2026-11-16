@@ -4,6 +4,8 @@ const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=re
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 const resumeMode=process.env.RESUME_PENDING_BATTLE;
+const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1';
+const coopCleanTests=process.env.COOP_CLEAN_TESTS==='1';
 const entryEncounterTests=process.env.ENTRY_ENCOUNTER_TESTS==='1';
 const eggResultTests=process.env.EGG_RESULT_TESTS==='1';
 const unavailableEggResult=process.env.EGG_RESULT_UNAVAILABLE;
@@ -18,7 +20,7 @@ const stealFlowTests=process.env.STEAL_FLOW_TESTS==='1';
 const stealResultTests=process.env.STEAL_RESULT_TESTS==='1'||stealFlowTests;
 const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 (async()=>{
- const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=entryEncounterTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
+ const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=entryEncounterTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
@@ -30,7 +32,8 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
- if(stealResultTests||entryEncounterTests){db.data.set('groups/B',{name:'另一座公開村落',members:['bob'],farmVillageVisibility:'public'});db.data.set('groups/B/users/bob',{farm:{...structuredClone(farm),hens:2,hensState:[{id:'flower',name:'花花',breed:'silkie',laidAt:stamp},{id:'rice',name:'米粒',breed:'silkie',laidAt:stamp}],readyEggs:{hen:0,silkie:3,bresse:0,onagadori:0}}});}
+ if(stealResultTests||entryEncounterTests||coopCleanTests||visitPreloadTests){db.data.set('groups/B',{name:'另一座公開村落',members:['bob'],farmVillageVisibility:'public'});db.data.set('groups/B/users/bob',{farm:{...structuredClone(farm),hens:2,hensState:[{id:'flower',name:'花花',breed:'silkie',laidAt:stamp},{id:'rice',name:'米粒',breed:'silkie',laidAt:stamp}],readyEggs:{hen:0,silkie:3,bresse:0,onagadori:0}}});}
+ if(coopCleanTests||visitPreloadTests){db.data.get('users/bob').name='村長 Bob';db.data.set('groups/C',{name:'另一個公開村落',members:['carol'],farmVillageVisibility:'public'});db.data.set('users/carol',{accountId:'carol',name:'Carol 村長',role:'member'});db.data.set('groups/C/users/carol',{farm:structuredClone(farm)});}
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
@@ -39,6 +42,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
   await page.exposeFunction('__privateServer',async(name,data)=>{
    calls.push({name,action:data.action,requestId:data.requestId,verifyOnly:data.verifyOnly===true,collectWhenClear:data.collectWhenClear===true,stealWhenClear:data.stealWhenClear===true});
    if(stealFlowTests&&data.stealWhenClear&&stealDelay)await new Promise(resolve=>setTimeout(resolve,stealDelay));
+   if(coopCleanTests&&data.action==='helpClean'){if(cleanDenied)return{__fixtureError:{code:'functions/permission-denied',message:'隔離測試：清潔被拒絕'}};if(cleanGate)await cleanGate;}
    if(failSteal&&data.action==='visitEncounter'&&data.stealWhenClear)throw Object.assign(Error('fixture theft denied'),{code:'functions/failed-precondition'});
    if(stealSpeedTests&&['visitEncounter','stealEgg'].includes(data.action))await new Promise(resolve=>setTimeout(resolve,400));
    if(failCollection&&data.action==='homeEncounter'&&data.collectWhenClear)throw Object.assign(Error('隔離測試：收蛋交易失敗'),{code:'functions/failed-precondition'});
@@ -50,7 +54,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
    const compatibleData={...data};if(legacyHarvestBackend&&data.action==='homeEncounter')delete compatibleData.collectWhenClear;
    if(legacyStealBackend&&data.action==='visitEncounter')delete compatibleData.stealWhenClear;
    const request={auth,data:compatibleData};
-   if(name==='gameOpsFarmTransaction'){if(entryEncounterTests&&data.action==='homeEncounter'&&!data.collectWhenClear&&!data.verifyOnly)await entryGate;if(data.action==='homeEncounter'&&data.collectWhenClear)await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;const response=await service.farmTransaction(request);const steal=response.result?.steal||(data.action==='stealEgg'?response.result:null);if(steal){lastStealResult=structuredClone(steal);if(oldStealResultFields)for(const key of ['transactionId','totalEggs','eggBreed','eggSources'])delete steal[key];}if(stealFlowTests&&data.stealWhenClear&&lateReplyOnce){lateReplyOnce=false;await new Promise(resolve=>setTimeout(resolve,350));}
+   if(name==='gameOpsFarmTransaction'){if(entryEncounterTests&&data.action==='homeEncounter'&&!data.collectWhenClear&&!data.verifyOnly)await entryGate;if(data.action==='homeEncounter'&&data.collectWhenClear)await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;let response;try{response=await service.farmTransaction(request);}catch(error){if(coopCleanTests&&data.action==='helpClean')return{__fixtureError:{code:'functions/'+(error.code||'internal'),message:error.message}};throw error;}if(coopCleanTests&&data.action==='helpClean'&&lateCleanReply){lateCleanReply=false;await new Promise(resolve=>setTimeout(resolve,350));}const steal=response.result?.steal||(data.action==='stealEgg'?response.result:null);if(steal){lastStealResult=structuredClone(steal);if(oldStealResultFields)for(const key of ['transactionId','totalEggs','eggBreed','eggSources'])delete steal[key];}if(stealFlowTests&&data.stealWhenClear&&lateReplyOnce){lateReplyOnce=false;await new Promise(resolve=>setTimeout(resolve,350));}
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
@@ -59,14 +63,14 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    throw Error('Unexpected callable '+name);
   });
   const old=fs.readFileSync('tests/farm-save-browser.cjs','utf8').match(/const sdk = `([\s\S]*?)`;/)[1];
-  const querySDK=stealFlowTests||entryEncounterTests?old.replace('export const getDocs=async()=>({empty:true,docs:[],forEach:()=>{}});',`export const getDocs=async ref=>{const rows=await window.__saveDb({kind:'query',...ref});const docs=rows.map(row=>snap(row.path,row.data));return{empty:!docs.length,docs,forEach:fn=>docs.forEach(fn)};};`):old;
+  const querySDK=stealFlowTests||entryEncounterTests||coopCleanTests||visitPreloadTests?old.replace('export const getDocs=async()=>({empty:true,docs:[],forEach:()=>{}});',`export const getDocs=async ref=>{const rows=await window.__saveDb({kind:'query',...ref});const docs=rows.map(row=>snap(row.path,row.data));return{empty:!docs.length,docs,forEach:fn=>docs.forEach(fn)};};`):old;
   const firestoreSDK="export const getFirestore=()=>({});\n"+querySDK.replace('l.callback(await getDoc(l.ref))',"l.callback(l.ref.kind==='query'?await getDocs(l.ref):await getDoc(l.ref))")+`\nwindow.__privateEmitAll=async()=>{for(const l of [...listeners])await emit(l);};`;
   await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js','utf8')}));
   await page.route('https://www.gstatic.com/**',r=>{
    const url=r.request().url();let body=firestoreSDK;
    if(url.endsWith('firebase-app.js'))body=`const apps=[];export const getApps=()=>apps,initializeApp=(_,name)=>{const app={name};apps.push(app);return app;};`;
    if(url.endsWith('firebase-auth.js'))body=`export const getAuth=()=>({authStateReady:async()=>{}}),setPersistence=async()=>{},inMemoryPersistence={},signInWithCustomToken=async()=>({user:{uid:'${auth.uid}'}});`;
-   if(url.endsWith('firebase-functions.js'))body=`export const getFunctions=()=>({}),httpsCallable=(_,name)=>async data=>{const tracked=data.stealWhenClear||data.action==='stealEgg';if(tracked&&window.__flowMeasure)window.__flowMeasure.requestAt??=performance.now();const result=await window.__privateServer(name,data);if(tracked&&window.__flowMeasure)window.__flowMeasure.responseAt=performance.now();return{data:result};};`;
+   if(url.endsWith('firebase-functions.js'))body=`export const getFunctions=()=>({}),httpsCallable=(_,name)=>async data=>{if(data.action==='visitEncounter'||data.action==='claimEncounter')window.__entryCallCount=(window.__entryCallCount||0)+1;const tracked=data.stealWhenClear||data.action==='stealEgg';if(tracked&&window.__flowMeasure)window.__flowMeasure.requestAt??=performance.now();const result=await window.__privateServer(name,data);if(result?.__fixtureError)throw Object.assign(Error(result.__fixtureError.message),{code:result.__fixtureError.code});if(tracked&&window.__flowMeasure)window.__flowMeasure.responseAt=performance.now();return{data:result};};`;
    return r.fulfill({contentType:'text/javascript',body});
   });
   // 使用真正的 firebase-config.js，涵蓋預設 Auth 恢復與模組初始化；SDK 仍完全隔離。
@@ -75,7 +79,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
   let releaseStealAssets,heldAssets=0;const assetGate=new Promise(resolve=>releaseStealAssets=resolve);
   if(holdStealAssets){await page.route('**/js/farm/steal-result-ui.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('export const prepareStealResultAssets',"for(const key in assets)assets[key]+='?held-assets';\nexport const prepareStealResultAssets")});});await page.route('**/*?held-assets',async r=>{heldAssets++;await assetGate;await r.continue();});}
-  if(stealFlowTests)await page.route('**/js/farm/operations-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('reject(timeoutFailure()),timeoutMs);','reject(timeoutFailure()),globalThis.__fixtureTimeoutMs||timeoutMs);')});});
+  if(stealFlowTests||coopCleanTests)await page.route('**/js/farm/operations-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('reject(timeoutFailure()),timeoutMs);','reject(timeoutFailure()),globalThis.__fixtureTimeoutMs||timeoutMs);')});});
   if(flowBefore)await page.route('**/css/farm-egg-result.css*',r=>r.fulfill({contentType:'text/css',body:require('node:child_process').execFileSync('git',['show','3517dab:css/farm-egg-result.css'],{encoding:'utf8'})}));
   if(flowBefore)for(const file of ['VisitScene.js','backend-client.js','egg-result-ui.js','steal-result-ui.js'])await page.route('**/js/farm/'+file+'*',r=>r.fulfill({contentType:'text/javascript',body:require('node:child_process').execFileSync('git',['show','3517dab:js/farm/'+file],{encoding:'utf8'})}));
   await page.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',docId:'alice',groupId:'A',name:'Alice'}));localStorage.setItem('lastGroupId','A');sessionStorage.setItem('nexus_active_group_id','A');});
@@ -84,6 +88,73 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(stealResultTests||entryEncounterTests)await page.clock.setFixedTime(new Date(stamp));
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(coopCleanTests||visitPreloadTests){
+   const cleanCalls=()=>calls.filter(c=>c.action==='helpClean');
+   const progress=async()=>(await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}})).challenges.mission.tasks.find(t=>t.type==='HELP_CLEAN_OTHER').count;
+   const clickScene=async(key,find)=>{
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const point=await page.evaluate(({key,find})=>{const s=window.__farmGame.scene.getScene(key),o=find==='public'?s.publicVillageButton:find==='own'?s.ownVillageButton:find==='B'||find==='C'?s.content.list.find(o=>o.getData('villageGroupId')===find):find==='farm'?s.content.list.find(o=>o.texture?.key==='coop'):s.coop;const p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();if(find==='coop'){const q=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-o.height*.3-s.cameras.main.scrollY);p.x=q.x;p.y=q.y;}return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{key,find});await page.mouse.click(point.x,point.y);
+   };
+   const enter=async(group,waitForEntry=true)=>{
+    const sceneKey=await page.evaluate(()=>window.__farmGame.scene.getScenes(true).find(s=>['MyFarmScene','VisitScene','LobbyScene'].includes(s.scene.key)).scene.key);
+    if(sceneKey==='MyFarmScene')await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();
+    else if(sceneKey==='VisitScene'){
+     const point=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),o=s.children.list.find(o=>o.type==='Rectangle'&&o.x===55&&o.y===50),p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};});await page.mouse.click(point.x,point.y);
+    }
+    await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);await clickScene('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await clickScene('LobbyScene',group);await page.waitForFunction(g=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id===g&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0,group);await clickScene('LobbyScene','farm');if(waitForEntry)await page.waitForFunction(g=>{const s=window.__farmGame.scene.getScene('VisitScene');return s?.targetGroupId===g&&s.entryChecked&&!s.visitEncounterPending;},group);
+   };
+   if(visitPreloadTests){
+    let releaseVisit;visitGate=new Promise(resolve=>releaseVisit=resolve);
+    await enter('B',false);await page.waitForFunction(()=>window.__farmGame.scene.isActive('LobbyScene')&&window.__farmGame.scene.getScene('LobbyScene').entering);
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('VisitScene')),false,'確認未完成時仍在列表載入');
+    assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('LobbyScene').loadingText.text),'正在載入村落…');
+    const visits=()=>calls.filter(c=>c.action==='visitEncounter'||c.action==='claimEncounter');
+    await page.waitForFunction(()=>window.__entryCallCount===1);
+    await clickScene('LobbyScene','farm');await page.waitForTimeout(100);assert.equal(visits().length,1,'連點只送一次進場確認');
+    await page.screenshot({path:'/tmp/gugu-visit-preload-list.png',animations:'disabled'});releaseVisit();visitGate=null;
+    await page.waitForFunction(()=>{const s=window.__farmGame.scene.getScene('VisitScene');return s?.entryChecked&&!s.visitEncounterPending;});
+    await page.waitForTimeout(100);assert.equal(visits().length,1,'進入後不重送確認');assert.equal(await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');return s.visitEncounterReady&&!s.stealFeedback.visible&&s.stealFeedback.text!=='確認村落中…'&&s.targetAccountId==='bob';}),true);
+    await page.screenshot({path:'/tmp/gugu-visit-preload-ready.png',animations:'disabled'});
+    serverRoll=0;await enter('C');await page.waitForFunction(()=>!!window.__farmGame.scene.getScene('VisitScene').gorillaEncounter);assert.equal(visits().length,2,'怪物已在列表取得，進場不再判定');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').stealFeedback.visible),false);
+    db.data.set(pendingKey,{id:'fixture-cleared',kind:null,targetGroupId:'C',targetAccountId:'carol',visitPermit:true,result:{outcome:'clear'}});serverRoll=.99;failVisitOnce=true;
+    await enter('B',false);await page.waitForFunction(()=>!window.__farmGame.scene.getScene('LobbyScene').entering);assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('LobbyScene')),true,'失敗留在列表');
+    await clickScene('LobbyScene','farm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').entryChecked&&window.__farmGame.scene.isActive('VisitScene'));
+    visitGate=new Promise(resolve=>releaseVisit=resolve);const beforeCancel=visits().length;await enter('C',false);await page.waitForFunction(count=>window.__entryCallCount>count,beforeCancel);await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').entering);await clickScene('LobbyScene','own');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='A');releaseVisit();visitGate=null;
+    await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('LobbyScene')&&!window.__farmGame.scene.isActive('VisitScene')),true,'舊回覆不可切進已取消的雞舍');
+    await enter('B');const beforeRestart=visits().length;await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('VisitScene');window.__oldEntryToken=s.visitToken;s.scene.restart();});await page.waitForFunction(()=>{const s=window.__farmGame.scene.getScene('VisitScene');return s.visitToken!==window.__oldEntryToken&&s.entryChecked&&!s.visitEncounterPending;});assert.equal(visits().length,beforeRestart+1,'預先確認只交接一次，重啟場景仍重新驗證');assert.deepEqual(errors,[]);
+    console.log('PASS visit preparation: original lobby click, slow verification stays in loading list, one call under rapid clicks, ready data/no second confirmation on arrival, monster before entry, safe error retry and discarded canceled selection');return;
+   }
+   const open=async()=>{await clickScene('VisitScene','coop');await page.waitForSelector('[data-result-kind=coop-clean]');await page.waitForFunction(()=>[...document.querySelectorAll('[data-result-kind=coop-clean] img')].every(i=>i.complete&&i.naturalWidth));};
+   const no=()=>page.locator('.farm-coop-clean-no'),yes=()=>page.locator('.farm-coop-clean-yes');
+   const refill=async(group='B',account='bob',cleanliness=70)=>{db.data.get(`groups/${group}/users/${account}`).farm.cleanliness=cleanliness;await page.evaluate(()=>window.__privateEmitAll());};
+   await enter('B');await refill();const listenersBefore=await page.evaluate(()=>{const e=window.__farmGame.scene.getScene('VisitScene').events;return ['shutdown','destroy','update'].map(key=>e.listenerCount(key));});await open();
+   assert.match(await page.locator('.farm-coop-clean-message').textContent(),/村長 Bob/);
+   await page.screenshot({path:'/tmp/gugu-coop-clean-390.png',animations:'disabled'});await page.setViewportSize({width:390,height:693});await page.screenshot({path:'/tmp/gugu-coop-clean-reference-ratio.png',animations:'disabled'});await page.setViewportSize({width:390,height:844});
+   const before=cleanCalls().length,taskBefore=await progress();await no().click();assert.equal(cleanCalls().length,before);assert.deepEqual(await page.evaluate(()=>{const e=window.__farmGame.scene.getScene('VisitScene').events;return ['shutdown','destroy','update'].map(key=>e.listenerCount(key));}),listenersBefore,'關閉清理所有臨時監聽器');assert.equal(db.data.get('groups/B/users/bob').farm.cleanliness,70);assert.equal(await progress(),taskBefore);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').targetGroupId),'B');
+   // 等待中的按壓回饋與雙層防重；同次確認只減 30，任務只加一次。
+   let releaseClean;cleanGate=new Promise(resolve=>releaseClean=resolve);await open();await yes().click();await page.waitForFunction(()=>document.querySelector('.farm-coop-clean-yes').disabled);
+   await page.evaluate(()=>{const b=document.querySelector('.farm-coop-clean-yes');b.click();b.click();window.__farmGame.scene.getScene('VisitScene').cleanTargetFarm();});assert.equal(cleanCalls().length,before+1);assert.equal(await no().isDisabled(),true);releaseClean();cleanGate=null;
+   await page.waitForSelector('[data-result-kind=coop-clean]',{state:'detached'});assert.equal(db.data.get('groups/B/users/bob').farm.cleanliness,40);assert.equal(await progress(),taskBefore+1);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').input.enabled),true);
+   // 明確拒絕後保留視窗並恢復按鈕，取消仍不寫資料。
+   await refill();cleanDenied=true;await open();await yes().click();await page.waitForFunction(()=>!document.querySelector('.farm-coop-clean-yes').disabled);assert.match(await page.locator('.farm-coop-clean-status').textContent(),/清潔被拒絕/);assert.equal(db.data.get('groups/B/users/bob').farm.cleanliness,70);assert.equal(await progress(),taskBefore+1);cleanDenied=false;await no().click();
+   // 對方先被打掃：保留舊畫面快照，交給原後端拒絕，不計任務。
+   await open();db.data.get('groups/B/users/bob').farm.cleanliness=0;await yes().click();await page.waitForSelector('[data-result-kind=coop-clean]',{state:'detached'});assert.equal(await progress(),taskBefore+1);
+   // 真正客戶端逾時。沒有自動第二次清潔；手動確認沿用同一 ID。
+   await refill();await open();await page.evaluate(()=>window.__fixtureTimeoutMs=100);lateCleanReply=true;const timeoutAt=cleanCalls().length;await yes().click();await page.waitForFunction(()=>document.querySelector('.farm-coop-clean-yes span')?.textContent==='確認結果');assert.equal(cleanCalls().length,timeoutAt+1);assert.equal(db.data.get('groups/B/users/bob').farm.cleanliness,40);assert.equal(await progress(),taskBefore+2);
+   await page.waitForTimeout(400);assert.equal(cleanCalls().length,timeoutAt+1);assert.equal(await page.locator('[data-result-kind=coop-clean]').count(),1);await yes().click();await page.waitForSelector('[data-result-kind=coop-clean]',{state:'detached'});assert.equal(cleanCalls().at(-1).requestId,cleanCalls().at(-2).requestId);assert.equal(db.data.get('groups/B/users/bob').farm.cleanliness,40);assert.equal(await progress(),taskBefore+2);await page.evaluate(()=>window.__fixtureTimeoutMs=0);
+   // 不同村落主人、長名稱、未知名稱及純文字注入。
+   await enter('C');await open();assert.match(await page.locator('.farm-coop-clean-message').textContent(),/Carol 村長/);await no().click();
+   await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').targetName='<img src=x onerror="window.__injected=1">很長的村落主人名稱'.repeat(8));await open();assert.equal(await page.locator('.farm-coop-clean-message img').count(),0);assert.equal(await page.evaluate(()=>window.__injected),undefined);await no().click();await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').targetName='住在咕咕村落的超長名稱村長'.repeat(4));await open();
+   for(const [width,height] of [[320,568],[375,667],[430,932],[768,1024],[844,390]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>{const p=document.querySelector('.farm-coop-clean-panel').getBoundingClientRect(),n=document.querySelector('.farm-coop-clean-no').getBoundingClientRect(),y=document.querySelector('.farm-coop-clean-yes').getBoundingClientRect(),m=document.querySelector('.farm-coop-clean-message').getBoundingClientRect();return p.left>=0&&p.right<=innerWidth&&p.top>=0&&p.bottom<=innerHeight&&n.height>=44&&y.height>=44&&Math.abs(n.width-y.width)<.1&&Math.abs(n.height-y.height)<.1&&m.bottom<=n.top&&document.documentElement.scrollWidth<=innerWidth;}),true);if(width===320)await page.screenshot({path:'/tmp/gugu-coop-clean-long-320.png',animations:'disabled'});}
+   const nameScroll=page.locator('.farm-coop-clean-message strong');assert.equal(await nameScroll.evaluate(n=>n.scrollHeight>n.clientHeight),true);await nameScroll.hover();await page.mouse.wheel(0,300);await page.waitForFunction(()=>document.querySelector('.farm-coop-clean-message strong').scrollTop>0);
+   await no().click();await page.setViewportSize({width:390,height:844});await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').targetName='');await open();assert.equal(await page.locator('.farm-coop-clean-message').textContent(),'這座雞舍有點髒亂，是否要幫忙打掃雞舍？');await no().click();
+   // 開窗後切換目標，不可在舊名稱之下發出新目標的交易。
+   await open();const staleAt=cleanCalls().length;await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.start('LobbyScene',{targetGroupId:'C'}));await page.waitForSelector('[data-result-kind=coop-clean]',{state:'detached'});assert.equal(cleanCalls().length,staleAt);
+   await enter('B');await refill();await open();
+   cleanGate=new Promise(resolve=>releaseClean=resolve);await yes().click();await page.waitForFunction(()=>document.querySelector('.farm-coop-clean-yes').disabled);
+   await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').scene.start('LobbyScene'));await page.waitForSelector('[data-result-kind=coop-clean]',{state:'detached'});await enter('C');const carolBefore=db.data.get('groups/C/users/carol').farm.cleanliness;releaseClean();cleanGate=null;await page.waitForFunction(async()=> (await window.__saveDb({kind:'get',path:'groups/B/users/bob'}))?.farm.cleanliness===40);assert.equal(db.data.get('groups/C/users/carol').farm.cleanliness,carolBefore);assert.equal(db.data.get('groups/B/users/bob').farm.cleanliness,40);assert.equal(await page.locator('[data-result-kind=coop-clean]').count(),0);
+   assert.deepEqual(errors,[]);console.log('PASS coop clean: original public visit and coop click, real owner text, no/yes and concurrent protection, authoritative already-clean/error, manual same-ID timeout confirmation, six viewports, safe text, target-switch cleanup and original-target completion');return;
+  }
   if(entryEncounterTests){
    const economy=()=>calls.filter(c=>c.collectWhenClear||c.stealWhenClear||['collectEggs','stealEgg','cleanOwn','helpClean','searchGarden','treatHen'].includes(c.action));
    await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').checkingEntry);
