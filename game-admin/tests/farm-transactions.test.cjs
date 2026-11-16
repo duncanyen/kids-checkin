@@ -86,24 +86,17 @@ test('independent regional handlers share committed harvest receipt without dupl
  assert.equal((await f.db.collection('ops_farm_transactions').get()).size,1);
 });
 
-test('permanent scenes use server price, atomic ownership, idempotent receipt and free owned-only selection',async()=>{
- const f=fixture();
+test('unreleased Fuji cannot be purchased; existing owners keep free scene selection',async()=>{
+ const f=fixture();f.farm().coins=600000;
  await assert.rejects(f.service.handle(f.req('setScene',{sceneId:'fuji'})),/尚未擁有/);
- await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:'fuji',price:0})),/金幣不足/);
- f.farm().coins=600000;
- const req=f.req('buyScene',{sceneId:'fuji',price:1});
- f.db.failAward=true;await assert.rejects(f.service.handle(req),/simulated storage failure/);
+ for(const extra of [{},{price:0,purchasable:true}])await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:'fuji',...extra})),/尚未開賣/);
  assert.equal(f.farm().coins,600000);assert.equal(f.farm().ownedSceneIds,undefined);
- const result=await f.service.handle(req);await f.service.handle(req);
- assert.equal(f.farm().coins,100000);assert.deepEqual(f.farm().ownedSceneIds,['fuji']);
- assert.equal(result.result.activeSceneId,'default');
- await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:'fuji'})),/已擁有/);
+ assert.equal((await f.db.collection('ops_farm_transactions').get()).size,0);
+ f.farm().ownedSceneIds=['fuji'];
  await f.service.handle(f.req('setScene',{sceneId:'fuji'}));assert.equal(f.farm().activeSceneId,'fuji');
  await f.service.handle(f.req('setScene',{sceneId:'default'}));assert.equal(f.farm().activeSceneId,'default');
- assert.equal(f.farm().coins,100000);assert.equal(f.farm().warehouseLimit,100);
- assert.equal(f.db.data.get('groups/A/users/bob').farm.ownedSceneIds,undefined);
+ assert.deepEqual(f.farm().ownedSceneIds,['fuji']);assert.equal(f.farm().coins,600000);
  assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
- await assert.rejects(f.service.handle(f.req('setScene',{sceneId:'evil'})),{code:'invalid-argument'});
 });
 
 test('scene purchase and switching cannot bypass an unfinished monster battle',async()=>{

@@ -78,7 +78,7 @@ export default class ShopScene extends Phaser.Scene {
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
         const buy = this.catalog.buy, sell = this.catalog.sell;
-        for(const item of Object.values(FARM_SCENES).filter(item=>item.price>0)) buy.push([`scene:${item.id}`,item.thumbTexture,`${item.name}\n${item.price.toLocaleString()}金幣`,()=>openScenePurchase(this,item.id)]);
+        for(const item of Object.values(FARM_SCENES).filter(item=>item.price>0)) buy.push([`scene:${item.id}`,item.thumbTexture,`${item.name}\n${item.purchasable===false?'尚未開賣':item.price.toLocaleString()+'金幣'}`,()=>openScenePurchase(this,item.id)]);
         for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,this.guardDogProductText(breed),()=>openGuardDogRental(this,breedId)]);
         for (const [key, breed] of Object.entries(BREEDS)) {
             buy.push([key, breed.texture, `${breed.name}\n${breed.buy}金幣${breed.purchasable === false ? '\n尚未開賣' : ''}`, () => breed.purchasable === false ? this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F') : this.openTradeModal('buy', key, breed.name, breed.buy)]);

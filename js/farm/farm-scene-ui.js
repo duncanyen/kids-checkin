@@ -13,7 +13,7 @@ export function openScenePurchase(scene,id) {
     dialog.message.textContent=`${item.name}：${item.price.toLocaleString('zh-TW')} 金幣。永久收藏，不占倉庫容量；購買後可在設定切換。`;
     let busy=false;
     const buy=dialog.button('確認購買',async()=>{
-        if(busy)return;busy=true;buy.disabled=true;buy.textContent='購買中…';
+        if(busy||item.purchasable===false)return;busy=true;buy.disabled=true;buy.textContent='購買中…';
         try {
             await farmCommand('buyScene',{sceneId:id});
             if(!dialog.root.isConnected)return;
@@ -23,14 +23,16 @@ export function openScenePurchase(scene,id) {
             dialog.message.textContent=error.message||'購買未確認，請重試確認原交易';buy.disabled=false;buy.textContent='重試確認購買';
         } finally {busy=false;}
     });
-    buy.disabled=ownedSceneIds(currentFarm(scene)).includes(id);
-    if(buy.disabled)buy.textContent='已擁有';
+    const owned=ownedSceneIds(currentFarm(scene)).includes(id);
+    buy.disabled=owned||item.purchasable===false;
+    if(owned)buy.textContent='已擁有';
+    else if(item.purchasable===false){buy.textContent='尚未開賣';dialog.message.textContent=`${item.name}尚未開賣，暫不開放購買。`;}
     dialog.button('關閉',dialog.close);
 }
 export function openSceneSettings(scene) {
     const dialog=farmDialog(scene,'更換場景');dialog.panel.classList.add('farm-scenes-panel');
     const farm=currentFarm(scene),owned=ownedSceneIds(farm);let active=activeSceneId(farm);
-    dialog.message.textContent=owned.length>1?'選擇已擁有的場景，免費切換。':'目前只有初始場景，請先到商店「場景」購買新場景。';
+    dialog.message.textContent=owned.length>1?'選擇已擁有的場景，免費切換。':'目前只有初始場景，其他場景開賣後可到商店「場景」購買。';
     const list=document.createElement('div');list.className='farm-scene-list';dialog.panel.append(list);
     let busy=false;const controls=[];
     for(const id of owned){
