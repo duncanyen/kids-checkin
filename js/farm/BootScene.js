@@ -14,7 +14,7 @@ export default class BootScene extends Phaser.Scene {
         const update=()=>farmLoading.progress(5+this.assetProgress*65+(this.memberDone?10:0)+(this.saveDone?10:0),
             this.game.registry.get('farmLoadState')?.phase==='error' ? undefined : this.assetProgress<1?'載入農莊素材':'確認群組與存檔');
         this.load.on('progress',progress=>{this.assetProgress=progress;update();});
-        this.load.on('loaderror',()=>{this.assetFailed=true;});
+        this.load.on('loaderror',file=>{this.assetFailed=true;this.assetError=Error(`素材載入失敗：${file.key || 'unknown'} (${file.src || file.url || ''})`);});
         this.load.on('filecomplete',()=>{if(this.textures.exists('hen'))farmLoading.attachHen(this.textures.get('hen'));});
         queueAssets(this,CORE_ASSETS);
         // Public images load while membership is checked. Private save access
@@ -32,17 +32,17 @@ export default class BootScene extends Phaser.Scene {
                     this.game.registry.set('farmLoadState',state);
                     if(this.game.registry.get('farmInitialReady'))return;
                     this.saveDone=state.phase==='ready';
-                    if(state.phase==='error')farmLoading.error('存檔尚未確認，請重試；不會重設農莊。',()=>this.game.retryFarmSave?.());
+                    if(state.phase==='error')farmLoading.error('存檔尚未確認，請重試；不會重設農莊。',()=>this.game.retryFarmSave?.(), { error: { message: state.message || '存檔尚未確認' }, stage: 'farm-save' });
                     else update();
                 }
             });
             this.game.retryFarmSave=session.retry;this.game.myFarmUnsubscribe=session.stop;
             window.addEventListener('online',session.retry);
             this.game.events.once('destroy',()=>{session.stop();window.removeEventListener('online',session.retry);});
-        }).catch(()=>farmLoading.error('無法確認群組資格，請返回重試。'));
+        }).catch(error=>farmLoading.error('無法確認群組資格，請返回重試。', undefined, { error, stage: 'membership' }));
     }
     create() {
-        if(this.assetFailed || CORE_ASSETS.some(key=>!this.textures.exists(key))){farmLoading.error('農莊素材載入失敗，請檢查連線後重試。');return;}
+        if(this.assetFailed || CORE_ASSETS.some(key=>!this.textures.exists(key))){farmLoading.error('農莊素材載入失敗，請檢查連線後重試。', undefined, { error: this.assetError || Error('缺少核心素材'), stage: 'core-assets' });return;}
         farmLoading.attachHen(this.textures.get('hen'));
         const palette = {
             '1': '#FFFFFF', '2': '#E53935', '3': '#FBC02D', '4': '#000000', 

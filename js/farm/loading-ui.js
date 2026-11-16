@@ -46,15 +46,17 @@ export const farmLoading = {
         if (root) { root.querySelector('canvas').hidden = false; root.querySelector('[data-loading-hen-fallback]').setAttribute('hidden',''); }
         restartAnimation();
     },
-    error(label, retry = () => window.location.reload()) {
+    error(label, retry = () => window.location.reload(), detail) {
         if (!root || disposed) return;
         clearTimeout(timer); root.hidden = false; root.dataset.failed='true'; retryAction = retry;
         root.querySelector('[data-loading-status]').textContent = label;
         root.querySelector('[data-loading-retry]').hidden = false; pause();
+        window.farmStartupDiagnostics?.report(detail?.error || { message: label }, detail);
     },
     complete(immediate = false) {
         if (!root || disposed || root.hidden) return;
         retryAction = () => window.location.reload(); delete root.dataset.failed;
+        window.farmStartupDiagnostics?.finish();
         this.progress(100, '農莊準備好了');
         root.querySelector('[data-loading-retry]').hidden = true;
         clearTimeout(timer);

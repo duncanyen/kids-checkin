@@ -38,6 +38,7 @@ function initializePart(part, initialize) {
     catch (error) {
         // Phaser 的版本橫幅只是啟動訊息；另外記錄實際失敗的初始化元件。
         console.error('farm-initialization-failure', JSON.stringify({ part, name:error?.name||'Error', code:error?.code||null, message:error?.message||'Unknown initialization error' }));
+        window.farmStartupDiagnostics?.report(error, { stage: 'initialization/' + part });
         throw error;
     }
 }
