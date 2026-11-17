@@ -46,7 +46,16 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         // Offline/deleted-save cases intentionally raise native startup alerts.
         // Handle them before navigating/closing so Playwright does not race its
         // automatic dialog dismissal against a detached page.
-        page.on('dialog',dialog=>{diagnostics.push(dialog.message());void dialog.accept().catch(error=>{if(!page.isClosed())errors.push(error.message);});});
+        let dialogAcknowledged=Promise.resolve();
+        page.on('dialog',dialog=>{
+            diagnostics.push(dialog.message());
+            dialogAcknowledged=(async()=>{
+                // Optional latency injection verifies navigation waits for native
+                // diagnostics to finish, including on slow Cloud Shell machines.
+                if(process.env.FARM_SAVE_DIALOG_DELAY_MS)await new Promise(resolve=>setTimeout(resolve,Number(process.env.FARM_SAVE_DIALOG_DELAY_MS)));
+                await dialog.accept();
+            })().catch(error=>{if(!page.isClosed())errors.push(error.message);});
+        });
         page.setDefaultTimeout(12000);
         // Check game/save readiness below instead of waiting for every image's
         // window.load event, which can lag on constrained Cloud Shell machines.
@@ -108,9 +117,14 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         assert.deepEqual(docs[owner], { farm, keep: 'unrelated field' });
         // Partial existing data is never interpreted as permission to reset.
         docs[owner] = { farm: { coins: 12345 }, keep: 'unrelated field' };
+        // The error state is published before diagnostics schedules alert(0).
+        // Wait for that alert AND its dismissal before reloading again.
+        const partialSaveAlert=page.waitForEvent('dialog');
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => window.__farmGame?.registry.get('farmLoadState')?.phase === 'error');
         assert.deepEqual(docs[owner], { farm: { coins: 12345 }, keep: 'unrelated field' });
+        await partialSaveAlert;
+        await dialogAcknowledged;
         assert.equal(writes.length, 0);
         // A genuinely new farm is initialized once, using the transactional path.
         delete docs[owner];
@@ -119,9 +133,12 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         assert.equal(writes.filter(write => write.path === owner).length, 1);
         assert.ok(docs[owner + '/farm_meta/creation']);
         // A new game's receipt survives an accidental parent deletion.
+        const deletedSaveAlert=page.waitForEvent('dialog');
         delete docs[owner];
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => window.__farmGame?.registry.get('farmLoadState')?.phase === 'error');
+        await deletedSaveAlert;
+        await dialogAcknowledged;
         assert.equal(docs[owner], undefined);
         assert.equal(writes.filter(write => write.path === owner).length, 1);
         assert.ok(diagnostics.every(message=>message.includes('階段：farm-save')),'only the injected save failures may raise startup alerts');
