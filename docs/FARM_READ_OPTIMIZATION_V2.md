@@ -122,3 +122,24 @@ bash scripts/deploy-farm-read-optimization.sh /本次證據目錄/verification.j
 腳本核對三項測試旗標、目前程式 hash、規則 hash、正式環境未殘留 Emulator 連線變數及排行榜索引 READY，任何一項不符便不開始部署。然後僅部署上述五支 Functions，確認台灣端五支皆 ACTIVE，再初始化缺少的公告版本。不部署 Rules、不遷移玩家資料。
 
 發佈前補查發現，舊 `farm-save-browser.cjs` 故意測試缺失／離線存檔時，原生啟動錯誤 alert 未設 handler，可能與 Playwright 導覽／關閉頁面衝突；已補上對話框處理並驗證僅允許測試注入的 farm-save 錯誤，沒有改動正式遊戲診斷功能。
+
+### Cloud Shell 索引工具相容性修正
+
+`gcloud firestore indexes fields update --index` 不支援 `query-scope`，舊工具會在參數解析時失敗，尚未修改索引。修正版保留 gcloud 唯讀查詢，使用 Firestore Admin REST `PATCH Field`，僅更新 `indexConfig`，保留既有 collection/collection-group 索引（包含陣列索引）。登入 access token 僅在程序記憶體中傳給官方 API，不寫入檔案或輸出。無法辨識既有設定時停止更新。
+
+若已持有通過的完整驗證報告，**不要先 git pull**；索引工具也在驗證雜湊範圍內。可將新版獨立工具放在 checkout 外執行，維持已驗證的部署程式不變：
+
+```bash
+cd "$HOME/kids-checkin"
+git fetch origin main
+NEXUS_READOPT_DIR="$(cat "$HOME/nexus-release-evidence/CURRENT_READOPT_DIR")"
+git show origin/main:scripts/ensure-farm-ranking-index.cjs \
+  > "$NEXUS_READOPT_DIR/ensure-farm-ranking-index-fixed.cjs"
+node "$NEXUS_READOPT_DIR/ensure-farm-ranking-index-fixed.cjs" \
+  --project homebasedb --apply
+# 稍後重查；必須看到 READY 才部署。
+node "$NEXUS_READOPT_DIR/ensure-farm-ranking-index-fixed.cjs" \
+  --project homebasedb
+```
+
+此修正只涉及部署工具；不修改既有驗證報告、不放寬部署腳本的版本雜湊檢查、不更新遊戲 Functions 或正式資料。API 請求若逾時，先唯讀檢查索引狀態，避免盲目重送。工具測試涵蓋 REST URL、PATCH body、舊索引保留、唯讀/已存在時不寫入，以及憑證與 API 錯誤的敏感資訊隔離；正式索引建立及 READY 狀態仍需由 Cloud Shell 確認。
