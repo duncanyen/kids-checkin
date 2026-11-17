@@ -1,29 +1,18 @@
 /**
  * 行事曆頁面：訂閱群組 events，依視圖與可見性呈現並直接寫入 Firestore。
- * 目前私密可見性仍比對 operator 姓名；listenToEvents 未保存 unsubscribe，詳見文件問題清單。
+ * 使用共用 Firebase 連線等待身分恢復；頁面離開時停止訂閱。
  * @module
  */
 import { icon as uiIcon } from './ui-icons.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { db } from './firebase-config.js';
 import { 
-    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
+    collection, addDoc, updateDoc, deleteDoc, doc,
     onSnapshot, serverTimestamp, query, where 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCj3XrBxi1c3RokMzCIhEB3hjJB-BPuO9Y",
-    authDomain: "homebasedb.firebaseapp.com",
-    projectId: "homebasedb",
-    storageBucket: "homebasedb.firebasestorage.app",
-    messagingSenderId: "476832900272",
-    appId: "1:476832900272:web:443bacb7cbc3113e9f8775"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
 let currentUser = null;
 let currentGroupId = localStorage.getItem('lastGroupId');
+let stopEvents=null,eventGeneration=0,pageActive=true;
 
 // 視圖狀態管理
 let currentView = 'month'; // 'month', 'week', 'day'
@@ -50,6 +39,9 @@ if (!savedUserStr || !currentGroupId) {
     currentUser = JSON.parse(savedUserStr);
     initCalendar();
     listenToEvents();
+    // Module dependencies have already awaited Auth restoration. Do not race
+    // window.onload, which may fire before a separately initialized Auth is ready.
+    void recordLog('功能瀏覽', '進入〈家庭行事曆〉');
 }
 
 async function recordLog(actionType, detailsText) {
@@ -68,21 +60,42 @@ async function recordLog(actionType, detailsText) {
         console.error("寫入 Log 失敗:", e); 
     }
 }
-window.onload = async function() { await recordLog('功能瀏覽', '進入〈家庭行事曆〉'); };
+window.addEventListener('pagehide',()=>{pageActive=false;eventGeneration++;stopEvents?.();stopEvents=null;});
+window.addEventListener('pageshow',event=>{
+    if(!event.persisted)return;
+    let saved;try{saved=JSON.parse(sessionStorage.getItem('familyCheckInUser')||localStorage.getItem('familyCheckInUser')||'null');}catch{}
+    if(!saved||saved.accountId!==currentUser?.accountId||localStorage.getItem('lastGroupId')!==currentGroupId){window.location.reload();return;}
+    pageActive=true;listenToEvents();
+});
+function eventReadError(error){
+    allFetchedEvents=[];renderCurrentView();
+    const modal=document.getElementById('eventModal');if(modal)modal.style.display='none';
+    let status=document.getElementById('calendarDataStatus');
+    if(!status){status=document.createElement('div');status.id='calendarDataStatus';status.className='calendar-data-status';status.setAttribute('role','alert');document.querySelector('.top-nav-wrapper').after(status);}
+    status.replaceChildren();status.hidden=false;
+    const text=document.createElement('span');text.textContent=error?.code==='permission-denied'?'行事曆讀取權限已失效，請重新登入後再試。':'暫時無法讀取行事曆，請重新讀取。';
+    const retry=document.createElement('button');retry.type='button';retry.textContent='重新讀取';retry.onclick=listenToEvents;
+    const home=document.createElement('a');home.href='index.html';home.textContent='返回首頁';status.append(text,retry,home);
+}
 
 /**
  * 訂閱目前群組的 events，再於前端篩選 public 或本人 operator 的行程。
- * @returns {void} 此版本未回傳停止函式；不可將前端可見性篩選視為資料庫授權。
+ * @returns {void} 維持單一監聽並處理拒絕授權；前端可見性篩選不是資料庫授權。
  * @description calendar_target_date 僅控制進入日期，不自動打開新增表單。
  */
 function listenToEvents() {
+    stopEvents?.();stopEvents=null;
+    if(!pageActive||!currentUser)return;
+    const token=++eventGeneration;
     const q = query(
         collection(db, "events"), 
         where("groupId", "==", currentGroupId)
     );
 
     // 當資料庫有更新時觸發
-    onSnapshot(q, (snapshot) => {
+    stopEvents=onSnapshot(q, (snapshot) => {
+        if(!pageActive||token!==eventGeneration)return;
+        const status=document.getElementById('calendarDataStatus');if(status)status.hidden=true;
         allFetchedEvents = [];
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -108,7 +121,7 @@ function listenToEvents() {
         if (document.getElementById('eventModal').style.display === 'flex' && !editingEventId) {
             renderDayEvents(selectedDateKey);
         }
-    });
+    },error=>{if(pageActive&&token===eventGeneration){stopEvents?.();stopEvents=null;eventReadError(error);}});
 }
 
 // 初始化與滑動事件

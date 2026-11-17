@@ -2,7 +2,7 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 const start=require('./helpers/navigation-performance-server.cjs');
 const sdk=`
-export const initializeApp=()=>({}),getFirestore=()=>({});
+export const initializeApp=()=>({}),getFirestore=()=>({}),getAuth=()=>({authStateReady:async()=>{}});
 export const doc=(_, ...parts)=>({path:parts.join('/')}),collection=doc;
 export const where=(field,op,value)=>({field,value}),query=(ref,...filters)=>({...ref,filters}),serverTimestamp=()=>1234;
 window.__calendarListeners??=new Set();

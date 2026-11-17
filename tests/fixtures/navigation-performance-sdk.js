@@ -20,7 +20,7 @@ export const getCountFromServer=async ref=>{record('count',ref);await pause();re
 export const addDoc=async(ref,value)=>{record('addDoc',ref);await pause();return{id:'new-item'};};
 export const setDoc=async(ref,value)=>{record('setDoc',ref);data()[ref.path]=value;},updateDoc=async(ref,value)=>{record('updateDoc',ref);data()[ref.path]={...data()[ref.path],...value};},deleteDoc=async ref=>{record('deleteDoc',ref);delete data()[ref.path];};
 export const runTransaction=async(_,fn)=>fn({get:getDoc,set:()=>{}});
-export const getAuth=()=>({}),setPersistence=async()=>{},inMemoryPersistence={},signInWithCustomToken=async()=>({user:{uid:'fixture'}});
+export const getAuth=()=>({authStateReady:async()=>{}}),setPersistence=async()=>{},inMemoryPersistence={},signInWithCustomToken=async()=>({user:{uid:'fixture'}});
 export const getFunctions=()=>({}),httpsCallable=(_,name)=>async()=>{record('callable',{path:name});return{data:{token:'fixture'}};};
 export const getStorage=()=>({}),ref=(_,path)=>({path}),uploadString=async()=>{},getDownloadURL=async()=>'/Nexus.png',deleteObject=async()=>{};
 
