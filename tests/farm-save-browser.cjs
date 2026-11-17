@@ -42,7 +42,11 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
     const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
     try {
         const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-        const errors = []; page.on('pageerror', error => errors.push(error.message));
+        const errors = [],diagnostics=[]; page.on('pageerror', error => errors.push(error.message));
+        // Offline/deleted-save cases intentionally raise native startup alerts.
+        // Handle them before navigating/closing so Playwright does not race its
+        // automatic dialog dismissal against a detached page.
+        page.on('dialog',dialog=>{diagnostics.push(dialog.message());void dialog.accept().catch(error=>{if(!page.isClosed())errors.push(error.message);});});
         page.setDefaultTimeout(12000);
         await page.exposeFunction('__saveDb', async operation => {
             if (operation.kind === 'get') {
@@ -117,6 +121,7 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         await page.waitForFunction(() => window.__farmGame?.registry.get('farmLoadState')?.phase === 'error');
         assert.equal(docs[owner], undefined);
         assert.equal(writes.filter(write => write.path === owner).length, 1);
+        assert.ok(diagnostics.every(message=>message.includes('階段：farm-save')),'only the injected save failures may raise startup alerts');
         assert.deepEqual(errors, []);
         console.log('PASS: slow cache miss, no offline default writes, assets retained during outage/reconnect, partial-save refusal, one-time new farm creation and deleted-save protection.');
     } finally { await browser.close(); }

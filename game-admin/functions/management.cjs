@@ -138,6 +138,7 @@ function createManagement({db,now}){
                 commit=()=>{t.set(ref,after);t.set(linked,{...announcement,announcementId:'event-'+id,sourceEventId:id,createdAt:linkedOld.data()?.createdAt||stamp,createdBy:linkedOld.data()?.createdBy||uid,updatedAt:stamp});};response={id,revision:after.revision};
             }else D.fail('invalid-argument','未知管理操作');
             commit();
+            if(action==='saveEvent')t.set(db.doc('ops_feed_versions/global'),{revision:crypto.randomUUID()});
             t.create(audit,{adminUid:uid,createdAt:stamp,action,target,before,after,result:'success',reason,requestId});
             t.create(journal,{fingerprint,response,createdAt:stamp});return response;
         });

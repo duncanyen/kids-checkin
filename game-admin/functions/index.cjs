@@ -19,3 +19,9 @@ module.exports.gameOpsFarmReportCapture=onDocumentWritten({document:'groups/{gro
  if(!before?.exists||!after?.exists)return;
  return reporting.capture({id:event.id,...event.params,before:before.data()?.farm,after:after.data()?.farm,occurredAt:after.updateTime.toMillis()});
 });
+
+// Includes Console edits and announcements maintained by the event-management API.
+const {bumpFeedVersion}=require('./feed-version.cjs');
+for(const [name,document]of [['gameOpsAnnouncementVersion','ops_announcements/{id}'],['gameOpsNotificationVersion','ops_notifications/{id}']]){
+ module.exports[name]=onDocumentWritten({document,region:'asia-east1',retry:true,maxInstances:3},event=>bumpFeedVersion(getFirestore(),event.id));
+}

@@ -67,3 +67,23 @@ test('anonymous redemption is denied and forged payload identity/rewards cannot 
     const request=f.request();request.data.accountId='bob';request.data.rewards=[{kind:'coins',amount:999999}];await f.service.redeem(request);
     assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,600);assert.equal((await f.db.doc('groups/A/users/bob').get()).data().farm.coins,100);
 });
+
+test('combined announcement feeds skip unchanged queries, expire at schedule boundaries and revalidate membership',async()=>{
+ const f=await fixture(),start=f.now();
+ await f.admin('saveAnnouncement',f.announcement({status:'published'}));
+ await f.admin('saveNotification',f.announcement({status:'scheduled',targetType:'accounts',targetAccountIds:['alice'],startAt:start+100,endAt:start+500}));
+ const request=(known)=>({...f.request(),data:{groupId:'A',action:'feeds',known}});
+ const first=await f.service.announcements(request());assert.equal(first.feeds.announcements.rows.length,1);assert.equal(first.feeds.notifications.rows.length,0);assert.equal(first.validUntil,start+100);
+ let queries=0;const collection=f.db.collection.bind(f.db);f.db.collection=(...args)=>{const q=collection(...args),wrap=o=>new Proxy(o,{get(t,k){if(k==='get')return()=>{queries++;return t.get();};const v=t[k];return typeof v==='function'? (...a)=>{const r=v.apply(t,a);return r&&r.get?wrap(r):r;}:v;}});return wrap(q);};
+ const known={revision:first.revision,validUntil:first.validUntil};
+ assert.equal((await f.service.announcements(request(known))).notModified,true);assert.equal(queries,0);
+ f.clock(start+100);const active=await f.service.announcements(request(known));assert.equal(active.feeds.notifications.rows.length,1);assert.equal(queries,2);
+ const bob={...request(),auth:f.request('bob').auth};assert.equal((await f.service.announcements(bob)).feeds.notifications.rows.length,0);
+ await f.db.doc('groups/A').update({members:['bob']});await assert.rejects(f.service.announcements(request({revision:active.revision,validUntil:active.validUntil})),{code:'permission-denied'});
+});
+test('announcement publication invalidates prior feed versions and paused settings clear both lists',async()=>{
+ const f=await fixture(),request=known=>({...f.request(),data:{groupId:'A',action:'feeds',known}});
+ await f.admin('saveAnnouncement',f.announcement({status:'published'}));const first=await f.service.announcements(request());
+ await f.admin('saveNotification',f.announcement({status:'published'}));const next=await f.service.announcements(request({revision:first.revision,validUntil:first.validUntil}));assert.notEqual(next.revision,first.revision);assert.equal(next.feeds.notifications.rows.length,1);
+ await f.db.doc('ops_settings/global').set({values:{announcementsEnabled:false}});const paused=await f.service.announcements(request({revision:next.revision,validUntil:next.validUntil}));assert.equal(paused.paused,true);assert.deepEqual(paused.feeds.notifications.rows,[]);assert.deepEqual(paused.feeds.announcements.rows,[]);
+});

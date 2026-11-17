@@ -9,8 +9,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
  const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js'),import('./game/farm-scenes-core.js')]);
  const positive=value=>D.integer(value,1,1000);
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
- async function handle(request){
-  if(!await enabled())D.fail('failed-precondition','共用交易尚未完成安全切換');
+ async function handle(request,{admit}={}){
+  let admission;
   const p=request.data||{},action=D.enumValue(p.action,['buyScene','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
@@ -25,7 +25,11 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
   return db.runTransaction(async transaction=>{
    const t=reuseTransactionReads(transaction);
    if(!await enabled(t))D.fail('failed-precondition','共用交易正在維護');
-   const actor=await player(request,t),stamp=now();let combatRollIndex=0;
+   const actor=await player(request,t);
+   // Invalid/revoked credentials cannot consume the current player's rate limit.
+   // Admission is charged once per request; every retry still revalidates player().
+   if(admit)await(admission ||= admit(actor));
+   const stamp=now();let combatRollIndex=0;
    const receiptRef=db.doc('ops_farm_transactions/'+D.hash(actor.uid+':'+requestId));
    const fingerprint=D.hash((['beginBattlePage','abandonBattlePage'].includes(action)?p.battlePageId+':':'')+JSON.stringify(Object.fromEntries(Object.keys(p).filter(key=>!['requestId','battlePageId'].includes(key)).sort().map(key=>[key,p[key]]))));
    const receipt=await t.get(receiptRef);

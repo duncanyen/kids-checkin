@@ -7,14 +7,14 @@ function endpoints(file,emulator){
  const code=`const f=require('./${file}');console.log(JSON.stringify(Object.fromEntries(Object.entries(f).map(([k,v])=>[k,{region:v.__endpoint.region,callable:!!v.__endpoint.callableTrigger,event:!!v.__endpoint.eventTrigger}]))));`;
  return JSON.parse(execFileSync(process.execPath,['-e',code],{cwd:root,encoding:'utf8',env:{...process.env,FUNCTIONS_EMULATOR:String(emulator)}}));
 }
-for(const emulator of [false,true])test(`deployment metadata: ${emulator?'Emulator keeps original endpoints':'ten callables serve both regions; seven triggers remain single-region'}`,()=>{
+for(const emulator of [false,true])test(`deployment metadata: ${emulator?'Emulator keeps original endpoints':'ten callables serve both regions; nine triggers remain single-region'}`,()=>{
  let triggerCount=0;
  for(const [file,names] of [['functions/index.cjs',live],['game-admin/functions/index.cjs',ops]]){
   const rows=endpoints(file,emulator);
   for(const name of names){assert.equal(rows[name].callable,true,name);assert.deepEqual(rows[name].region,emulator?['asia-southeast1']:['asia-southeast1','asia-east1'],name);}
-  for(const [name,row] of Object.entries(rows))if(!names.includes(name)){assert.equal(row.event,true,name);assert.deepEqual(row.region,['asia-southeast1'],name);triggerCount++;}
+  for(const [name,row] of Object.entries(rows))if(!names.includes(name)){assert.equal(row.event,true,name);assert.deepEqual(row.region,[['gameOpsAnnouncementVersion','gameOpsNotificationVersion'].includes(name)?'asia-east1':'asia-southeast1'],name);triggerCount++;}
  }
- assert.equal(triggerCount,7);
+ assert.equal(triggerCount,9);
 });
 
 test('production clients select Taiwan without moving RTDB; admin Emulator retains old endpoints',()=>{

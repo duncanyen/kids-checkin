@@ -89,16 +89,16 @@ test('failed commit can retry the same receipt without losing eggs or duplicatin
  await assert.rejects(f.service.farmTransaction(request),/simulated/);assert.equal(f.farm().eggsReady,3);assert.equal([...f.db.data.keys()].some(key=>key.startsWith('ops_verified_farm_events/')),false);
  await f.service.farmTransaction(request);await f.service.farmTransaction(request);assert.equal(f.farm().inventoryEggs,3);
 });
-test('credential revocation after preflight is still detected inside the transaction',async()=>{
+test('credential revocation after Auth check is still detected inside the transaction',async()=>{
  const f=fixture(),run=f.db.runTransaction.bind(f.db);let attempts=0;
- f.db.runTransaction=callback=>{if(++attempts===2)f.db.data.get('ops_identity_credentials/alice-profile').sessionVersion++;return run(callback);};
+ f.db.runTransaction=callback=>{if(++attempts===1)f.db.data.get('ops_identity_credentials/alice-profile').sessionVersion++;return run(callback);};
  await assert.rejects(f.service.farmTransaction(f.request('homeEncounter',{collectWhenClear:true})),{code:'unauthenticated'});assert.equal(f.farm().eggsReady,3);
 });
 test('combined harvest uses fewer reads and matches the old two-call farm result',async()=>{
  const old=fixture(),combined=fixture();await old.service.farmTransaction(old.request('homeEncounter'));await old.service.farmTransaction(old.request('collectEggs'));
  await combined.service.farmTransaction(combined.request('homeEncounter',{collectWhenClear:true}));
  assert.deepEqual(combined.farm(),old.farm());assert.ok(combined.reads.length<old.reads.length);
- assert.equal(combined.reads.filter(path=>path==='users/alice-profile').length,2,'前置與交易內各一次，不跨權限階段快取');
+ assert.equal(combined.reads.filter(path=>path==='users/alice-profile').length,1,'目前權限只在原子交易內讀取，不跨請求快取');
  assert.equal(combined.reads.filter(path=>path==='groups/A/users/alice').length,1);
  console.log('isolated harvest document reads:',JSON.stringify({twoCalls:old.reads.length,combinedCall:combined.reads.length}));
 });
@@ -113,6 +113,13 @@ test('combined visit and theft saves authorization reads while keeping the same 
  assert.deepEqual(Object.keys(response.timing).sort(),['handlerMs','identityMs','rateLimitMs','transactionMs']);
  for(const value of Object.values(response.timing))assert.ok(Number.isSafeInteger(value)&&value>=0);
  assert.deepEqual(combined.farm(),old.farm());assert.deepEqual(combined.db.data.get('groups/A/users/bob').farm,old.db.data.get('groups/A/users/bob').farm);assert.ok(combined.reads.length<old.reads.length);
- assert.equal(combined.reads.filter(path=>path==='ops_identity_credentials/alice-profile').length,2,'前置及交易內仍重新驗證目前憑證');
+ assert.equal(combined.reads.filter(path=>path==='ops_identity_credentials/alice-profile').length,1,'每次交易內重新驗證目前憑證，外層不重讀');
  console.log('isolated theft document reads:',JSON.stringify({twoCalls:old.reads.length,combinedCall:combined.reads.length}));
+});
+
+
+test('revoked sessions and blocked players cannot consume an active player rate limit',async()=>{
+ for(const change of [f=>f.db.data.get('ops_identity_credentials/alice-profile').sessionVersion++,f=>f.db.data.set('ops_player_controls/alice-profile',{blocked:true}),f=>f.db.data.get('groups/A').members=[]]){
+  const f=fixture();change(f);await assert.rejects(f.service.farmTransaction(f.request('buyMedicine',{quantity:1})));assert.equal(f.farm().coins,10000);assert.equal(f.db.data.has('ops_limits/'+D.hash('farm:alice-profile')),false);
+ }
 });

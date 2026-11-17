@@ -15,7 +15,7 @@ const cleanAudit=value=>{
  * @description 每次管理操作核對當前 Auth admin claim；users.role 不授予營運管理權。
  */
 function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,farmBackendEnabled=()=>false,farmRandom=Math.random}) {
-    const management=createManagement({db,now}),reporting=createReporting({db,now});
+    const management=createManagement({db,now}),reporting=createReporting({db,now}),farmRanking=require('./farm-ranking.cjs').createFarmRanking({db,now});
     async function admin(request){
         const uid=D.adminIdentity(request.auth),user=await auth.getUser(uid);
         if(user.disabled||user.customClaims?.role!=='admin')D.fail('permission-denied','管理權限已撤銷，請重新登入');
@@ -58,6 +58,23 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         const result=await lookup;if(result.error)throw result.error;
         if(result.user.disabled)D.fail('permission-denied','玩家帳號已停用');
         return identity;
+    }
+    // Economic mutations revalidate all mutable Firestore permissions INSIDE the
+    // transaction. Only Auth RPC and token structure are checked before it.
+    async function transactionSession(request){
+        if(!request.auth?.uid)D.fail('unauthenticated','請重新登入玩家帳號');
+        const groupId=D.id(request.data?.groupId),token=request.auth.token||{};
+        if(token.photoGroupId!==groupId||typeof token.photoAccountId!=='string')D.fail('permission-denied','玩家工作階段與群組不符，請重新登入');
+        let uid=request.auth.uid;
+        if(await privateIdentityEnabled()){
+            const I=require('./identity-domain.cjs');
+            if(typeof token.nexusProfileId!=='string')D.fail('unauthenticated','請重新登入 Nexus');
+            uid=I.id(token.nexusProfileId);
+            if(request.auth.uid!==I.profileUid(uid))D.fail('permission-denied','登入身分不符');
+        }
+        const user=await auth.getUser(request.auth.uid);
+        if(user.disabled)D.fail('permission-denied','玩家帳號已停用');
+        return{uid};
     }
     async function throttle(key,maximum,windowMs){
         const ref=db.doc(`ops_limits/${D.hash(key)}`);
@@ -132,6 +149,7 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
             if(isGift)Object.assign(after,{codeHash:codeHash||before.codeHash,redeemedCount:before?.redeemedCount||0});
             const response={id:recordId,record:isGift?D.safeGift(after):after};
             t.set(ref,after);
+            if(!isGift)t.set(db.doc('ops_feed_versions/global'),{revision:crypto.randomUUID()});
             if(codeHash)t.create(db.doc(`ops_code_index/${codeHash}`),{giftCodeId:recordId});
             t.create(auditRef,{adminUid:uid,createdAt:stamp,action,target:collection+'/'+recordId,before:cleanAudit(before),after:cleanAudit(after),result:'success',requestId});
             t.create(journal,{fingerprint:digest,response,createdAt:stamp});
@@ -163,9 +181,27 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         return{coins:{enabled:true},eggs:Object.entries(BREEDS).map(([key,b])=>({key,name:b.eggName,enabled:true})),chickens:Object.entries(BREEDS).map(([key,b])=>({key,name:b.name,enabled:key==='hen',reason:key==='hen'?'':'第一階段僅開放母雞獎勵'})),items:D.ITEMS.map(key=>({key,name:D.ITEM_NAMES[key],enabled:true})),limits:{coins:1000000,eggs:1000,chicken:20,item:1000}};
     }
     async function announcements(request){
-        const identity=await playerSession(request);await throttle('announcements:'+identity.uid,30,60000);
+        const identity=await playerSession(request);await throttle((request.data.action==='ranking'?'ranking:':'announcements:')+identity.uid,30,60000);
+        if(request.data.action==='ranking'){
+            try{return await farmRanking.load(identity,request.data.ranking);}
+            catch(error){if([9,'9','failed-precondition'].includes(error.code)&&/index/i.test(error.message||''))return{rankingUnavailable:'index'};throw error;}
+        }
         const settings=(await management.settings()).values;
-        if(!settings.announcementsEnabled)return{rows:[],nextCursor:null,asOf:now(),paused:true,settings};
+        if(!settings.announcementsEnabled)return{rows:[],nextCursor:null,...(request.data.action==='feeds'?{feeds:{announcements:{rows:[],nextCursor:null},notifications:{rows:[],nextCursor:null}}}:{}),asOf:now(),paused:true,settings};
+        if(request.data.action==='feeds'){
+            const stamp=now(),revision=(await db.doc('ops_feed_versions/global').get()).data()?.revision||null;
+            const known=request.data.known;
+            if(revision&&known?.revision===revision&&Number.isFinite(known.validUntil)&&known.validUntil>stamp&&known.validUntil<=stamp+86400000)
+                return{notModified:true,revision,settings,asOf:stamp};
+            const feeds={},boundaries=[];
+            await Promise.all(['announcements','notifications'].map(async channel=>{
+                const result=await db.collection(COLLECTIONS[channel]).where('status','in',['published','scheduled']).where('audienceKeys','array-contains-any',['all','account:'+identity.accountId]).orderBy('priority','desc').orderBy('createdAt','desc').limit(101).get();
+                const scanned=result.docs.slice(0,100).map(doc=>({...doc.data(),id:doc.id}));
+                for(const row of scanned)for(const value of [row.startAt,row.endAt])if(Number.isFinite(value)&&value>stamp)boundaries.push(value);
+                feeds[channel]={rows:scanned.filter(a=>D.activeAnnouncement(a,identity.accountId,stamp)).map(({searchTokens,audienceKeys,...a})=>a),nextCursor:result.size>100?scanned.at(-1).id:null};
+            }));
+            return{feeds,revision,validUntil:Math.min(stamp+86400000,...boundaries),asOf:stamp,settings};
+        }
         const kind=D.enumValue(request.data.channel||'announcements',['announcements','notifications']),collection=COLLECTIONS[kind];
         let query=db.collection(collection).where('status','in',['published','scheduled']).where('audienceKeys','array-contains-any',['all','account:'+identity.accountId]).orderBy('priority','desc').orderBy('createdAt','desc');
         if(request.data.cursor){const cursor=await db.doc(`${collection}/${D.id(request.data.cursor)}`).get();if(!cursor.exists)D.fail('failed-precondition','公告分頁已變更');query=query.startAfter(cursor);}
@@ -256,12 +292,12 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
     const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle,trustedReady});
     const transactions=require('./farm-transactions.cjs').createFarmTransactions({db,now,player,random:farmRandom,enabled:t=>trustedReady(t),prepareProgress:dailyChallenges.prepareProgress});
     async function farmTransaction(request){
-        const started=performance.now(),identity=await playerSession(request),verified=performance.now();
-        await throttle('farm:'+identity.uid,180,60000);const limited=performance.now();
-        const response=await transactions.handle(request),finished=performance.now();
+        const started=performance.now();await transactionSession(request);const verified=performance.now();
+        let admissionMs=0;
+        const response=await transactions.handle(request,{admit:async actor=>{const start=performance.now();await throttle('farm:'+actor.uid,180,60000);admissionMs+=performance.now()-start;}}),finished=performance.now();
         if(['visitEncounter','stealEgg'].includes(request.data?.action)){
             // 不記錄帳號、群組、payload 或憑證；只量測成功請求的處理階段。
-            const timing={identityMs:Math.round(verified-started),rateLimitMs:Math.round(limited-verified),transactionMs:Math.round(finished-limited),handlerMs:Math.round(finished-started)};
+            const timing={identityMs:Math.round(verified-started),rateLimitMs:Math.round(admissionMs),transactionMs:Math.round(Math.max(0,finished-verified-admissionMs)),handlerMs:Math.round(finished-started)};
             console.info('farm-theft-timing',{action:request.data.action,combined:request.data.stealWhenClear===true,...timing});
             return{...response,timing};
         }

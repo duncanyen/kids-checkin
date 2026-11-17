@@ -27,7 +27,7 @@ export function mountFarmMail(game, context) {
     const store = createFarmMailStore(db, context);
     const operations = createGameOperationsClient(context);
     const feeds={announcements:{rows:[],cursor:null,loading:false},notifications:{rows:[],cursor:null,loading:false}};
-    let operationsTimer=null,pendingPopupId=null,nextPopupCheck=0;
+    let operationsTimer=null,pendingPopupId=null,nextPopupCheck=0,feedRequest=null,feedKnown=null;
     const categories=['visitor','system','operations','redeem'];
     const redemption={phase:'idle',code:'',result:null,error:''};
     let runtimeSettings={redemptionEnabled:true,pauseMessage:'此營運功能暫停開放，請稍後再試。'};
@@ -90,8 +90,8 @@ export function mountFarmMail(game, context) {
         launcher.hidden = false;
         start().catch(() => { launcher.title = '通知準備失敗，點擊重試'; });
         if(GAME_ANNOUNCEMENTS_ENABLED&&!operationsTimer){
-            loadOperations(true);loadOperations(true,false,'notifications');
-            operationsTimer=setInterval(()=>{loadOperations(true);loadOperations(true,false,'notifications');},60000);
+            refreshFeeds(true);
+            operationsTimer=setInterval(()=>{if(document.visibilityState!=='hidden')refreshFeeds(true);},60000);
         }
     }
     const inputLocks=new Map();
@@ -334,7 +334,32 @@ export function mountFarmMail(game, context) {
             content.append(button(category==='system'?'重新整理系統通知':'重新整理公告',()=>loadOperations(false,false,channel)));
         }
     }
+    function refreshFeeds(background=false,force=false){
+        if(disposed||!GAME_ANNOUNCEMENTS_ENABLED)return Promise.resolve();
+        if(feedRequest)return feedRequest;
+        feedRequest=(async()=>{
+            try{
+                const result=await operations.announcementFeeds(force?null:feedKnown);
+                if(disposed)return;
+                if(result.settings)runtimeSettings=result.settings;
+                if(!result.notModified){
+                    for(const channel of ['announcements','notifications']){
+                        const received=result.feeds?.[channel];if(!received)throw Error('公告回覆格式不完整');
+                        Object.assign(feeds[channel],{rows:received.rows,cursor:received.nextCursor,paused:result.paused===true});
+                    }
+                    feedKnown=result.revision?{revision:result.revision,validUntil:result.validUntil}:null;
+                }
+                updateBadge();
+                if(!overlay.hidden&&['system','operations','redeem'].includes(category)){message.textContent='';render();}
+                if(background){for(const channel of ['announcements','notifications']){const popup=remoteRows(channel).find(a=>a.showPopup&&!a.readAt);if(popup){pendingPopupId=popup.id;maybeShowAnnouncement();break;}}}
+            }catch(error){if(!disposed&&!overlay.hidden)message.textContent=error.message||'通知讀取失敗，請重試';}
+            finally{feedRequest=null;}
+        })();return feedRequest;
+    }
+    const onFeedVisible=()=>{if(document.visibilityState==='visible')void refreshFeeds(true);};
+    document.addEventListener('visibilitychange',onFeedVisible);
     async function loadOperations(background=false,more=false,channel='announcements'){
+        if(!more)return refreshFeeds(background,!background);
         const feed=feeds[channel],targetCategory=channel==='notifications'?'system':'operations';
         if(feed.loading||disposed||!GAME_ANNOUNCEMENTS_ENABLED)return;
         feed.loading=true;
@@ -400,6 +425,7 @@ export function mountFarmMail(game, context) {
         disposed = true;
         unsubscribe?.();
         clearInterval(operationsTimer);
+        document.removeEventListener('visibilitychange',onFeedVisible);
         game.events.off('step',lockSceneInputs);game.events.off('step',maybeShowAnnouncement);unlockSceneInputs();
         game.registry.events.off('setdata', onSetData);
         game.registry.events.off('changedata-myFarmData', farmReady);

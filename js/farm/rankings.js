@@ -1,12 +1,23 @@
+import { PRIVATE_IDENTITY_ENABLED } from '../identity-config.js';
+import { createGameOperationsClient } from './operations-client.js';
 import { db } from '../firebase-config.js';
 import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { isPublicVillage, listPublicVillages } from './villages.js';
 import { FARM_RANKINGS, rankFarmPlayers } from './ranking-core.js';
 export { FARM_RANKINGS } from './ranking-core.js';
+let rankingClient,rankingContext;
 
 export async function loadFarmRanking({ groupId, accountId }, ranking = 'stolenEggs') {
     const config = FARM_RANKINGS[ranking];
     if (!config) throw new Error('排行榜不存在');
+    if(PRIVATE_IDENTITY_ENABLED){
+        const identity=JSON.stringify([groupId,accountId]);
+        if(!rankingClient||rankingContext!==identity){rankingClient=createGameOperationsClient({groupId,accountId});rankingContext=identity;}
+        let result;try{result=await rankingClient.farmRanking(ranking);}catch(error){if(error.code==='functions/unauthenticated')rankingClient=null;throw error;}
+        if(result.ranking===ranking&&Array.isArray(result.rows))return result.rows;
+        // Older backend or an index still building: preserve the old working path.
+        // Auth/network failures throw above; they never trigger an unbounded retry.
+    }
     const own = await getDoc(doc(db, 'groups', groupId));
     if (!own.exists() || !own.data().members?.includes(accountId)) throw new Error('你已不在此村落，請重新登入。');
     const groups = await listPublicVillages();

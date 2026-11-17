@@ -29,7 +29,7 @@ test('ranking reads exclude closed villages, removed members/profiles and mid-re
     globalThis.__rankingFixture={groups,docs,profiles};
     const source=readFileSync(new URL('../js/farm/rankings.js',import.meta.url),'utf8').replace(/^(import|export) .* from .*;\n/gm,'');
     const core=readFileSync(new URL('../js/farm/ranking-core.js',import.meta.url),'utf8');
-    const mock=`const {groups,docs,profiles}=globalThis.__rankingFixture,db={};
+    const mock=`const {groups,docs,profiles}=globalThis.__rankingFixture,db={},PRIVATE_IDENTITY_ENABLED=false;
       const doc=(_, ...bits)=>bits.join('/'),collection=doc,query=(ref,filter)=>filter,where=(_,__,ids)=>ids;
       const getDoc=async path=>({exists:()=>!!docs[path],data:()=>structuredClone(docs[path])});
       const getDocs=async ids=>({forEach:cb=>profiles.filter(p=>ids.includes(p.accountId)).forEach(p=>cb({data:()=>p}))});
@@ -69,4 +69,14 @@ test('new contest resets every previous participant and only accumulates the new
     assert.deepEqual(previous,original,'reading or beginning the new period must not alter the archived scores');
     const current=[...previous,{groupId:'B',accountId:'new',farm:{stolenEggs20261109:99999,stolenEggs20261116:2}}];
     assert.deepEqual(rankFarmPlayers(current,THEFT_RANKING_FIELD).map(row=>[row.accountId,row.score]),[['new',2]]);
+});
+
+test('optimized ranking uses server rows and never full-scans on authorization/network failures',async()=>{
+ const source=readFileSync(new URL('../js/farm/rankings.js',import.meta.url),'utf8').replace(/^(import|export) .* from .*;\n/gm,'');
+ const core=readFileSync(new URL('../js/farm/ranking-core.js',import.meta.url),'utf8');
+ globalThis.__rankingAPIResult={rows:[{accountId:'a',groupId:'A',score:4}]};
+ const mock=`const PRIVATE_IDENTITY_ENABLED=true,db={},createGameOperationsClient=()=>({farmRanking:async()=>{if(globalThis.__rankingAPIResult.error)throw Object.assign(Error('denied'),{code:globalThis.__rankingAPIResult.error});return{ranking:'stolenEggs',rows:globalThis.__rankingAPIResult.rows}}});const getDoc=()=>{throw Error('must not full scan')};`;
+ const mod=await import('data:text/javascript;base64,'+Buffer.from(mock+core+source).toString('base64'));
+ assert.deepEqual(await mod.loadFarmRanking({groupId:'A',accountId:'a'}),globalThis.__rankingAPIResult.rows);
+ for(const code of ['functions/permission-denied','functions/unavailable']){globalThis.__rankingAPIResult.error=code;await assert.rejects(mod.loadFarmRanking({groupId:'A',accountId:'a'}),{code});}
 });

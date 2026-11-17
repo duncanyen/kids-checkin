@@ -105,3 +105,14 @@ test('scene purchase and switching cannot bypass an unfinished monster battle',a
  for(const action of ['buyScene','setScene'])await assert.rejects(f.service.handle(f.req(action,{sceneId:'fuji'})),/請先完成怪物戰鬥結算/);
  assert.equal(f.farm().coins,600000);assert.equal(f.farm().activeSceneId,undefined);
 });
+
+
+test('transaction retry revalidates but charges admission only once and commits inventory once',async()=>{
+ const f=fixture(),run=f.db.runTransaction.bind(f.db);let first=true,admissions=0;
+ f.db.runTransaction=async callback=>{
+  if(first){first=false;await assert.rejects(run(async t=>{await callback(t);throw Error('isolated retry')}),/isolated retry/);}
+  return run(callback);
+ };
+ await f.service.handle(f.req('buyMedicine',{quantity:1}),{admit:async()=>{admissions++;}});
+ assert.equal(admissions,1);assert.equal(f.farm().coins,9990);assert.equal(f.farm().medicines,1);
+});

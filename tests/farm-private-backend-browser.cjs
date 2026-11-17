@@ -8,6 +8,8 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
 const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1';
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
+const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
+const costTests=process.env.FARM_READ_COST_TESTS==='1';
 const sceneTests=process.env.FARM_SCENE_TESTS==='1';
 const ownCleanTests=process.env.OWN_COOP_CLEAN_TESTS==='1';
 const crossSelfCleanTests=process.env.CROSS_GROUP_SELF_CLEAN_TESTS==='1';
@@ -26,6 +28,7 @@ const stealFlowTests=process.env.STEAL_FLOW_TESTS==='1';
 const stealResultTests=process.env.STEAL_RESULT_TESTS==='1'||stealFlowTests;
 const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 (async()=>{
+ const feedResponses=[];
  const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=entryEncounterTests||dragonStartupTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
@@ -43,6 +46,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  if(coopCleanTests||visitPreloadTests){db.data.get('users/bob').name='村長 Bob';db.data.set('groups/C',{name:'另一個公開村落',members:['carol'],farmVillageVisibility:'public'});db.data.set('users/carol',{accountId:'carol',name:'Carol 村長',role:'member'});db.data.set('groups/C/users/carol',{farm:structuredClone(farm)});}
  if(crossSelfCleanTests){db.data.get('groups/A/users/alice').farm.moral=40;db.data.get('groups/B').members=['alice'];db.data.set('groups/B/users/alice',{farm:{...structuredClone(farm),cleanliness:70}});}
  if(ownCleanTests)Object.assign(db.data.get('groups/A/users/alice').farm,{cleanliness:70,moral:40});
+ if(costTests){db.data.set('ops_feed_versions/global',{revision:'v1'});db.data.set('ops_announcements/read-test',{title:'初始公告',content:'測試內容',status:'published',priority:1,targetType:'all',targetAccountIds:[],audienceKeys:['all'],startAt:stamp-100,endAt:stamp+3600000,createdAt:stamp,updatedAt:stamp,showPopup:false});db.data.get('groups/A/users/bob').farm.stolenEggs20261116=50;}
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
@@ -68,12 +72,12 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
-   if(name==='gameOpsAnnouncements')return{rows:[],nextCursor:null};
+   if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
    if(name==='gameOpsGuardDog')return service.guardDog(request);
    throw Error('Unexpected callable '+name);
   });
   const old=fs.readFileSync('tests/farm-save-browser.cjs','utf8').match(/const sdk = `([\s\S]*?)`;/)[1];
-  const querySDK=sceneTests||stealFlowTests||entryEncounterTests||coopCleanTests||visitPreloadTests||battleExitTests?old.replace('export const getDocs=async()=>({empty:true,docs:[],forEach:()=>{}});',`export const getDocs=async ref=>{const rows=await window.__saveDb({kind:'query',...ref});const docs=rows.map(row=>snap(row.path,row.data));return{empty:!docs.length,docs,forEach:fn=>docs.forEach(fn)};};`):old;
+  const querySDK=costTests||sceneTests||stealFlowTests||entryEncounterTests||coopCleanTests||visitPreloadTests||battleExitTests?old.replace('export const getDocs=async()=>({empty:true,docs:[],forEach:()=>{}});',`export const getDocs=async ref=>{const rows=await window.__saveDb({kind:'query',...ref});const docs=rows.map(row=>snap(row.path,row.data));return{empty:!docs.length,docs,forEach:fn=>docs.forEach(fn)};};`):old;
   const firestoreSDK="export const getFirestore=()=>({});\n"+querySDK.replace('l.callback(await getDoc(l.ref))',"l.callback(l.ref.kind==='query'?await getDocs(l.ref):await getDoc(l.ref))")+`\nwindow.__privateEmitAll=async()=>{for(const l of [...listeners])await emit(l);};`;
   await page.route('https://cdn.jsdelivr.net/**',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js','utf8')}));
   await page.route('https://www.gstatic.com/**',r=>{
@@ -96,8 +100,21 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(unavailableEggResult==='module')await page.route('**/js/farm/egg-result-ui.js',r=>r.fulfill({status:503,contentType:'text/javascript',body:'fixture optional module unavailable'}));
   if(unavailableEggResult==='image')await page.route('**/assets/farm/egg-result/v1/egg_result_panel.png',r=>r.fulfill({status:503,body:'fixture optional image unavailable'}));
   if(stealResultTests||entryEncounterTests||battleExitTests)await page.clock.setFixedTime(new Date(stamp));
+  if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(costTests){
+   await page.waitForFunction(()=>document.querySelector('.farm-mail-badge')?.textContent==='2');
+   const feeds=()=>feedResponses.filter(r=>r.action==='feeds');assert.equal(feeds().length,1);
+   await page.clock.fastForward(60001);await page.waitForTimeout(150);assert.equal(feeds().length,2);assert.equal(feeds().at(-1).notModified,!legacyAnnouncements);
+   await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});await page.clock.fastForward(180001);await page.waitForTimeout(150);assert.equal(feeds().length,2);
+   db.data.get('ops_announcements/read-test').title='更新公告';db.data.get('ops_feed_versions/global').revision='v2';
+   await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));});await page.waitForTimeout(150);assert.equal(feeds().length,3);assert.equal(feeds().at(-1).notModified,false);
+   await page.locator('.farm-mail-launcher').click();await page.getByRole('tab',{name:'公告',exact:true}).click();await page.getByText('更新公告',{exact:true}).first().waitFor();await page.locator('.farm-mail-overlay .farm-mail-header button').click();
+   await page.locator('.farm-ranking-launcher').click();await page.waitForFunction(()=>document.querySelectorAll('.farm-ranking-row').length===1);assert.match(await page.locator('.farm-ranking-person').textContent(),/bob/);assert.match(await page.locator('.farm-ranking-score').textContent(),/50/);assert.ok(feedResponses.some(r=>r.action==='ranking'&&r.rows===1));await page.screenshot({path:'/tmp/gugu-read-optimized-ranking.png'});
+   await page.locator('.farm-ranking-close').click();assert.equal(await page.evaluate(()=>window.__farmGame.input.enabled),true);assert.deepEqual(errors,[]);
+   console.log('PASS read cost UI: one combined minute poll, unchanged version, background suspension, foreground refresh, announcement display, real ranking backend Top 10 and modal close');return;
+  }
   if(sceneTests){
    const own=()=>db.data.get('groups/A/users/alice').farm;
    const artRequests=[];page.on('request',request=>{if(request.url().includes('/scenes/fuji-')&&!request.url().includes('thumb'))artRequests.push(request.url());});

@@ -53,6 +53,13 @@ export function createGameOperationsClient(context,{timeoutMs=20000}={}) {
             return withDeadline(async()=> (await connect('daily'))('gameOpsDailyChallenges',{...payload,action}),
                 ()=>Object.assign(Error('每日挑戰連線逾時；若已送出領獎，請重新載入確認，重試不會重複發獎。'),{code:'ops/timeout'}));
         },
+        async farmRanking(ranking){return(await connect('announcements'))('gameOpsAnnouncements',{action:'ranking',ranking});},
+        async announcementFeeds(known){
+            const api=await connect('announcements'),result=await api('gameOpsAnnouncements',{action:'feeds',known:known||null});
+            // A rolling deployment can still reach the old server; retain its behaviour.
+            if(result.feeds||result.notModified)return result;
+            return{settings:result.settings,paused:result.paused,feeds:{announcements:result,notifications:await api('gameOpsAnnouncements',{channel:'notifications',cursor:null})}};
+        },
         async announcements(cursor,channel='announcements'){return(await connect('announcements'))('gameOpsAnnouncements',{cursor:cursor||null,channel});},
         async guardDog(action,payload={}){
             const key=`nexus.guard.pending:${context.accountId}:${context.groupId}:${action}:${JSON.stringify(payload)}`;
