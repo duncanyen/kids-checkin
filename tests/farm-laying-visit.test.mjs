@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LayingVisit } from '../js/farm/laying-visit.js';
 import { BREEDS, nextEggStatus, collectPoultry, poultryPatch, settlePoultry } from '../js/farm/poultry.js';
-import { farmEggPosition } from '../js/farm/scenery.js';
+import { farmEggPosition, getFarmMapLayout } from '../js/farm/scenery.js';
 
 globalThis.document = { hidden: false };
 const dueAt = 100000000;
@@ -123,4 +123,21 @@ test('friendly roaming collie does not cancel the timed laying visit, while pred
     const animal={active:true,visible:true,alpha:1,displayWidth:96,displayHeight:96,getBounds:()=>({left:50,right:146,top:400,bottom:496}),getData:()=>true};
     scene.guardDog=animal;visit.update(dueAt-1500);assert.equal(visit.task.id,'next');
     scene.wolf={...animal};visit.update(dueAt-500);assert.equal(visit.task,null);
+});
+
+
+test('Japanese Fuji doorway remains inside painted entrance and map references survive theme/orientation changes',()=>{
+    for(const size of [{width:390,height:844},{width:1024,height:768}]){
+        const scene={scale:size},original=getFarmMapLayout(scene);
+        scene.displayedFarmSceneId='fuji';const map=getFarmMapLayout(scene),door=farmEggPosition(scene);
+        const x=(door.x-map.offsetX)/map.artScale,y=(door.y-map.offsetY)/map.artScale;
+        if(map.texture==='farm_map'){assert.ok(x>=300&&x<=350);assert.ok(y>=370&&y<=420);}
+        else{assert.ok(x>=990&&x<=1050);assert.ok(y>=235&&y<=275);}
+        for(const reference of [[370,322.5],[217,961],[511,1137],[145,900],[596,1194]]){
+            const painted=map.point(...reference),restored=map.reference(painted.x,painted.y);
+            assert.ok(Math.abs(restored.x-reference[0])<1e-6);assert.ok(Math.abs(restored.y-reference[1])<1e-6);
+            const unchanged=original.point(restored.x,restored.y),expected=original.point(...reference);
+            assert.ok(Math.abs(unchanged.x-expected.x)<1e-6&&Math.abs(unchanged.y-expected.y)<1e-6);
+        }
+    }
 });

@@ -8,12 +8,13 @@ import { predatorDestination, reflowPredatorPatrol } from './predators.js';
 export function addFarmBackground(scene, field = false) {
     const image = scene.add.image(0, 0, field ? 'farm_map' : 'farm_background').setOrigin(0, 0).setDepth(-10);
     let previous, requested='default', displayed='default', token=0, alive=true;
+    if(field)scene.displayedFarmSceneId='default';
     const themeFarm=()=>scene.sys.settings.key==='VisitScene'?scene.targetFarmData:scene.registry.get('myFarmData');
     const syncTheme=()=>{
         if(!field)return;
         const id=activeSceneId(themeFarm());if(id===requested)return;
         requested=id;const generation=++token,item=FARM_SCENES[id];
-        const show=()=>{if(alive&&generation===token){displayed=id;resize();}};
+        const show=()=>{if(alive&&generation===token){displayed=id;scene.displayedFarmSceneId=id;resize();}};
         if([item.portrait,item.landscape].every(key=>scene.textures.exists(key)))show();
         else import('./assets.js').then(({ensureAssets})=>ensureAssets(scene,[item.portrait,item.landscape])).then(show).catch(()=>{
             // Keep the usable previous background; a later explicit retry can load again.
@@ -30,7 +31,7 @@ export function addFarmBackground(scene, field = false) {
         }
         const map = getFarmMapLayout(scene);
         image.setData('farmSceneId',displayed).setTexture(FARM_SCENES[displayed][map.texture==='farm_map'?'portrait':'landscape']).setPosition(map.offsetX, map.offsetY).setDisplaySize(map.width * map.artScale, map.height * map.artScale);
-        if (previous && (previous.texture !== map.texture || previous.artScale !== map.artScale)) reflowFarm(scene, previous, map);
+        if (previous && (previous.texture !== map.texture || previous.artScale !== map.artScale || previous.artId !== map.artId)) reflowFarm(scene, previous, map);
         previous = map;
     };
     resize();syncTheme();
@@ -47,30 +48,40 @@ export function addFarmBackground(scene, field = false) {
 // align them with the new panoramic painting, including all 42 cabbages.
 const yKnots = [[0,0],[210,157],[322.5,246],[395,327],[495,355],[900,453],
     [961,492],[993,515],[1027,540],[1062,566],[1099,591],[1137,618],[1194,659],[1280,724]];
-function interpolate(value, inverse = false) {
+// Coordinates of the approved Japanese Fuji painting; rules and logical garden
+// cell IDs stay in the existing reference space. Inverse mapping makes changing
+// theme or orientation move existing objects instead of rebuilding the scene.
+const fujiPortraitKnots=[[0,0],[210,244],[322.5,350],[395,425],[495,525],[900,935],
+    [961,978],[993,1011],[1027,1045],[1062,1080],[1099,1114],[1137,1148],[1194,1214],[1280,1280]];
+const fujiPanoramaKnots=[[0,0],[210,115],[322.5,215],[395,300],[495,355],[900,453],
+    [961,492],[993,515],[1027,540],[1062,566],[1099,591],[1137,618],[1194,659],[1280,724]];
+function interpolate(value, inverse = false, knots = yKnots) {
     const from = inverse ? 1 : 0, to = inverse ? 0 : 1;
     let i = 1;
-    while (i < yKnots.length - 1 && value > yKnots[i][from]) i++;
-    const a = yKnots[i - 1], b = yKnots[i];
+    while (i < knots.length - 1 && value > knots[i][from]) i++;
+    const a = knots[i - 1], b = knots[i];
     return a[to] + (value - a[from]) / (b[from] - a[from]) * (b[to] - a[to]);
 }
 export function getFarmMapLayout(scene) {
-    const view = farmView(scene);
+    const view = farmView(scene),artId=scene.displayedFarmSceneId||'default',fuji=artId==='fuji';
+    const portraitY=y=>fuji?interpolate(y,false,fujiPortraitKnots):y;
+    const portraitReference=y=>fuji?interpolate(y,true,fujiPortraitKnots):y;
+    const knots=fuji?fujiPanoramaKnots:yKnots;
     if (view.width <= 500) {
         const artScale = Math.max(view.width / 720, view.height / 1280);
         const offsetX = 195 - 360 * artScale, offsetY = 422 - 640 * artScale;
-        return { texture: 'farm_map', width:720, height:1280, artScale, scale:artScale, offsetX, offsetY,
-            point:(x,y)=>({x:offsetX+x*artScale,y:offsetY+y*artScale}),
-            reference:(x,y)=>({x:(x-offsetX)/artScale,y:(y-offsetY)/artScale}) };
+        return { artId, coopWidth:fuji?310:260, texture: 'farm_map', width:720, height:1280, artScale, scale:artScale, offsetX, offsetY,
+            point:(x,y)=>({x:offsetX+x*artScale,y:offsetY+portraitY(y)*artScale}),
+            reference:(x,y)=>({x:(x-offsetX)/artScale,y:portraitReference((y-offsetY)/artScale)}) };
     }
     const artScale = Math.max(view.width / 2172, view.height / 724);
     const offsetX = 195 - 1086 * artScale, offsetY = 422 - 362 * artScale;
-    return { texture:'farm_panorama', width:2172, height:724, artScale, scale: .889 * artScale, offsetX, offsetY,
-        point: (x, y) => ({ x: offsetX + (739 + x * .889) * artScale, y: offsetY + interpolate(y) * artScale }),
-        reference: (x, y) => ({ x: ((x - offsetX) / artScale - 739) / .889, y: interpolate((y - offsetY) / artScale, true) }) };
+    return { artId, coopWidth:fuji?335:260, texture:'farm_panorama', width:2172, height:724, artScale, scale: .889 * artScale, offsetX, offsetY,
+        point: (x, y) => ({ x: offsetX + (739 + x * .889) * artScale, y: offsetY + interpolate(y,false,knots) * artScale }),
+        reference: (x, y) => ({ x: ((x - offsetX) / artScale - 739) / .889, y: interpolate((y - offsetY) / artScale, true,knots) }) };
 }
 function coopGeometry(map) {
-    return { width: 260 * map.scale, height: map.point(370,435).y - map.point(370,210).y };
+    return { width: (map.coopWidth||260) * map.scale, height: map.point(370,435).y - map.point(370,210).y };
 }
 function reflowFarm(scene, oldMap, map) {
     const move = object => {
@@ -136,8 +147,8 @@ export function addFarmCoop(scene, onClick) {
 
 function positionCoopLevel(coop, map) {
     const point = map.texture === 'farm_panorama'
-        ? { x: map.offsetX + 1033 * map.artScale, y: map.offsetY + 224 * map.artScale }
-        : map.point(334, 316);
+        ? { x: map.offsetX + (map.artId==='fuji'?1023:1033) * map.artScale, y: map.offsetY + (map.artId==='fuji'?208:224) * map.artScale }
+        : map.artId==='fuji'?map.point(325,325):map.point(334, 316);
     coop.levelBadge?.setPosition(point.x, point.y).setFontSize(16 * map.artScale);
 }
 
@@ -146,8 +157,8 @@ export function farmEggPosition(scene) {
     // Anchor on the straw inside each painted doorway, above the wooden ramp.
     // The panoramic painting's doorway does not follow the generic y mapping.
     return map.texture === 'farm_panorama'
-        ? { x: map.offsetX + 1034 * map.artScale, y: map.offsetY + 254 * map.artScale }
-        : map.point(334, 358);
+        ? { x: map.offsetX + (map.artId==='fuji'?1020:1034) * map.artScale, y: map.offsetY + 254 * map.artScale }
+        : map.artId==='fuji'?map.point(325,364):map.point(334, 358);
 }
 
 export function positionFarmEgg(scene, egg) {
