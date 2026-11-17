@@ -20,7 +20,7 @@ export function battleRewardView(result, kind, {legacyInventoryConfirmed=false}=
     const loot=Array.isArray(result.rewards)?result.rewards.map(row=>{
         const item=items.find(item=>item.item===row.itemId);
         if(!Number.isSafeInteger(row.quantity)||row.quantity<=0)throw Error('戰利品數量無效');
-        return {itemId:row.itemId,name:item?.itemName||row.itemName||row.itemId,quantity:row.quantity,icon:item?.icon};
+        return {itemId:row.itemId,name:row.itemId==='unopenedChest'?'寶箱':item?.itemName||row.itemName||row.itemId,quantity:row.quantity,icon:item?.icon,...(row.itemId==='unopenedChest'?{slot:1}:{})};
     }):[{itemId:monster.item,name:monster.itemName,quantity:1,icon:monster.icon}];
     return {id:result.id,kind,monsterName:monster.name,inventoryUpdated,loot:inventoryUpdated?loot:[]};
 }

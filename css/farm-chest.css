@@ -1,0 +1,34 @@
+.farm-chest-panel{width:min(94vw,480px);height:min(680px,calc(100dvh - 64px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));aspect-ratio:auto;display:flex;flex-direction:column;gap:10px;padding:48px 32px 30px;box-sizing:border-box;min-height:0}
+.farm-chest-title{position:absolute;top:-12px;left:8%;width:84%;height:70px}
+.farm-chest-title img{width:100%;height:100%}
+.farm-chest-title h2{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:#fff1ce;font-size:7cqw;text-shadow:1px 2px #572607}
+.farm-chest-panel .farm-chest-button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:70px;min-height:44px;padding:8px 15px;background:url('../assets/farm/coop-clean/v1/coop_clean_button_yes.png') center/100% 100% no-repeat;color:#fff6cf;font:700 15px system-ui;text-shadow:0 1px #435d17;border:0}
+.farm-chest-panel .farm-chest-button.secondary{background-image:url('../assets/farm/coop-clean/v1/coop_clean_button_no.png');color:#5e3d1f;text-shadow:none}
+.farm-chest-panel .farm-chest-button:disabled{opacity:.55;cursor:wait}
+.farm-chest-panel .farm-chest-dismiss{position:absolute;top:4px;right:4px;min-width:44px;min-height:44px;width:44px;height:44px;padding:0;font-size:0;background:url('../assets/farm/battle-reward/v1/battle_reward_close.png') center/contain no-repeat}
+.farm-chest-panel .farm-chest-dismiss::after{content:''}
+.farm-chest-tabs{display:flex;gap:8px;margin-top:16px}
+.farm-chest-tabs button{flex:1}
+.farm-chest-tabs [aria-pressed=true]{filter:brightness(1.1);text-decoration:underline}
+.farm-chest-inventory{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+.farm-chest-box{display:flex;align-items:center;gap:8px;min-height:82px;padding:10px 3px;border-bottom:1px solid #bd965d}
+.farm-chest-box img{width:64px;height:64px;object-fit:contain;flex:none}
+.farm-chest-box>div{flex:1;min-width:0;display:flex;flex-direction:column;font-size:14px;overflow-wrap:anywhere}
+.farm-chest-stage{position:relative;flex:0 1 230px;min-height:110px;margin-top:16px;aspect-ratio:1;align-self:center;width:min(76cqw,230px)}
+.farm-chest-stage .farm-chest-sprite{position:absolute;left:50%;top:78.125%;width:100%;height:100%;transform:translate(-50%,-78.125%);object-fit:contain}
+.farm-chest-rewards{flex:1;min-height:60px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+.farm-chest-reward{display:flex;align-items:center;gap:8px;min-height:48px;border-bottom:1px solid #d2b384;font-weight:700}
+.farm-chest-reward img{width:36px;height:36px;object-fit:contain;flex:none}
+.farm-chest-reward span{flex:1;min-width:0;overflow-wrap:anywhere}
+.farm-chest-reward strong{flex:none;white-space:nowrap}
+.farm-chest-note{margin:0;font-size:13px;text-align:center}
+.farm-chest-footer{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;flex:none}
+.farm-chest-error{font-size:13px;color:#9c3419;margin:0}
+.farm-chest-panel [hidden]{display:none!important}
+@media(max-height:620px){.farm-chest-panel{padding:36px 28px 22px;gap:6px}.farm-chest-title{height:58px}.farm-chest-stage{flex-basis:145px;width:145px;margin-top:10px}.farm-chest-box img{width:48px;height:48px}.farm-chest-box{min-height:65px}.farm-chest-note{font-size:12px}.farm-chest-panel .farm-chest-button{font-size:13px;padding:6px 12px}}
+
+.farm-chest-panel::before{border-image-source:url('../assets/farm/battle-reward/v1/battle_reward_panel.png');border-image-slice:100 65 85 fill}
+.farm-chest-rewards{width:100%;min-width:0;box-sizing:border-box}
+
+/* Opaque inner parchment keeps the underlying warehouse readable only outside the frame. */
+.farm-chest-panel::after{content:'';position:absolute;inset:42px 24px 38px;border-radius:18px;background:#f7e4bc;z-index:-2;pointer-events:none}

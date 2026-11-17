@@ -27,3 +27,12 @@ test('own/private/public farm reads and real profile queries retain intended acc
  await assertSucceeds(getDocs(query(collection(db,'users'),where('accountId','in',['alice','bob']))));await assertSucceeds(getDocs(collection(db,'groups')));
  await env.withSecurityRulesDisabled(c=>updateDoc(doc(c.firestore(),'groups','B'),{farmVillageVisibility:'public'}));await assertSucceeds(getDoc(doc(db,'groups','B','users','bob')));
 });
+
+test('chest records, reward snapshots and chest settings cannot be forged through client SDK',async()=>{
+ const db=client('alice');
+ for(const path of ['ops_farm_chests/owner/boxes/box1','ops_game_config/chests']){
+  await assertFails(setDoc(doc(db,path),{status:'unopened',snapshot:{dropRate:100,coins:{enabled:true,min:999999,max:999999}}}));
+  await assertFails(getDoc(doc(db,path)));
+ }
+ await assertFails(updateDoc(doc(db,'groups/A/users/alice'),{'farm.chestCount':1000}));
+});

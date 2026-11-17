@@ -10,7 +10,7 @@ async function main(){
  report.codeSha256=require('./private-code-hash.cjs')();
  const units=['tests','game-admin/tests'].flatMap(dir=>fs.readdirSync(dir).filter(name=>/\.test\.(cjs|mjs)$/.test(name)).map(name=>path.join(dir,name)));
  run(process.execPath,['--test',...units]);report.unitPassed=true;
- if(!fs.existsSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js'))throw Error('缺少 Phaser 3.80.1 測試檔，請設定 PHASER_FIXTURE');
+ if(!fs.existsSync(process.env.PHASER_FIXTURE||'/tmp/kids-phaser.js'))throw Error('缺少 Phaser 測試檔，請設定 PHASER_FIXTURE（目前遊戲版本 3.60.0）');
  const port=await new Promise((resolve,reject)=>{const server=net.createServer();server.on('error',reject);server.listen(0,'127.0.0.1',()=>{const p=server.address().port;server.close(()=>resolve(p));});});
  const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{stdio:'ignore'});
  try{
@@ -19,6 +19,8 @@ async function main(){
   if(!ready)throw Error('隔離 HTTP Server 未啟動');
   const env={...process.env,AUTH_BASE_URL:base,SETTINGS_BASE_URL:base,FARM_BASE_URL:base,ADMIN_BASE_URL:base};
   for(const file of ['account-login.cjs','private-auth-browser.cjs','settings-profile-browser.cjs','private-admin-browser.cjs','farm-save-browser.cjs','farm-private-backend-browser.cjs'])run(process.execPath,['tests/'+file],env);
+  for(const mode of [{CHEST_FLOW_TESTS:'1'},{CHEST_FLOW_TESTS:'1',CHEST_ART_FAIL:'1'}])run(process.execPath,['tests/farm-private-backend-browser.cjs'],{...env,...mode});
+  run(process.execPath,['game-admin/tests/management.browser.cjs'],{...env,OPS_UI_BASE:'http://127.0.0.1:'+port+'/game-admin/site'});
   report.browserPassed=true;
  }finally{server.kill();}
  if(process.argv.includes('--emulator')){

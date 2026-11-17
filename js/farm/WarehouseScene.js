@@ -1,3 +1,4 @@
+import { openChestInventory } from './chest-ui.js';
 import { FARM_SCENES, ownedSceneIds, activeSceneId } from './farm-scenes-core.js';
 import { openOwnedScene } from './farm-scene-ui.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
@@ -15,6 +16,7 @@ import { db } from '../firebase-config.js';
 import { runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { myFarmRef, getUsedSpace, WEAPONS_CONFIG } from './constants.js';
 
+const WAREHOUSE_CATEGORIES=[...ITEM_CATEGORIES.slice(0,-1),{key:'chests',label:'寶箱'},ITEM_CATEGORIES.at(-1)];
 export default class WarehouseScene extends Phaser.Scene {
     constructor() { super({ key: 'WarehouseScene' }); }
 
@@ -44,8 +46,9 @@ export default class WarehouseScene extends Phaser.Scene {
 
         this.warehouseCategory = 'chickens';
         this.warehousePages = {};
-        this.categoryTabs = addCategoryTabs(this, 250, key => this.selectWarehouseCategory(key));
+        this.categoryTabs = addCategoryTabs(this, 250, key => this.selectWarehouseCategory(key),{categories:WAREHOUSE_CATEGORIES});
         this.allConfigItems = [
+            {key:'unopenedChest',name:'寶箱',icon:'chest_inventory',type:'chest'},
             ...Object.values(FARM_SCENES).map(item=>({key:`scene:${item.id}`,name:item.name,icon:item.thumbTexture,type:'scene',sceneId:item.id})),
             ...Object.entries(GUARD_DOG_BREEDS).map(([breedId,breed])=>({key:`guard:${breedId}`,name:breed.name,icon:breed.texture,type:'guardDog',breedId})),
             ...Object.entries(BREEDS).map(([key, breed]) => ({ key: `bird:${key}`, name: breed.name, icon: breed.texture, type: 'bird', breed: key })),
@@ -136,7 +139,7 @@ export default class WarehouseScene extends Phaser.Scene {
         const liveDogs=guardDogLeases(this.farmData),hasDogs=liveDogs.length>0;
         const dialogId=this.guardDogDialog?.root.dataset.guardDogLeaseId;
         if(dialogId&&!liveDogs.some(dog=>dog.id===dialogId))this.guardDogDialog.close();
-        this.categoryTabs.setCategories(ITEM_CATEGORIES.filter(item=>item.key!=='dogs'||hasDogs).map(item=>item.key));
+        this.categoryTabs.setCategories(WAREHOUSE_CATEGORIES.filter(item=>item.key!=='dogs'||hasDogs).map(item=>item.key));
         if(this.warehouseCategory==='dogs'&&!hasDogs){this.warehouseCategory='chickens';this.actionPanel.setVisible(false);}
         const category = this.warehouseCategory;
         const ownedItems = this.allConfigItems.filter(item => itemCategory(item.key) === category && this.warehouseItemCount(item) > 0);
@@ -144,7 +147,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.warehousePage = this.warehousePages[category] = Math.min(this.warehousePages[category] || 0, totalPages - 1);
         this.visibleWarehouseItems = ownedItems.slice(this.warehousePage * 8, this.warehousePage * 8 + 8);
         this.categoryTabs.select(category);
-        const label = ITEM_CATEGORIES.find(c => c.key === category).label;
+        const label = WAREHOUSE_CATEGORIES.find(c => c.key === category).label;
         this.emptyText.setText(`「${label}」分類目前沒有物品`).setVisible(ownedItems.length === 0);
         this.warehousePageText.setText(`${this.warehousePage + 1} / ${totalPages}`);
         for (const object of [this.warehousePageText, this.previousPage, this.previousLabel, this.nextPage, this.nextLabel]) object.setVisible(totalPages > 1);
@@ -167,6 +170,7 @@ export default class WarehouseScene extends Phaser.Scene {
             img.setScale(scale);
 
             let displayTxt = `${item.name}\nx ${count}`;
+            if(item.type==='chest')displayTxt=`寶箱\n待開啟 × ${this.farmData.chestCount||0}`;
             if(item.type==='guardDog'){const dog=guardDogLeases(this.farmData).find(dog=>dog.breedId===item.breedId);displayTxt=`${item.name}\n${dog?guardDogStatus(dog):'租期已結束'}`;}
             if(item.type==='scene')displayTxt=`${item.name}\n${activeSceneId(this.farmData)===item.sceneId?'使用中':'已收藏'}`;
             if (item.type === 'bird') displayTxt = `${item.name}\n雞舍中 × ${count}`;
@@ -188,6 +192,7 @@ export default class WarehouseScene extends Phaser.Scene {
         const count = this.farmData[key] || 0;
         
         const itemConfig = this.allConfigItems.find(i => i.key === key);
+        if(itemConfig?.type==='chest'){this.actionPanel.setVisible(false);openChestInventory(this);return;}
         if(itemConfig?.type==='scene'){this.actionPanel.setVisible(false);openOwnedScene(this,itemConfig.sceneId);return;}
         if(itemConfig?.type==='guardDog'){this.actionPanel.setVisible(false);openGuardDogAction(this,itemConfig.breedId);return;}
         if (itemConfig?.type === 'warehouse') {
@@ -273,6 +278,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     warehouseItemCount(item) {
+        if(item.type==='chest')return 1;
         if(item.type==='scene')return ownedSceneIds(this.farmData).includes(item.sceneId)?1:0;
         if(item.type==='guardDog')return guardDogLeases(this.farmData).some(dog=>dog.breedId===item.breedId)?1:0;
         if (item.type === 'bird') return poultryState(this.farmData).hens.filter(h => h.breed === item.breed).length;
@@ -281,7 +287,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     selectWarehouseCategory(key) {
-        if (!ITEM_CATEGORIES.some(c => c.key === key)) return;
+        if (!WAREHOUSE_CATEGORIES.some(c => c.key === key)) return;
         this.warehouseCategory = key;
         this.actionPanel.setVisible(false);
         this.feedPicker.setVisible(false);

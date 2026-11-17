@@ -4,3 +4,5 @@
 
 /* 報表只讓表格內水平捲動，日期欄位依兩個時間條件排列。 */
 .report-filters input[type=datetime-local]{width:100%;min-width:0;max-width:100%;box-sizing:border-box}.report-filters label{min-width:0;max-width:100%}.farm-report-table{max-width:100%;overflow:auto;margin-top:20px}.farm-report-table table{min-width:1900px}.farm-report-table th,.farm-report-table td{white-space:nowrap}.report-notes{font-size:13px;line-height:1.8;color:var(--muted)}
+
+.chest-setting-items{min-width:0;border:1px solid var(--border,#d5dce4);border-radius:10px;padding:12px}.chest-setting-row{display:flex;align-items:end;gap:10px;margin-bottom:12px}.chest-setting-row label:first-child{flex:1;min-width:0}.chest-setting-row label:nth-child(2){width:100px;flex:none}.chest-setting-row select{max-width:100%}@media(max-width:560px){.chest-setting-row{flex-wrap:wrap}.chest-setting-row label:first-child{flex-basis:100%}}

@@ -1,8 +1,9 @@
 const crypto=require('node:crypto');
 const D=require('./domain.cjs');
+const Chests=require('./chests.cjs');
 const DEFAULT_SETTINGS=Object.freeze({announcementsEnabled:true,redemptionEnabled:true,guardDogRentalsEnabled:true,pauseMessage:'此營運功能暫停開放，請稍後再試。'});
 const READ_ACTIONS=['listPlayers','playerDetail','gameBalance','listEvents','getSettings'];
-const WRITE_ACTIONS=['savePlayerControl','adjustPlayerCoins','saveGuardConfig','saveEvent','saveSettings'];
+const WRITE_ACTIONS=['savePlayerControl','adjustPlayerCoins','saveGuardConfig','saveChestConfig','saveEvent','saveSettings'];
 const boolean=value=>{if(typeof value!=='boolean')D.fail('invalid-argument','開關格式不正確');return value;};
 const revision=value=>D.integer(value,0,Number.MAX_SAFE_INTEGER-1);
 const profile=(snap)=>{const p=snap.data()||{};return{uid:snap.id,accountId:p.accountId||'',name:p.name||p.accountId||'',role:p.role||'member'};};
@@ -73,7 +74,7 @@ function createManagement({db,now}){
         if(action==='getSettings')return settings();
         if(action==='gameBalance'){
             const [{BREEDS},{WEAPONS_CONFIG,ENEMY_HEALTH,hitsToDefeat},dogs]=await Promise.all([import('./game/poultry.js'),import('./game/combat-rules.js'),guardCatalog()]);
-            return{chickens:BREEDS,weapons:WEAPONS_CONFIG,enemyHealth:ENEMY_HEALTH,weaponHitCounts:Object.fromEntries(Object.entries(WEAPONS_CONFIG).map(([id,w])=>[id,Object.fromEntries(Object.keys(ENEMY_HEALTH).map(enemy=>{const hits=hitsToDefeat(w,enemy);return[enemy,Number.isFinite(hits)?hits:null];}))])),guardDogs:dogs};
+            return{chests:{...await Chests.config(db),names:Chests.MONSTERS,catalog:await Chests.catalog(),maxCoins:Chests.MAX_COINS},chickens:BREEDS,weapons:WEAPONS_CONFIG,enemyHealth:ENEMY_HEALTH,weaponHitCounts:Object.fromEntries(Object.entries(WEAPONS_CONFIG).map(([id,w])=>[id,Object.fromEntries(Object.keys(ENEMY_HEALTH).map(enemy=>{const hits=hitsToDefeat(w,enemy);return[enemy,Number.isFinite(hits)?hits:null];}))])),guardDogs:dogs};
         }
         D.fail('invalid-argument','未知管理查詢');
     }
@@ -110,6 +111,12 @@ function createManagement({db,now}){
                     before={coins:farm.coins};after={coins,delta,reason,accountId:p.accountId,groupId};target=ref.path;
                     commit=()=>t.update(ref,{farm:{...farm,coins}});response={coins,accountId:p.accountId,groupId};
                 }
+            }else if(action==='saveChestConfig'){
+                const kind=D.enumValue(payload.monster,Object.keys(Chests.MONSTERS)),ref=db.doc('ops_game_config/chests'),old=await t.get(ref);
+                requireVersion(old.data(),payload.expectedRevision);const value=await Chests.validate(payload.config);
+                before={monster:kind,config:old.data()?.monsters?.[kind]||Chests.DEFAULTS[kind],revision:old.data()?.revision||0};after={monster:kind,config:value,revision:(old.data()?.revision||0)+1};target=ref.path;
+                const next={...(old.data()||{}),monsters:{...Chests.DEFAULTS,...old.data()?.monsters,[kind]:value},revision:(old.data()?.revision||0)+1,updatedAt:stamp,updatedBy:uid};
+                commit=()=>t.set(ref,next);response={monster:kind,revision:next.revision};
             }else if(action==='saveGuardConfig'){
                 const G=await import('./game/guard-dog-core.js'),id=D.id(payload.breedId);
                 if(!Object.hasOwn(G.GUARD_DOG_BREEDS,id))D.fail('invalid-argument','未知護衛犬');

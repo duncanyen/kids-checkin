@@ -4,6 +4,7 @@ import { battleRewardView, BATTLE_REWARDS } from './battle-reward.js';
 const base='assets/farm/battle-reward/v1/battle_reward_';
 const assets=Object.fromEntries(['panel','plaque','close','row','storage_banner','confirm','feather'].map(key=>[key,base+key+'.png']));
 export const prepareBattleRewardAssets=()=>prepareFarmResultAssets(assets);
+assets.chest='assets/farm/chest/v1/chest_inventory_icon.png';
 const pending=new Map(),shown=new Set();
 function spriteImage(scene,key,frame){
     try{if(scene.textures.exists(key))return scene.textures.getBase64(key,frame);}catch{/* Missing art never changes the reward. */}
@@ -43,9 +44,10 @@ export async function openBattleReward(scene,result,kind,options={}){
             const rows=el('div','farm-battle-reward-rows');rows.setAttribute('aria-label','本次戰利品');rows.tabIndex=0;
             // One shared renderer for filled and reserved rows; no placeholder labels/icons.
             for(let index=0;index<Math.max(3,view.loot.length);index++){
-                const item=view.loot[index],row=el('div','farm-battle-reward-row');
+                const positioned=view.loot.some(item=>item.slot!==undefined);
+                const item=positioned?view.loot.find((item,i)=>(item.slot??i)===index):view.loot[index],row=el('div','farm-battle-reward-row');
                 if(item){
-                    const icon=item.itemId==='eagleFeathers'?assets.feather:spriteImage(scene,item.icon);
+                    const icon=item.itemId==='unopenedChest'?assets.chest:item.itemId==='eagleFeathers'?assets.feather:spriteImage(scene,item.icon);
                     if(icon)row.append(art(icon,'farm-battle-reward-icon'));
                     row.append(el('span','farm-battle-reward-item',item.name),el('strong','farm-battle-reward-quantity','× '+item.quantity.toLocaleString('zh-TW')));
                 }else{row.classList.add('is-empty');row.setAttribute('aria-hidden','true');}

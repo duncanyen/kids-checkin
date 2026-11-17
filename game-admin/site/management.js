@@ -93,9 +93,39 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
             input(fields,'reason','調整原因','textarea','');
         },v=>({action:'saveGuardConfig',value:{breedId:id,dayPrice:Number(v.dayPrice),weekPrice:Number(v.weekPrice),rentable:v.rentable==='true',reason:v.reason,expectedRevision:data.guardDogs.revision}}),'確認更新租犬商品？新價格將在玩家下次讀取商品或確認交易時生效。');
     }
+    function editChest(kind){
+        const chests=data.chests,value=chests.monsters[kind];
+        edit(`寶箱設定 · ${chests.names[kind]}`,fields=>{
+            fields.append(node('p','新設定只套用到儲存後掉落的寶箱。金幣等機率抽整數；物品清單為每次開箱全部發放，沒有額外抽選。','full muted'));
+            const rate=input(fields,'dropRate','寶箱掉落機率（%）','number',value.dropRate);rate.min='0';rate.max='100';rate.step='0.01';
+            const enabled=input(fields,'coinsEnabled','金幣獎勵','select',String(value.coins.enabled),true,{true:'啟用',false:'停用'});
+            const min=input(fields,'coinMin','最少金幣（含）','number',value.coins.min),max=input(fields,'coinMax','最多金幣（含）','number',value.coins.max);
+            for(const field of [min,max]){field.min='0';field.max=String(chests.maxCoins);field.step='1';}
+            const items=node('fieldset',undefined,'full chest-setting-items');items.append(node('legend','一併發放的物品'));
+            const list=node('div');items.append(list);fields.append(items);let serial=0;
+            const add=row=>{
+                const index=++serial,wrap=node('div',undefined,'chest-setting-row');wrap.dataset.chestItemRow='';
+                const label=node('label',`商品 ${index}`),select=node('select');select.required=true;select.setAttribute('aria-label',`寶箱商品 ${index}`);select.dataset.chestItem='';
+                const placeholder=node('option','請選擇商品');placeholder.value='';select.append(placeholder);
+                for(const item of chests.catalog){const option=node('option',item.name+(item.enabled?'':`（不可交付：${item.reason}）`));option.value=item.id;option.disabled=!item.enabled;option.title=item.reason;select.append(option);}
+                select.value=row?.itemId||'';label.append(select);
+                const quantityLabel=node('label',`數量 ${index}`),quantity=node('input');quantity.type='number';quantity.required=true;quantity.min='1';quantity.step='1';quantity.value=String(row?.quantity||1);quantity.setAttribute('aria-label',`寶箱數量 ${index}`);quantity.dataset.chestQuantity='';quantityLabel.append(quantity);
+                const limit=()=>{quantity.max=String(chests.catalog.find(item=>item.id===select.value)?.maxQuantity||1000);};select.onchange=limit;limit();
+                wrap.append(label,quantityLabel,button('移除',()=>wrap.remove()));list.append(wrap);
+            };
+            for(const row of value.items)add(row);
+            items.append(button('新增物品',()=>add()));
+            fields.append(node('p','限時護衛犬租約、場景及升級服務目前沒有寶箱交付流程；選單已標示並停用。雞隻與道具在開箱時仍檢查雞舍／倉庫容量。','full muted'));
+            input(fields,'reason','寶箱設定修改原因','textarea','');
+        },(v,form)=>({action:'saveChestConfig',value:{monster:kind,expectedRevision:chests.revision,reason:v.reason,config:{dropRate:Number(v.dropRate),coins:{enabled:v.coinsEnabled==='true',min:Number(v.coinMin),max:Number(v.coinMax)},items:[...form.querySelectorAll('[data-chest-item-row]')].map(row=>({itemId:row.querySelector('[data-chest-item]').value,quantity:Number(row.querySelector('[data-chest-quantity]').value)}))}}}),`確認更新「${chests.names[kind]}」之後掉落的寶箱？既有寶箱內容保持原樣。`);
+    }
     function balance(){
         let card=section('護衛犬 · 可即時調整','這些設定已接到新版村落商店與後端租用交易。全域暫停租用時，個別商品仍保留自己的開放設定。');
         let wrap=node('div',undefined,'table-wrap');wrap.append(table(['犬種','日租','週租','攔截率','目前狀態','操作'],Object.entries(data.guardDogs.breeds).map(([id,b])=>[b.name,b.dayPrice,b.weekPrice,`${Math.round(b.biteChance*100)}%`,b.availability==='paused'?'租用服務暫停':b.rentable?'可租用':'尚未開放',button('編輯',()=>editGuard(id,b))])));card.append(wrap,button('重新讀取數值',()=>load()));
+        if(data.chests){
+            card=section('怪物寶箱 · 個別掉落與內容','每隻怪物獨立設定；只影響新掉落寶箱。尚未建立設定時使用預設值，已儲存設定不會被預設值覆蓋。');
+            wrap=node('div',undefined,'table-wrap');wrap.append(table(['怪物','額外掉落率','開箱金幣','一併發放物品','操作'],Object.entries(data.chests.monsters).map(([id,value])=>[data.chests.names[id],value.dropRate+'%',value.coins.enabled?`${value.coins.min.toLocaleString()}–${value.coins.max.toLocaleString()}`:'停用',value.items.map(row=>(data.chests.catalog.find(item=>item.id===row.itemId)?.name||row.itemId)+' × '+row.quantity).join('、')||'無',button('編輯寶箱',()=>editChest(id))])));card.append(wrap);
+        }
         card=section('雞種 · 版本設定／唯讀','產蛋、買賣與戰鬥仍由既有遊戲版本決定；第一版不提供會與玩家端不一致的線上編輯。');
         wrap=node('div',undefined,'table-wrap');wrap.append(table(['雞種','購買','回售','產蛋間隔','每日產能','蛋售價','狀態'],Object.values(data.chickens).map(b=>[b.name,b.buy,b.sell,`${b.interval/3600000} 小時`,b.daily,b.eggPrice,b.purchasable===false?'展示':'開賣'])));card.append(wrap);
         card=section('武器與怪物 · 版本設定／唯讀');

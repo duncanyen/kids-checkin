@@ -42,6 +42,15 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  assert.equal(status.data.result.challenges.mission.tasks.find(task=>task.type==='COLLECT_EGG_ACTION').count,1);
  const day=status.data.result.challenges.checkin,claim={groupId:'emulator-group',action:'claim',type:'checkin',dateKey:day.dateKey,cycleId:day.cycleId,day:day.day,requestId:'emulator-checkin-001'};
  await call('gameOpsDailyChallenges',claim,token);const replay=await call('gameOpsDailyChallenges',claim,token);assert.equal(replay.data.result.replayed,true);
+ // Chest replay uses real concurrent Functions/Firestore transactions, with no frontend-supplied rewards.
+ const chestActor={uid:'emulator-profile',groupId:'emulator-group',accountId:'emulator_player'},C=require('../functions/chests.cjs'),chestId='emulator-chest-concurrent',chestRef=db.doc(C.ownerPath(chestActor)+'/'+chestId),ownerRef=db.doc('groups/emulator-group/users/emulator_player');
+ const beforeChest=(await ownerRef.get()).data().farm;
+ await ownerRef.update({'farm.chestCount':1});
+ await chestRef.set({...chestActor,id:chestId,monster:'eagle',battleId:'emulator-chest-source',status:'unopened',droppedAt:Date.now(),configRevision:17,snapshot:{dropRate:100,coins:{enabled:true,min:23,max:23},items:[{itemId:'medicine',quantity:1}]}});
+ const opens=await Promise.all(['a','b'].map(suffix=>call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'openChest',chestId,coins:999999,requestId:'emulator-chest-open-'+suffix},token)));
+ for(const opened of opens){assert.equal(opened.status,200,JSON.stringify(opened.data.error||{}));assert.equal(opened.data.result.result.coins,23);}
+ const afterChest=(await ownerRef.get()).data().farm;assert.equal(afterChest.coins,beforeChest.coins+23);assert.equal(afterChest.medicines,(beforeChest.medicines||0)+1);assert.equal(afterChest.chestCount,0);
+ const recorded=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'listChests',status:'opened',requestId:'emulator-chest-history'},token);assert.equal(recorded.status,200,JSON.stringify(recorded.data.error||{}));assert.equal(recorded.data.result.result.rows.find(row=>row.id===chestId).result.coins,23);
  const changed=await call('nexusIdentity',{action:'changePassword',currentSecret:'old-secret',newSecret:'new-secret'},signed.data.idToken);assert.equal(changed.status,200);
  const stale=await call('gameOpsFarmTransaction',{...trade,requestId:'emulator-trade-002'},token);assert.equal(stale.status,401);
  const newLogin=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'new-secret'});assert.equal(newLogin.status,200);assert.equal((await signIn(newLogin.data.result.token)).status,200);

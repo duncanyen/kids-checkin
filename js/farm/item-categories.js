@@ -12,6 +12,7 @@ export const ITEM_CATEGORIES = [
 export const COOP_NAMES = { 1: '基礎雞舍', 2: '中級雞舍', 3: '高級雞舍', 4: '特級雞舍', 5: '頂級雞舍' };
 export const coopName = level => COOP_NAMES[level || 1] || `Lv.${level} 雞舍`;
 export function itemCategory(key) {
+    if (key === 'unopenedChest') return 'chests';
     if (key.startsWith('scene:')) return 'scenes';
     if (key.startsWith('guard:')) return 'dogs';
     if (BREEDS[key] || key.startsWith('bird:') || Object.values(BREEDS).some(b => b.eggKey === key)) return 'chickens';
@@ -20,17 +21,17 @@ export function itemCategory(key) {
     return 'other';
 }
 
-export function addCategoryTabs(scene, y, onSelect) {
+export function addCategoryTabs(scene, y, onSelect, {categories = ITEM_CATEGORIES} = {}) {
     const tabs = new Map();
-    for (const [index, category] of ITEM_CATEGORIES.entries()) {
-        const x = 195 + (index - (ITEM_CATEGORIES.length-1)/2) * 60;
-        const background = scene.add.image(x, y, 'ui_wood').setDisplaySize(56, 38).setInteractive({ cursor: 'pointer' });
-        const label = scene.add.text(x, y, category.label, { fontSize: '14px', color: '#fff2cc', fontStyle: 'bold', stroke: '#593b27', strokeThickness: 2 }).setOrigin(0.5);
+    for (const [index, category] of categories.entries()) {
+        const x = 195 + (index - (categories.length-1)/2) * (categories.length>6?52:60);
+        const background = scene.add.image(x, y, 'ui_wood').setDisplaySize(categories.length>6?48:56, 38).setInteractive({ cursor: 'pointer' });
+        const label = scene.add.text(x, y, category.label, { fontSize: categories.length>6?'12px':'14px', color: '#fff2cc', fontStyle: 'bold', stroke: '#593b27', strokeThickness: 2 }).setOrigin(0.5);
         background.on('pointerdown', () => onSelect(category.key));
         tabs.set(category.key, { background, label });
     }
     return { tabs, setCategories(keys) {
-        for(const [id,tab] of tabs){const index=keys.indexOf(id),visible=index>=0;tab.background.setVisible(visible);tab.label.setVisible(visible);if(visible){const step=keys.length>=6?60:keys.length===4?94:74,x=195+(index-(keys.length-1)/2)*step;tab.background.setPosition(x,y).setDisplaySize(keys.length>=6?56:keys.length===4?84:68,38);tab.label.setPosition(x,y);}}
+        for(const [id,tab] of tabs){const index=keys.indexOf(id),visible=index>=0;tab.background.setVisible(visible);tab.label.setVisible(visible);if(visible){const step=keys.length>6?52:keys.length>=6?60:keys.length===4?94:74,x=195+(index-(keys.length-1)/2)*step;tab.background.setPosition(x,y).setDisplaySize(keys.length>6?48:keys.length>=6?56:keys.length===4?84:68,38);tab.label.setPosition(x,y);}}
     }, select(key) {
         for (const [id, tab] of tabs) {
             tab.background.setTexture(id === key ? 'ui_wood_selected' : 'ui_wood');

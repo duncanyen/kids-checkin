@@ -2,9 +2,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const chestFlowTests=process.env.CHEST_FLOW_TESTS==='1';
+const chestArtFail=process.env.CHEST_ART_FAIL==='1';
 const predatorRewardTests=process.env.PREDATOR_REWARD_TESTS==='1';
 const predatorRewardKind=process.env.PREDATOR_REWARD_KIND||'wolf';
-const battleRewardTests=process.env.BATTLE_REWARD_TESTS==='1';
+const battleRewardTests=process.env.BATTLE_REWARD_TESTS==='1'||chestFlowTests;
 const battleRewardKind=process.env.BATTLE_REWARD_KIND||'eagle';
 const legacyBattlePageBackend=process.env.LEGACY_BATTLE_PAGE_BACKEND==='1';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
@@ -35,7 +37,7 @@ const stealResultTests=process.env.STEAL_RESULT_TESTS==='1'||stealFlowTests;
 const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 (async()=>{
  const feedResponses=[];
- const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=battleRewardTests?(battleRewardKind==='eagle'?.1:0):entryEncounterTests||dragonStartupTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false,failBattleSettlement=false,lastBattleResult=null;
+ const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=battleRewardTests?(battleRewardKind==='eagle'?.1:0):entryEncounterTests||dragonStartupTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false,failBattleSettlement=false,lastBattleResult=null,chestReplyDelay=0;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
@@ -57,6 +59,8 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  if(ownCleanTests)Object.assign(db.data.get('groups/A/users/alice').farm,{cleanliness:70,moral:40});
  if(costTests){db.data.set('ops_feed_versions/global',{revision:'v1'});db.data.set('ops_announcements/read-test',{title:'初始公告',content:'測試內容',status:'published',priority:1,targetType:'all',targetAccountIds:[],audienceKeys:['all'],startAt:stamp-100,endAt:stamp+3600000,createdAt:stamp,updatedAt:stamp,showPopup:false});db.data.get('groups/A/users/bob').farm.stolenEggs20261116=50;}
  if(predatorRewardTests)db.data.get('groups/B/users/bob').farm.coopLevel=1;
+ if(battleRewardTests&&!chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:Object.fromEntries(Object.entries(require('../game-admin/functions/chests.cjs').DEFAULTS).map(([kind,value])=>[kind,{...value,dropRate:0}]))});
+ if(chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:{eagle:{dropRate:100,coins:{enabled:true,min:137,max:137},items:[]}}});
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
@@ -79,9 +83,10 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
    const compatibleData={...data};if(legacyHarvestBackend&&data.action==='homeEncounter')delete compatibleData.collectWhenClear;
    if(legacyStealBackend&&data.action==='visitEncounter')delete compatibleData.stealWhenClear;
    const request={auth,data:compatibleData};
-   if(name==='gameOpsFarmTransaction'){if(entryEncounterTests&&data.action==='homeEncounter'&&!data.collectWhenClear&&!data.verifyOnly)await entryGate;if(data.action==='homeEncounter'&&data.collectWhenClear)await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;let response;try{response=await service.farmTransaction(request);}catch(error){if(sceneTests&&['buyScene','setScene'].includes(data.action)||coopCleanTests&&data.action==='helpClean'||ownCleanTests&&data.action==='cleanOwn')return{__fixtureError:{code:'functions/'+(error.code||'internal'),message:error.message}};throw error;}if((coopCleanTests&&data.action==='helpClean'||ownCleanTests&&data.action==='cleanOwn')&&lateCleanReply){lateCleanReply=false;await new Promise(resolve=>setTimeout(resolve,350));}const steal=response.result?.steal||(data.action==='stealEgg'?response.result:null);if(steal){lastStealResult=structuredClone(steal);if(oldStealResultFields)for(const key of ['transactionId','totalEggs','eggBreed','eggSources'])delete steal[key];}if(stealFlowTests&&data.stealWhenClear&&lateReplyOnce){lateReplyOnce=false;await new Promise(resolve=>setTimeout(resolve,350));}
+   if(name==='gameOpsFarmTransaction'){if(entryEncounterTests&&data.action==='homeEncounter'&&!data.collectWhenClear&&!data.verifyOnly)await entryGate;if(data.action==='homeEncounter'&&data.collectWhenClear)await harvestGate;if(data.action==='collectEggs')await collectionGate;if(data.action==='battleSettle')await settlementGate;const gate=data.action==='feedPoultry'?feedGate:null;let response;try{response=await service.farmTransaction(request);}catch(error){if(chestFlowTests&&data.action==='openChest'||sceneTests&&['buyScene','setScene'].includes(data.action)||coopCleanTests&&data.action==='helpClean'||ownCleanTests&&data.action==='cleanOwn')return{__fixtureError:{code:'functions/'+(error.code||'internal'),message:error.message}};throw error;}if((coopCleanTests&&data.action==='helpClean'||ownCleanTests&&data.action==='cleanOwn')&&lateCleanReply){lateCleanReply=false;await new Promise(resolve=>setTimeout(resolve,350));}const steal=response.result?.steal||(data.action==='stealEgg'?response.result:null);if(steal){lastStealResult=structuredClone(steal);if(oldStealResultFields)for(const key of ['transactionId','totalEggs','eggBreed','eggSources'])delete steal[key];}if(stealFlowTests&&data.stealWhenClear&&lateReplyOnce){lateReplyOnce=false;await new Promise(resolve=>setTimeout(resolve,350));}
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(battleRewardTests&&data.action==='battleSettle')lastBattleResult=structuredClone(response.result);
+if(chestFlowTests&&data.action==='openChest'&&chestReplyDelay)await new Promise(resolve=>setTimeout(resolve,chestReplyDelay));
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
@@ -105,7 +110,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
   let releaseStealAssets,heldAssets=0;const assetGate=new Promise(resolve=>releaseStealAssets=resolve);
   if(holdStealAssets){await page.route('**/js/farm/steal-result-ui.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('export const prepareStealResultAssets',"for(const key in assets)assets[key]+='?held-assets';\nexport const prepareStealResultAssets")});});await page.route('**/*?held-assets',async r=>{heldAssets++;await assetGate;await r.continue();});}
-  if(stealFlowTests||coopCleanTests||ownCleanTests)await page.route('**/js/farm/operations-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('reject(timeoutFailure()),timeoutMs);','reject(timeoutFailure()),globalThis.__fixtureTimeoutMs||timeoutMs);')});});
+  if(stealFlowTests||coopCleanTests||ownCleanTests||chestFlowTests)await page.route('**/js/farm/operations-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('reject(timeoutFailure()),timeoutMs);','reject(timeoutFailure()),globalThis.__fixtureTimeoutMs||timeoutMs);')});});
   if(flowBefore)await page.route('**/css/farm-egg-result.css*',r=>r.fulfill({contentType:'text/css',body:require('node:child_process').execFileSync('git',['show','3517dab:css/farm-egg-result.css'],{encoding:'utf8'})}));
   if(flowBefore)for(const file of ['VisitScene.js','backend-client.js','egg-result-ui.js','steal-result-ui.js'])await page.route('**/js/farm/'+file+'*',r=>r.fulfill({contentType:'text/javascript',body:require('node:child_process').execFileSync('git',['show','3517dab:js/farm/'+file],{encoding:'utf8'})}));
   await page.addInitScript(()=>{sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'alice',docId:'alice',groupId:'A',name:'Alice'}));localStorage.setItem('lastGroupId','A');sessionStorage.setItem('nexus_active_group_id','A');});
@@ -115,6 +120,58 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(chestFlowTests){
+   releaseSettlement();
+   const openCalls=()=>calls.filter(c=>c.action==='openChest'),own=()=>db.data.get('groups/A/users/alice').farm;
+   const taskCount=async()=>(await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}})).challenges.mission.tasks.find(t=>t.type==='DEFEAT_MONSTER').count;
+   const clickObject=async(sceneKey,selector)=>{
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    const p=await page.evaluate(({sceneKey,selector})=>{const s=window.__farmGame.scene.getScene(sceneKey),o=selector==='chest-tab'?s.categoryTabs.tabs.get('chests').background:s.itemsPanel.list.find(o=>o.type==='Rectangle'),w=o.getWorldTransformMatrix().transformPoint(0,0),q=s.cameras.main.matrix.transformPoint(w.x-s.cameras.main.scrollX,w.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+q.x/s.scale.width*r.width,y:r.y+q.y/s.scale.height*r.height};},{sceneKey,selector});await page.mouse.click(p.x,p.y);
+   };
+   const shoot=async()=>{
+    await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter?.archery);
+    const point=async(x,y)=>page.evaluate(({x,y})=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),p=s.cameras.main.matrix.transformPoint(x-s.cameras.main.scrollX,y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{x,y});
+    const b=await page.evaluate(()=>{const o=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.button;return{x:o.x,y:o.y};}),p=await point(b.x,b.y);await page.mouse.click(p.x,p.y);
+    for(let shot=0;shot<15;shot++){
+     if(await page.evaluate(()=>!!window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.result))break;
+     const aim=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter,o=b.archery.bow,r=b.sprite.getBounds(),t=.45;return{x:o.x,y:o.y,px:o.x-(r.centerX-o.x)/t/9,py:o.y-((r.centerY-o.y)/t-180*t)/9};});
+     const a=await point(aim.x,aim.y),z=await point(aim.px,aim.py);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(z.x,z.y,{steps:5});await page.mouse.up();await page.waitForTimeout(650);
+    }
+    await page.locator('[data-result-kind=battle]').waitFor();
+    assert.equal(await page.locator('.farm-battle-reward-row:not(.is-empty)').count(),2);assert.equal(await page.locator('.farm-battle-reward-row.is-empty').count(),1);assert.match(await page.locator('[data-result-kind=battle]').textContent(),/寶箱/);
+   };
+   const cases=[{coins:{enabled:true,min:137,max:137},items:[]},{coins:{enabled:false,min:0,max:0},items:[{itemId:'medicine',quantity:2}]},{coins:{enabled:true,min:7,max:7},items:[{itemId:'worms',quantity:2},{itemId:'ironhammer',quantity:1},{itemId:'bresse',quantity:1}]}];
+   if(chestArtFail)await page.route('**/assets/farm/chest/v1/frames/**',r=>r.fulfill({status:503,body:'fixture animation unavailable'}));
+   for(let index=0;index<cases.length;index++){
+    if(index){db.data.set('ops_game_config/chests',{revision:index+1,monsters:{eagle:{dropRate:100,...cases[index]}}});await page.setViewportSize({width:390,height:844});await page.reload();await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.entryChecked);}
+    const coinsBefore=own().coins;await shoot();assert.equal(own().coins,coinsBefore);assert.equal(own().chestCount,1);
+    const chestId=lastBattleResult.chest.id;
+    await page.screenshot({path:`/tmp/gugu-chest-drop-${index}.png`});await page.locator('[data-result-kind=battle] button[aria-label=確定]').click();
+    await page.evaluate(()=>window.__privateEmitAll());await page.locator('.farm-hud-bottom button[aria-label="倉庫"]').click();await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));
+    await clickObject('WarehouseScene','chest-tab');await page.screenshot({path:`/tmp/gugu-chest-warehouse-${index}.png`});await clickObject('WarehouseScene','chest-card');
+    const root=page.locator('[data-result-kind=chest]');await root.getByRole('button',{name:'開啟',exact:true}).waitFor();
+    await page.screenshot({path:`/tmp/gugu-chest-list-${index}.png`});
+    if(!chestArtFail)await page.evaluate(async()=>{await(await import('/js/farm/chest-ui.js')).prepareChestArt();});
+    if(index===2)await page.emulateMedia({reducedMotion:'reduce'});
+    if(index===1){chestReplyDelay=350;await page.evaluate(()=>window.__fixtureTimeoutMs=100);}
+    const progress=await taskCount(),before=openCalls().length;
+    await page.evaluate(()=>{window.__chestFrames=[];const root=document.querySelector('[data-result-kind=chest]');new MutationObserver(()=>{const frame=root.dataset.chestFrame;if(frame!==undefined&&window.__chestFrames.at(-1)?.frame!==frame)window.__chestFrames.push({frame,at:performance.now(),hidden:root.querySelector('.farm-chest-rewards')?.hidden});}).observe(root,{attributes:true,attributeFilter:['data-chest-frame']});});
+    await root.getByRole('button',{name:'開啟',exact:true}).evaluate(b=>{b.click();b.click();b.click();});
+    if(index===1){await root.getByText(/結果確認中/).waitFor();assert.equal(openCalls().length,before+1);const originalId=openCalls().at(-1).requestId;await page.waitForTimeout(400);chestReplyDelay=0;await page.evaluate(()=>window.__fixtureTimeoutMs=undefined);await root.getByRole('button',{name:'確認／重試此寶箱',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-result-kind=chest] .farm-chest-rewards'));assert.equal(openCalls().at(-1).requestId,originalId);const skip=root.getByRole('button',{name:'跳過動畫',exact:true});if(await skip.isVisible())await skip.click();}
+    if(index===0&&!chestArtFail){await page.waitForFunction(()=>Number(document.querySelector('[data-result-kind=chest]')?.dataset.chestFrame)>=4);await page.screenshot({path:'/tmp/gugu-chest-opening.png'});}
+    await page.waitForFunction(()=>{const r=document.querySelector('[data-result-kind=chest]');return r?.querySelector('.farm-chest-rewards')&&!r.querySelector('.farm-chest-rewards').hidden&&['complete','static'].includes(r.dataset.animationState);});
+    if(index===0&&!chestArtFail){const frames=await page.evaluate(()=>window.__chestFrames);assert.deepEqual(frames.map(f=>Number(f.frame)),[0,1,2,3,4,5,6,7]);assert.equal(frames.find(f=>f.frame==='3').hidden,true);assert.equal(frames.find(f=>f.frame==='4').hidden,false);}
+    const expected=cases[index].coins.enabled?cases[index].coins.min:0;assert.equal(own().coins,coinsBefore+expected);assert.equal(own().chestCount,0);assert.equal(await taskCount(),progress);
+    for(const item of cases[index].items)assert.match(await root.textContent(),item.itemId==='bresse'?/布雷斯雞/:item.itemId==='worms'?/菜蟲/:item.itemId==='ironhammer'?/大鐵槌/:/活力散/);
+    await page.setViewportSize({width:320,height:568});await page.waitForTimeout(150);await page.screenshot({path:`/tmp/gugu-chest-result-${index}-320.png`});
+    assert.equal(await root.locator('.farm-chest-rewards').evaluate(node=>!node.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true}))),false,'current rewards scroller must stay scrollable after replacing the inventory view');
+    const bounds=await root.getByRole('button',{name:'確定',exact:true}).boundingBox();assert.ok(bounds.y+bounds.height<=568);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await root.getByRole('button',{name:'確定',exact:true}).evaluate(b=>{b.click();b.click();});assert.equal(await root.count(),0);
+    const snapshot=structuredClone(own());await Promise.all([service.farmTransaction({auth,data:{groupId:'A',action:'openChest',chestId,requestId:require('node:crypto').randomUUID(),battlePageId:'other-device-a'}}),service.farmTransaction({auth,data:{groupId:'A',action:'openChest',chestId,requestId:require('node:crypto').randomUUID(),battlePageId:'other-device-b'}})]);assert.deepEqual(own(),snapshot);
+    await clickObject('WarehouseScene','chest-card');await root.getByRole('button',{name:'開箱紀錄',exact:true}).click();await root.getByRole('button',{name:'查看結果',exact:true}).first().click();assert.equal(await root.getAttribute('data-animation-state'),'static');await root.getByRole('button',{name:'確定',exact:true}).click();
+   }
+   assert.deepEqual(errors,[]);console.log('PASS real eagle drop -> warehouse chest tab -> opening; full manifest frames/reveal/hold, coin-only/items-only/mixed/bird rewards, timeout same receipt, double taps, cross-device replay, refresh/history, reduced motion and 320px result'+(chestArtFail?' with failed animation fallback':''));return;
+  }
   if(battleRewardTests){
    releaseSettlement();failBattleSettlement=true;
    const key=battleRewardKind+'Encounter',inventoryKey=battleRewardKind==='eagle'?'eagleFeathers':'gorillaFangs';
@@ -479,7 +536,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    db.data.get('groups/B/users/bob').farm.guardDogs=[{id:'dog',breedId:'pyrenees',days:1,startedAt:stamp-1,expiresAt:stamp+86400000}];serverRoll=0;await reset();await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);
    assert.equal(lastStealResult.success,false);assert.equal(await page.locator('[data-result-kind=steal]').count(),0);assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);
    const target=db.data.get('groups/B/users/bob').farm;target.guardDogs=[];target.readyEggs.silkie=0;target.eggsReady=0;serverRoll=.99;await reset();const empty=economyCalls();await clickHen();assert.equal(economyCalls(),empty);assert.equal(await page.locator('[data-result-kind=steal]').count(),0);
-   target.readyEggs.silkie=2;target.eggsReady=2;await reset();failSteal=true;await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);failSteal=false,failBattleSettlement=false,lastBattleResult=null;assert.equal(await page.locator('[data-result-kind=steal]').count(),0);assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);
+   target.readyEggs.silkie=2;target.eggsReady=2;await reset();failSteal=true;await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);failSteal=false,failBattleSettlement=false,lastBattleResult=null,chestReplyDelay=0;assert.equal(await page.locator('[data-result-kind=steal]').count(),0);assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);
    await page.evaluate(()=>{window.__append=document.body.append;document.body.append=function(...nodes){if(nodes.some(n=>n.dataset?.resultKind==='steal'))throw Error('fixture popup failure');return window.__append.apply(this,nodes);};});
    await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);await page.evaluate(()=>document.body.append=window.__append);
    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,2);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261116,2);assert.equal(await page.evaluate(()=>window.__successFloats),1,'開啟失敗保留成功浮字，不重送交易');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').input.enabled),true);

@@ -6,7 +6,7 @@ export function createFarmDialog(scene, { property = 'eggResultDialog', kind, pa
     const panel = document.createElement('section'); panel.className = 'farm-egg-result-panel' + (panelClass ? ' ' + panelClass : '');
     panel.tabIndex = -1; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-label', label);
     root.append(panel);
-    let closed = false;
+    let closed = false, scrollNodes = [], scrollProtected = false;
     const isCurrent = () => !closed && scene.sys.isActive() && (scene.farmSceneToken || scene.visitToken) === token && valid();
     const close = () => {
         if (closed) return;
@@ -19,8 +19,10 @@ export function createFarmDialog(scene, { property = 'eggResultDialog', kind, pa
     const dialog = { root, panel, close, isCurrent,
         mount() { if (!isCurrent()) { close(); return false; } document.body.append(root); panel.focus({ preventScroll: true }); return true; },
         protectScroll(scrollNode) {
-            const nodes = Array.isArray(scrollNode) ? scrollNode : [scrollNode];
-            for (const eventName of ['touchmove', 'wheel']) root.addEventListener(eventName, event => { if (!nodes.some(node => node.contains(event.target))) event.preventDefault(); }, { passive: false });
+            scrollNodes = Array.isArray(scrollNode) ? scrollNode : [scrollNode];
+            if (scrollProtected) return;
+            scrollProtected = true;
+            for (const eventName of ['touchmove', 'wheel']) root.addEventListener(eventName, event => { if (!scrollNodes.some(node => node.contains(event.target))) event.preventDefault(); }, { passive: false });
         }
     };
     scene[property] = dialog; input.enabled = false;
