@@ -172,7 +172,8 @@ test('all eight monster settlements keep canonical rewards, penalties and one ve
   const models=await import('../../js/farm/combat-rules.js'),mode=['eagle','dragon'].includes(kind)?'ranged':'melee',weapon=models.WEAPONS_CONFIG[mode==='ranged'?'shortbow':'battleaxe'],hits=Math.ceil(config.health/models.weaponDamage(weapon,kind));
   f.clock(Math.ceil(hits/(mode==='ranged'?10:20))*1000);
   await f.api.handle(f.req('battleAttack',{battleId:id,mode,count:hits,damage:999999}));
-  await f.api.handle(f.req('battleSettle',{battleId:id}));await f.api.handle(f.req('battleSettle',{battleId:id}));
+  const settled=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result,replayed=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result;
+  assert.equal(settled.monster,kind);assert.equal(settled.inventoryUpdated,true);assert.deepEqual(settled.rewards,[{itemId:config.item,quantity:1}]);assert.deepEqual(replayed,settled);
   assert.equal(f.farm()[config.item],1,kind);assert.equal((await f.status()).tasks[2].count,1,kind);
  }
 });
@@ -226,4 +227,13 @@ test('cross-group self cleaning retains public access, membership, dirt and batt
  f.db.data.get('groups/B/users/alice').farm.cleanliness=70;f.roll(0);await f.api.handle(f.req('visitEncounter',{targetGroupId:'B',targetAccountId:'alice'}));
  await assert.rejects(clean(),{code:'failed-precondition'});assert.equal(f.db.data.get('groups/B/users/alice').farm.cleanliness,70);
  assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
+});
+
+test('full warehouse wolf victory returns no inventory reward, while defeat still counts once',async()=>{
+ const f=setup(),D=require('../functions/domain.cjs'),id='wolf-full',started=Date.parse('2026-11-16T10:00:00+08:00');
+ f.farm().warehouseLimit=1;f.farm().wolfFangs=1;
+ f.db.data.set('ops_farm_active/'+D.hash('profile:A'),{id,kind:'wolf',startedAt:started,deadline:started+60000,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:0,lastAttackAt:started+1,attacks:{melee:200,ranged:0}});
+ const result=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result;
+ assert.equal(result.outcome,'win');assert.equal(result.inventoryUpdated,false);assert.deepEqual(result.rewards,[]);assert.equal(f.farm().wolfFangs,1);
+ assert.equal((await f.status()).tasks[2].count,1);
 });

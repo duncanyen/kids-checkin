@@ -1,3 +1,4 @@
+import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
 import {FARM_BACKEND_ENABLED,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { ArcheryControls } from './archery.js';
 import { clearPoultryEggs } from './poultry.js';
@@ -93,6 +94,7 @@ export class BossEncounter {
         this.result = null;
         this.destroyed = false;
         this.settling = false;
+        warmBattleReward();
         this.weapon = equippedWeapon(scene.myFarmData || scene.farmData);
         this.damage = bossWeaponDamage(this.weapon, spec.key);
         this.destination = spec.destination ? spec.destination() : { x: Math.max(spec.minX || 80, scene.coop.getBounds().left - (spec.approachInset || 34)), y: scene.coop.getBounds().bottom + 10 };
@@ -214,8 +216,11 @@ export class BossEncounter {
             this.result = result.outcome;
             this.settled = true;
             if (this.destroyed) return;
-            this.warning.setText(result.outcome === 'win'
-                ? `擊退${this.spec.name}！${this.spec.reward} ×1 已收入倉庫${result.overflow ? '\n倉庫已滿，請先出售或擴充' : `\n可在商店售出 ${this.spec.salePrice} 金幣`}`
+            const presented=result.outcome==='win'&&await showBattleReward(this.scene,result,this.spec.key,{legacyInventoryConfirmed:!FARM_BACKEND_ENABLED,groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
+            if(this.destroyed)return;
+            if(presented)this.warning.setVisible(false);
+            else this.warning.setText(result.outcome === 'win'
+                ? (result.hasSpace===false?'擊退'+this.spec.name+'！但倉庫滿了，戰利品未入庫':`擊退${this.spec.name}！${this.spec.reward} ×1 已收入倉庫`)
                 : `${this.spec.lossText || (this.spec.key === 'eagle' ? '巨飛鷹離開了！' : '防守失敗！雞舍內的蛋已全數損失')}\n扣除 ${result.coinsLost} 金幣`);
             this.scene.time.delayedCall(6000, () => { if (!this.destroyed) this.warning.setVisible(false); });
             this.healthBack.setVisible(false);

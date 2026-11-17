@@ -1,3 +1,4 @@
+import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
 import { farmLoading } from './loading-ui.js';
 import { GiantEncounter } from './giant.js';
 import { CobraEncounter } from './cobra.js';
@@ -539,6 +540,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     spawnTigerEvent() {
+        warmBattleReward();
         if(giantBlocksFarm(this))return;
         this.isTigerDefeated = false; this.tigerHitCount = FARM_BACKEND_ENABLED?ENEMY_HEALTH.tiger-(this.backendChallenge?.health??ENEMY_HEALTH.tiger):0;
         const weapon = equippedWeapon(this.myFarmData);
@@ -587,11 +589,10 @@ export default class VisitScene extends Phaser.Scene {
         this.isTigerDefeated = true; if (this.tigerTween) this.tigerTween.stop();
         if (!finishPredator(this.tiger, 'dead')) return;
         this.club.setVisible(false);
-        this.showFloatingText('成功擊退猛虎！', '#FFC107', 22, this.tiger.x, this.tiger.y - 50);
         this.tweens.add({ targets: this.tiger, alpha: 0, y: this.tiger.y - 50, duration: 1500, delay: 1000, onComplete: () => this.tiger.destroy() });
 
-        const encounterId = this.tiger.getData('encounterId');
-        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id).then(result=>result.hasSpace):this.runVisitTransaction(async (t) => {
+        const encounterId = this.tiger.getData('encounterId'), token=this.visitToken;
+        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id):this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
@@ -601,11 +602,12 @@ export default class VisitScene extends Phaser.Scene {
             if (hasSpace) updates['farm.tigerPelts'] = (farm.tigerPelts || 0) + 1;
             t.update(myFarmRef, updates);
             return hasSpace;
-        })).then((success) => {
-            if (success) { 
-                this.time.delayedCall(1000, () => this.showFloatingText('獲得 虎皮 +1', '#FFF', 20, 195, 422));
-                this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
-            } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, 195, 422)); }
+        }).then(success=>({id:encounterId,outcome:'win',hasSpace:success}))).then(async result => {
+            if(!this.sys.isActive()||this.visitToken!==token)return;
+            const presented=await showBattleReward(this,result,'tiger',{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
+            if(!this.sys.isActive()||this.visitToken!==token)return;
+            if(!presented)this.showFloatingText(result.outcome==='win'?(result.hasSpace?'獲得 虎皮 +1':'打贏了！但倉庫滿了...'):'未獲得戰利品', '#FFF',20,195,422);
+            if(result.outcome==='win'&&result.hasSpace)this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
         }).catch(e => console.error(e));
     }
 
@@ -623,6 +625,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     spawnWolfEvent() {
+        warmBattleReward();
         if(giantBlocksFarm(this))return;
         this.isWolfDefeated = false; this.wolfHitCount = FARM_BACKEND_ENABLED?ENEMY_HEALTH.wolf-(this.backendChallenge?.health??ENEMY_HEALTH.wolf):0;
         const weapon = equippedWeapon(this.myFarmData);
@@ -671,11 +674,10 @@ export default class VisitScene extends Phaser.Scene {
         this.isWolfDefeated = true; if (this.wolfTween) this.wolfTween.stop();
         if (!finishPredator(this.wolf, 'dead')) return;
         this.club.setVisible(false);
-        this.showFloatingText('成功擊退大野狼！', '#4CAF50', 22, this.wolf.x, this.wolf.y - 50);
         this.tweens.add({ targets: this.wolf, alpha: 0, y: this.wolf.y - 50, duration: 1500, delay: 1000, onComplete: () => this.wolf.destroy() });
 
-        const encounterId = this.wolf.getData('encounterId');
-        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id).then(result=>result.hasSpace):this.runVisitTransaction(async (t) => {
+        const encounterId = this.wolf.getData('encounterId'), token=this.visitToken;
+        (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id):this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return false;
             const farm = snap.data().farm;
@@ -685,11 +687,12 @@ export default class VisitScene extends Phaser.Scene {
             if (hasSpace) updates['farm.wolfFangs'] = (farm.wolfFangs || 0) + 1;
             t.update(myFarmRef, updates);
             return hasSpace;
-        })).then((success) => {
-            if (success) { 
-                this.time.delayedCall(1000, () => this.showFloatingText('獲得 狼牙 +1', '#FFF', 20, 195, 422));
-                this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
-            } else { this.time.delayedCall(1000, () => this.showFloatingText('打贏了！但倉庫滿了...', '#F44336', 16, 195, 422)); }
+        }).then(success=>({id:encounterId,outcome:'win',hasSpace:success}))).then(async result => {
+            if(!this.sys.isActive()||this.visitToken!==token)return;
+            const presented=await showBattleReward(this,result,'wolf',{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
+            if(!this.sys.isActive()||this.visitToken!==token)return;
+            if(!presented)this.showFloatingText(result.outcome==='win'?(result.hasSpace?'獲得 狼牙 +1':'打贏了！但倉庫滿了...'):'未獲得戰利品', '#FFF',20,195,422);
+            if(result.outcome==='win'&&result.hasSpace)this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
         }).catch(e => console.error(e));
     }
 

@@ -1,0 +1,144 @@
+{
+  "assets": {
+    "panel": {
+      "file": "assets/battle_reward_panel.png",
+      "size_px": [
+        602,
+        684
+      ],
+      "description": "木框與米色內頁，底部花草一體"
+    },
+    "row": {
+      "file": "assets/battle_reward_row.png",
+      "size_px": [
+        683,
+        115
+      ],
+      "description": "無字明細底板，可連續使用三列"
+    },
+    "storage_banner": {
+      "file": "assets/battle_reward_storage_banner.png",
+      "size_px": [
+        570,
+        119
+      ],
+      "description": "已放入倉庫提示"
+    },
+    "confirm": {
+      "file": "assets/battle_reward_confirm.png",
+      "size_px": [
+        534,
+        148
+      ],
+      "description": "確定按鈕"
+    },
+    "close": {
+      "file": "assets/battle_reward_close.png",
+      "size_px": [
+        122,
+        126
+      ],
+      "description": "右上關閉按鈕"
+    },
+    "plaque": {
+      "file": "assets/battle_reward_plaque.png",
+      "size_px": [
+        1136,
+        263
+      ],
+      "description": "金葉木質標題底牌，疊入「戰鬥勝利」"
+    },
+    "eagle": {
+      "file": "assets/battle_reward_eagle.png",
+      "size_px": [
+        796,
+        455
+      ],
+      "description": "巨飛鷹示例立繪，依實際怪物切換"
+    },
+    "feather": {
+      "file": "assets/battle_reward_feather.png",
+      "size_px": [
+        272,
+        244
+      ],
+      "description": "巨鷹羽毛道具圖示，對應該道具 ID"
+    }
+  },
+  "preview_canvas_px": [
+    780,
+    1386
+  ],
+  "loot_slots": 3,
+  "preview_rects_xywh_px": {
+    "panel": [
+      40,
+      210,
+      700,
+      1015
+    ],
+    "plaque": [
+      94,
+      147,
+      592,
+      137
+    ],
+    "close": [
+      646,
+      178,
+      78,
+      81
+    ],
+    "eagle": [
+      189,
+      311,
+      402,
+      230
+    ],
+    "row_1": [
+      105,
+      704,
+      570,
+      96
+    ],
+    "row_2": [
+      105,
+      810,
+      570,
+      96
+    ],
+    "row_3": [
+      105,
+      916,
+      570,
+      96
+    ],
+    "feather": [
+      119,
+      723,
+      66,
+      59
+    ],
+    "storage_banner": [
+      229,
+      1024,
+      322,
+      67
+    ],
+    "confirm": [
+      241,
+      1100,
+      298,
+      83
+    ]
+  },
+  "text": {
+    "title": "戰鬥勝利",
+    "defeated": "擊退 {monsterName}",
+    "loot_section": "本次戰利品",
+    "loot_row": "{itemName} × {quantity}",
+    "storage_confirmed": "已放入倉庫",
+    "confirm": "確定",
+    "close": "關閉"
+  }
+}

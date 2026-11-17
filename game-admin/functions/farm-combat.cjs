@@ -31,7 +31,12 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
    patch['farm.'+kind+'Results']=[...(farm[kind+'Results']||[]).slice(-31),settlement];
   }
   if(won){settlement.overflow=inventory.getUsedSpace(farm)>=(farm.warehouseLimit||10);event={type:'DEFEAT_MONSTER',monster:kind,battleId:next.id};}
-  settlement.hasSpace=!!patch['farm.'+config.item];next={...next,result:settlement,resolvedAt:stamp};return settlement;
+  settlement.hasSpace=!!patch['farm.'+config.item];
+  // Display-only receipt fields reflect the actual inventory delta of this settlement.
+  const quantity=won?Math.max(0,(patch['farm.'+config.item]??farm[config.item]??0)-(farm[config.item]||0)):0;
+  settlement.monster=kind;settlement.inventoryUpdated=quantity>0;
+  settlement.rewards=quantity>0?[{itemId:config.item,quantity}]:[];
+  next={...next,result:settlement,resolvedAt:stamp};return settlement;
  };
  if(['homeEncounter','visitEncounter','claimEncounter'].includes(action)){
   if(action==='claimEncounter'&&next&&!next.result&&next.kind!==p.monster)return{patch,result:null,session:next};
