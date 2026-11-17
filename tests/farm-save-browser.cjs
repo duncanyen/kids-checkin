@@ -48,6 +48,9 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         // automatic dialog dismissal against a detached page.
         page.on('dialog',dialog=>{diagnostics.push(dialog.message());void dialog.accept().catch(error=>{if(!page.isClosed())errors.push(error.message);});});
         page.setDefaultTimeout(12000);
+        // Check game/save readiness below instead of waiting for every image's
+        // window.load event, which can lag on constrained Cloud Shell machines.
+        page.setDefaultNavigationTimeout(30000);
         await page.exposeFunction('__saveDb', async operation => {
             if (operation.kind === 'get') {
                 if (operation.path === owner) {
@@ -78,7 +81,7 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
             sessionStorage.setItem('familyCheckInUser', JSON.stringify({ accountId: 'alice', groupId: 'A', name: '測試玩家' }));
             localStorage.setItem('lastGroupId', 'A');
         });
-        await page.goto(base + '/farmgame.html');
+        await page.goto(base + '/farmgame.html', { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => window.__farmGame?.scene.isActive('MyFarmScene'));
         await page.waitForTimeout(600);
         assert.equal(writes.length, 0);
@@ -105,19 +108,19 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
         assert.deepEqual(docs[owner], { farm, keep: 'unrelated field' });
         // Partial existing data is never interpreted as permission to reset.
         docs[owner] = { farm: { coins: 12345 }, keep: 'unrelated field' };
-        await page.reload();
+        await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => window.__farmGame?.registry.get('farmLoadState')?.phase === 'error');
         assert.deepEqual(docs[owner], { farm: { coins: 12345 }, keep: 'unrelated field' });
         assert.equal(writes.length, 0);
         // A genuinely new farm is initialized once, using the transactional path.
         delete docs[owner];
-        await page.reload();
+        await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.hens === 1);
         assert.equal(writes.filter(write => write.path === owner).length, 1);
         assert.ok(docs[owner + '/farm_meta/creation']);
         // A new game's receipt survives an accidental parent deletion.
         delete docs[owner];
-        await page.reload();
+        await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForFunction(() => window.__farmGame?.registry.get('farmLoadState')?.phase === 'error');
         assert.equal(docs[owner], undefined);
         assert.equal(writes.filter(write => write.path === owner).length, 1);
