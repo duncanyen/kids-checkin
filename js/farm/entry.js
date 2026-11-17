@@ -5,6 +5,40 @@
  */
 import { farmLoading } from './loading-ui.js';
 farmLoading.begin();
+// A rejected module graph stays rejected in this document (including failed dependencies).
+// Use one fresh document, rather than importing main repeatedly or creating another Phaser game.
+const retryParameter = '_farm_module_retry';
+const retryStorageKey = 'nexus:farm-module-retry';
+const retryWindowMs = 120000;
+const startupURL = new URL(window.location.href);
+const retryStamp = Number(startupURL.searchParams.get(retryParameter));
+function isModuleDownloadFailure(error) {
+    return error?.name === 'TypeError' && /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(error.message || '');
+}
+function recoverModuleDownload(error) {
+    if (stage !== 'game-module' || !isModuleDownloadFailure(error)) return false;
+    const now = Date.now();
+    // The URL guard also works when Safari disallows sessionStorage.
+    if (retryStamp > 0 && now - retryStamp < retryWindowMs) return false;
+    try {
+        const previous = Number(sessionStorage.getItem(retryStorageKey));
+        if (previous > 0 && now - previous < retryWindowMs) return false;
+        sessionStorage.setItem(retryStorageKey, String(now));
+    } catch (_) { /* URL is the fallback guard. */ }
+    const target = new URL(window.location.href);
+    target.searchParams.set(retryParameter, String(now));
+    farmLoading.progress(5, '遊戲程式下載中斷，正在重新連線…');
+    console.warn('farm-startup-recovery', JSON.stringify({ stage, attempt: 1, reason: 'module-download' }));
+    window.location.replace(target.href);
+    return true;
+}
+function clearRetryURL() {
+    if (!startupURL.searchParams.has(retryParameter)) return;
+    const target = new URL(window.location.href);
+    target.searchParams.delete(retryParameter);
+    try { window.history.replaceState(window.history.state, '', target.href); } catch (_) {}
+}
+
 // 引擎與帳號常數平行下載；常數 export 初始化後才載入主模組，Boot 另等 membershipReady 才開放私人場景。
 const contextModule = import('./constants.js');
 contextModule.catch(error => farmLoading.error('無法確認群組，請返回重試。', undefined, { error, stage: 'membership-module' }));
@@ -24,9 +58,15 @@ engine.then(async () => {
     await contextModule;
     stage = 'game-module'; window.farmStartupDiagnostics?.stage(stage);
     farmLoading.progress(5, '載入遊戲程式');
-    return import('./main.js');
+    // Fresh root URL on recovery avoids reusing a cached failed response. A fresh document
+    // also resets the module map for transitive dependencies; no cache busting in normal play.
+    const mainURL = new URL('./main.js', import.meta.url);
+    if (retryStamp > 0) mainURL.searchParams.set(retryParameter, String(retryStamp));
+    await import(mainURL.href);
+    clearRetryURL();
 })
     .catch(error => {
+        if (recoverModuleDownload(error)) return;
         // 動態匯入的例外也會到這裡；保留原因，避免把程式初始化錯誤誤判成斷線。
         console.error('farm-startup-failure', JSON.stringify({
             stage,
