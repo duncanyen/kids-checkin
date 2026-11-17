@@ -25,6 +25,10 @@
 .farm-chest-footer{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;flex:none}
 .farm-chest-error{font-size:13px;color:#9c3419;margin:0}
 .farm-chest-panel [hidden]{display:none!important}
+/* Reserve result/footer space while frames reveal their contents. Otherwise the
+   rewards move into the skip button's previous position during a touch. */
+.farm-chest-panel .farm-chest-rewards[hidden]{display:block!important;visibility:hidden;pointer-events:none}
+.farm-chest-panel .farm-chest-note[hidden]{display:block!important;visibility:hidden;pointer-events:none}
 @media(max-height:620px){.farm-chest-panel{padding:36px 28px 22px;gap:6px}.farm-chest-title{height:58px}.farm-chest-stage{flex-basis:145px;width:145px;margin-top:10px}.farm-chest-box img{width:48px;height:48px}.farm-chest-box{min-height:65px}.farm-chest-note{font-size:12px}.farm-chest-panel .farm-chest-button{font-size:13px;padding:6px 12px}}
 
 .farm-chest-panel::before{border-image-source:url('../assets/farm/battle-reward/v1/battle_reward_panel.png');border-image-slice:100 65 85 fill}

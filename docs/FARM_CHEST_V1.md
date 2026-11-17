@@ -139,3 +139,7 @@ PRIVATE_FARM_REPORT="$HOME/nexus-chest-verification.json" node scripts/test-priv
 - `js/farm/chest-ui.js`
 - `tests/farm-chest-animation.test.mjs`
 - `docs/FARM_CHEST_V1.md`（本報告）。
+
+## Cloud Shell 動畫操作驗證修正
+
+獎勵列與入庫提示在動畫前保留版面空間，僅隱藏內容；避免第4格揭露時移動到「跳過動畫」原點擊位置。測試以 Playwright 時鐘固定動畫期間，再使用真正滑鼠點擊「跳過動畫」，斷言停第7格、結果完成，並恢復時鐘。沒有強制點擊、忽略逾時或略過跳過功能測試。正式動畫仍為原900毫秒。
