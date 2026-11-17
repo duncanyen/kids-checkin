@@ -6,7 +6,9 @@ const legacyBattlePageBackend=process.env.LEGACY_BATTLE_PAGE_BACKEND==='1';
 const legacyHarvestBackend=process.env.LEGACY_HARVEST_BACKEND==='1';
 const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
-const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1';
+const visitReturnTests=process.env.VISIT_RETURN_TESTS==='1';
+const visitReturnTheme=process.env.VISIT_RETURN_THEME==='default'?'default':'fuji';
+const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests;
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
 const costTests=process.env.FARM_READ_COST_TESTS==='1';
@@ -44,13 +46,14 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
  if(stealResultTests||entryEncounterTests||coopCleanTests||visitPreloadTests||battleExitTests){db.data.set('groups/B',{name:'另一座公開村落',members:['bob'],farmVillageVisibility:'public'});db.data.set('groups/B/users/bob',{farm:{...structuredClone(farm),hens:2,hensState:[{id:'flower',name:'花花',breed:'silkie',laidAt:stamp},{id:'rice',name:'米粒',breed:'silkie',laidAt:stamp}],readyEggs:{hen:0,silkie:3,bresse:0,onagadori:0}}});}
  if(coopCleanTests||visitPreloadTests){db.data.get('users/bob').name='村長 Bob';db.data.set('groups/C',{name:'另一個公開村落',members:['carol'],farmVillageVisibility:'public'});db.data.set('users/carol',{accountId:'carol',name:'Carol 村長',role:'member'});db.data.set('groups/C/users/carol',{farm:structuredClone(farm)});}
+ if(visitReturnTests){Object.assign(db.data.get('groups/A/users/alice').farm,{ownedSceneIds:['fuji'],activeSceneId:visitReturnTheme,cleanliness:70});Object.assign(db.data.get('groups/C/users/carol').farm,{ownedSceneIds:['fuji'],activeSceneId:'fuji',cleanliness:70});}
  if(crossSelfCleanTests){db.data.get('groups/A/users/alice').farm.moral=40;db.data.get('groups/B').members=['alice'];db.data.set('groups/B/users/alice',{farm:{...structuredClone(farm),cleanliness:70}});}
  if(ownCleanTests)Object.assign(db.data.get('groups/A/users/alice').farm,{cleanliness:70,moral:40});
  if(costTests){db.data.set('ops_feed_versions/global',{revision:'v1'});db.data.set('ops_announcements/read-test',{title:'初始公告',content:'測試內容',status:'published',priority:1,targetType:'all',targetAccountIds:[],audienceKeys:['all'],startAt:stamp-100,endAt:stamp+3600000,createdAt:stamp,updatedAt:stamp,showPopup:false});db.data.get('groups/A/users/bob').farm.stolenEggs20261116=50;}
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
   await page.exposeFunction('__saveDb',async op=>{if(op.kind==='query')return [...db.data].filter(([key,value])=>key.startsWith(op.path+'/')&&key.split('/').length===op.path.split('/').length+1&&(op.filters||[]).every(f=>f.op==='in'?f.value.includes(value[f.field]):value[f.field]===f.value)).map(([path,data])=>({path,data}));if(op.kind==='get')return structuredClone(db.data.get(op.path));throw Error('Private mode attempted direct Firestore write: '+op.kind);});
   await page.exposeFunction('__privateServer',async(name,data)=>{
    if(legacyBattlePageBackend&&data.action==='beginBattlePage')return{__fixtureError:{code:'functions/invalid-argument',message:'選項無效 [400]'}};
@@ -166,6 +169,30 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     }
     await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);await clickScene('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await clickScene('LobbyScene',group);await page.waitForFunction(g=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id===g&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0,group);await clickScene('LobbyScene','farm');if(waitForEntry)await page.waitForFunction(g=>{const s=window.__farmGame.scene.getScene('VisitScene');return s?.targetGroupId===g&&s.entryChecked&&!s.visitEncounterPending;},group);
    };
+   if(visitReturnTests){
+    const pressBack=async key=>{
+     const point=await page.evaluate(key=>{const s=window.__farmGame.scene.getScene(key),o=s.children.list.find(o=>o.input&&o.x===(key==='VisitScene'?55:42)&&o.y===50),p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},key);
+     await page.mouse.click(point.x,point.y);
+    };
+    for(let round=0;round<3;round++){
+     await enter(round%2?'C':'B');
+     await pressBack('VisitScene');
+     await page.waitForFunction(()=>window.__farmGame.scene.isActive('LobbyScene')&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0);
+     await pressBack('LobbyScene');
+     await page.waitForFunction(()=>window.__farmGame.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').entryChecked);
+     await page.waitForFunction(theme=>window.__farmGame.scene.getScene('MyFarmScene').displayedFarmSceneId===theme,visitReturnTheme);
+     // Resizing must still reflow the current live rubbish group and all current hens.
+     await page.setViewportSize({width:round%2?430:390,height:round%2?932:844});
+     assert.ok(await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene');return s.rubbishGroup.getChildren().length>0&&s.rubbishGroup.getChildren().every(o=>o.active&&Number.isFinite(o.x)&&Number.isFinite(o.y))&&s.hensGroup.every(o=>o.active); }));
+     const frame=await page.evaluate(()=>window.__farmGame.loop.frame);
+     await page.waitForTimeout(150);
+     assert.ok(await page.evaluate(frame=>window.__farmGame.loop.frame>frame,frame),'return must keep the game loop running');
+     assert.deepEqual(errors,[]);
+    }
+    await page.screenshot({path:`/tmp/gugu-visit-return-${visitReturnTheme}-390.png`});
+    assert.equal(calls.filter(c=>['stealEgg','collectEggs','helpClean','cleanOwn'].includes(c.action)).length,0);
+    console.log('PASS original HUD/public village/house/back/back path, three restarts with '+visitReturnTheme+' scenery, live rubbish/hens after resize, render loop alive and no transaction side effects');return;
+   }
    if(ownCleanTests){
     const own=()=>db.data.get('groups/A/users/alice').farm,commands=()=>calls.filter(c=>c.action==='cleanOwn');
     const openOwn=async()=>{await clickScene('MyFarmScene','coop');await page.locator('.farm-coop-clean-yes').waitFor();};

@@ -89,19 +89,24 @@ function reflowFarm(scene, oldMap, map) {
         const ref = oldMap.reference(object.x, object.y), point = map.point(ref.x, ref.y);
         object.setPosition(point.x, point.y);
     };
-    if (scene.coop) {
+    if (scene.coop?.active) {
         const p = map.point(370,322.5), size = coopGeometry(map);
         scene.coop.setPosition(p.x,p.y).setSize(size.width,size.height);
         scene.coop.input?.hitArea.setSize(size.width,size.height);
         positionCoopLevel(scene.coop, map);
     }
     if (scene.coopEgg?.active) positionFarmEgg(scene, scene.coopEgg);
-    [scene.farmSign,...(scene.gardenPlants || []),...(scene.rubbishGroup?.getChildren() || [])].forEach(move);
+    // Phaser keeps the Scene instance on restart but destroys its Groups, including
+    // Group.children. A cached theme may reflow before create replaces these fields.
+    const rubbish = scene.rubbishGroup;
+    const liveRubbish = rubbish?.scene === scene && rubbish.children ? rubbish.getChildren() : [];
+    [scene.farmSign,...(scene.gardenPlants || []),...liveRubbish].forEach(move);
     if (scene.gardenBounds) {
         const a=map.point(145,900),b=map.point(596,1194);
         scene.gardenBounds={left:a.x,top:a.y,right:b.x,bottom:b.y};
     }
     for (const hen of scene.hensGroup || []) {
+        if (!hen?.active || hen.scene !== scene) continue;
         // The deadline-driven nest walk recalculates its doorway each frame.
         if (hen.nesting) {
             move(hen);
@@ -123,7 +128,7 @@ function reflowFarm(scene, oldMap, map) {
         }
         if (dest && predator.moveTween?.isPlaying()) { predator.moveTween.updateTo('x',dest.x,true); predator.moveTween.updateTo('y',dest.y,true); }
     }
-    for (const boss of [scene.eagleEncounter,scene.dragonEncounter,scene.gorillaEncounter].filter(Boolean)) {
+    for (const boss of [scene.eagleEncounter,scene.dragonEncounter,scene.gorillaEncounter].filter(boss => boss && !boss.destroyed && boss.sprite?.active)) {
         boss.destination=boss.spec.destination ? boss.spec.destination() : {x:Math.max(boss.spec.minX||80,scene.coop.getBounds().left-(boss.spec.approachInset||34)),y:scene.coop.getBounds().bottom+10};
         if (boss.flight?.isPlaying()) { boss.flight.updateTo('x',boss.destination.x,true); boss.flight.updateTo('y',boss.destination.y,true); }
         else if (!boss.result) boss.sprite.setPosition(boss.destination.x,boss.destination.y);
