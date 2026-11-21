@@ -51,6 +51,18 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  for(const opened of opens){assert.equal(opened.status,200,JSON.stringify(opened.data.error||{}));assert.equal(opened.data.result.result.coins,23);}
  const afterChest=(await ownerRef.get()).data().farm;assert.equal(afterChest.coins,beforeChest.coins+23);assert.equal(afterChest.medicines,(beforeChest.medicines||0)+1);assert.equal(afterChest.chestCount,0);
  const recorded=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'listChests',status:'opened',requestId:'emulator-chest-history'},token);assert.equal(recorded.status,200,JSON.stringify(recorded.data.error||{}));assert.equal(recorded.data.result.result.rows.find(row=>row.id===chestId).result.coins,23);
+ // Real Firestore/Functions must use the saved policy, below legacy client thresholds.
+ const E=require('../functions/encounters.cjs'),encounters=structuredClone(E.DEFAULTS);
+ for(const value of Object.values(encounters))value.enabled=false;
+ encounters.mole={...encounters.mole,enabled:true,interval:2};
+ await db.doc('ops_game_config/encounters').set({monsters:encounters,revision:1});
+ await activeRef.delete();await ownerRef.update({'farm.coopLevel':2,'farm.gardenCatchCount':2,'farm.moleLastMilestone':0,'farm.moleChallenge':null});
+ const customEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-custom-mole'},token);
+ assert.equal(customEntry.status,200,JSON.stringify(customEntry.data.error||{}));assert.equal(customEntry.data.result.result.kind,'mole');assert.equal(customEntry.data.result.result.challenge.milestone,2);
+ encounters.mole.enabled=false;await db.doc('ops_game_config/encounters').set({monsters:encounters,revision:2});
+ const stillActive=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-custom-mole-active'},token);assert.equal(stillActive.status,200);assert.equal(stillActive.data.result.result.challenge.id,customEntry.data.result.result.challenge.id);
+ await activeRef.delete();await ownerRef.update({'farm.moleChallenge':null,'farm.moleLastMilestone':0});
+ const disabledEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-disabled-mole'},token);assert.equal(disabledEntry.status,200,JSON.stringify(disabledEntry.data.error||{}));assert.equal(disabledEntry.data.result.result,null);
  const changed=await call('nexusIdentity',{action:'changePassword',currentSecret:'old-secret',newSecret:'new-secret'},signed.data.idToken);assert.equal(changed.status,200);
  const stale=await call('gameOpsFarmTransaction',{...trade,requestId:'emulator-trade-002'},token);assert.equal(stale.status,401);
  const newLogin=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'new-secret'});assert.equal(newLogin.status,200);assert.equal((await signIn(newLogin.data.result.token)).status,200);

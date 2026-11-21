@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
 const chestFlowTests=process.env.CHEST_FLOW_TESTS==='1';
 const chestArtFail=process.env.CHEST_ART_FAIL==='1';
 const predatorRewardTests=process.env.PREDATOR_REWARD_TESTS==='1';
@@ -14,7 +15,7 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
 const visitReturnTests=process.env.VISIT_RETURN_TESTS==='1';
 const visitReturnTheme=process.env.VISIT_RETURN_THEME==='default'?'default':'fuji';
-const visitPreloadTests=process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
+const visitPreloadTests=encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
 const costTests=process.env.FARM_READ_COST_TESTS==='1';
@@ -49,6 +50,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
+ if(encounterConfigTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
@@ -120,6 +122,24 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(encounterConfigTests){
+   const own=db.data.get('groups/A/users/alice').farm,settings=db.data.get('ops_game_config/encounters');
+   settings.monsters.mole.enabled=true;settings.monsters.mole.interval=2;own.gardenCatchCount=2;
+   await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.entryChecked&&window.__farmGame.scene.getScene('MyFarmScene').moleEncounter);
+   assert.equal(db.data.get(pendingKey).kind,'mole');assert.equal(db.data.get(pendingKey).milestone,2);assert.equal(calls.filter(c=>c.action==='claimEncounter').length,0);
+   await page.locator('.farm-hud-bottom button[aria-label="倉庫"]').dispatchEvent('click');assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('WarehouseScene')),false);
+   await page.screenshot({path:'/tmp/gugu-configured-mole-entry.png'});
+   settings.monsters.mole.home.rate=0;settings.monsters.mole.visit.rate=0;
+   await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.entryChecked);
+   assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('MyFarmScene').moleEncounter),false);assert.ok(!db.data.get(pendingKey).kind);
+   settings.monsters.wolf.enabled=true;settings.monsters.wolf.visit.rate=100;
+   const click=async(find)=>{const point=await page.evaluate(find=>{const s=window.__farmGame.scene.getScene('LobbyScene'),o=find==='public'?s.publicVillageButton:find==='village'?s.content.list.find(o=>o.getData('villageGroupId')==='B'):s.content.list.find(o=>o.texture?.key==='coop'),p=s.cameras.main.matrix.transformPoint(o.x-s.cameras.main.scrollX,o.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},find);await page.mouse.click(point.x,point.y);};
+   await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);
+   await click('public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await click('village');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='B'&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0);await click('farm');
+   await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.entryChecked&&window.__farmGame.scene.getScene('VisitScene').wolf?.active);
+   assert.equal(db.data.get(pendingKey).kind,'wolf');assert.equal(calls.filter(c=>c.action==='claimEncounter').length,0);await page.waitForFunction(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),b=s.wolf?.getBounds();return b&&b.left>=0&&b.right<=s.scale.width&&b.top>=0&&b.bottom<=s.scale.height;});await page.screenshot({path:'/tmp/gugu-configured-wolf-visit.png'});
+   assert.deepEqual(errors,[]);console.log('PASS configurable server entry: mole threshold 2 below legacy 30, 0% disables, actual public village entry uses 100% wolf, no client milestone claims, battle blocks warehouse');return;
+  }
   if(chestFlowTests){
    releaseSettlement();
    const openCalls=()=>calls.filter(c=>c.action==='openChest'),own=()=>db.data.get('groups/A/users/alice').farm;

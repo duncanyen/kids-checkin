@@ -241,7 +241,7 @@ export default class MyFarmScene extends Phaser.Scene {
         this.checkingEntry = true;
         try {
             // 里程碑也只在進場檢查，抓蟲／收蛋及擊倒後不臨時開下一場。
-            for (const start of (this.farmData.giantChallenge ? [maybeStartGiant] : this.farmData.moleChallenge ? [maybeStartMole] : [maybeStartCobra, maybeStartGiant, maybeStartMole])) {
+            for (const start of (FARM_BACKEND_ENABLED ? [] : this.farmData.giantChallenge ? [maybeStartGiant] : this.farmData.moleChallenge ? [maybeStartMole] : [maybeStartCobra, maybeStartGiant, maybeStartMole])) {
                 if (!active()) return;
                 if (await start(this)) {
                     if (!active()) return;

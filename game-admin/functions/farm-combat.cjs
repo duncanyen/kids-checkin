@@ -1,8 +1,8 @@
 /** 後端怪物會話與結算。客戶端只送攻擊命令，不接受 damage／outcome／reward。 */
-const D=require('./domain.cjs');
+const D=require('./domain.cjs'),Encounters=require('./encounters.cjs');
 const CONFIG={wolf:{health:200,durationMs:60000,flightMs:0,item:'wolfFangs'},tiger:{health:200,durationMs:50000,flightMs:0,item:'tigerPelts',penalty:5},dragon:{health:600,durationMs:60000,flightMs:10000,item:'dragonScales',penalty:100,clearEggs:true},gorilla:{health:1000,durationMs:40000,flightMs:10000,item:'gorillaFangs',penalty:100,clearEggs:true},eagle:{health:200,durationMs:60000,flightMs:10000,item:'eagleFeathers',penalty:100},cobra:{health:6000,durationMs:50000,flightMs:8000,item:'cobraFangs',penalty:200},giant:{health:36000,durationMs:70000,flightMs:7000,item:'ancientStones',penalty:300},mole:{health:600,durationMs:60000,flightMs:0,item:'sweetPotatoes',penalty:100}};
 const apply=(farm,patch)=>({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
-async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id}){
+async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id,encounterSettings=async()=>({monsters:Encounters.DEFAULTS,revision:0})}){
  const [P,inventory,C,,G,giant,cobra,mole,progress]=models;
  const patch={},result={};let next=session,event=null,targetChanged=false,targetFarm=target?.farm||null;
  const start=(kind,milestone)=>{
@@ -51,18 +51,23 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
   }
   // 偷蛋前可以重新確認目前拜訪。相同目標的已清場／已結算許可直接重用，不能因重試重新抽怪。
   if(action==='visitEncounter'&&p.reusePermit===true&&next&&next.targetGroupId===target.groupId&&next.targetAccountId===target.accountId&&(next.visitPermit||next.kind))return{patch,result:null,session:next};
-  const requested=action==='claimEncounter'?D.enumValue(p.monster,['giant','cobra','mole']):null;
+  let requested=action==='claimEncounter'?D.enumValue(p.monster,['giant','cobra','mole']):null;
+  // Resume outstanding challenges even if an operator has disabled new spawns.
+  if(!requested&&!next)requested=['giant','mole','cobra'].find(kind=>farm[kind+'Challenge'])||null;
   let kind=requested,milestone;
   if(requested&&farm[requested+'Challenge']&&!next){const old=farm[requested+'Challenge'];next={...old,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:requested,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,health:CONFIG[requested].health,attacks:{melee:0,ranged:0}};if(stamp>=old.deadline)return{patch,result:{expired:true,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:requested},session:next};}
-  if(requested){milestone=requested==='giant'?giant.nextGiantMilestone(farm):requested==='cobra'?cobra.nextCobraMilestone(farm):mole.nextMoleMilestone(farm);if(milestone===null)return{patch,result:null,session:next};}
-  else{
-   const roll=(min,max)=>min+Math.floor(random()*(max-min+1));
-   if(action==='homeEncounter'){
-    if(next&&!next.harvested&&next.targetGroupId===actor.groupId&&next.targetAccountId===actor.accountId&&(next.result?.outcome==='win'||next.harvestPermit))return{patch,result:null,session:next};
-    kind=G.rollHomeBossEncounter(farm.coopLevel,roll);
-   }else{kind=G.rollVisitBossEncounter(targetFarm?.coopLevel,roll,30);if(!kind&&roll(1,30)===1)kind='tiger';if(!kind&&roll(1,10)===1)kind='wolf';}
-   if(!kind){if(action==='visitEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,targetGroupId:target.groupId,targetAccountId:target.accountId,visitPermit:true,result:{outcome:'clear'}};if(action==='homeEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,groupId:actor.groupId,targetGroupId:actor.groupId,targetAccountId:actor.accountId,harvestPermit:true,harvested:false,result:{outcome:'clear'}};return{patch,result:null,session:next};}
-  }
+  // A previously cleared home keeps its random-boss permit, but newly earned
+  // milestones must still be considered on entry (as the old client precheck did).
+  // verifyOnly returned above, so harvest/theft never perform this check.
+  const clearedHome=action==='homeEncounter'&&next&&!next.harvested&&next.targetGroupId===actor.groupId&&next.targetAccountId===actor.accountId&&(next.result?.outcome==='win'||next.harvestPermit);
+  if(clearedHome&&p.collectWhenClear===true)return{patch,result:null,session:next};
+  const settings=await encounterSettings(),place=action==='homeEncounter'||target.groupId===actor.groupId&&target.accountId===actor.accountId?'home':'visit';
+  const due=Encounters.rollMilestone(settings,farm,place,random,requested);
+  if(requested&&!due)return{patch,result:null,session:next};
+  if(due){kind=due.kind;milestone=due.milestone;}
+  else if(clearedHome)return{patch,result:null,session:next};
+  else kind=Encounters.rollRandom(settings,place,action==='homeEncounter'?farm.coopLevel:targetFarm?.coopLevel||1,random);
+  if(!kind){if(action==='visitEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,targetGroupId:target.groupId,targetAccountId:target.accountId,visitPermit:true,result:{outcome:'clear'}};if(action==='homeEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,groupId:actor.groupId,targetGroupId:actor.groupId,targetAccountId:actor.accountId,harvestPermit:true,harvested:false,result:{outcome:'clear'}};return{patch,result:null,session:next};}
   return{patch,result:start(kind,milestone),session:next};
  }
  if(!next||!next.id||p.battleId!==next.id)D.fail('failed-precondition','戰鬥會話已變更');

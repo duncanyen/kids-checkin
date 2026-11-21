@@ -236,7 +236,7 @@ export default class VisitScene extends Phaser.Scene {
         this.visitEncounterReady = false;
         const work = (async () => {
             try {
-                if (first && !verify && !prepared) {
+                if (!FARM_BACKEND_ENABLED && first && !verify && !prepared) {
                     const checks = this.myFarmData.giantChallenge ? [maybeStartGiant] : this.myFarmData.moleChallenge ? [maybeStartMole] : [maybeStartCobra, maybeStartGiant, maybeStartMole];
                     for (const check of checks) {
                         if (await check(this)) {

@@ -30,7 +30,7 @@ test('own/private/public farm reads and real profile queries retain intended acc
 
 test('chest records, reward snapshots and chest settings cannot be forged through client SDK',async()=>{
  const db=client('alice');
- for(const path of ['ops_farm_chests/owner/boxes/box1','ops_game_config/chests']){
+ for(const path of ['ops_farm_chests/owner/boxes/box1','ops_game_config/chests','ops_game_config/encounters']){
   await assertFails(setDoc(doc(db,path),{status:'unopened',snapshot:{dropRate:100,coins:{enabled:true,min:999999,max:999999}}}));
   await assertFails(getDoc(doc(db,path)));
  }

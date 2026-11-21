@@ -11,7 +11,7 @@ test('里程碑順序一致，已到期的舊事件只補確認一次，保留�
  assert.equal(visitEntryMilestone({giantChallenge:{},moleChallenge:{}}),'giant');assert.equal(visitEntryMilestone({moleChallenge:{}}),'mole');
  const calls=[],challenge={targetGroupId:'B',targetAccountId:'bob',health:600,deadline:123};
  const result=await prepareVisitEntry({...context,ownFarm:{moleChallenge:{}}},{active:()=>true,command:async(...args)=>{calls.push(args);return calls.length===1?{expired:true,result:{outcome:'loss'}}:{kind:'mole',challenge};}});
- assert.equal(calls[0][0],'claimEncounter');assert.equal(calls[0][1].monster,'mole');assert.deepEqual(calls[1],['visitEncounter',{targetGroupId:'B',targetAccountId:'bob',reusePermit:true}]);assert.equal(result.authorized.challenge,challenge);
+ assert.deepEqual(calls[0],['visitEncounter',{targetGroupId:'B',targetAccountId:'bob'}]);assert.deepEqual(calls[1],['visitEncounter',{targetGroupId:'B',targetAccountId:'bob',reusePermit:true}]);assert.equal(result.authorized.challenge,challenge);
 });
 test('切換選擇後丟棄回覆，不補送請求；其他雞舍未完成事件不得默默換目標',async()=>{
  let current=true,count=0;

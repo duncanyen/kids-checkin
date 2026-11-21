@@ -18,10 +18,11 @@ export function visitEntryMilestone(farm) {
 export async function prepareVisitEntry(context, { command, active }) {
     if (!active()) return null;
     const target = { targetGroupId: context.targetGroupId, targetAccountId: context.targetAccountId };
-    const monster = visitEntryMilestone(context.ownFarm);
-    let authorized = await command(monster ? 'claimEncounter' : 'visitEncounter', monster ? { monster, targetAccountId: target.targetAccountId, targetGroupId: target.targetGroupId } : target);
+    // The server owns milestone thresholds and probabilities; a stale farm snapshot
+    // must not decide which monster is requested during village loading.
+    let authorized = await command('visitEncounter', target);
     if (!active()) return null;
-    if ((monster && !authorized) || (authorized?.result && !authorized.challenge)) {
+    if (authorized?.result && !authorized.challenge) {
         authorized = await command('visitEncounter', { ...target, reusePermit: true });
         if (!active()) return null;
     }

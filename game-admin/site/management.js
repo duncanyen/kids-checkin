@@ -119,9 +119,35 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
             input(fields,'reason','寶箱設定修改原因','textarea','');
         },(v,form)=>({action:'saveChestConfig',value:{monster:kind,expectedRevision:chests.revision,reason:v.reason,config:{dropRate:Number(v.dropRate),coins:{enabled:v.coinsEnabled==='true',min:Number(v.coinMin),max:Number(v.coinMax)},items:[...form.querySelectorAll('[data-chest-item-row]')].map(row=>({itemId:row.querySelector('[data-chest-item]').value,quantity:Number(row.querySelector('[data-chest-quantity]').value)}))}}}),`確認更新「${chests.names[kind]}」之後掉落的寶箱？既有寶箱內容保持原樣。`);
     }
+    function editEncounter(kind){
+        const settings=data.encounters,value=settings.monsters[kind],milestone=['cobra','giant','mole'].includes(kind);
+        edit(`出現設定 · ${settings.names[kind]}`,fields=>{
+            fields.append(node('p','僅在下一次新的村落進場確認生效，不中斷現有戰鬥，也不在收蛋、偷蛋或抓蟲途中重新抽選。未通過機率時不消耗里程碑，下一次新進場再判定。','full muted'));
+            input(fields,'enabled','怪物出現狀態','select',String(value.enabled),true,{true:'啟用',false:'停用新出現'});
+            for(const [place,label]of [['home','自家村落'],['visit','拜訪村落']]){
+                const s=value[place],supported=place!=='home'||!['wolf','tiger'].includes(kind);
+                const title=node('p',label+(milestone?'（使用玩家自己的雞舍等級）':'（使用此村落目標雞舍等級）'),'full');fields.append(title);
+                const enabled=input(fields,place+'Enabled',label+'出現','select',String(s.enabled),true,{true:'啟用',false:'停用'});enabled.disabled=!supported;
+                const min=input(fields,place+'MinLevel',label+'最低雞舍等級','number',s.minLevel);min.min='1';min.max='5';min.step='1';min.disabled=!supported;
+                const rate=input(fields,place+'Rate',label+'出現機率（%）','number',s.rate);rate.min='0';rate.max='100';rate.step='any';rate.disabled=!supported;
+                if(!supported)fields.append(node('p','野狼與老虎現有戰鬥畫面只支援拜訪村落；此處保留原有適用範圍。','full muted'));
+            }
+            if(milestone){
+                const interval=input(fields,'interval',kind==='mole'?'每累計成功抓蟲次數':'每累計成功擊退次數','number',value.interval);interval.min='1';interval.max='1000000';interval.step='1';
+                if(kind!=='mole')for(const id of settings.killTypes)input(fields,'count_'+id,'累計 '+settings.names[id],'checkbox',value.killTypes.includes(id),false);
+                fields.append(node('p','保留已消耗的里程碑，不歸零。新門檻為高於上次紀錄的下一個倍數；累計類型只列已由後端可靠記錄的怪物。','full muted'));
+            }
+            input(fields,'reason','出現設定修改原因','textarea','');
+        },v=>({action:'saveEncounterConfig',value:{monster:kind,expectedRevision:settings.revision,reason:v.reason,config:{enabled:v.enabled==='true',...Object.fromEntries(['home','visit'].map(place=>[place,place==='home'&&['wolf','tiger'].includes(kind)?value.home:{enabled:v[place+'Enabled']==='true',minLevel:Number(v[place+'MinLevel']),rate:Number(v[place+'Rate'])}])),...(milestone?{interval:Number(v.interval)}:{}),...(['cobra','giant'].includes(kind)?{killTypes:settings.killTypes.filter(id=>v['count_'+id]==='on')}:{} )}}}),`確認更新「${settings.names[kind]}」的新進場出現條件？既有戰鬥與已領獎紀錄維持不變。`);
+    }
     function balance(){
         let card=section('護衛犬 · 可即時調整','這些設定已接到新版村落商店與後端租用交易。全域暫停租用時，個別商品仍保留自己的開放設定。');
         let wrap=node('div',undefined,'table-wrap');wrap.append(table(['犬種','日租','週租','攔截率','目前狀態','操作'],Object.entries(data.guardDogs.breeds).map(([id,b])=>[b.name,b.dayPrice,b.weekPrice,`${Math.round(b.biteChance*100)}%`,b.availability==='paused'?'租用服務暫停':b.rentable?'可租用':'尚未開放',button('編輯',()=>editGuard(id,b))])));card.append(wrap,button('重新讀取數值',()=>load()));
+        if(data.encounters){
+            card=section('怪物出現 · 條件與機率','只在進入村落時由後端判定。先檢查蛇王、巨人、地鼠里程碑；未觸發才抽一般怪物。金剛、烈火龍、巨飛鷹採互斥機率，合計不可超過100%；老虎在無上述怪物時判定，野狼在仍無怪物時判定，因此兩者為條件機率。');
+            const describe=(id,value,place)=>{const s=value[place];return !value.enabled||!s.enabled?'停用':`等級 ≥ ${s.minLevel} · ${s.rate.toLocaleString('zh-TW',{maximumFractionDigits:6})}%`;};
+            wrap=node('div',undefined,'table-wrap');wrap.append(table(['怪物','自家村落','拜訪村落','累計條件','操作'],Object.entries(data.encounters.monsters).map(([id,value])=>[data.encounters.names[id],describe(id,value,'home'),describe(id,value,'visit'),value.interval?`每 ${value.interval} 次`+(id==='mole'?'成功抓蟲':`擊退（${value.killTypes.map(k=>data.encounters.names[k]).join('、')}）`):'進場抽選',button('編輯出現條件',()=>editEncounter(id))])));card.append(wrap);
+        }
         if(data.chests){
             card=section('怪物寶箱 · 個別掉落與內容','每隻怪物獨立設定；只影響新掉落寶箱。尚未建立設定時使用預設值，已儲存設定不會被預設值覆蓋。');
             wrap=node('div',undefined,'table-wrap');wrap.append(table(['怪物','額外掉落率','開箱金幣','一併發放物品','操作'],Object.entries(data.chests.monsters).map(([id,value])=>[data.chests.names[id],value.dropRate+'%',value.coins.enabled?`${value.coins.min.toLocaleString()}–${value.coins.max.toLocaleString()}`:'停用',value.items.map(row=>(data.chests.catalog.find(item=>item.id===row.itemId)?.name||row.itemId)+' × '+row.quantity).join('、')||'無',button('編輯寶箱',()=>editChest(id))])));card.append(wrap);
