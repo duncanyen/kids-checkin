@@ -12,6 +12,7 @@ import { mountHalloween } from './halloween.js';
 import { ensureAssets, bossAssets } from './assets.js';
 import { farmLoading } from './loading-ui.js';
 import { onSceneExit } from './scene-cleanup.js';
+import { HornetEncounter } from './hornet.js';
 import { EagleEncounter } from './eagle.js';
 import { isFarmSave, copyFarmSave } from './save-store.js';
 import { configureFarmViewport } from './viewport.js';
@@ -74,8 +75,8 @@ export default class MyFarmScene extends Phaser.Scene {
         this.isHarvesting = false;
         this.harvestStatus = null;
         this.coopCleanDialog = null; this.coopCleanOpening = null; this.cleaningRequest = null;
-        this.eagleEncounter = null;
-        this.eagle = null;
+        this.eagleEncounter = null; this.hornetEncounter = null;
+        this.eagle = null; this.hornet = null;
         this.dragonEncounter = null;
         this.dragon = null;
         this.gorillaEncounter = null;
@@ -116,7 +117,7 @@ export default class MyFarmScene extends Phaser.Scene {
             this.isHarvesting = false;
             this.harvestStatus = null;
             this.resumingPendingBattle = false;
-            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
+            this.hornetEncounter?.destroy(); this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             if (this.unsubscribe) this.unsubscribe();
             if (this.farmInterval) clearInterval(this.farmInterval);
@@ -270,7 +271,8 @@ export default class MyFarmScene extends Phaser.Scene {
                 if (['giant','cobra','mole'].includes(kind)) {
                     this.preparingEncounter = false;
                     await restorePendingBattle(this, authorized.challenge);
-                } else if (kind === 'eagle') this.eagleEncounter = new EagleEncounter(this);
+                } else if (kind === 'hornet') this.hornetEncounter = new HornetEncounter(this);
+                else if (kind === 'eagle') this.eagleEncounter = new EagleEncounter(this);
                 else if (kind === 'gorilla') this.gorillaEncounter = new GorillaEncounter(this);
                 else this.dragonEncounter = new DragonEncounter(this);
             }
@@ -609,7 +611,7 @@ export default class MyFarmScene extends Phaser.Scene {
     async harvestEgg() {
         if (!this.isSaveReady() || farmActionsBlocked(this, hasPendingBackendBattle())) return;
         if (this.isHarvesting || this.eggResultDialog || this.resumingPendingBattle || this.preparingEncounter || this.preparingMole || this.preparingCobra || this.preparingGiant) return;
-        const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        const activeBoss = [this.hornetEncounter, this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;
@@ -674,9 +676,9 @@ export default class MyFarmScene extends Phaser.Scene {
 
             }));
             if (!active()) return;
-            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
-            this.eagleEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
-            this.eagle = null; this.dragon = null; this.gorilla = null;
+            this.hornetEncounter?.destroy(); this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy(); this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy();
+            this.eagleEncounter = null; this.hornetEncounter = null; this.dragonEncounter = null; this.gorillaEncounter = null; this.cobraEncounter = null; this.cobra = null;
+            this.eagle = null; this.hornet = null; this.dragon = null; this.gorilla = null;
             if (this.layingVisit?.task && result.collected[this.layingVisit.task.breed] > 0 && Date.now() >= this.layingVisit.task.dueAt) this.layingVisit.cancel();
             const warning = result.remaining ? `\n倉庫空間不足，尚有 ${result.remaining} 顆蛋\n留在雞舍，請擴充倉庫！` : '';
             const summary = (Object.entries(result?.collected || {}).filter(([, n]) => n).map(([key, n]) => `${BREEDS[key]?.eggName || key} +${n}`).join('\n') || '雞舍目前沒有蛋') + warning;

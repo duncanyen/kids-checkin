@@ -1,4 +1,4 @@
-import {createManagementUI} from './management.js?v=20261122-encounters';
+import {createManagementUI} from './management.js?v=20261123-hornet';
 import * as runtime from './runtime.js?v=20261116-taiwan';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};

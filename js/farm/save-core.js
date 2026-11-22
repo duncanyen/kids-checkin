@@ -11,7 +11,7 @@ export function isFarmSave(farm) {
     if (!farm || typeof farm !== 'object' || Array.isArray(farm)) return false;
     if (!Number.isFinite(farm.coins) || !Number.isInteger(farm.hens)) return false;
     const counts = ['coins', 'hens', 'inventoryEggs', 'silkieEggs', 'bresseEggs', 'onagadoriEggs', 'eggsReady', 'worms', 'earthworms',
-        'ancientStones', 'giantLastMilestone', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'katana', 'shortbow', 'huntingbow', 'paladinbow', 'eagleFeathers', 'sweetPotatoes', 'ironhammer', 'cobraFangs', 'gardenCatchCount', 'moleLastMilestone', 'cobraLastMilestone', 'warehouseLimit'];
+        'ancientStones', 'giantLastMilestone', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'katana', 'shortbow', 'huntingbow', 'paladinbow', 'eagleFeathers', 'honey', 'sweetPotatoes', 'ironhammer', 'cobraFangs', 'gardenCatchCount', 'moleLastMilestone', 'cobraLastMilestone', 'warehouseLimit'];
     if (counts.some(key => key in farm && (!Number.isFinite(farm[key]) || farm[key] < 0))) return false;
     if ('combatKills' in farm && (!farm.combatKills || typeof farm.combatKills !== 'object' || Array.isArray(farm.combatKills))) return false;
     if (farm.combatKills && ['wolf', 'tiger', 'eagle'].some(key => key in farm.combatKills && (!Number.isSafeInteger(farm.combatKills[key]) || farm.combatKills[key] < 0))) return false;

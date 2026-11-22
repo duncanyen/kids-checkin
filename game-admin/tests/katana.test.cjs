@@ -44,5 +44,5 @@ test('existing operations reward and chest catalogs recognize the new weapon usi
  const product=(await require('../functions/chests.cjs').catalog()).find(item=>item.id==='katana');assert.equal(product.name,'武士刀');assert.equal(product.enabled,true);
  const f=await require('./fixture.cjs').fixture(),balance=await f.admin('gameBalance');assert.equal(balance.weapons.katana.buyPrice,500000);assert.equal(balance.weapons.katana.sellPrice,30000);
  assert.equal(balance.weapons.katana.purchasable,false);
- assert.deepEqual(balance.weaponHitCounts.katana,{wolf:1,tiger:1,dragon:null,gorilla:10,eagle:null,cobra:40,mole:50,giant:50});
+ assert.deepEqual(balance.weaponHitCounts.katana,{wolf:1,tiger:1,dragon:null,gorilla:10,eagle:null,cobra:40,mole:50,giant:50,hornet:null});
 });

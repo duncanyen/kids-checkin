@@ -77,6 +77,23 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const swordSale={groupId:'emulator-group',action:'sellItem',item:'katana',quantity:1,price:1,requestId:'emulator-katana-sale'};const coinsBeforeSale=(await ownerRef.get()).data().farm.coins;
  const soldSword=await call('gameOpsFarmTransaction',swordSale,token);assert.equal(soldSword.status,200,JSON.stringify(soldSword.data.error||{}));assert.equal((await ownerRef.get()).data().farm.coins,coinsBeforeSale+30000);assert.equal((await ownerRef.get()).data().farm.katana,0);
  assert.equal((await call('gameOpsFarmTransaction',swordSale,token)).status,200);assert.equal((await ownerRef.get()).data().farm.coins,coinsBeforeSale+30000);
+ // Hornet uses actual callable validation and concurrent Firestore settlement.
+ const hornetPolicy=structuredClone(E.DEFAULTS);for(const value of Object.values(hornetPolicy))value.enabled=false;
+ hornetPolicy.hornet.enabled=true;hornetPolicy.hornet.home.rate=100;
+ await db.doc('ops_game_config/encounters').set({monsters:hornetPolicy,revision:3});
+ await activeRef.delete();await ownerRef.update({'farm.coopLevel':2,'farm.paladinbow':1,'farm.equippedBow':'paladinbow','farm.honey':0});
+ const hornetEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-hornet-entry'},token);
+ assert.equal(hornetEntry.status,200,JSON.stringify(hornetEntry.data.error||{}));const hornetBattle=hornetEntry.data.result.result.challenge;
+ assert.equal(hornetBattle.kind,'hornet');assert.equal(hornetBattle.deadline-hornetBattle.startedAt,50000);
+ await activeRef.update({startedAt:Date.now()-5000});
+ const hornetMelee=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battleId:hornetBattle.id,mode:'melee',count:1,requestId:'emulator-hornet-melee'},token);assert.equal(hornetMelee.status,400);
+ const hornetHit=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battleId:hornetBattle.id,mode:'ranged',count:10,requestId:'emulator-hornet-bow'},token);assert.equal(hornetHit.status,200,JSON.stringify(hornetHit.data.error||{}));assert.equal(hornetHit.data.result.result.health,0);
+ const hornetWins=await Promise.all(['a','b'].map(suffix=>call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleSettle',battleId:hornetBattle.id,requestId:'emulator-hornet-settle-'+suffix},token)));
+ for(const win of hornetWins){assert.equal(win.status,200,JSON.stringify(win.data.error||{}));assert.equal(win.data.result.result.outcome,'win');}
+ assert.equal((await ownerRef.get()).data().farm.honey,1);
+ const honeySale={groupId:'emulator-group',action:'sellItem',item:'honey',quantity:1,price:999999,requestId:'emulator-honey-sale'},beforeHoneySale=(await ownerRef.get()).data().farm.coins;
+ assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);
+ assert.equal((await ownerRef.get()).data().farm.coins,beforeHoneySale+300);assert.equal((await ownerRef.get()).data().farm.honey,0);
  const changed=await call('nexusIdentity',{action:'changePassword',currentSecret:'old-secret',newSecret:'new-secret'},signed.data.idToken);assert.equal(changed.status,200);
  const stale=await call('gameOpsFarmTransaction',{...trade,requestId:'emulator-trade-002'},token);assert.equal(stale.status,401);
  const newLogin=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'new-secret'});assert.equal(newLogin.status,200);assert.equal((await signIn(newLogin.data.result.token)).status,200);

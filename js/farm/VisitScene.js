@@ -17,6 +17,7 @@ import { killProgressPatch } from './combat-progress.js';
 import { mountHalloween } from './halloween.js';
 import { preloadSceneAssets, finishSceneAssets, ensureAssets, bossAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
+import { HornetEncounter } from './hornet.js';
 import { EagleEncounter } from './eagle.js';
 import { configureFarmViewport, farmView } from './viewport.js';
 import { visitorNotice } from './mail-store.js';
@@ -83,8 +84,8 @@ export default class VisitScene extends Phaser.Scene {
         this.moleEncounter = null; this.preparingMole = false; this.gardenSearching = false;
         this.cobraEncounter = null;
         this.cobra = null;
-        this.eagleEncounter = null;
-        this.eagle = null;
+        this.eagleEncounter = null; this.hornetEncounter = null;
+        this.eagle = null; this.hornet = null;
         this.dragonEncounter = null;
         this.dragon = null;
         this.gorillaEncounter = null;
@@ -145,7 +146,7 @@ export default class VisitScene extends Phaser.Scene {
         onSceneExit(this, () => {
             this.visitToken = null;
             this.events.off('farm-viewport-resize', this.resizeStealTargets);
-            this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
+            this.hornetEncounter?.destroy(); this.eagleEncounter?.destroy(); this.dragonEncounter?.destroy();
             this.gorillaEncounter?.destroy(); this.cobraEncounter?.destroy(); this.moleEncounter?.destroy(); this.giantEncounter?.destroy();
             this.groupUnsubscribes?.forEach(unsubscribe => unsubscribe());
             if (this.unsubscribeTarget) this.unsubscribeTarget(); 
@@ -277,6 +278,7 @@ export default class VisitScene extends Phaser.Scene {
                 if (encounter === 'giant') this.giantEncounter = new GiantEncounter(this, authorized.challenge);
                 else if (encounter === 'cobra') this.cobraEncounter = new CobraEncounter(this, authorized.challenge);
                 else if (encounter === 'mole') this.moleEncounter = new MoleEncounter(this, authorized.challenge);
+                else if (encounter === 'hornet') this.hornetEncounter = new HornetEncounter(this);
                 else if (encounter === 'eagle') this.eagleEncounter = new EagleEncounter(this);
                 else if (encounter === 'gorilla') this.spawnGorillaEvent();
                 else if (encounter === 'dragon') this.spawnDragonEvent();
@@ -320,13 +322,13 @@ export default class VisitScene extends Phaser.Scene {
 
     spawnGorillaEvent() {
         if(giantBlocksFarm(this))return;
-        if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
+        if ([this.hornetEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.gorillaEncounter = new GorillaEncounter(this);
     }
 
     spawnDragonEvent() {
         if(giantBlocksFarm(this))return;
-        if ([this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
+        if ([this.hornetEncounter, this.cobraEncounter, this.eagleEncounter, this.dragonEncounter, this.gorillaEncounter].some(boss => boss && !boss.destroyed)) return;
         this.dragonEncounter = new DragonEncounter(this);
     }
 
@@ -788,7 +790,7 @@ export default class VisitScene extends Phaser.Scene {
             this.showFloatingText('請先擊退怪物並完成結算！', '#FFD54F', 16);
             return;
         }
-        const activeBoss = [this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
+        const activeBoss = [this.hornetEncounter, this.giantEncounter, this.moleEncounter, this.cobraEncounter, this.eagleEncounter, this.gorillaEncounter, this.dragonEncounter].find(boss => boss && !boss.destroyed && !boss.settled);
         if (!recovery && activeBoss) {
             this.showFloatingText(`請先擊退${activeBoss.spec.name}並完成結算！`, '#FFD54F', 16);
             return;

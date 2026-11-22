@@ -144,9 +144,9 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
         let card=section('護衛犬 · 可即時調整','這些設定已接到新版村落商店與後端租用交易。全域暫停租用時，個別商品仍保留自己的開放設定。');
         let wrap=node('div',undefined,'table-wrap');wrap.append(table(['犬種','日租','週租','攔截率','目前狀態','操作'],Object.entries(data.guardDogs.breeds).map(([id,b])=>[b.name,b.dayPrice,b.weekPrice,`${Math.round(b.biteChance*100)}%`,b.availability==='paused'?'租用服務暫停':b.rentable?'可租用':'尚未開放',button('編輯',()=>editGuard(id,b))])));card.append(wrap,button('重新讀取數值',()=>load()));
         if(data.encounters){
-            card=section('怪物出現 · 條件與機率','只在進入村落時由後端判定。先檢查蛇王、巨人、地鼠里程碑；未觸發才抽一般怪物。金剛、烈火龍、巨飛鷹採互斥機率，合計不可超過100%；老虎在無上述怪物時判定，野狼在仍無怪物時判定，因此兩者為條件機率。');
+            card=section('怪物出現 · 條件與機率','只在進入村落時由後端判定。先檢查蛇王、巨人、地鼠里程碑；未觸發才抽一般怪物。金剛、烈火龍、巨飛鷹、虎頭蜂採互斥機率，合計不可超過100%；老虎在無上述怪物時判定，野狼在仍無怪物時判定，因此兩者為條件機率。');
             const describe=(id,value,place)=>{const s=value[place];return !value.enabled||!s.enabled?'停用':`等級 ≥ ${s.minLevel} · ${s.rate.toLocaleString('zh-TW',{maximumFractionDigits:6})}%`;};
-            wrap=node('div',undefined,'table-wrap');wrap.append(table(['怪物','自家村落','拜訪村落','累計條件','操作'],Object.entries(data.encounters.monsters).map(([id,value])=>[data.encounters.names[id],describe(id,value,'home'),describe(id,value,'visit'),value.interval?`每 ${value.interval} 次`+(id==='mole'?'成功抓蟲':`擊退（${value.killTypes.map(k=>data.encounters.names[k]).join('、')}）`):'進場抽選',button('編輯出現條件',()=>editEncounter(id))])));card.append(wrap);
+            wrap=node('div',undefined,'table-wrap');wrap.append(table(['怪物','自家村落','拜訪村落','累計條件','操作'],Object.entries(data.encounters.monsters).map(([id,value])=>[data.encounters.names[id],describe(id,value,'home'),describe(id,value,'visit'),value.interval?`每 ${value.interval} 次`+(id==='mole'?'成功抓蟲':`擊退（${value.killTypes.map(k=>data.encounters.names[k]).join('、')}）`):'進場抽選',button('編輯出現條件',()=>editEncounter(id))])));card.append(wrap);for(const note of data.encounters.notes||[])card.append(node('p',note,'muted'));
         }
         if(data.chests){
             card=section('怪物寶箱 · 個別掉落與內容','每隻怪物獨立設定；只影響新掉落寶箱。尚未建立設定時使用預設值，已儲存設定不會被預設值覆蓋。');
@@ -157,7 +157,7 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
         card=section('武器與怪物 · 版本設定／唯讀');
         wrap=node('div',undefined,'table-wrap');wrap.append(table(['武器','購買','回售','基礎傷害'],Object.values(data.weapons).map(w=>[w.name,w.buyPrice??'不可購買',w.sellPrice??'不可回售',w.damage])));card.append(wrap);
         const details=node('details'),summary=node('summary','查看怪物生命值與參考攻擊次數');details.append(summary);
-        const enemies={wolf:'野狼',tiger:'老虎',dragon:'暴龍',gorilla:'巨猩',eagle:'巨鷹',cobra:'眼鏡蛇王',mole:'地鼠',giant:'遠古巨人'};
+        const enemies={wolf:'野狼',tiger:'老虎',dragon:'暴龍',gorilla:'巨猩',eagle:'巨鷹',cobra:'眼鏡蛇王',mole:'地鼠',giant:'遠古巨人',hornet:'虎頭蜂'};
         details.append(table(['怪物','生命值'],Object.entries(data.enemyHealth).map(([id,hp])=>[enemies[id]||id,hp])));
         const matrix=node('div',undefined,'table-wrap');matrix.append(table(['武器',...Object.keys(enemies).map(id=>enemies[id])],Object.entries(data.weapons).map(([id,w])=>[w.name,...Object.keys(enemies).map(enemy=>data.weaponHitCounts[id][enemy]??'無效')])));details.append(node('p','攻擊次數依版本傷害換算，不含操作速度與戰鬥時限。','muted'),matrix);card.append(details);
     }

@@ -161,7 +161,7 @@ test('same-group self theft stays forbidden and cross-group self theft keeps mem
  }
  assert.deepEqual(f.farm(),before);assert.equal(f.db.data.get('groups/B/users/alice').farm.eggsReady,3);
 });
-test('all eight monster settlements keep canonical rewards, penalties and one verified victory',async()=>{
+test('all monster settlements keep canonical rewards, penalties and one verified victory',async()=>{
  const D=require('../functions/domain.cjs'),{CONFIG}=require('../functions/farm-combat.cjs');
  for(const [kind,config]of Object.entries(CONFIG)){
   const f=setup(),id='server-'+kind,started=Date.parse('2026-11-16T10:00:00+08:00');
@@ -169,7 +169,7 @@ test('all eight monster settlements keep canonical rewards, penalties and one ve
   f.db.data.set('ops_farm_active/'+D.hash('profile:A'),challenge);
   if(['giant','cobra','mole'].includes(kind))f.farm()[kind+'Challenge']=challenge;
   Object.assign(f.farm(),{battleaxe:1,equippedWeapon:'battleaxe',shortbow:1,equippedBow:'shortbow'});
-  const models=await import('../../js/farm/combat-rules.js'),mode=['eagle','dragon'].includes(kind)?'ranged':'melee',weapon=models.WEAPONS_CONFIG[mode==='ranged'?'shortbow':'battleaxe'],hits=Math.ceil(config.health/models.weaponDamage(weapon,kind));
+  const models=await import('../../js/farm/combat-rules.js'),mode=['eagle','dragon','hornet'].includes(kind)?'ranged':'melee',weapon=models.WEAPONS_CONFIG[mode==='ranged'?'shortbow':'battleaxe'],hits=Math.ceil(config.health/models.weaponDamage(weapon,kind));
   f.clock(Math.ceil(hits/(mode==='ranged'?10:20))*1000);
   await f.api.handle(f.req('battleAttack',{battleId:id,mode,count:hits,damage:999999}));
   const settled=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result,replayed=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result;

@@ -31,8 +31,8 @@ function normalizeCode(value){
     if(!/^[A-Z0-9]{8,64}$/.test(normalized))fail('invalid-argument','兌換碼須為 8–64 位英文字母或數字');return normalized;
 }
 const generateCode=()=>crypto.randomBytes(12).toString('hex').toUpperCase();
-const ITEM_NAMES={worms:'菜蟲',earthworms:'蚯蚓',wolfFangs:'狼牙',tigerPelts:'虎皮',dragonScales:'龍麟',gorillaFangs:'猩猩尖牙',cobraFangs:'眼鏡蛇王毒牙',eagleFeathers:'巨鷹羽毛',sweetPotatoes:'地瓜',medicines:'咕咕活力散',mace:'狼牙棒',battleaxe:'雙手斧',katana:'武士刀',ironhammer:'大鐵槌',shortbow:'短弓',huntingbow:'獵弓',paladinbow:'聖騎士弓'};
-const ITEMS=Object.freeze(['worms','earthworms','wolfFangs','tigerPelts','dragonScales','gorillaFangs','cobraFangs','eagleFeathers','sweetPotatoes','medicines','mace','battleaxe','katana','ironhammer','shortbow','huntingbow','paladinbow']);
+const ITEM_NAMES={honey:'蜂蜜',worms:'菜蟲',earthworms:'蚯蚓',wolfFangs:'狼牙',tigerPelts:'虎皮',dragonScales:'龍麟',gorillaFangs:'猩猩尖牙',cobraFangs:'眼鏡蛇王毒牙',eagleFeathers:'巨鷹羽毛',sweetPotatoes:'地瓜',medicines:'咕咕活力散',mace:'狼牙棒',battleaxe:'雙手斧',katana:'武士刀',ironhammer:'大鐵槌',shortbow:'短弓',huntingbow:'獵弓',paladinbow:'聖騎士弓'};
+const ITEMS=Object.freeze(['honey','worms','earthworms','wolfFangs','tigerPelts','dragonScales','gorillaFangs','cobraFangs','eagleFeathers','sweetPotatoes','medicines','mace','battleaxe','katana','ironhammer','shortbow','huntingbow','paladinbow']);
 function rewards(value){
     if(!Array.isArray(value)||!value.length||value.length>20)fail('invalid-argument','請設定 1–20 項獎勵');
     return value.map(r=>{

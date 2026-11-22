@@ -7,7 +7,7 @@ import { farmLoading } from './loading-ui.js';
 export const giantBlocksFarm=scene=>scene.preparingGiant||!!(scene.giantEncounter&&!scene.giantEncounter.destroyed&&!scene.giantEncounter.settled);
 function occupied(scene){
     return scene.preparingCobra||scene.preparingMole||scene.preparingEncounter||
-        ['moleEncounter','cobraEncounter','eagleEncounter','dragonEncounter','gorillaEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled)||
+        ['hornetEncounter','moleEncounter','cobraEncounter','eagleEncounter','dragonEncounter','gorillaEncounter'].some(key=>scene[key]&&!scene[key].destroyed&&!scene[key].settled)||
         ['wolf','tiger'].some(key=>scene[key]?.active&&!scene[key].getData('resolved'));
 }
 export async function maybeStartGiant(scene){

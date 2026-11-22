@@ -1,5 +1,5 @@
 const D=require('./domain.cjs');
-const MONSTERS=Object.freeze({wolf:'野狼',tiger:'老虎',eagle:'巨飛鷹',dragon:'飛龍',gorilla:'大猩猩',cobra:'眼鏡蛇',mole:'地鼠',giant:'遠古巨人'});
+const MONSTERS=Object.freeze({wolf:'野狼',tiger:'老虎',eagle:'巨飛鷹',dragon:'飛龍',gorilla:'大猩猩',cobra:'眼鏡蛇',mole:'地鼠',giant:'遠古巨人',hornet:'虎頭蜂'});
 const valid=n=>Number.isSafeInteger(n)&&n>=0;
 const empty=()=>({collectedEggs:0,stolenEggs:0,coinsAdded:0,coinsSpent:0,coinsNet:0,monsters:Object.fromEntries(Object.keys(MONSTERS).map(key=>[key,0]))});
 /** 只供 Firestore 觸發器呼叫：保存已提交存檔的變化，不將前端存檔當作防作弊驗證。 */
@@ -13,7 +13,7 @@ function createReporting({db,now=Date.now}){
   metrics.collectedEggs=increase(before.reportHarvestedEggs,after.reportHarvestedEggs,'收蛋');
   metrics.stolenEggs=increase(before.reportStolenEggs,after.reportStolenEggs,'偷蛋');
   for(const key of ['wolf','tiger'])metrics.monsters[key]=increase(before.combatKills?.[key],after.combatKills?.[key],key);
-  for(const key of ['eagle','dragon','gorilla','cobra','mole','giant']){
+  for(const key of ['eagle','dragon','gorilla','cobra','mole','giant','hornet']){
    const list=farm=>{const value=farm[key+'Results'];if(value!==undefined&&!Array.isArray(value)&&JSON.stringify(before[key+'Results'])!==JSON.stringify(after[key+'Results']))warnings.push(key+'：戰鬥紀錄格式無效');return Array.isArray(value)?value:[];};
    const previous=new Set(list(before).map(row=>row?.id));
    metrics.monsters[key]=new Set(list(after).filter(row=>row?.id&&row.outcome==='win'&&!previous.has(row.id)).map(row=>row.id)).size;

@@ -1,6 +1,7 @@
 import {routeBackendChallenge,settleBackendBattle,farmNow} from './backend-client.js';
 import {bossAssets,ensureAssets} from './assets.js';
 import {WEAPONS_CONFIG} from './combat-rules.js';
+import {HornetEncounter} from './hornet.js';
 import {EagleEncounter} from './eagle.js';
 import {DragonEncounter} from './dragon.js';
 import {GorillaEncounter} from './gorilla.js';
@@ -23,7 +24,7 @@ export async function restorePendingBattle(scene,challenge){
   const claim={kind:challenge.kind,challenge};
   // 拜訪時留下的挑戰仍回到原目標，由 VisitScene 重新核對並取得目前狀態。
   if(!routeBackendChallenge(scene,claim))return;
-  const constructors={eagle:EagleEncounter,dragon:DragonEncounter,gorilla:GorillaEncounter,giant:GiantEncounter,cobra:CobraEncounter,mole:MoleEncounter};
+  const constructors={hornet:HornetEncounter,eagle:EagleEncounter,dragon:DragonEncounter,gorilla:GorillaEncounter,giant:GiantEncounter,cobra:CobraEncounter,mole:MoleEncounter};
   const Encounter=Object.hasOwn(constructors,challenge.kind)?constructors[challenge.kind]:null;if(!Encounter)throw Error('未完成戰鬥的類型無法在自家恢復');
   const key=challenge.kind+'Encounter',existing=scene[key];
   if(existing&&!existing.destroyed&&existing.id===challenge.id)return;

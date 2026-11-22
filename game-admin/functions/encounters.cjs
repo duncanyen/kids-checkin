@@ -1,7 +1,7 @@
 /** Trusted entry-only encounter policy. Defaults preserve the shipped encounter distribution. */
 const D=require('./domain.cjs');
-const NAMES={wolf:'大野狼',tiger:'老虎',dragon:'烈火龍',gorilla:'金剛',eagle:'巨飛鷹',cobra:'眼鏡蛇王',giant:'遠古巨人',mole:'地鼠'};
-const BOSS_ORDER=['gorilla','dragon','eagle'],MILESTONE_ORDER=['cobra','giant','mole'];
+const NAMES={wolf:'大野狼',tiger:'老虎',dragon:'烈火龍',gorilla:'金剛',eagle:'巨飛鷹',cobra:'眼鏡蛇王',giant:'遠古巨人',mole:'地鼠',hornet:'虎頭蜂'};
+const BOSS_ORDER=['gorilla','dragon','eagle','hornet'],MILESTONE_ORDER=['cobra','giant','mole'];
 const KILL_TYPES=['wolf','tiger','eagle'];
 const scope=(enabled,minLevel,rate)=>({enabled,minLevel,rate});
 const DEFAULTS={
@@ -10,6 +10,7 @@ const DEFAULTS={
  dragon:{enabled:true,home:scope(true,2,5),visit:scope(true,2,100/30)},
  gorilla:{enabled:true,home:scope(true,3,100/30),visit:scope(true,3,100/30)},
  eagle:{enabled:true,home:scope(true,3,5),visit:scope(true,3,5)},
+ hornet:{enabled:true,home:scope(true,2,100/30),visit:scope(true,2,100/30)},
  cobra:{enabled:true,home:scope(true,2,100),visit:scope(true,2,100),interval:100,killTypes:['wolf','tiger','eagle']},
  giant:{enabled:true,home:scope(true,3,100),visit:scope(true,3,100),interval:50,killTypes:['wolf','tiger']},
  mole:{enabled:true,home:scope(true,2,100),visit:scope(true,2,100),interval:30}
@@ -32,11 +33,22 @@ function validateAll(monsters){
  const result=Object.fromEntries(Object.keys(NAMES).map(id=>[id,validate(id,monsters[id]??DEFAULTS[id])]));
  for(const place of ['home','visit'])for(let level=1;level<=5;level++){
   const sum=BOSS_ORDER.reduce((n,id)=>{const v=result[id],s=v[place];return n+(v.enabled&&s.enabled&&level>=s.minLevel?s.rate:0);},0);
-  if(sum>100+1e-9)D.fail('invalid-argument',`${place==='home'?'自家':'拜訪'}等級 ${level} 的金剛、烈火龍與巨飛鷹合計機率不可超過 100%`);
+  if(sum>100+1e-9)D.fail('invalid-argument',`${place==='home'?'自家':'拜訪'}等級 ${level} 的金剛、烈火龍、巨飛鷹與虎頭蜂合計機率不可超過 100%`);
  }
  return result;
 }
-async function config(db,t){const snap=await(t?t.get(db.doc('ops_game_config/encounters')):db.doc('ops_game_config/encounters').get()),raw=snap.data()||{};return{monsters:validateAll(raw.monsters||{}),revision:raw.revision||0,updatedAt:raw.updatedAt||null};}
+function mergeSaved(saved={}){
+ const monsters=Object.fromEntries(Object.keys(NAMES).map(id=>[id,validate(id,saved[id]??DEFAULTS[id])])),notes=[];
+ // Existing operators may already allocate 100% to old monsters. Do not silently
+ // scale their saved rates or make entry fail when introducing a new default.
+ if(!Object.hasOwn(saved,'hornet'))for(const place of ['home','visit']){
+  if([1,2,3,4,5].some(level=>BOSS_ORDER.reduce((n,id)=>n+(available(monsters[id],place,level)?monsters[id][place].rate:0),0)>100+1e-9)){
+   monsters.hornet[place].enabled=false;notes.push(`${place==='home'?'自家':'拜訪'}舊設定的互斥機率已滿，虎頭蜂暫未啟用；請調整機率後再啟用。`);
+  }
+ }
+ return{monsters,notes};
+}
+async function config(db,t){const snap=await(t?t.get(db.doc('ops_game_config/encounters')):db.doc('ops_game_config/encounters').get()),raw=snap.data()||{},merged=mergeSaved(raw.monsters||{});return{monsters:validateAll(merged.monsters),notes:merged.notes,revision:raw.revision||0,updatedAt:raw.updatedAt||null};}
 const hit=(rate,random)=>rate===100||rate>0&&random()*100<rate;
 function available(value,place,level){return value.enabled&&value[place].enabled&&level>=value[place].minLevel;}
 function milestone(kind,value,farm,place){
@@ -55,4 +67,4 @@ function rollRandom(settings,place,level,random){
  if(place==='visit')for(const id of ['tiger','wolf']){const v=settings.monsters[id];if(available(v,place,level)&&hit(v[place].rate,random))return id;}
  return null;
 }
-module.exports={NAMES,DEFAULTS,BOSS_ORDER,MILESTONE_ORDER,KILL_TYPES,validate,validateAll,config,hit,milestone,rollMilestone,rollRandom};
+module.exports={NAMES,DEFAULTS,BOSS_ORDER,MILESTONE_ORDER,KILL_TYPES,validate,validateAll,mergeSaved,config,hit,milestone,rollMilestone,rollRandom};

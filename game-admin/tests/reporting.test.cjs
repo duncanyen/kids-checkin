@@ -3,7 +3,7 @@ const {fixture}=require('./fixture.cjs');
 const {createReporting,MONSTERS}=require('../functions/reporting.cjs');
 const {MemoryDB}=require('./memory-db.cjs');
 const baseline=()=>({coins:100,hens:3,combatKills:{wolf:0,tiger:0}});
-async function setup(){const f=await fixture(),capture=createReporting({db:f.db,now:f.now}).capture,base=f.now();f.clock(base+1000);return{...f,capture,base,event:(patch={})=>({id:'event-1',groupId:'A',accountId:'alice',before:baseline(),after:{...baseline(),coins:150,reportHarvestedEggs:5,reportStolenEggs:1,combatKills:{wolf:2,tiger:1},...Object.fromEntries(['eagle','dragon','gorilla','cobra','mole','giant'].map(key=>[key+'Results',[{id:key+'-win',outcome:'win'},{id:key+'-loss',outcome:'loss'}]]))},occurredAt:base,...patch})};}
+async function setup(){const f=await fixture(),capture=createReporting({db:f.db,now:f.now}).capture,base=f.now();f.clock(base+1000);return{...f,capture,base,event:(patch={})=>({id:'event-1',groupId:'A',accountId:'alice',before:baseline(),after:{...baseline(),coins:150,reportHarvestedEggs:5,reportStolenEggs:1,combatKills:{wolf:2,tiger:1},...Object.fromEntries(['eagle','dragon','gorilla','cobra','mole','giant','hornet'].map(key=>[key+'Results',[{id:key+'-win',outcome:'win'},{id:key+'-loss',outcome:'loss'}]]))},occurredAt:base,...patch})};}
 test('reports require current server admin claims; absent history is explicit and no secrets escape',async()=>{
  const f=await setup();await assert.rejects(f.service.adminAPI({data:{action:'farmReport',payload:{}}}),{code:'unauthenticated'});
  await assert.rejects(f.service.adminAPI({auth:{uid:'alice',token:{}},data:{action:'farmReport',payload:{}}}),{code:'permission-denied'});

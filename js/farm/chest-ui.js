@@ -3,7 +3,7 @@ import { farmCommand } from './backend-client.js';
 import { readGameContext } from '../game-context.js';
 import { playChestFrames } from './chest-animation.js';
 const BASE='assets/farm/chest/v1/';
-const NAMES={wolf:'大野狼',tiger:'老虎',gorilla:'金剛',mole:'地鼠',dragon:'烈火龍',eagle:'巨飛鷹',cobra:'眼鏡蛇王',giant:'遠古巨人'};
+const NAMES={wolf:'大野狼',tiger:'老虎',gorilla:'金剛',mole:'地鼠',dragon:'烈火龍',eagle:'巨飛鷹',cobra:'眼鏡蛇王',giant:'遠古巨人',hornet:'虎頭蜂'};
 let art;
 function preload(url){return new Promise((resolve,reject)=>{const image=new Image(),timer=setTimeout(()=>finish(Error('寶箱動畫載入逾時')),8000);function finish(error){clearTimeout(timer);image.onload=image.onerror=null;error?reject(error):resolve();}image.onload=()=>finish();image.onerror=()=>finish(Error('寶箱動畫載入失敗'));image.src=url;});}
 export function prepareChestArt(){

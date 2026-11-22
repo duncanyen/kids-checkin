@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const hornetTests=process.env.HORNET_TESTS==='1';
 const katanaTests=process.env.KATANA_TESTS==='1';
 const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
 const chestFlowTests=process.env.CHEST_FLOW_TESTS==='1';
@@ -16,7 +17,7 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
 const visitReturnTests=process.env.VISIT_RETURN_TESTS==='1';
 const visitReturnTheme=process.env.VISIT_RETURN_THEME==='default'?'default':'fuji';
-const visitPreloadTests=katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
+const visitPreloadTests=hornetTests||katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
 const costTests=process.env.FARM_READ_COST_TESTS==='1';
@@ -47,11 +48,13 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const farm={coins:12345,hens:1,hensState:[{id:'hen1',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,lastLayTime:stamp,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,coopLevel:3,cleanliness:30,equippedWeapon:'club',worms:2,earthworms:3};
  if(dragonStartupTests)farm.coopLevel=2;
  if(predatorRewardTests)Object.assign(farm,{equippedWeapon:'ironhammer',ironhammer:1});
+ if(hornetTests)Object.assign(farm,{shortbow:1,huntingbow:1,paladinbow:1,equippedBow:'paladinbow'});
  if(battleRewardTests)Object.assign(farm,{equippedWeapon:'ironhammer',ironhammer:1,equippedBow:'paladinbow',paladinbow:1});
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
  if(encounterConfigTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
  const token={nexusProfileId:'alice',nexusAccountId:'alice',nexusSessionVersion:1,photoGroupId:'A',photoAccountId:'alice'},auth={uid:I.profileUid('alice'),token};
@@ -64,7 +67,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  if(predatorRewardTests)db.data.get('groups/B/users/bob').farm.coopLevel=1;
  if(battleRewardTests&&!chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:Object.fromEntries(Object.entries(require('../game-admin/functions/chests.cjs').DEFAULTS).map(([kind,value])=>[kind,{...value,dropRate:0}]))});
  if(chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:{eagle:{dropRate:100,coins:{enabled:true,min:137,max:137},items:[]}}});
- const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
+ const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
   const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
@@ -90,7 +93,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(battleRewardTests&&data.action==='battleSettle')lastBattleResult=structuredClone(response.result);
 if(chestFlowTests&&data.action==='openChest'&&chestReplyDelay)await new Promise(resolve=>setTimeout(resolve,chestReplyDelay));
-if(katanaTests)await page.evaluate(()=>window.__privateEmitAll?.());
+if(katanaTests||hornetTests)await page.evaluate(()=>window.__privateEmitAll?.());
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
@@ -121,9 +124,41 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(unavailableEggResult==='module')await page.route('**/js/farm/egg-result-ui.js',r=>r.fulfill({status:503,contentType:'text/javascript',body:'fixture optional module unavailable'}));
   if(unavailableEggResult==='image')await page.route('**/assets/farm/egg-result/v1/egg_result_panel.png',r=>r.fulfill({status:503,body:'fixture optional image unavailable'}));
   if(stealResultTests||entryEncounterTests||battleExitTests)await page.clock.setFixedTime(new Date(stamp));
+  if(hornetTests)await page.clock.install({time:new Date(stamp)});
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(hornetTests){
+   releaseSettlement();const own=()=>db.data.get('groups/A/users/alice').farm;
+   const progress=async()=>(await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}})).challenges.mission.tasks.find(t=>t.type==='DEFEAT_MONSTER').count;
+   const point=(key,x,y)=>page.evaluate(({key,x,y})=>{const s=window.__farmGame.scene.getScene(key),p=s.cameras.main.matrix.transformPoint(x-s.cameras.main.scrollX,y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{key,x,y});
+   const click=async(key,find)=>{await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const p=await page.evaluate(({key,find})=>{const s=window.__farmGame.scene.getScene(key);let o;
+    if(find==='hornet')o=s.hornetEncounter.sprite;else if(find==='bow')o=s.hornetEncounter.archery.button;else if(find==='back')o=s.children.list.find(o=>o.input?.enabled&&o.x===55&&o.y===60);
+    else if(find==='other')o=s.categoryTabs.tabs.get('other').background;else if(find==='sell')o=s.children.list.find(o=>o.input?.enabled&&o.x===290&&o.y===180);else if(find==='honey')o=s.sellContainer.list.find(o=>o.catalogKey==='honey'&&o.input?.enabled);else if(find==='confirm')o=s.dialogContainer.list.find(o=>o.input?.enabled&&o.x===130&&o.y===505);
+    else if(find==='public')o=s.publicVillageButton;else if(find==='village')o=s.content.list.find(o=>o.getData('villageGroupId')==='B');else if(find==='farm')o=s.content.list.find(o=>o.texture?.key==='coop');
+    if(!o)throw Error('Missing hornet test target '+find);const world=o.getWorldTransformMatrix().transformPoint(0,0);return{x:world.x,y:world.y};},{key,find}),q=await point(key,p.x,p.y);await page.mouse.click(q.x,q.y);};
+   await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter?.sprite?.active);
+   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.health),600);
+   await page.waitForTimeout(2200);await page.screenshot({path:'/tmp/gugu-hornet-home.png'});
+   const beforeHit=calls.filter(c=>c.action==='battleAttack').length;await click('MyFarmScene','hornet');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.health),600);assert.equal(calls.filter(c=>c.action==='battleAttack').length,beforeHit);
+   await page.locator('.farm-hud-bottom button[aria-label="倉庫"]').dispatchEvent('click');assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('WarehouseScene')),false);
+   // Stabilize only target movement for repeatable projectile collision testing.
+   // Screenshots above and pure route tests cover the actual moving entry route.
+   await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),b=s.hornetEncounter;s.events.off('update',b.motion);b.animateHornet=()=>{};b.sprite.setPosition(195,350);});
+   backendNow=stamp+18000;await click('MyFarmScene','bow');
+   for(let i=0;i<14;i++){
+    if(await page.evaluate(()=>!!window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.result))break;
+    const aim=await page.evaluate(()=>{const b=window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter,o=b.archery.bow,r=b.sprite.getBounds(),t=.45;return{x:o.x,y:o.y,px:o.x-(r.centerX-o.x)/t/9,py:o.y-((r.centerY-o.y)/t-180*t)/9};}),a=await point('MyFarmScene',aim.x,aim.y),z=await point('MyFarmScene',aim.px,aim.py);
+    await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(z.x,z.y,{steps:5});await page.mouse.up();await page.waitForTimeout(650);
+   }
+   const reward=page.locator('[data-result-kind=battle]');await reward.waitFor();assert.match(await reward.textContent(),/擊退 虎頭蜂/);assert.match(await reward.textContent(),/蜂蜜/);assert.equal(own().honey,1);assert.equal(own().coins,12345);assert.equal(await progress(),1);assert.equal(await reward.locator('.farm-battle-reward-row:not(.is-empty)').count(),1);assert.equal(await reward.locator('.farm-battle-reward-row.is-empty').count(),2);await page.screenshot({path:'/tmp/gugu-hornet-victory.png'});await page.setViewportSize({width:320,height:568});await page.waitForTimeout(150);assert.equal(await reward.locator('button[aria-label=確定]').isVisible(),true);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'/tmp/gugu-hornet-victory-small.png'});await page.setViewportSize({width:390,height:844});await page.waitForTimeout(150);
+   await reward.locator('button[aria-label=確定]').click();await page.locator('.farm-hud-bottom button[aria-label="倉庫"]').click();await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene'));await click('WarehouseScene','other');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('WarehouseScene').visibleWarehouseItems.some(i=>i.key==='honey')),true);await page.screenshot({path:'/tmp/gugu-honey-warehouse.png'});await click('WarehouseScene','back');await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked);
+   await page.locator('.farm-hud-bottom button[aria-label="商店"]').click();await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));await click('ShopScene','sell');await click('ShopScene','other');await click('ShopScene','honey');assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').dialogSubText.text),/300/);await page.screenshot({path:'/tmp/gugu-honey-sale.png'});await click('ShopScene','confirm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').farmData.honey===0);assert.equal(own().coins,12645);await click('ShopScene','back');await page.waitForFunction(()=>window.__farmGame.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').entryChecked);
+   own().coins=50;await page.evaluate(()=>window.__privateEmitAll());const targetBefore=structuredClone(db.data.get('groups/B/users/bob').farm);
+   await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);await click('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await click('LobbyScene','village');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='B'&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0);await click('LobbyScene','farm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.hornetEncounter?.sprite?.active&&window.__farmGame.scene.getScene('VisitScene').entryChecked);
+   await page.screenshot({path:'/tmp/gugu-hornet-visit.png'});backendNow=db.data.get(pendingKey).deadline+1;await page.clock.fastForward(51000);await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').hornetEncounter?.settled);assert.equal(own().coins,0);assert.equal(own().honey,0);assert.equal(await progress(),1);assert.deepEqual(db.data.get('groups/B/users/bob').farm,targetBefore);assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').hornetEncounter.warning.text),/扣除 50 金幣/);await page.screenshot({path:'/tmp/gugu-hornet-timeout.png'});assert.deepEqual(errors,[]);
+   console.log('PASS hornet real home/public entry, melee no-op, bow projectile victory, honey warehouse/sale300, visit timeout caps actor loss at50 with target intact, one verified daily event');return;
+  }
   if(katanaTests){
    releaseSettlement();const own=()=>db.data.get('groups/A/users/alice').farm;
    const click=async(key,find)=>{await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const point=await page.evaluate(({key,find})=>{const s=window.__farmGame.scene.getScene(key);let o;

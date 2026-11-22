@@ -17,7 +17,7 @@ test('encounter defaults preserve exclusive boss rates, sequential tiger/wolf an
   const value=(i+.5)/6000;
   for(const place of ['home','visit']){
    const values=[value,.99,.99];let next=0;const random=()=>values[next++]??.99;
-   const actual=E.rollRandom(settings(),place,level,random);
+   const oldPolicy=settings();oldPolicy.monsters.hornet.enabled=false;const actual=E.rollRandom(oldPolicy,place,level,random);
    let legacyNext=0;const roll=(min,max)=>min+Math.floor((values[legacyNext++]??.99)*(max-min+1));
    let expected=place==='home'?G.rollHomeBossEncounter(level,roll):G.rollVisitBossEncounter(level,roll,30);
    if(place==='visit'){if(!expected&&roll(1,30)===1)expected='tiger';if(!expected&&roll(1,10)===1)expected='wolf';}
@@ -36,7 +36,7 @@ test('encounter validators reject invalid probabilities, level/counter gates and
  for(const minLevel of [0,6,1.5])assert.throws(()=>E.validate('eagle',{...E.DEFAULTS.eagle,home:{...E.DEFAULTS.eagle.home,minLevel}}));
  for(const killTypes of [[],['dragon'],['wolf','wolf']])assert.throws(()=>E.validate('cobra',{...E.DEFAULTS.cobra,killTypes}));
  const s=settings();s.monsters.eagle.home.rate=100;assert.throws(()=>E.validateAll(s.monsters),/合計機率/);
- s.monsters.dragon.enabled=false;s.monsters.gorilla.enabled=false;assert.equal(E.validateAll(s.monsters).eagle.home.rate,100);
+ s.monsters.dragon.enabled=false;s.monsters.gorilla.enabled=false;s.monsters.hornet.enabled=false;assert.equal(E.validateAll(s.monsters).eagle.home.rate,100);
 });
 test('per-monster configuration is privileged, versioned, audited, idempotent and keeps other saved monsters',async()=>{
  const f=await fixture(),config={...structuredClone(E.DEFAULTS.wolf),visit:{enabled:true,minLevel:2,rate:100}};

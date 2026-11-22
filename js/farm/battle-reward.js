@@ -1,5 +1,6 @@
 // Names and inventory IDs match the existing combat and warehouse contracts.
 export const BATTLE_REWARDS = Object.freeze({
+    hornet:{stunnedFrame:43,name:'虎頭蜂',item:'honey',itemName:'蜂蜜',icon:'honey'},
     eagle:{stunnedFrame:6,name:'巨飛鷹',item:'eagleFeathers',itemName:'巨鷹羽毛',icon:'eagle-feather'},
     dragon:{stunnedFrame:16,name:'烈火龍',item:'dragonScales',itemName:'龍麟',icon:'dragon_scale'},
     gorilla:{stunnedFrame:9,name:'大金剛',item:'gorillaFangs',itemName:'猩猩尖牙',icon:'gorilla_fang'},

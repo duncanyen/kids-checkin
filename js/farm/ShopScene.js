@@ -97,7 +97,7 @@ export default class ShopScene extends Phaser.Scene {
             if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.purchasable === false ? '尚未開賣' : weapon.buyPrice + '金幣'}`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
             if (weapon.sellPrice) sell.push([key, weapon.icon, `${weapon.name}\n${weapon.sellPrice}金幣`, () => this.openTradeModal('sell', key, weapon.name, weapon.sellPrice)]);
         }
-        for (const [key, icon, name, price] of [['ancientStones', 'ancient_stone', '遠古巨石', 600], ['sweetPotatoes', 'sweet_potato', '地瓜', 300], ['cobraFangs', 'cobra_fang', '眼鏡蛇王毒牙', COBRA_FANG_PRICE], ['eagleFeathers', 'eagle-feather', '巨鷹羽毛', 300], ['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
+        for (const [key, icon, name, price] of [['honey','honey','蜂蜜',300],['ancientStones', 'ancient_stone', '遠古巨石', 600], ['sweetPotatoes', 'sweet_potato', '地瓜', 300], ['cobraFangs', 'cobra_fang', '眼鏡蛇王毒牙', COBRA_FANG_PRICE], ['eagleFeathers', 'eagle-feather', '巨鷹羽毛', 300], ['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
             sell.push([key, icon, `${name}\n${price}金幣`, () => this.openTradeModal('sell', key, name, price)]);
         }
         for (const [mode, entries] of Object.entries(this.catalog)) {
@@ -191,7 +191,7 @@ export default class ShopScene extends Phaser.Scene {
             '近戰：木棒／狼牙棒／雙手斧／大鐵槌／武士刀',
             ...[['giant', '遠古巨人'], ['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer', 'katana'], ' 下')}`),
             '', '弓箭：短弓／獵弓／聖騎士弓',
-            ...[['giant', '遠古巨人'], ['dragon', '烈火龍'], ['eagle', '巨飛鷹'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
+            ...[['giant', '遠古巨人'], ['dragon', '烈火龍'], ['eagle', '巨飛鷹'], ['hornet','虎頭蜂'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
             '蛇王可用近戰或弓；飛行怪物需用弓。',
             `地鼠：Lv.2，每抓到${MOLE_CONFIG.catchInterval}隻蟲，限時60秒。`
         ].join('\n');

@@ -1,6 +1,6 @@
 /** 後端怪物會話與結算。客戶端只送攻擊命令，不接受 damage／outcome／reward。 */
 const D=require('./domain.cjs'),Encounters=require('./encounters.cjs');
-const CONFIG={wolf:{health:200,durationMs:60000,flightMs:0,item:'wolfFangs'},tiger:{health:200,durationMs:50000,flightMs:0,item:'tigerPelts',penalty:5},dragon:{health:600,durationMs:60000,flightMs:10000,item:'dragonScales',penalty:100,clearEggs:true},gorilla:{health:1000,durationMs:40000,flightMs:10000,item:'gorillaFangs',penalty:100,clearEggs:true},eagle:{health:200,durationMs:60000,flightMs:10000,item:'eagleFeathers',penalty:100},cobra:{health:6000,durationMs:50000,flightMs:8000,item:'cobraFangs',penalty:200},giant:{health:36000,durationMs:70000,flightMs:7000,item:'ancientStones',penalty:300},mole:{health:600,durationMs:60000,flightMs:0,item:'sweetPotatoes',penalty:100}};
+const CONFIG={hornet:{health:600,durationMs:50000,flightMs:10000,item:'honey',penalty:100},wolf:{health:200,durationMs:60000,flightMs:0,item:'wolfFangs'},tiger:{health:200,durationMs:50000,flightMs:0,item:'tigerPelts',penalty:5},dragon:{health:600,durationMs:60000,flightMs:10000,item:'dragonScales',penalty:100,clearEggs:true},gorilla:{health:1000,durationMs:40000,flightMs:10000,item:'gorillaFangs',penalty:100,clearEggs:true},eagle:{health:200,durationMs:60000,flightMs:10000,item:'eagleFeathers',penalty:100},cobra:{health:6000,durationMs:50000,flightMs:8000,item:'cobraFangs',penalty:200},giant:{health:36000,durationMs:70000,flightMs:7000,item:'ancientStones',penalty:300},mole:{health:600,durationMs:60000,flightMs:0,item:'sweetPotatoes',penalty:100}};
 const apply=(farm,patch)=>({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
 async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id,encounterSettings=async()=>({monsters:Encounters.DEFAULTS,revision:0})}){
  const [P,inventory,C,,G,giant,cobra,mole,progress]=models;
@@ -75,7 +75,7 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
  if(action==='battleSettle')return{patch,result:resolve(),session:next,event,targetFarm:targetChanged?targetFarm:null};
  if(stamp>=next.deadline)D.fail('deadline-exceeded','戰鬥時間已到，請結算');
  const mode=D.enumValue(p.mode,['melee','ranged']),count=D.integer(p.count,1,1000),weapon=mode==='ranged'?C.equippedBow(farm):C.equippedWeapon(farm);
- if(!weapon||mode==='ranged'&&!['dragon','eagle','cobra','giant'].includes(next.kind)||mode==='melee'&&['dragon','eagle'].includes(next.kind))D.fail('failed-precondition','此武器無法攻擊怪物');
+ if(!weapon||mode==='ranged'&&!['dragon','eagle','cobra','giant','hornet'].includes(next.kind)||mode==='melee'&&['dragon','eagle','hornet'].includes(next.kind))D.fail('failed-precondition','此武器無法攻擊怪物');
  const damage=C.weaponDamage(weapon,next.kind);if(!damage)D.fail('failed-precondition','此武器無法造成傷害');
  // 每個會話累計速率與小幅 burst；重送由外層收據去重，不能跨裝備／跨裝置重設額度。
  const attacks={...next.attacks},cap=Math.floor((stamp-next.startedAt)/1000*(mode==='ranged'?10:20))+4;

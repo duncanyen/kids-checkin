@@ -115,8 +115,8 @@ function createManagement({db,now}){
             }else if(action==='saveEncounterConfig'){
                 const kind=D.enumValue(payload.monster,Object.keys(Encounters.NAMES)),ref=db.doc('ops_game_config/encounters'),old=await t.get(ref);
                 requireVersion(old.data(),payload.expectedRevision);
-                const monsters=Encounters.validateAll({...old.data()?.monsters,[kind]:Encounters.validate(kind,payload.config)});
-                before={monster:kind,config:old.data()?.monsters?.[kind]||Encounters.DEFAULTS[kind],revision:old.data()?.revision||0};after={monster:kind,config:monsters[kind],revision:(old.data()?.revision||0)+1};target=ref.path;
+                const previous=Encounters.mergeSaved(old.data()?.monsters||{}).monsters,monsters=Encounters.validateAll({...previous,[kind]:Encounters.validate(kind,payload.config)});
+                before={monster:kind,config:previous[kind],revision:old.data()?.revision||0};after={monster:kind,config:monsters[kind],revision:(old.data()?.revision||0)+1};target=ref.path;
                 const next={monsters,revision:after.revision,updatedAt:stamp,updatedBy:uid};commit=()=>t.set(ref,next);response={monster:kind,revision:next.revision};
             }else if(action==='saveChestConfig'){
                 const kind=D.enumValue(payload.monster,Object.keys(Chests.MONSTERS)),ref=db.doc('ops_game_config/chests'),old=await t.get(ref);

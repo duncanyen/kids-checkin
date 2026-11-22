@@ -52,7 +52,7 @@ test('battle grants original loot plus one unopened chest atomically, without co
 });
 test('0% and missed rolls retain original loot; every monster gets the configured locked tier',async()=>{
  for(const [kind,defaultConfig]of Object.entries(C.DEFAULTS)){
-  const f=setup(),b=await f.execute(kind);assert.ok(b.chest);const chest=f.db.data.get(C.ownerPath(f.actor)+'/'+b.chest.id);assert.deepEqual(chest.snapshot,defaultConfig);
+  const f=setup(),b=await f.execute(kind);if(kind==='hornet'){assert.equal(b.chest,undefined);assert.equal(f.farm().honey,1);continue;}assert.ok(b.chest);const chest=f.db.data.get(C.ownerPath(f.actor)+'/'+b.chest.id);assert.deepEqual(chest.snapshot,defaultConfig);
  }
  for(const rate of [0,20]){const f=setup();f.configure('eagle',setting({dropRate:rate}));f.roll(.9);const b=await f.execute();assert.equal(b.chest,undefined);assert.equal(f.farm().eagleFeathers,1);assert.equal(f.farm().coins,100);}
 });

@@ -64,6 +64,7 @@ export default class WarehouseScene extends Phaser.Scene {
             { key: 'tigerPelts', name: '虎皮', icon: 'tiger_pelt' },
             { key: 'dragonScales', name: '龍麟', icon: 'dragon_scale' },
             { key: 'cobraFangs', name: '眼鏡蛇王毒牙', icon: 'cobra_fang' },
+            { key:'honey',name:'蜂蜜',icon:'honey' },
             { key: 'eagleFeathers', name: '巨鷹羽毛', icon: 'eagle-feather' },
             { key: 'gorillaFangs', name: '猩猩尖牙', icon: 'gorilla_fang' },
             { key: 'medicines', name: '咕咕活力散', icon: 'medicine' },
@@ -234,7 +235,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
-        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'ancientStones' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'cobraFangs' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
+        if (Object.values(BREEDS).some(b => b.eggKey === key) || key === 'coins' || key === 'inventoryEggs' || key === 'ancientStones' || key === 'wolfFangs' || key === 'tigerPelts' || key === 'dragonScales' || key === 'cobraFangs' || key === 'honey' || key === 'eagleFeathers' || key === 'gorillaFangs' || key === 'medicines') {
             this.actionPanel.setVisible(false);
             if (key === 'medicines') {
                 this.showMsg('病雞可直接點選治療；雞舍內病雞請返回農場點選雞舍治療。', '#FFD54F');

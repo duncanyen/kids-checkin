@@ -1,5 +1,7 @@
 // Public file descriptions; safe to inspect without Phaser or Firebase.
 export const ASSET_MANIFEST = {
+    hornet:{type:'atlas',image:'hornet-sheet.png',json:'hornet-sheet.json'},
+    honey:{type:'image',image:'honey.png'},
     chest_inventory:{type:'image',image:'chest/v1/chest_inventory_icon.png'},
     scene_default_thumb:{type:'image',image:'scenes/default-thumb.webp'},
     scene_fuji_thumb:{type:'image',image:'scenes/fuji-japanese-v2-thumb.webp'},

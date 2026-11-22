@@ -1,9 +1,10 @@
 /** Chest configuration and fulfilment. No client outcomes, prices or random values are accepted. */
 const crypto=require('node:crypto'),D=require('./domain.cjs');
-const MONSTERS=Object.freeze({wolf:'大野狼',tiger:'老虎',gorilla:'金剛',mole:'地鼠',dragon:'烈火龍',eagle:'巨飛鷹',cobra:'眼鏡蛇王',giant:'遠古巨人'});
+const MONSTERS=Object.freeze({wolf:'大野狼',tiger:'老虎',gorilla:'金剛',mole:'地鼠',dragon:'烈火龍',eagle:'巨飛鷹',cobra:'眼鏡蛇王',giant:'遠古巨人',hornet:'虎頭蜂'});
 const MAX_COINS=1000000000;
 const DEFAULTS=Object.freeze(Object.fromEntries(Object.keys(MONSTERS).map(kind=>{
  const tier=['wolf','tiger','gorilla'].includes(kind)?[20,1,100]:['mole','dragon','eagle'].includes(kind)?[50,100,200]:[80,500,1000];
+ if(kind==='hornet')return[kind,{dropRate:0,coins:{enabled:false,min:0,max:0},items:[]}];
  return[kind,{dropRate:tier[0],coins:{enabled:true,min:tier[1],max:tier[2]},items:[]}];
 })));
 // All nested documents inherit the existing ops_* client-deny rules.
@@ -15,7 +16,7 @@ async function catalog(){
  const items=Object.entries(P.BREEDS).map(([id,b])=>({id,name:b.name,kind:'chicken',breed:id,icon:b.texture,enabled:b.purchasable!==false,reason:b.purchasable===false?'此雞種尚未開放交付':'',maxQuantity:20}));
  for(const [id,w]of Object.entries(C.WEAPONS_CONFIG))items.push({id,name:w.name,kind:'stock',icon:w.icon,enabled:!!w.buyPrice,reason:w.buyPrice?'':'初始武器不是可交付的商店商品',maxQuantity:1000});
  const eggs=Object.fromEntries(Object.values(P.BREEDS).map(b=>[b.eggKey,{name:b.eggName,icon:b.eggIcon}]));
- const other={ancientStones:['遠古巨石','ancient_stone'],sweetPotatoes:['地瓜','sweet_potato'],medicines:['咕咕活力散','medicine'],worms:['菜蟲','worm'],earthworms:['蚯蚓','earthworm'],wolfFangs:['狼牙','fang'],tigerPelts:['虎皮','tiger_pelt'],dragonScales:['龍麟','dragon_scale'],gorillaFangs:['猩猩尖牙','gorilla_fang'],cobraFangs:['眼鏡蛇王毒牙','cobra_fang'],eagleFeathers:['巨鷹羽毛','eagle-feather']};
+ const other={honey:['蜂蜜','honey'],ancientStones:['遠古巨石','ancient_stone'],sweetPotatoes:['地瓜','sweet_potato'],medicines:['咕咕活力散','medicine'],worms:['菜蟲','worm'],earthworms:['蚯蚓','earthworm'],wolfFangs:['狼牙','fang'],tigerPelts:['虎皮','tiger_pelt'],dragonScales:['龍麟','dragon_scale'],gorillaFangs:['猩猩尖牙','gorilla_fang'],cobraFangs:['眼鏡蛇王毒牙','cobra_fang'],eagleFeathers:['巨鷹羽毛','eagle-feather']};
  for(const id of I.INVENTORY_KEYS){
   if(items.some(item=>item.id===id))continue;
   const value=eggs[id]||other[id]&&{name:other[id][0],icon:other[id][1]};

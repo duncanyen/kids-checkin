@@ -187,7 +187,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }else if(action==='sellItem'){
     const item=D.id(p.item),weapon=Object.hasOwn(combat.WEAPONS_CONFIG,item)?combat.WEAPONS_CONFIG[item]:null,egg=Object.values(P.BREEDS).find(b=>b.eggKey===item);
     // 價格依現有 ShopScene／constants／boss rules，不接受客戶端 unitPrice。
-    const otherPrices={ancientStones:600,sweetPotatoes:300,cobraFangs:600,eagleFeathers:300,worms:1,earthworms:3,wolfFangs:20,tigerPelts:50,dragonScales:200,gorillaFangs:300};
+    const otherPrices={honey:300,ancientStones:600,sweetPotatoes:300,cobraFangs:600,eagleFeathers:300,worms:1,earthworms:3,wolfFangs:20,tigerPelts:50,dragonScales:200,gorillaFangs:300};
     const price=weapon?.sellPrice??egg?.eggPrice??(Object.hasOwn(otherPrices,item)?otherPrices[item]:null);
     if(!price)D.fail('invalid-argument','此商品尚未接上後端出售');
     if(weapon&&(farm.equippedWeapon===item||farm.equippedBow===item))D.fail('failed-precondition','請先卸下武器');

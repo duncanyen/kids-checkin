@@ -2,7 +2,7 @@ const CLEARANCE = 40; // Half a hen plus a little room around the visible body.
 const EPSILON = 1;
 
 export function getThreatZones(scene) {
-    return [scene.wolf, scene.tiger, scene.dragon, scene.gorilla, scene.eagle, scene.cobra, scene.giant,
+    return [scene.hornet, scene.wolf, scene.tiger, scene.dragon, scene.gorilla, scene.eagle, scene.cobra, scene.giant,
         scene.guardDog?.getData?.('henObstacle') ? scene.guardDog : null]
         .filter(animal => animal?.active && animal.visible && animal.alpha > 0.05)
         .map(animal => {
