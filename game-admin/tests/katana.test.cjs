@@ -8,18 +8,23 @@ function setup(){
  const req=(action,data={})=>({auth:{uid:'profile'},data:{action,groupId:'A',requestId:crypto.randomUUID(),...data}});
  return{db,api,req,stamp,farm:()=>db.data.get('groups/A/users/alice').farm};
 }
-test('server katana purchase/equip/unequip/sale are priced by the trusted catalog and idempotent',async()=>{
- const f=setup(),purchase=f.req('buyWeapon',{item:'katana',quantity:1,price:1});await f.api.handle(purchase);assert.equal(f.farm().coins,500000);assert.equal(f.farm().katana,1);
- await f.api.handle(purchase);assert.equal(f.farm().katana,1);assert.equal(f.farm().coins,500000);
+test('unreleased katana cannot be bought, while existing owners can equip and sell once at 30000',async()=>{
+ const f=setup(),purchase=f.req('buyWeapon',{item:'katana',quantity:1,price:1,purchasable:true});
+ for(let i=0;i<2;i++)await assert.rejects(f.api.handle(purchase),error=>error.code==='failed-precondition'&&error.message.includes('尚未開賣'));
+ assert.equal(f.farm().coins,1000000);assert.equal(f.farm().katana,undefined);
+ f.farm().katana=1; // Existing ownership, not a simulated purchase.
  await f.api.handle(f.req('equipWeapon',{item:'katana',currentlyEquipped:false}));assert.equal(f.farm().equippedWeapon,'katana');
  await assert.rejects(f.api.handle(f.req('sellItem',{item:'katana',quantity:1})),/卸下/);
  await f.api.handle(f.req('equipWeapon',{item:'katana',currentlyEquipped:true}));assert.equal(f.farm().equippedWeapon,'club');
- const sell=f.req('sellItem',{item:'katana',quantity:1,price:999999});await f.api.handle(sell);assert.equal(f.farm().coins,515000);assert.equal(f.farm().katana,0);await f.api.handle(sell);assert.equal(f.farm().coins,515000);
+ const sell=f.req('sellItem',{item:'katana',quantity:1,price:999999});await f.api.handle(sell);assert.equal(f.farm().coins,1030000);assert.equal(f.farm().katana,0);await f.api.handle(sell);assert.equal(f.farm().coins,1030000);
  await assert.rejects(f.api.handle(f.req('equipWeapon',{item:'katana',currentlyEquipped:false})),/倉庫/);
 });
-test('insufficient coins and full storage cannot debit or grant a katana',async()=>{
- const f=setup();f.farm().coins=499999;await assert.rejects(f.api.handle(f.req('buyWeapon',{item:'katana',quantity:1})),/金幣不足/);assert.equal(f.farm().coins,499999);assert.equal(f.farm().katana,undefined);
- f.farm().coins=1000000;f.farm().worms=100;await assert.rejects(f.api.handle(f.req('buyWeapon',{item:'katana',quantity:1})),/容量不足/);assert.equal(f.farm().coins,1000000);assert.equal(f.farm().katana,undefined);
+test('sale lock ignores forged client flags, funds and storage while other weapons remain purchasable',async()=>{
+ const f=setup();
+ for(const [coins,worms]of [[499999,0],[1000000,100],[1000000,0]]){
+  Object.assign(f.farm(),{coins,worms});await assert.rejects(f.api.handle(f.req('buyWeapon',{item:'katana',quantity:1,purchasable:true})),/尚未開賣/);assert.equal(f.farm().coins,coins);assert.equal(f.farm().katana,undefined);
+ }
+ await f.api.handle(f.req('buyWeapon',{item:'mace',quantity:1}));assert.equal(f.farm().coins,998000);assert.equal(f.farm().mace,1);
 });
 test('actual backend attack and settlement require exactly the requested katana hits for each ground monster',async()=>{
  const {CONFIG}=require('../functions/farm-combat.cjs');
@@ -37,6 +42,7 @@ test('actual backend attack and settlement require exactly the requested katana 
 test('existing operations reward and chest catalogs recognize the new weapon using its actual item ID',async()=>{
  assert.equal(D.rewards([{kind:'item',itemKey:'katana',amount:1}])[0].itemKey,'katana');assert.equal(D.ITEM_NAMES.katana,'武士刀');
  const product=(await require('../functions/chests.cjs').catalog()).find(item=>item.id==='katana');assert.equal(product.name,'武士刀');assert.equal(product.enabled,true);
- const f=await require('./fixture.cjs').fixture(),balance=await f.admin('gameBalance');assert.equal(balance.weapons.katana.buyPrice,500000);assert.equal(balance.weapons.katana.sellPrice,15000);
+ const f=await require('./fixture.cjs').fixture(),balance=await f.admin('gameBalance');assert.equal(balance.weapons.katana.buyPrice,500000);assert.equal(balance.weapons.katana.sellPrice,30000);
+ assert.equal(balance.weapons.katana.purchasable,false);
  assert.deepEqual(balance.weaponHitCounts.katana,{wolf:1,tiger:1,dragon:null,gorilla:10,eagle:null,cobra:40,mole:50,giant:50});
 });

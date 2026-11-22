@@ -66,12 +66,17 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  // New weapon is priced, equipped and applied by the actual callable backend.
  await ownerRef.update({'farm.coins':500000,'farm.katana':0});
  const swordBuy={groupId:'emulator-group',action:'buyWeapon',item:'katana',quantity:1,price:1,requestId:'emulator-katana-buy'};
- const boughtSword=await call('gameOpsFarmTransaction',swordBuy,token);assert.equal(boughtSword.status,200,JSON.stringify(boughtSword.data.error||{}));assert.equal((await ownerRef.get()).data().farm.coins,0);assert.equal((await ownerRef.get()).data().farm.katana,1);
- assert.equal((await call('gameOpsFarmTransaction',swordBuy,token)).status,200);assert.equal((await ownerRef.get()).data().farm.katana,1);
+ const boughtSword=await call('gameOpsFarmTransaction',swordBuy,token);assert.equal(boughtSword.status,400,JSON.stringify(boughtSword.data));assert.match(boughtSword.data.error.message,/尚未開賣/);assert.equal((await ownerRef.get()).data().farm.coins,500000);assert.equal((await ownerRef.get()).data().farm.katana,0);
+ assert.equal((await call('gameOpsFarmTransaction',swordBuy,token)).status,400);assert.equal((await ownerRef.get()).data().farm.katana,0);
+ await ownerRef.update({'farm.katana':1}); // An existing owner's sword remains usable.
  const equippedSword=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'equipWeapon',item:'katana',currentlyEquipped:false,requestId:'emulator-katana-equip'},token);assert.equal(equippedSword.status,200,JSON.stringify(equippedSword.data.error||{}));
  await activeRef.set({id:'emulator-katana-wolf',kind:'wolf',groupId:'emulator-group',targetGroupId:'emulator-group',targetAccountId:accountId,startedAt:Date.now()-4000,deadline:Date.now()+60000,health:200,attacks:{melee:0,ranged:0}});
  const swordHit=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battleId:'emulator-katana-wolf',mode:'melee',count:1,requestId:'emulator-katana-hit'},token);assert.equal(swordHit.status,200,JSON.stringify(swordHit.data.error||{}));assert.equal(swordHit.data.result.result.health,0);
  const swordWin=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleSettle',battleId:'emulator-katana-wolf',requestId:'emulator-katana-settle'},token);assert.equal(swordWin.status,200,JSON.stringify(swordWin.data.error||{}));assert.equal(swordWin.data.result.result.outcome,'win');
+ const swordUnequip=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'equipWeapon',item:'katana',currentlyEquipped:true,requestId:'emulator-katana-unequip'},token);assert.equal(swordUnequip.status,200);
+ const swordSale={groupId:'emulator-group',action:'sellItem',item:'katana',quantity:1,price:1,requestId:'emulator-katana-sale'};const coinsBeforeSale=(await ownerRef.get()).data().farm.coins;
+ const soldSword=await call('gameOpsFarmTransaction',swordSale,token);assert.equal(soldSword.status,200,JSON.stringify(soldSword.data.error||{}));assert.equal((await ownerRef.get()).data().farm.coins,coinsBeforeSale+30000);assert.equal((await ownerRef.get()).data().farm.katana,0);
+ assert.equal((await call('gameOpsFarmTransaction',swordSale,token)).status,200);assert.equal((await ownerRef.get()).data().farm.coins,coinsBeforeSale+30000);
  const changed=await call('nexusIdentity',{action:'changePassword',currentSecret:'old-secret',newSecret:'new-secret'},signed.data.idToken);assert.equal(changed.status,200);
  const stale=await call('gameOpsFarmTransaction',{...trade,requestId:'emulator-trade-002'},token);assert.equal(stale.status,401);
  const newLogin=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'new-secret'});assert.equal(newLogin.status,200);assert.equal((await signIn(newLogin.data.result.token)).status,200);

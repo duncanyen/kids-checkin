@@ -5,7 +5,7 @@ export const WEAPONS_CONFIG = {
     mace: { name: '狼牙棒', damage: 10, damageByEnemy: { giant: 45, mole: 3, wolf: 10, tiger: 10, dragon: 0, eagle: 0, gorilla: 5, cobra: 20 }, icon: 'mace', buyPrice: 2000, sellPrice: 1000 },
     battleaxe: { name: '雙手斧', damage: 20, damageByEnemy: { giant: 60, mole: 4, wolf: 40, tiger: 20, dragon: 0, eagle: 0, gorilla: 25, cobra: 30 }, icon: 'battleaxe', buyPrice: 5000, sellPrice: 2500 },
     ironhammer: { name: '大鐵槌', damage: 0, damageByEnemy: { giant: 90, wolf: 100, tiger: 50, gorilla: 50, cobra: 60, mole: 6, dragon: 0, eagle: 0 }, icon: 'ironhammer', buyPrice: 15000, sellPrice: 7500 },
-    katana: { name: '武士刀', damage: 0, damageByEnemy: { wolf: 200, tiger: 200, mole: 12, cobra: 150, gorilla: 100, giant: 720, dragon: 0, eagle: 0 }, icon: 'katana', buyPrice: 500000, sellPrice: 15000 },
+    katana: { name: '武士刀', damage: 0, damageByEnemy: { wolf: 200, tiger: 200, mole: 12, cobra: 150, gorilla: 100, giant: 720, dragon: 0, eagle: 0 }, icon: 'katana', buyPrice: 500000, sellPrice: 30000, purchasable: false },
     shortbow: { name: '短弓', ranged: true, damage: 0, damageByEnemy: { giant: 120, dragon: 30, eagle: 20, cobra: 100 }, icon: 'shortbow', buyPrice: 1000, sellPrice: 500 },
     huntingbow: { name: '獵弓', ranged: true, damage: 0, damageByEnemy: { giant: 180, dragon: 60, eagle: 40, cobra: 150 }, icon: 'huntingbow', buyPrice: 5000, sellPrice: 2500 },
     paladinbow: { name: '聖騎士弓', ranged: true, damage: 0, damageByEnemy: { giant: 240, dragon: 120, eagle: 70, cobra: 300 }, icon: 'paladinbow', buyPrice: 10000, sellPrice: 5000 }

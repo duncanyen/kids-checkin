@@ -182,6 +182,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     patch=P.tradePoultry(farm,D.enumValue(p.breed,Object.keys(P.BREEDS)),qty,D.enumValue(p.direction,['buy','sell']),stamp,ids);
    }else if(action==='buyWeapon'||action==='buyMedicine'){
     const item=action==='buyMedicine'?'medicines':D.id(p.item),price=action==='buyMedicine'?10:(Object.hasOwn(combat.WEAPONS_CONFIG,item)?combat.WEAPONS_CONFIG[item].buyPrice:null);
+    if(action==='buyWeapon'&&combat.WEAPONS_CONFIG[item]?.purchasable===false)D.fail('failed-precondition',`${combat.WEAPONS_CONFIG[item].name}尚未開賣`);
     if(!price)D.fail('invalid-argument','此商品不可購買');capacity(qty);spend(price*qty);patch['farm.'+item]=(farm[item]||0)+qty;
    }else if(action==='sellItem'){
     const item=D.id(p.item),weapon=Object.hasOwn(combat.WEAPONS_CONFIG,item)?combat.WEAPONS_CONFIG[item]:null,egg=Object.values(P.BREEDS).find(b=>b.eggKey===item);

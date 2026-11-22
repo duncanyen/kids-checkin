@@ -94,7 +94,7 @@ export default class ShopScene extends Phaser.Scene {
         buy.push(['coop4', 'coop', '特級雞舍\n即將推出', () => this.showMsg('特級雞舍即將推出', '#FFD54F')],
             ['coop5', 'coop', '頂級雞舍\n即將推出', () => this.showMsg('頂級雞舍即將推出', '#FFD54F')]);
         for (const [key, weapon] of Object.entries(WEAPONS_CONFIG)) {
-            if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.buyPrice}金幣`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
+            if (weapon.buyPrice) buy.push([key, weapon.icon, `${weapon.name}\n${weapon.purchasable === false ? '尚未開賣' : weapon.buyPrice + '金幣'}`, () => this.openTradeModal('buy', key, weapon.name, weapon.buyPrice)]);
             if (weapon.sellPrice) sell.push([key, weapon.icon, `${weapon.name}\n${weapon.sellPrice}金幣`, () => this.openTradeModal('sell', key, weapon.name, weapon.sellPrice)]);
         }
         for (const [key, icon, name, price] of [['ancientStones', 'ancient_stone', '遠古巨石', 600], ['sweetPotatoes', 'sweet_potato', '地瓜', 300], ['cobraFangs', 'cobra_fang', '眼鏡蛇王毒牙', COBRA_FANG_PRICE], ['eagleFeathers', 'eagle-feather', '巨鷹羽毛', 300], ['worms', 'worm', '菜蟲', WORM_PRICE], ['earthworms', 'earthworm', '蚯蚓', EARTHWORM_PRICE], ['wolfFangs', 'fang', '狼牙', FANG_PRICE], ['tigerPelts', 'tiger_pelt', '虎皮', 50], ['dragonScales', 'dragon_scale', '龍麟', DRAGON_SCALE_PRICE], ['gorillaFangs', 'gorilla_fang', '猩猩尖牙', GORILLA_FANG_PRICE]]) {
@@ -109,7 +109,7 @@ export default class ShopScene extends Phaser.Scene {
                 categoryIndexes[category] = index + 1;
                 const slot = index % 6;
                 const objects = this.addShopItem(container, slot % 2 ? 295 : 95, 40 + Math.floor(slot / 2) * 100, icon, text, 0x735038, action);
-                if (mode === 'buy' && BREEDS[key]?.purchasable === false) {
+                if (mode === 'buy' && (BREEDS[key]?.purchasable === false || WEAPONS_CONFIG[key]?.purchasable === false)) {
                     objects[0].setFillStyle(0x635a50,.9);
                     objects[0].setData('purchaseDisabled',true);
                 }
@@ -266,6 +266,8 @@ export default class ShopScene extends Phaser.Scene {
         if (this.isProcessing || !this.farmData) return;
         if (type === 'buy' && BREEDS[itemKey]?.purchasable === false) { this.showMsg('日本長尾雞尚未開賣，目前僅供展示', '#FFD54F'); return; }
 
+        if (type === 'buy' && WEAPONS_CONFIG[itemKey]?.purchasable === false) { this.showMsg(`${WEAPONS_CONFIG[itemKey].name}尚未開賣，目前僅供展示`, '#FFD54F'); return; }
+
         if (['coop4', 'coop5'].includes(itemKey)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
 
         if (type === 'sell' && WEAPONS_CONFIG[itemKey] && (this.farmData.equippedWeapon === itemKey || this.farmData.equippedBow === itemKey)) {
@@ -368,6 +370,7 @@ export default class ShopScene extends Phaser.Scene {
         if (this.isProcessing) return;
         this.isProcessing = true;
         const config = WEAPONS_CONFIG[key];
+        if (config?.purchasable === false) { this.isProcessing = false; this.showMsg(`${config.name}尚未開賣，目前僅供展示`, '#FFD54F'); return; }
         if (!config?.buyPrice || !Number.isSafeInteger(qty) || qty <= 0) { this.isProcessing = false; return; }
         const totalPrice = qty * config.buyPrice;
         try {
