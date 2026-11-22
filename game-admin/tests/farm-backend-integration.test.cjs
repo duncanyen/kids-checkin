@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {MemoryDB}=require('./memory-db.cjs'),{createFarmTransactions}=require('../functions/farm-transactions.cjs'),{createDailyChallenges}=require('../functions/daily-challenges.cjs');
 function setup(){
- const db=new MemoryDB();let stamp=Date.parse('2026-11-16T10:00:00+08:00'),roll=.99;
+ const db=new MemoryDB();let stamp=Date.parse('2026-11-23T10:00:00+08:00'),roll=.99;
  const farm={coins:10000,hens:1,hensState:[{id:'h',breed:'hen',laidAt:stamp,isSick:false}],poultryVersion:2,readyEggs:{hen:3,silkie:0,bresse:0,onagadori:0},eggsReady:3,warehouseLimit:100,cleanliness:40,coopLevel:3};
  db.data.set('groups/A',{members:['alice','bob'],farmVillageVisibility:'public'});
  for(const id of ['alice','bob'])db.data.set('groups/A/users/'+id,{farm:structuredClone(farm),other:'keep'});
@@ -67,7 +67,7 @@ test('rechecking a cleared visit reuses its permit without rerolling; a new visi
  const f=setup(),target={targetGroupId:'A',targetAccountId:'bob'};
  await f.api.handle(f.req('visitEncounter',target));f.roll(0);
  const recheck=await f.api.handle(f.req('visitEncounter',{...target,reusePermit:true}));assert.equal(recheck.result,null);
- await f.api.handle(f.req('stealEgg',target));assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261116,1);
+ await f.api.handle(f.req('stealEgg',target));assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261123,1);
  const fresh=await f.api.handle(f.req('visitEncounter',target));assert.equal(fresh.result.kind,'gorilla');
  await assert.rejects(f.api.handle(f.req('stealEgg',target)),{code:'failed-precondition'});
 });
@@ -75,10 +75,10 @@ test('combined visit confirmation and theft commits once with the existing scori
  const f=setup(),target={targetGroupId:'A',targetAccountId:'bob'};await f.api.handle(f.req('visitEncounter',target));
  const request=f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true,success:true,quantity:999,totalEggs:999,eggSources:[{henId:'forged',henName:'偽造來源',breed:'silkie',quantity:999}]});
  const response=await f.api.handle(request);await f.api.handle(request);
- assert.equal(response.result.steal.success,true);assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261116,1);assert.equal(f.farm().reportStolenEggs,1);
+ assert.equal(response.result.steal.success,true);assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().stolenEggs20261123,1);assert.equal(f.farm().reportStolenEggs,1);
  assert.equal(response.result.steal.transactionId,response.transactionId);assert.equal(response.result.steal.totalEggs,1);assert.deepEqual(response.result.steal.eggSources,[{henId:null,breed:'hen',quantity:1}]);
  assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,2);
- assert.equal(response.result.steal.blockedUntil,Date.parse('2026-11-16T11:00:00+08:00'));
+ assert.equal(response.result.steal.blockedUntil,Date.parse('2026-11-23T11:00:00+08:00'));
  await assert.rejects(f.api.handle(f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true})),{code:'failed-precondition'});
 });
 test('combined theft never bypasses an active or expired monster battle',async()=>{
@@ -89,7 +89,7 @@ test('combined theft never bypasses an active or expired monster battle',async()
  f.clock(50000);const expired=await f.api.handle(request());assert.equal(expired.result.result.outcome,'loss');assert.equal(expired.result.steal,undefined);assert.equal(f.farm().inventoryEggs,undefined);assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,0);
 });
 test('combined theft keeps guard-dog randomness independent from the preceding monster rolls',async()=>{
- const f=setup(),stamp=Date.parse('2026-11-16T10:00:00+08:00');
+ const f=setup(),stamp=Date.parse('2026-11-23T10:00:00+08:00');
  f.db.data.get('groups/A/users/bob').farm.guardDogs=[{id:'guard',breedId:'pyrenees',days:1,startedAt:stamp-1000,expiresAt:stamp+86400000}];
  let index=0;f.roll(()=>index++===18?0:.99);
  const response=await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob',stealWhenClear:true}));
@@ -124,27 +124,27 @@ test('new contest starts at zero despite archived scores; successful receipt rep
  const req=f.req('visitEncounter',{...target,reusePermit:true,stealWhenClear:true});
  await f.api.handle(f.req('visitEncounter',target));
  await f.api.handle(req);await f.api.handle(req);
- assert.equal(f.farm().stolenEggs20261116,1);assert.equal(f.farm().stolenEggs20261109,999);
+ assert.equal(f.farm().stolenEggs20261123,1);assert.equal(f.farm().stolenEggs20261109,999);
  assert.equal(f.farm().stolenEggsTotal,1234);assert.equal(f.farm().inventoryEggs,1);
 });
-test('the November 16 contest window increments the existing leaderboard score atomically and replay adds nothing',async()=>{
- const f=setup();f.clock(24*3600000);f.farm().stolenEggs20261116=7;const target={targetGroupId:'A',targetAccountId:'bob'};
+test('the November 23 contest window increments the existing leaderboard score atomically and replay adds nothing',async()=>{
+ const f=setup();f.clock(24*3600000);f.farm().stolenEggs20261123=7;const target={targetGroupId:'A',targetAccountId:'bob'};
  await f.api.handle(f.req('visitEncounter',target));const req=f.req('stealEgg',target);await f.api.handle(req);await f.api.handle(req);
- assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261116,8);
+ assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261123,8);
 });
-test('successful theft after the November 23 deadline still updates inventory and lifetime report, not the closed leaderboard',async()=>{
+test('successful theft after the November 30 deadline still updates inventory and lifetime report, not the closed leaderboard',async()=>{
  const f=setup();f.clock(7*24*3600000);const target={targetGroupId:'A',targetAccountId:'bob'};
  await f.api.handle(f.req('visitEncounter',target));const req=f.req('stealEgg',target);await f.api.handle(req);await f.api.handle(req);
- assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261116,undefined);
+ assert.equal(f.farm().inventoryEggs,1);assert.equal(f.farm().reportStolenEggs,1);assert.equal(f.farm().stolenEggs20261123,undefined);
 });
 test('same account in another public village is a distinct farm; theft and replay update only the correct farms',async()=>{
  const f=setup(),targetGroupId='B',targetAccountId='alice';
  f.db.data.set('groups/B',{members:['alice'],farmVillageVisibility:'public'});
- const target={...structuredClone(f.farm()),hensState:[{id:'long',breed:'onagadori',laidAt:Date.parse('2026-11-16T10:00:00+08:00')}],readyEggs:{hen:0,silkie:0,bresse:0,onagadori:2},eggsReady:2};
+ const target={...structuredClone(f.farm()),hensState:[{id:'long',breed:'onagadori',laidAt:Date.parse('2026-11-23T10:00:00+08:00')}],readyEggs:{hen:0,silkie:0,bresse:0,onagadori:2},eggsReady:2};
  f.db.data.set('groups/B/users/alice',{farm:target});
  await f.api.handle(f.req('visitEncounter',{targetGroupId,targetAccountId}));
  const request=f.req('stealEgg',{targetGroupId,targetAccountId});await f.api.handle(request);await f.api.handle(request);
- assert.equal(f.farm().onagadoriEggs,1);assert.equal(f.farm().eggsReady,3);assert.equal(f.farm().stolenEggs20261116,1);
+ assert.equal(f.farm().onagadoriEggs,1);assert.equal(f.farm().eggsReady,3);assert.equal(f.farm().stolenEggs20261123,1);
  assert.equal(f.db.data.get('groups/B/users/alice').farm.eggsReady,1);assert.equal(f.db.data.get('groups/B/users/alice').farm.onagadoriEggs,undefined);
  assert.equal([...f.db.data.keys()].filter(path=>path.startsWith('groups/B/users/alice/farm_notifications/')).length,1);
  await assert.rejects(f.api.handle(f.req('stealEgg',{targetGroupId,targetAccountId})),{code:'failed-precondition'});
@@ -164,7 +164,7 @@ test('same-group self theft stays forbidden and cross-group self theft keeps mem
 test('all monster settlements keep canonical rewards, penalties and one verified victory',async()=>{
  const D=require('../functions/domain.cjs'),{CONFIG}=require('../functions/farm-combat.cjs');
  for(const [kind,config]of Object.entries(CONFIG)){
-  const f=setup(),id='server-'+kind,started=Date.parse('2026-11-16T10:00:00+08:00');
+  const f=setup(),id='server-'+kind,started=Date.parse('2026-11-23T10:00:00+08:00');
   const challenge={id,kind,startedAt:started,deadline:started+config.durationMs,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:config.health,attacks:{melee:0,ranged:0},milestone:100};
   f.db.data.set('ops_farm_active/'+D.hash('profile:A'),challenge);
   if(['giant','cobra','mole'].includes(kind))f.farm()[kind+'Challenge']=challenge;
@@ -174,7 +174,7 @@ test('all monster settlements keep canonical rewards, penalties and one verified
   await f.api.handle(f.req('battleAttack',{battleId:id,mode,count:hits,damage:999999}));
   const settled=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result,replayed=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result;
   assert.equal(settled.monster,kind);assert.equal(settled.inventoryUpdated,true);assert.deepEqual(settled.rewards,[{itemId:config.item,quantity:1}]);assert.deepEqual(replayed,settled);
-  assert.equal(f.farm()[config.item],1,kind);assert.equal((await f.status()).tasks[2].count,1,kind);
+  assert.equal(f.farm()[config.item],1,kind);assert.equal((await f.status()).tasks[2].count,1,kind);assert.equal(f.farm().monsterKills20261123,1,kind+' scores exactly one new verified victory');
  }
 });
 test('prototype names and invalid stock cannot corrupt the wallet',async()=>{
@@ -185,12 +185,12 @@ test('prototype names and invalid stock cannot corrupt the wallet',async()=>{
 test('all monster deadlines preserve original coin and egg loss rules and never count a defeat',async()=>{
  const D=require('../functions/domain.cjs'),{CONFIG}=require('../functions/farm-combat.cjs');
  for(const [kind,config]of Object.entries(CONFIG)){
-  const f=setup(),id='expired-'+kind,started=Date.parse('2026-11-16T10:00:00+08:00'),challenge={id,kind,startedAt:started,deadline:started+config.durationMs,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:config.health,attacks:{melee:0,ranged:0},milestone:100};
+  const f=setup(),id='expired-'+kind,started=Date.parse('2026-11-23T10:00:00+08:00'),challenge={id,kind,startedAt:started,deadline:started+config.durationMs,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:config.health,attacks:{melee:0,ranged:0},milestone:100};
   f.db.data.set('ops_farm_active/'+D.hash('profile:A'),challenge);if(['giant','cobra','mole'].includes(kind))f.farm()[kind+'Challenge']=challenge;
   f.clock(config.durationMs);const result=(await f.api.handle(f.req('battleSettle',{battleId:id,outcome:'win'}))).result;
   assert.equal(result.outcome,'loss',kind);assert.equal(f.farm().coins,10000-(config.penalty||0),kind);
   assert.equal(f.db.data.get('groups/A/users/bob').farm.eggsReady,kind==='wolf'?2:config.clearEggs?0:3,kind);
-  assert.equal((await f.status()).tasks[2].count,0,kind);
+  assert.equal((await f.status()).tasks[2].count,0,kind);assert.equal(f.farm().monsterKills20261123,undefined,kind+' loss cannot score');
  }
 });
 
@@ -230,10 +230,23 @@ test('cross-group self cleaning retains public access, membership, dirt and batt
 });
 
 test('full warehouse wolf victory returns no inventory reward, while defeat still counts once',async()=>{
- const f=setup(),D=require('../functions/domain.cjs'),id='wolf-full',started=Date.parse('2026-11-16T10:00:00+08:00');
+ const f=setup(),D=require('../functions/domain.cjs'),id='wolf-full',started=Date.parse('2026-11-23T10:00:00+08:00');
  f.farm().warehouseLimit=1;f.farm().wolfFangs=1;
  f.db.data.set('ops_farm_active/'+D.hash('profile:A'),{id,kind:'wolf',startedAt:started,deadline:started+60000,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:0,lastAttackAt:started+1,attacks:{melee:200,ranged:0}});
  const result=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result;
- assert.equal(result.outcome,'win');assert.equal(result.inventoryUpdated,false);assert.deepEqual(result.rewards,[]);assert.equal(f.farm().wolfFangs,1);
+ assert.equal(result.outcome,'win');assert.equal(result.inventoryUpdated,false);assert.deepEqual(result.rewards,[]);assert.equal(f.farm().wolfFangs,1);assert.equal(f.farm().monsterKills20261123,1);
  assert.equal((await f.status()).tasks[2].count,1);
+});
+
+test('monster leaderboard is atomic with rewards, public-only and start-inclusive/end-exclusive; replay cannot score twice',async()=>{
+ const {THEFT_RANKING_START:start,THEFT_RANKING_END:end}=await import('../../js/farm/ranking-core.js');
+ const D=require('../functions/domain.cjs');
+ for(const [stamp,pub,count]of [[start-1,true,0],[start,true,1],[end-1,true,1],[end,true,0],[start,false,0]]){
+  const f=setup(),id='weekly-victory';f.clock(stamp-Date.parse('2026-11-23T10:00:00+08:00'));
+  f.db.data.get('groups/A').farmVillageVisibility=pub?'public':'closed';
+  Object.assign(f.farm(),{stolenEggs20261116:99,stolenEggs20261123:2,monsterKills20261116:88});
+  f.db.data.set('ops_farm_active/'+D.hash('profile:A'),{id,kind:'wolf',groupId:'A',targetGroupId:'A',targetAccountId:'alice',health:0,startedAt:stamp-1000,lastAttackAt:stamp-1,deadline:stamp+1000,attacks:{melee:200,ranged:0}});
+  const request=f.req('battleSettle',{battleId:id});await f.api.handle(request);await f.api.handle(request);await f.api.handle(f.req('battleSettle',{battleId:id}));
+  assert.equal(f.farm().monsterKills20261123||0,count);assert.equal(f.farm().wolfFangs,1);assert.equal(f.farm().stolenEggs20261123,2);assert.equal(f.farm().stolenEggs20261116,99);assert.equal(f.farm().monsterKills20261116,88);
+ }
 });

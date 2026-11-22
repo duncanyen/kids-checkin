@@ -82,6 +82,8 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  hornetPolicy.hornet.enabled=true;hornetPolicy.hornet.home.rate=100;
  await db.doc('ops_game_config/encounters').set({monsters:hornetPolicy,revision:3});
  await activeRef.delete();await ownerRef.update({'farm.coopLevel':2,'farm.paladinbow':1,'farm.equippedBow':'paladinbow','farm.honey':0});
+ await db.doc('groups/emulator-group').update({farmVillageVisibility:'public'});
+ const beforeHornetRank=(await ownerRef.get()).data().farm.monsterKills20261123||0;
  const hornetEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-hornet-entry'},token);
  assert.equal(hornetEntry.status,200,JSON.stringify(hornetEntry.data.error||{}));const hornetBattle=hornetEntry.data.result.result.challenge;
  assert.equal(hornetBattle.kind,'hornet');assert.equal(hornetBattle.deadline-hornetBattle.startedAt,50000);
@@ -91,6 +93,10 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const hornetWins=await Promise.all(['a','b'].map(suffix=>call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleSettle',battleId:hornetBattle.id,requestId:'emulator-hornet-settle-'+suffix},token)));
  for(const win of hornetWins){assert.equal(win.status,200,JSON.stringify(win.data.error||{}));assert.equal(win.data.result.result.outcome,'win');}
  assert.equal((await ownerRef.get()).data().farm.honey,1);
+ const rankingCore=await import('../functions/game/ranking-core.js'),settledAt=hornetWins[0].data.result.serverNow;
+ const hornetRank=beforeHornetRank+(settledAt>=rankingCore.THEFT_RANKING_START&&settledAt<rankingCore.THEFT_RANKING_END?1:0);
+ assert.equal((await ownerRef.get()).data().farm.monsterKills20261123||0,hornetRank);
+ const monsterRank=await call('gameOpsAnnouncements',{groupId:'emulator-group',action:'ranking',ranking:'monsterKills'},token);assert.equal(monsterRank.status,200,JSON.stringify(monsterRank.data.error||{}));assert.equal(monsterRank.data.result.ranking,'monsterKills');assert.equal(monsterRank.data.result.rows.find(r=>r.accountId===accountId)?.score||0,hornetRank);
  const honeySale={groupId:'emulator-group',action:'sellItem',item:'honey',quantity:1,price:999999,requestId:'emulator-honey-sale'},beforeHoneySale=(await ownerRef.get()).data().farm.coins;
  assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);
  assert.equal((await ownerRef.get()).data().farm.coins,beforeHoneySale+300);assert.equal((await ownerRef.get()).data().farm.honey,0);

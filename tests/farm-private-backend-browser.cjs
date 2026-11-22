@@ -2,6 +2,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const weeklyRankingTests=process.env.WEEKLY_RANKING_TESTS==='1';
+let legacyRankingPeriod=false;
 const hornetTests=process.env.HORNET_TESTS==='1';
 const katanaTests=process.env.KATANA_TESTS==='1';
 const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
@@ -40,7 +42,7 @@ const stealResultTests=process.env.STEAL_RESULT_TESTS==='1'||stealFlowTests;
 const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 (async()=>{
  const feedResponses=[];
- const db=new MemoryDB(),stamp=stealResultTests?Date.parse('2026-11-16T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=battleRewardTests?(battleRewardKind==='eagle'?.1:0):entryEncounterTests||dragonStartupTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false,failBattleSettlement=false,lastBattleResult=null,chestReplyDelay=0;
+ const db=new MemoryDB(),stamp=stealResultTests||weeklyRankingTests?Date.parse('2026-11-23T10:00:00+08:00'):Date.now(),tokens=new Map(),calls=[],errors=[];let cleanGate=null,cleanDenied=false,lateCleanReply=false;let stealDelay=0,timeoutStealAlways=false,lateReplyOnce=false;let sequence=0,serverRoll=battleRewardTests?(battleRewardKind==='eagle'?.1:0):entryEncounterTests||dragonStartupTests?0:.99,releaseSettlement,feedGate=null,feedEntered=null,releaseHarvest,releaseCollection,failCollection=false,visitGate=null,failVisitOnce=false,backendNow=stamp,lastStealResult=null,failSteal=false,failBattleSettlement=false,lastBattleResult=null,chestReplyDelay=0;
  const harvestGate=new Promise(resolve=>releaseHarvest=resolve);
  const collectionGate=new Promise(resolve=>releaseCollection=resolve);
  const settlementGate=new Promise(resolve=>releaseSettlement=resolve);
@@ -53,7 +55,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
- if(encounterConfigTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(encounterConfigTests||weeklyRankingTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
  if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
@@ -63,11 +65,11 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  if(visitReturnTests){Object.assign(db.data.get('groups/A/users/alice').farm,{ownedSceneIds:['fuji'],activeSceneId:visitReturnTheme,cleanliness:70});Object.assign(db.data.get('groups/C/users/carol').farm,{ownedSceneIds:['fuji'],activeSceneId:'fuji',cleanliness:70});}
  if(crossSelfCleanTests){db.data.get('groups/A/users/alice').farm.moral=40;db.data.get('groups/B').members=['alice'];db.data.set('groups/B/users/alice',{farm:{...structuredClone(farm),cleanliness:70}});}
  if(ownCleanTests)Object.assign(db.data.get('groups/A/users/alice').farm,{cleanliness:70,moral:40});
- if(costTests){db.data.set('ops_feed_versions/global',{revision:'v1'});db.data.set('ops_announcements/read-test',{title:'初始公告',content:'測試內容',status:'published',priority:1,targetType:'all',targetAccountIds:[],audienceKeys:['all'],startAt:stamp-100,endAt:stamp+3600000,createdAt:stamp,updatedAt:stamp,showPopup:false});db.data.get('groups/A/users/bob').farm.stolenEggs20261116=50;}
+ if(costTests){db.data.set('ops_feed_versions/global',{revision:'v1'});db.data.set('ops_announcements/read-test',{title:'初始公告',content:'測試內容',status:'published',priority:1,targetType:'all',targetAccountIds:[],audienceKeys:['all'],startAt:stamp-100,endAt:stamp+3600000,createdAt:stamp,updatedAt:stamp,showPopup:false});db.data.get('groups/A/users/bob').farm.stolenEggs20261123=50;}
  if(predatorRewardTests)db.data.get('groups/B/users/bob').farm.coopLevel=1;
  if(battleRewardTests&&!chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:Object.fromEntries(Object.entries(require('../game-admin/functions/chests.cjs').DEFAULTS).map(([kind,value])=>[kind,{...value,dropRate:0}]))});
  if(chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:{eagle:{dropRate:100,coins:{enabled:true,min:137,max:137},items:[]}}});
- const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
+ const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>weeklyRankingTests||hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
   const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
@@ -96,7 +98,7 @@ if(chestFlowTests&&data.action==='openChest'&&chestReplyDelay)await new Promise(
 if(katanaTests||hornetTests)await page.evaluate(()=>window.__privateEmitAll?.());
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
-   if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
+   if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(weeklyRankingTests&&legacyRankingPeriod&&data.action==='ranking')result.scoreField='stolenEggs20261116';if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
    if(name==='gameOpsGuardDog')return service.guardDog(request);
    throw Error('Unexpected callable '+name);
   });
@@ -124,10 +126,34 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(unavailableEggResult==='module')await page.route('**/js/farm/egg-result-ui.js',r=>r.fulfill({status:503,contentType:'text/javascript',body:'fixture optional module unavailable'}));
   if(unavailableEggResult==='image')await page.route('**/assets/farm/egg-result/v1/egg_result_panel.png',r=>r.fulfill({status:503,body:'fixture optional image unavailable'}));
   if(stealResultTests||entryEncounterTests||battleExitTests)await page.clock.setFixedTime(new Date(stamp));
-  if(hornetTests)await page.clock.install({time:new Date(stamp)});
+  if(hornetTests||weeklyRankingTests)await page.clock.install({time:new Date(stamp)});
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(weeklyRankingTests){
+   releaseSettlement();const owner=db.data.get('groups/A/users/alice').farm;
+   owner.stolenEggs20261116=999;owner.monsterKills20261116=888;
+   const panel=page.locator('.farm-ranking-panel'),launcher=page.getByRole('button',{name:'開啟排行榜',exact:true});
+   const loaded=()=>page.waitForFunction(()=>document.querySelector('.farm-ranking-content').getAttribute('aria-busy')==='false');
+   await launcher.click();await loaded();assert.equal(await panel.locator('.farm-ranking-row').count(),0);assert.match(await panel.locator('.farm-ranking-period').textContent(),/2026\/11\/23 06:00:00～2026\/11\/30 00:00:00/);
+   await panel.getByRole('tab',{name:'打怪王',exact:true}).click();await loaded();assert.match(await panel.locator('.farm-ranking-empty').textContent(),/擊退怪物/);assert.doesNotMatch(await panel.locator('.farm-ranking-status').textContent(),/偷蛋/);
+   // Apply an actual server-validated kill, reward and replay, then query it via the normal ranking button.
+   const current=db.data.get(pendingKey),id='weekly-ranked-wolf',beforeCoins=owner.coins;
+   Object.assign(owner,{ironhammer:1,equippedWeapon:'ironhammer'});
+   db.data.set(pendingKey,{...current,id,kind:'wolf',groupId:'A',targetGroupId:'A',targetAccountId:'alice',health:200,startedAt:backendNow-4000,deadline:backendNow+60000,attacks:{melee:0,ranged:0},result:undefined});
+   const command=async(action,extra={})=>service.farmTransaction({auth,data:{groupId:'A',battlePageId:current.ownerPageId,action,battleId:id,requestId:'weekly-'+action,...extra}});
+   await command('battleAttack',{mode:'melee',count:2});await command('battleSettle');await command('battleSettle');
+   assert.equal(db.data.get('groups/A/users/alice').farm.monsterKills20261123,1);assert.equal(db.data.get('groups/A/users/alice').farm.wolfFangs,1);assert.equal(db.data.get('groups/A/users/alice').farm.coins,beforeCoins);
+   Object.assign(db.data.get('groups/A/users/bob').farm,{stolenEggs20261123:7,monsterKills20261123:1025});
+   db.data.set('groups/Closed',{name:'私密村落',farmVillageVisibility:'closed',members:['alice']});db.data.set('groups/Closed/users/alice',{farm:{stolenEggs20261123:99999,monsterKills20261123:99999}});
+   await panel.getByRole('button',{name:'重新整理',exact:true}).click();await loaded();assert.equal(await panel.locator('.farm-ranking-row').count(),2);assert.match(await panel.locator('.farm-ranking-row').first().textContent(),/bob.*1,025 隻/);assert.match(await panel.locator('.farm-ranking-row').nth(1).textContent(),/alice.*1 隻/);assert.equal(await panel.getByRole('tab',{name:'打怪王',exact:true}).getAttribute('aria-selected'),'true');
+   for(const viewport of [{width:390,height:844},{width:320,height:568},{width:768,height:1024}]){
+    await page.setViewportSize(viewport);await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(await panel.getByRole('tab',{name:'打怪王',exact:true}).isVisible(),true);await page.screenshot({path:'/tmp/gugu-monster-ranking-'+viewport.width+'.png'});
+   }
+   await page.setViewportSize({width:390,height:844});await panel.getByRole('tab',{name:'偷蛋王',exact:true}).click();await loaded();assert.equal(await panel.locator('.farm-ranking-row').count(),1);assert.match(await panel.locator('.farm-ranking-score').textContent(),/7 顆/);await page.screenshot({path:'/tmp/gugu-theft-ranking-20261123.png'});
+   await panel.getByRole('button',{name:'關閉',exact:true}).click();legacyRankingPeriod=true;await launcher.click();await loaded();assert.match(await panel.locator('.farm-ranking-status').textContent(),/服務正在同步/);assert.equal(await panel.locator('.farm-ranking-row').count(),0);await panel.getByRole('button',{name:'關閉',exact:true}).click();legacyRankingPeriod=false;assert.equal(await page.evaluate(()=>window.__farmGame.input.enabled),true);assert.deepEqual(errors,[]);
+   console.log('PASS weekly rankings from game launcher: archive reset, actual validated wolf kill/replay, both tabs, new dates, query privacy, 1,025 kills, refresh retains tab, 320/390/768px and scene input restored');return;
+  }
   if(hornetTests){
    releaseSettlement();const own=()=>db.data.get('groups/A/users/alice').farm;
    const progress=async()=>(await service.dailyChallenges({auth,data:{groupId:'A',action:'status'}})).challenges.mission.tasks.find(t=>t.type==='DEFEAT_MONSTER').count;
@@ -600,7 +626,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
      await page.locator('.farm-egg-result-confirm').click();
     }
     fs.writeFileSync('/tmp/gugu-theft-'+(flowBefore?'before':'after')+'.json',JSON.stringify({baseline:flowBefore,viewport:'390x844',environment:'Linux Chromium, real Phaser, MemoryDB callable, injected service delay; warm assets',rows},null,2));
-    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,60);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261116,60);assert.deepEqual(errors,[]);console.log('PASS theft benchmark',flowBefore?'before':'after',rows.length);return;
+    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,60);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261123,60);assert.deepEqual(errors,[]);console.log('PASS theft benchmark',flowBefore?'before':'after',rows.length);return;
    }
    if(stealFlowTests){assert.equal(await page.evaluate(()=>!!window.__farmGame.scene.getScene('VisitScene').stealButton),false,'沒有額外偷蛋按鈕');}
    if(stealFlowTests)await page.screenshot({path:'/tmp/gugu-steal-action-mobile.png',animations:'disabled'});
@@ -634,7 +660,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     }
     await page.locator('.farm-egg-result-close').click();assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('VisitScene')),true);
    }
-   assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261116,1);
+   assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261123,1);
    assert.equal(await openFixture({success:false,totalEggs:0}),false);assert.equal(await openFixture({success:true,totalEggs:0}),false);
    const reset=async()=>{const f=db.data.get('groups/A/users/alice').farm;f.villageStealCooldowns={};f.villageStealBlockedUntil={};await page.evaluate(()=>{window.__farmGame.scene.getScene('VisitScene').lastStealBlockedUntil=0;return window.__privateEmitAll();});};
    db.data.get('groups/B/users/bob').farm.guardDogs=[{id:'dog',breedId:'pyrenees',days:1,startedAt:stamp-1,expiresAt:stamp+86400000}];serverRoll=0;await reset();await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);
@@ -643,7 +669,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    target.readyEggs.silkie=2;target.eggsReady=2;await reset();failSteal=true;await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);failSteal=false,failBattleSettlement=false,lastBattleResult=null,chestReplyDelay=0;assert.equal(await page.locator('[data-result-kind=steal]').count(),0);assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,1);
    await page.evaluate(()=>{window.__append=document.body.append;document.body.append=function(...nodes){if(nodes.some(n=>n.dataset?.resultKind==='steal'))throw Error('fixture popup failure');return window.__append.apply(this,nodes);};});
    await clickHen();await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);await page.evaluate(()=>document.body.append=window.__append);
-   assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,2);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261116,2);assert.equal(await page.evaluate(()=>window.__successFloats),1,'開啟失敗保留成功浮字，不重送交易');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').input.enabled),true);
+   assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,2);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261123,2);assert.equal(await page.evaluate(()=>window.__successFloats),1,'開啟失敗保留成功浮字，不重送交易');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').input.enabled),true);
    if(stealFlowTests){
     const beforeSlow=economyCalls();stealDelay=850;await reset();
     await clickObject('VisitScene','steal');await page.waitForTimeout(180);
@@ -656,11 +682,11 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     // 真正的客戶端逾時計時器；第一筆已提交後延遲回傳，第二次查回同一收據。
     const refill=()=>{const t=db.data.get('groups/B/users/bob').farm;t.eggsReady=3;t.readyEggs.silkie=3;};refill();await reset();
     await page.evaluate(()=>{window.__fixtureTimeoutMs=100;window.__sawConfirming=false;const s=window.__farmGame.scene.getScene('VisitScene'),set=s.stealFeedback.setText.bind(s.stealFeedback);s.stealFeedback.setText=function(value){if(value==='結果確認中')window.__sawConfirming=true;return set(value);};});
-    const beforeTimeout=economyCalls(),beforeEggs=db.data.get('groups/A/users/alice').farm.silkieEggs,beforeRank=db.data.get('groups/A/users/alice').farm.stolenEggs20261116;
+    const beforeTimeout=economyCalls(),beforeEggs=db.data.get('groups/A/users/alice').farm.silkieEggs,beforeRank=db.data.get('groups/A/users/alice').farm.stolenEggs20261123;
     lateReplyOnce=true;await clickObject('VisitScene','steal');await page.waitForSelector('[data-result-kind=steal]');
     assert.equal(await page.evaluate(()=>window.__sawConfirming),true);assert.equal(economyCalls(),beforeTimeout+2);
     const retries=calls.filter(c=>c.stealWhenClear).slice(-2);assert.equal(retries[0].requestId,retries[1].requestId);
-    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,beforeEggs+1);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261116,beforeRank+1);
+    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,beforeEggs+1);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261123,beforeRank+1);
     await page.locator('.farm-egg-result-close').click();await page.waitForTimeout(400);assert.equal(await page.locator('[data-result-kind=steal]').count(),0,'原回覆晚到不重開');
     // 兩次均未收到明確結果，按「確認結果」仍沿用原 ID，跳過已提交造成的本地冷卻。
     refill();await reset();timeoutStealAlways=true;await clickObject('VisitScene','steal');await page.waitForFunction(()=>!window.__farmGame.scene.getScene('VisitScene').isStealing);
@@ -670,7 +696,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);
     await clickObject('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await clickObject('LobbyScene','village');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='B'&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0);await clickObject('LobbyScene','farm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene')?.visitEncounterReady);
     await clickObject('VisitScene','steal');await page.waitForSelector('[data-result-kind=steal]');assert.equal(calls.filter(c=>c.stealWhenClear).at(-1).requestId,unresolved);
-    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,beforeEggs+2);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261116,beforeRank+2);
+    assert.equal(db.data.get('groups/A/users/alice').farm.silkieEggs,beforeEggs+2);assert.equal(db.data.get('groups/A/users/alice').farm.stolenEggs20261123,beforeRank+2);
     await page.screenshot({path:'/tmp/gugu-steal-flow-mobile.png',animations:'disabled'});await page.locator('.farm-egg-result-confirm').click();
     assert.deepEqual(errors,[]);console.log('PASS original HUD/public village/coop/hen tap, delayed hint, rapid click, real timeout+late reply, same-ID receipt replay across reload, one inventory/ranking update');return;
    }

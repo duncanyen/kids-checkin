@@ -33,7 +33,7 @@ function createFarmRanking({db,now=Date.now,onMeasure=()=>{}}){
    cursor=last;
   }
   const rows=rankFarmPlayers(visible,config.field);onMeasure({scanned,returned:rows.length});
-  return{ranking:key||'stolenEggs',rows,asOf:now()};
+  return{ranking:key||'stolenEggs',scoreField:config.field,rows,asOf:now()};
  }
  return{load};
 }

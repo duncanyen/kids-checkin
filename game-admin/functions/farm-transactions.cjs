@@ -78,7 +78,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     let name=actor.name||accountId;
     if(profiles)name=profiles.size===1?profiles.docs[0].data().name:accountId;
     const targetFarm=battle&&!allowed?null:requireFarm(data.data()?.farm);if(targetFarm&&!save.isFarmSave(targetFarm))D.fail('failed-precondition','目標存檔資料不完整');
-    return{groupId,accountId,name,group,ref,allowed,farm:targetFarm};
+    return{groupId,accountId,name,group,actorGroup:own,ref,allowed,farm:targetFarm};
    };
    const spend=amount=>{if(!Number.isSafeInteger(amount)||amount<0||farm.coins<amount)D.fail('failed-precondition','金幣不足');patch['farm.coins']=farm.coins-amount;};
    const capacity=n=>{if(inventory.getUsedSpace(farm)+n>(farm.warehouseLimit||10))D.fail('failed-precondition','倉庫容量不足');};
@@ -122,6 +122,9 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
     const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id,encounterSettings:()=>require('./encounters.cjs').config(db,t)});
     patch=response.patch;result=response.result;event=response.event;nextSession=response.session;
+    // Only a newly verified victory contributes, in the same atomic settlement.
+    // readTarget already loaded the actor village; do not add another read.
+    if(event?.type==='DEFEAT_MONSTER')Object.assign(patch,ranking.monsterRankingPatch(farm,{now:stamp,publicVillage:target.actorGroup?.farmVillageVisibility==='public',monster:event.monster}));
     if(response.targetFarm){if(target.ref.path===farmRef.path)Object.assign(patch,{'farm.readyEggs':response.targetFarm.readyEggs,'farm.eggsReady':response.targetFarm.eggsReady,'farm.hensState':response.targetFarm.hensState,'farm.hens':response.targetFarm.hens,'farm.poultryVersion':response.targetFarm.poultryVersion,'farm.lastLayTime':response.targetFarm.lastLayTime,'farm.cleanliness':response.targetFarm.cleanliness});else{targetRef=target.ref;targetFarm=response.targetFarm;targetPatch={};}}
     // 僅將原本可直接收蛋的分支合併。未結束的怪物仍回傳 challenge；逾時／勝利補結算保留原流程及獨立事件。
     if(action==='homeEncounter'&&p.collectWhenClear===true&&result===null)result={kind:null,harvest:collect()};

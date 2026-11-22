@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {MemoryDB}=require('./memory-db.cjs'),{createFarmRanking}=require('../functions/farm-ranking.cjs');
-const score='stolenEggs20261116';
+const score='stolenEggs20261123';
 function fixture(count){
  const db=new MemoryDB(),members=[];for(let n=0;n<count;n++){const id='p'+String(n).padStart(4,'0');members.push(id);db.data.set('users/'+id,{accountId:id,name:'玩家'+n});db.data.set(`groups/A/users/${id}`,{farm:{[score]:count-n}});}
  db.data.set('groups/A',{members,name:'村落',farmVillageVisibility:'public'});
@@ -25,4 +25,11 @@ test('privacy changes during profile reads continue scanning to fill the next va
  const f=fixture(60);f.db.data.set('groups/B',{members:['p0000'],farmVillageVisibility:'public'});f.db.data.set('groups/B/users/p0000',{farm:{[score]:9999}});
  const collection=f.db.collection.bind(f.db);f.db.collection=(...args)=>{f.db.data.get('groups/B').farmVillageVisibility='closed';return collection(...args)};
  const result=await f.api.load({},'stolenEggs');assert.equal(result.rows.length,10);assert.ok(result.rows.every(r=>r.groupId==='A'));
+});
+
+test('monster Top10 queries only the new monster field and retains farm-scoped ranking/privacy rules',async()=>{
+ const f=fixture(40);
+ for(const [path,value]of f.db.data)if(path.startsWith('groups/A/users/'))value.farm.monsterKills20261123=41-value.farm[score];
+ f.db.data.set('groups/Private',{members:['p0000'],farmVillageVisibility:'closed'});f.db.data.set('groups/Private/users/p0000',{farm:{monsterKills20261123:9999}});
+ const result=await f.api.load({},'monsterKills');assert.equal(result.ranking,'monsterKills');assert.equal(f.scanned,25);assert.deepEqual(result.rows.map(r=>r.score),[40,39,38,37,36,35,34,33,32,31]);assert.equal(result.rows[0].accountId,'p0039');
 });

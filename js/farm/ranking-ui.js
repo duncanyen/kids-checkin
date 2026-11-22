@@ -35,7 +35,8 @@ export function mountFarmRankings(game, context) {
     const buttons = [];
     for (const [key, config] of Object.entries(FARM_RANKINGS)) {
         const tab = node('button', 'farm-ranking-tab', config.label); tab.type = 'button';
-        if (key === 'stolenEggs') { tab.replaceChildren(image('category'), node('span', 'farm-ranking-sr', config.label)); }
+        const plaque = image('category'); plaque.src = 'assets/farm/daily-missions/v2/wood-label.png';
+        tab.replaceChildren(plaque, node('span', 'farm-ranking-tab-label', config.label));
         tab.setAttribute('role', 'tab'); tab.id = `farm-ranking-tab-${key}`;
         tab.setAttribute('aria-controls', content.id);
         tab.addEventListener('click', () => { if (key !== current) load(key); }); tabs.append(tab); buttons.push([key, tab]);
@@ -75,7 +76,7 @@ export function mountFarmRankings(game, context) {
                 person.querySelector('strong').title = row.name; person.querySelector('small').title = row.groupName;
                 item.append(place, person, node('span', 'farm-ranking-score', `${row.score.toLocaleString('zh-TW')} ${config.unit}`)); list.append(item);
             });
-            content.append(list); if (!rows.length) content.append(node('p', 'farm-ranking-empty', '目前還沒有本期成功偷蛋紀錄，下一位上榜的可能就是你！')); status.textContent = `${theftRankingStatus()} · 公開村落 · Top 10${rows.length ? '' : ' · 尚無本期成功偷蛋紀錄'}`;
+            content.append(list); if (!rows.length) content.append(node('p', 'farm-ranking-empty', `目前還沒有${config.empty}，下一位上榜的可能就是你！`)); status.textContent = `${theftRankingStatus()} · 公開村落 · Top 10${rows.length ? '' : ' · 尚無' + config.empty}`;
         } catch (error) { if (!disposed && !overlay.hidden && request === version) status.textContent = error.message || '排行榜載入失敗，請重新整理。'; }
         finally {
             // 舊查詢不得解除新畫面的載入狀態、重設計時器或在關閉後再排程。

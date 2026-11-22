@@ -17,9 +17,9 @@ async function patchField({name,indexes,run,fetchImpl}){
  if(result.error)throw Error('索引 API 回報作業失敗；請唯讀確認狀態');
  return result;
 }
-async function ensure({project,apply=false,run=defaultRun,fetchImpl=globalThis.fetch,log=console.log}){
+async function ensureField({project,field,apply=false,requireReady=false,run=defaultRun,fetchImpl=globalThis.fetch,log=console.log}){
  if(!/^[a-z][a-z0-9-]*$/.test(project||''))throw Error('請指定有效的 --project 專案 ID');
- const field='farm.stolenEggs20261116',base=['--project',project,'--database','(default)','--collection-group','users'];
+ const base=['--project',project,'--database','(default)','--collection-group','users'];
  let current;try{current=JSON.parse(run(['firestore','indexes','fields','describe',field,...base,'--format=json']));}catch{throw Error('無法唯讀取得欄位索引；停止更新，請檢查 gcloud 登入及專案權限');}
  if(!Array.isArray(current.indexConfig?.indexes))throw Error('缺少既有索引設定；停止更新以免移除設定');
  const configured=current.indexConfig.indexes.map(index=>{
@@ -32,16 +32,21 @@ async function ensure({project,apply=false,run=defaultRun,fetchImpl=globalThis.f
   return {queryScope:index.queryScope,fields:[{fieldPath:field,...(entry.order?{order:entry.order}:{arrayConfig:entry.arrayConfig})}],state:index.state};
  });
  const found=configured.find(i=>i.queryScope==='COLLECTION_GROUP'&&i.fields[0].order==='DESCENDING');
- if(found){log('排行榜 collection-group 索引：'+(found.state||'已設定')+'；請確認 READY 後再啟用新版後端');return;}
- if(!apply){log('唯讀檢查：需新增排行榜索引；加 --apply 執行，原欄位索引會保留');return;}
+ if(found){log(field+' collection-group 索引：'+(found.state||'已設定'));if(requireReady&&found.state!=='READY')throw Error(field+' 尚未 READY，請等待後重試');return;}
+ if(!apply){if(requireReady)throw Error(field+' 缺少索引；請先加 --apply 建立');log(field+'：需新增排行榜索引；加 --apply 執行，原欄位索引會保留');return;}
  const indexes=[...configured.map(({state,...index})=>index),{queryScope:'COLLECTION_GROUP',fields:[{fieldPath:field,order:'DESCENDING'}]}];
  const name='projects/'+project+'/databases/(default)/collectionGroups/users/fields/'+field;
  const operation=await patchField({name,indexes,run,fetchImpl});
  if(typeof operation.name==='string'&&/^projects\/[a-z0-9-]+\/databases\//.test(operation.name))log('索引建立作業：'+operation.name);
- log('已提交建立排行榜索引；再次執行唯讀檢查，等待 READY');
+ log(field+'：已提交建立排行榜索引；再次執行唯讀檢查，等待 READY');if(requireReady)throw Error(field+' 已提交建立，尚未確認 READY');
+}
+async function ensure(options){
+ const {FARM_RANKINGS}=await import('../js/farm/ranking-core.js');
+ const fields=options.fields||[...new Set(Object.values(FARM_RANKINGS).map(config=>'farm.'+config.field))];
+ for(const field of fields)await ensureField({...options,field});
 }
 module.exports={ensure};
 if(require.main===module){
  const args=process.argv.slice(2),position=args.indexOf('--project');
- ensure({project:position<0?undefined:args[position+1],apply:args.includes('--apply')}).catch(error=>{console.error(error.message);process.exitCode=1;});
+ ensure({project:position<0?undefined:args[position+1],apply:args.includes('--apply'),requireReady:args.includes('--require-ready')}).catch(error=>{console.error(error.message);process.exitCode=1;});
 }

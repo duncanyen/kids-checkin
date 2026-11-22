@@ -14,7 +14,10 @@ export async function loadFarmRanking({ groupId, accountId }, ranking = 'stolenE
         const identity=JSON.stringify([groupId,accountId]);
         if(!rankingClient||rankingContext!==identity){rankingClient=createGameOperationsClient({groupId,accountId});rankingContext=identity;}
         let result;try{result=await rankingClient.farmRanking(ranking);}catch(error){if(error.code==='functions/unauthenticated')rankingClient=null;throw error;}
-        if(result.ranking===ranking&&Array.isArray(result.rows))return result.rows;
+        if(result.ranking===ranking&&Array.isArray(result.rows)){
+            if(result.scoreField!==config.field)throw new Error('排行榜活動已更新，服務正在同步，請稍後重新整理。');
+            return result.rows;
+        }
         // Older backend or an index still building: preserve the old working path.
         // Auth/network failures throw above; they never trigger an unbounded retry.
     }
