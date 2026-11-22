@@ -15,6 +15,7 @@ test('anonymous, forged UID, revoked version and ordinary Firebase admin claims 
 });
 test('all client routes to coins, chicken, inventory, lease, welcome receipt and creation receipt are denied',async()=>{
  const db=client('alice'),owner=doc(db,'groups','A','users','alice');
+ await assertFails(updateDoc(owner,{'farm.katana':1,'farm.equippedWeapon':'katana'}));
  for(const changes of [{'farm.coins':999999},{'farm.hens':100},{'farm.inventoryEggs':99},{'farm.guardDogs':[{expiresAt:9999999999999}]},{'farmMail.welcomeClaimedAt':null}])await assertFails(updateDoc(owner,changes));
  await assertFails(deleteDoc(owner));await assertFails(setDoc(doc(db,'groups','A','users','new'),{farm:{coins:999}}));await assertFails(setDoc(doc(db,'groups','A','users','alice','farm_meta','creation'),{}));await assertFails(setDoc(doc(db,'groups','A','users','alice','farm_notifications','welcome-v1'),{reward:{coins:999}}));
 });

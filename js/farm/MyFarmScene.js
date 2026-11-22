@@ -23,6 +23,7 @@ import { GARDEN_ROLL_SIZE, gardenFindForRoll } from './garden-core.js';
 import { attachFarmAtmosphere } from './atmosphere.js';
 import { GorillaEncounter } from './gorilla.js';
 import { rollHomeBossEncounter } from './gorilla-rules.js';
+import { equippedWeapon } from './combat-rules.js';
 import { DragonEncounter } from './dragon.js';
 import { getThreatZones, henRouteIsSafe, planHenPath } from './hen-navigation.js';
 import { addFarmBackground, addFarmCoop, addFarmSign, addFarmEgg, addVegetableGarden, setCoopSize, randomHenPosition, getHenWalkArea, getHenWanderArea } from './scenery.js';
@@ -263,7 +264,7 @@ export default class MyFarmScene extends Phaser.Scene {
             const kind = authorized?.kind;
             if (kind) {
                 this.preparingEncounter = true;
-                await ensureAssets(this, bossAssets(kind));
+                await ensureAssets(this, [...bossAssets(kind), equippedWeapon(this.farmData).icon]);
                 if (!active()) return;
                 // 包含伺服器原有會話；不改血量、期限或原始目標。
                 if (['giant','cobra','mole'].includes(kind)) {

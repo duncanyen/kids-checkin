@@ -108,7 +108,7 @@ export class BossEncounter {
         this.sprite.on('animationcomplete', animation => {
             if (!this.result && animation.key === `${spec.key}_hit`) this.sprite.play(`${spec.key}_${this.phase === spec.attackPhase ? spec.attack : spec.travel}`);
         });
-        this.weaponSprite = scene.add.image(0, 0, this.weapon.icon).setDisplaySize(64, 86).setDepth(28).setVisible(false);
+        this.weaponSprite = scene.add.image(0, 0, this.weapon.icon).setDisplaySize(this.weapon.icon === 'katana' ? 86 : 64, 86).setDepth(28).setVisible(false);
         this.warning = scene.add.text(195, 126, '', {
             fontSize: '13px', color: '#FFF2CC', fontStyle: 'bold', align: 'center',
             backgroundColor: '#542723', padding: { x: 12, y: 8 },

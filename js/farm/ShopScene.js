@@ -188,8 +188,8 @@ export default class ShopScene extends Phaser.Scene {
         panel.add([shade, paper, title]);
         const hits = (enemy, keys, suffix) => keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
         const guide = [
-            '近戰：木棒／狼牙棒／雙手斧／大鐵槌',
-            ...[['giant', '遠古巨人'], ['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer'], ' 下')}`),
+            '近戰：木棒／狼牙棒／雙手斧／大鐵槌／武士刀',
+            ...[['giant', '遠古巨人'], ['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer', 'katana'], ' 下')}`),
             '', '弓箭：短弓／獵弓／聖騎士弓',
             ...[['giant', '遠古巨人'], ['dragon', '烈火龍'], ['eagle', '巨飛鷹'], ['cobra', '毒牙眼鏡蛇王']].map(([key, name]) => `${name}：${hits(key, ['shortbow', 'huntingbow', 'paladinbow'], ' 箭')}`),
             '蛇王可用近戰或弓；飛行怪物需用弓。',

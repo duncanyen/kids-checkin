@@ -549,7 +549,7 @@ export default class VisitScene extends Phaser.Scene {
         const totalHitsNeeded = Math.ceil(health / damage);
         const spawn = predatorSpawnPoint(this, 'tiger');
         this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
-        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
+        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(weapon.icon === 'katana' ? 86 : 64, 86).setDepth(30).setVisible(false);
         const warnText = this.add.text(195, 120, `危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
         // Keep the warning above the clearing, clear of the patrol and hens.
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
@@ -634,7 +634,7 @@ export default class VisitScene extends Phaser.Scene {
         const totalHitsNeeded = Math.ceil(health / damage);
         const spawn = predatorSpawnPoint(this, 'wolf');
         this.wolf = createPredator(this, 'wolf', spawn.x, spawn.y);
-        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(64, 86).setDepth(30).setVisible(false);
+        this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(weapon.icon === 'katana' ? 86 : 64, 86).setDepth(30).setVisible(false);
         const warnText = this.add.text(195, 120, `警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
         this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
         this.wolf.warning = warnText;

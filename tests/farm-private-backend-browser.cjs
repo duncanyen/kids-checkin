@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const katanaTests=process.env.KATANA_TESTS==='1';
 const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
 const chestFlowTests=process.env.CHEST_FLOW_TESTS==='1';
 const chestArtFail=process.env.CHEST_ART_FAIL==='1';
@@ -15,7 +16,7 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
 const visitReturnTests=process.env.VISIT_RETURN_TESTS==='1';
 const visitReturnTheme=process.env.VISIT_RETURN_THEME==='default'?'default':'fuji';
-const visitPreloadTests=encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
+const visitPreloadTests=katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
 const costTests=process.env.FARM_READ_COST_TESTS==='1';
@@ -89,6 +90,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(battleRewardTests&&data.action==='battleSettle')lastBattleResult=structuredClone(response.result);
 if(chestFlowTests&&data.action==='openChest'&&chestReplyDelay)await new Promise(resolve=>setTimeout(resolve,chestReplyDelay));
+if(katanaTests)await page.evaluate(()=>window.__privateEmitAll?.());
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges')return service.dailyChallenges(request);
    if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
@@ -122,6 +124,43 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(katanaTests){
+   releaseSettlement();const own=()=>db.data.get('groups/A/users/alice').farm;
+   const click=async(key,find)=>{await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const point=await page.evaluate(({key,find})=>{const s=window.__farmGame.scene.getScene(key);let o;
+    if(find==='weapons')o=s.categoryTabs.tabs.get('weapons').background;
+    else if(find==='buykatana'||find==='sellkatana')o=s[find==='buykatana'?'buyContainer':'sellContainer'].list.find(o=>o.catalogKey==='katana'&&o.input?.enabled);
+    else if(find==='confirm')o=s.dialogContainer.list.find(o=>o.input?.enabled&&o.x===130&&o.y===505);
+    else if(find==='selltab')o=s.children.list.find(o=>o.input?.enabled&&o.x===290&&o.y===180);
+    else if(find==='back')o=s.children.list.find(o=>o.input?.enabled&&o.x===55&&o.y===60);
+    else if(find==='item')o=s.itemsPanel.list.find(o=>o.input?.enabled);
+    else if(find==='equip')o=s.btnFeed;
+    else if(find==='public')o=s.publicVillageButton;
+    else if(find==='village')o=s.content.list.find(o=>o.getData('villageGroupId')==='B');
+    else if(find==='farm')o=s.content.list.find(o=>o.texture?.key==='coop');
+    else if(find==='wolf')o=s.wolf;
+    if(!o)throw Error('Missing UI object '+key+':'+find);
+    const p=o.getWorldTransformMatrix().transformPoint(0,0),camera=s.cameras.main,r=s.game.canvas.getBoundingClientRect(),q=camera.matrix.transformPoint(p.x-camera.scrollX,p.y-camera.scrollY);return{x:r.x+q.x/s.scale.width*r.width,y:r.y+q.y/s.scale.height*r.height};},{key,find});await page.mouse.click(point.x,point.y);};
+   const home=()=>page.waitForFunction(()=>window.__farmGame?.scene.isActive('MyFarmScene')&&window.__farmGame.scene.getScene('MyFarmScene').entryChecked);
+   const shop=async()=>{await page.locator('.farm-hud-bottom button[aria-label="商店"]').click();await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene')&&!!window.__farmGame.scene.getScene('ShopScene').farmData);await click('ShopScene','weapons');};
+   const warehouse=async()=>{await page.locator('.farm-hud-bottom button[aria-label="倉庫"]').click();await page.waitForFunction(()=>window.__farmGame.scene.isActive('WarehouseScene')&&!!window.__farmGame.scene.getScene('WarehouseScene').farmData);await click('WarehouseScene','weapons');};
+   own().coins=1100000;await page.evaluate(()=>window.__privateEmitAll());await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.coins===1100000);
+   await shop();await page.screenshot({path:'/tmp/gugu-katana-shop.png'});
+   await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene');window.__katanaGuide=s.weaponGuide.list.filter(o=>o.type==='Text').map(o=>o.text).join('\n');});assert.match(await page.evaluate(()=>window.__katanaGuide),/武士刀/);
+   await click('ShopScene','buykatana');await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').dialogContainer.visible);assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').dialogSubText.text),/500000/);await page.screenshot({path:'/tmp/gugu-katana-purchase.png'});await click('ShopScene','confirm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').farmData.katana===1);assert.equal(own().coins,600000);
+   await click('ShopScene','back');await home();await warehouse();await click('WarehouseScene','item');await click('WarehouseScene','equip');await page.waitForFunction(()=>window.__farmGame.scene.getScene('WarehouseScene').farmData.equippedWeapon==='katana');await page.screenshot({path:'/tmp/gugu-katana-warehouse.png'});
+   const coldPolicy=structuredClone(require('../game-admin/functions/encounters.cjs').DEFAULTS);for(const value of Object.values(coldPolicy))value.enabled=false;coldPolicy.gorilla.enabled=true;coldPolicy.gorilla.home.rate=100;db.data.set('ops_game_config/encounters',{monsters:coldPolicy,revision:1});
+   await page.reload({waitUntil:'domcontentloaded'});await home();assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.equippedWeapon),'katana');assert.equal(own().katana,1);
+   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').gorillaEncounter.weaponSprite.texture.key),'katana','cold home boss must load equipped sword art before creating its attack sprite');await page.screenshot({path:'/tmp/gugu-katana-cold-gorilla.png'});
+   coldPolicy.gorilla.enabled=false;db.data.set('ops_game_config/encounters',{monsters:coldPolicy,revision:2});await page.reload({waitUntil:'domcontentloaded'});await home();assert.equal(own().gorillaFangs||0,0,'closing the cold-entry battle does not grant a reward');
+   await shop();await click('ShopScene','selltab');await click('ShopScene','sellkatana');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').dialogContainer.visible),false);assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').msgText.text),/卸下/);
+   await click('ShopScene','back');await home();await warehouse();await click('WarehouseScene','item');await click('WarehouseScene','equip');await page.waitForFunction(()=>window.__farmGame.scene.getScene('WarehouseScene').farmData.equippedWeapon==='club');await click('WarehouseScene','back');await home();await shop();await click('ShopScene','selltab');await click('ShopScene','sellkatana');await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').dialogContainer.visible);assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').dialogSubText.text),/15000/);await page.screenshot({path:'/tmp/gugu-katana-sale.png'});await click('ShopScene','confirm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').farmData.katana===0);assert.equal(own().coins,615000);
+   await click('ShopScene','back');await home();await shop();await click('ShopScene','buykatana');await click('ShopScene','confirm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('ShopScene').farmData.katana===1);assert.equal(own().coins,115000);
+   await click('ShopScene','back');await home();await warehouse();await click('WarehouseScene','item');await click('WarehouseScene','equip');await page.waitForFunction(()=>window.__farmGame.scene.getScene('WarehouseScene').farmData.equippedWeapon==='katana');await click('WarehouseScene','back');await home();
+   const E=require('../game-admin/functions/encounters.cjs'),policy=structuredClone(E.DEFAULTS);for(const value of Object.values(policy))value.enabled=false;policy.wolf.enabled=true;policy.wolf.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:policy,revision:1});
+   await page.locator('.farm-hud-bottom button[aria-label="村落"]').click();await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene')?.farms?.length>0);await click('LobbyScene','public');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').mode==='public');await click('LobbyScene','village');await page.waitForFunction(()=>window.__farmGame.scene.getScene('LobbyScene').displayGroup?.id==='B'&&window.__farmGame.scene.getScene('LobbyScene').farms?.length>0);await click('LobbyScene','farm');await page.waitForFunction(()=>{const s=window.__farmGame.scene.getScene('VisitScene'),b=s?.wolf?.getBounds();return s?.entryChecked&&b&&b.left>=0&&b.right<=s.scale.width;});
+   await page.screenshot({path:'/tmp/gugu-katana-wolf-one-hit.png'});await click('VisitScene','wolf');await page.locator('[data-result-kind=battle]').waitFor();assert.equal(own().wolfFangs,1);assert.equal(own().combatKills.wolf,1);assert.equal(own().coins,115000);await page.screenshot({path:'/tmp/gugu-katana-wolf-victory.png'});assert.deepEqual(errors,[]);
+   console.log('PASS katana real shop buy500000, warehouse equip/refresh/unequip, cold-home boss weapon art, equipped-sale refusal, sell15000/rebuy, normal public village wolf one pointer hit and one committed reward');return;
+  }
   if(encounterConfigTests){
    const own=db.data.get('groups/A/users/alice').farm,settings=db.data.get('ops_game_config/encounters');
    settings.monsters.mole.enabled=true;settings.monsters.mole.interval=2;own.gardenCatchCount=2;
