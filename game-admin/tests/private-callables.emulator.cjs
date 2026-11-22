@@ -2,13 +2,13 @@
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{createRequire}=require('node:module'),I=require('../../functions/identity-domain.cjs');
 if(!process.env.FIRESTORE_EMULATOR_HOST||!process.env.FIREBASE_AUTH_EMULATOR_HOST)throw Error('需要 Auth 與 Firestore Emulator；禁止正式測試');
 const sdk=createRequire(path.resolve(__dirname,'../../functions/package.json')),{initializeApp,deleteApp}=sdk('firebase-admin/app'),{getFirestore}=sdk('firebase-admin/firestore');
-const project='demo-nexus-private-farm',base=`http://127.0.0.1:5008/${project}/asia-southeast1`,authBase='http://127.0.0.1:9098';let app,db;
+const project='demo-nexus-private-farm',accountId='emulator_player',base=`http://127.0.0.1:5008/${project}/asia-southeast1`,authBase='http://127.0.0.1:9098';let app,db;
 async function post(url,data,token){const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data)});return{status:response.status,data:await response.json()};}
 const call=(name,data,token)=>post(base+'/'+name,{data},token);
 const signIn=token=>post(authBase+'/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=demo-key',{token,returnSecureToken:true});
 test.before(async()=>{
  app=initializeApp({projectId:project},'private-callable-contract');db=getFirestore(app);
- const id='emulator-profile',accountId='emulator_player',stamp=Date.now();
+ const id='emulator-profile',stamp=Date.now();
  await db.doc('users/'+id).set({accountId,name:'Emulator Player',role:'member'});
  await db.doc('ops_identity_credentials/'+id).set({authUid:I.profileUid(id),accountId,sessionVersion:1,secrets:[await I.hashSecret('old-secret')],disabled:false});await db.doc('ops_identity_accounts/'+I.hash(accountId)).set({profileId:id});await db.doc('ops_identity_state/global').set({ready:true,farmReady:true});
  await db.doc('groups/emulator-group').set({members:[accountId],farmVillageVisibility:'closed'});
