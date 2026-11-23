@@ -12,14 +12,18 @@ function refreshFarm(scene){Promise.resolve().then(()=>scene.game.retryFarmSave?
 function modal(scene, title) {
     scene.guardDogDialog?.close();
     const previous = document.activeElement;
+    const input = scene.input, inputEnabled = input.enabled;
+    input.enabled = false;
     const root = node('div', null, 'guard-dog-overlay');root.dataset.guardDogDialog = '';
+    // DOM controls must never hit Phaser shop cards beneath the modal.
+    for(const name of ['pointerdown','pointerup','touchstart','touchend','click','wheel'])root.addEventListener(name,event=>event.stopPropagation(),{passive:true});
     const panel = node('section', null, 'guard-dog-panel');panel.setAttribute('role', 'dialog');panel.setAttribute('aria-modal', 'true');
     const heading = node('h2', title);heading.id = 'guard-dog-dialog-title';panel.setAttribute('aria-labelledby', heading.id);
     const error = node('p', '', 'guard-dog-error');error.setAttribute('role', 'alert');
     const actions = node('div', null, 'guard-dog-actions');
     const cancel = node('button', '取消');cancel.type = 'button';
     let busy = false, closed = false, teardown = () => {};
-    const close = () => { if (closed) return;closed = true;root.remove();document.removeEventListener('keydown', keys);teardown();if(previous?.isConnected)previous.focus(); };
+    const close = () => { if (closed) return;closed = true;root.remove();input.enabled=inputEnabled;if(scene.guardDogDialog===dialog)scene.guardDogDialog=null;document.removeEventListener('keydown', keys);teardown();if(previous?.isConnected)previous.focus(); };
     const keys = event => {
         if(event.key === 'Escape' && !busy) close();
         if(event.key === 'Tab') {
@@ -30,7 +34,7 @@ function modal(scene, title) {
     };
     cancel.addEventListener('click', () => { if(!busy)close(); });
     panel.append(heading,error,actions);actions.append(cancel);root.append(panel);document.body.append(root);
-    document.addEventListener('keydown', keys);scene.guardDogDialog = { close, root };teardown=onSceneExit(scene,close);
+    const dialog={close,root};document.addEventListener('keydown', keys);scene.guardDogDialog=dialog;teardown=onSceneExit(scene,close);
     const submit = (label, run) => {
         const button = node('button',label,'guard-dog-primary');button.type = 'button';actions.append(button);
         button.addEventListener('click',async()=>{

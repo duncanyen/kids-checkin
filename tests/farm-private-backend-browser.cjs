@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const guardRentalTests=process.env.GUARD_RENTAL_TESTS==='1';
 const dailyGroupTests=process.env.DAILY_GROUP_TESTS==='1';
 const weeklyRankingTests=process.env.WEEKLY_RANKING_TESTS==='1';
 let legacyRankingPeriod=false;
@@ -56,7 +57,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
- if(encounterConfigTests||weeklyRankingTests||dailyGroupTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
  if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
@@ -74,7 +75,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>weeklyRankingTests||hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844}}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
+  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:guardRentalTests}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
   await page.exposeFunction('__saveDb',async op=>{if(op.kind==='query')return [...db.data].filter(([key,value])=>key.startsWith(op.path+'/')&&key.split('/').length===op.path.split('/').length+1&&(op.filters||[]).every(f=>f.op==='in'?f.value.includes(value[f.field]):value[f.field]===f.value)).map(([path,data])=>({path,data}));if(op.kind==='get')return structuredClone(db.data.get(op.path));throw Error('Private mode attempted direct Firestore write: '+op.kind);});
   await page.exposeFunction('__privateServer',async(name,data)=>{
    if(legacyBattlePageBackend&&data.action==='beginBattlePage')return{__fixtureError:{code:'functions/invalid-argument',message:'選項無效 [400]'}};
@@ -101,7 +102,7 @@ if(katanaTests||hornetTests||dailyGroupTests)await page.evaluate(()=>window.__pr
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges'){const result=await service.dailyChallenges(request);if(dailyGroupTests&&data.action==='claim')await page.evaluate(()=>window.__privateEmitAll?.());return result;}
    if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(weeklyRankingTests&&legacyRankingPeriod&&data.action==='ranking')result.scoreField='stolenEggs20261116';if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
-   if(name==='gameOpsGuardDog')return service.guardDog(request);
+   if(name==='gameOpsGuardDog'){const result=await service.guardDog(request);if(guardRentalTests)await page.evaluate(()=>window.__privateEmitAll?.());return result;}
    throw Error('Unexpected callable '+name);
   });
   const old=fs.readFileSync('tests/farm-save-browser.cjs','utf8').match(/const sdk = `([\s\S]*?)`;/)[1];
@@ -132,6 +133,23 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(guardRentalTests){
+   releaseSettlement();const own=()=>db.data.get('groups/A/users/alice').farm;
+   await page.locator('.farm-hud-bottom button[aria-label="商店"]').tap();await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene')&&window.__farmGame.scene.getScene('ShopScene').categoryTabs);
+   const tap=async find=>{await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const p=await page.evaluate(find=>{const s=window.__farmGame.scene.getScene('ShopScene'),o=find==='dogs'?s.categoryTabs.tabs.get('dogs').background:s.buyContainer.list.find(o=>o.catalogKey==='guard:'+find&&o.input?.enabled),w=o.getWorldTransformMatrix().transformPoint(0,0),v=s.cameras.main.matrix.transformPoint(w.x-s.cameras.main.scrollX,w.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+v.x/s.scale.width*r.width,y:r.y+v.y/s.scale.height*r.height};},find);await page.touchscreen.tap(p.x,p.y);};
+   await tap('dogs');
+   const dialog=page.locator('[data-guard-dog-dialog]'),input=page.locator('#guard-rental-days');
+   for(const viewport of [{width:390,height:844},{width:320,height:568},{width:430,height:932}]){
+    await page.setViewportSize(viewport);await tap('corgi');await dialog.getByRole('heading',{name:'租用柯基犬',exact:true}).waitFor();
+    const before=calls.filter(c=>c.name==='gameOpsGuardDog').length;
+    for(const days of [7,1,7]){await dialog.getByRole('button',{name:days+' 天',exact:true}).tap();await page.waitForTimeout(150);assert.equal(await input.inputValue(),String(days));assert.equal(await dialog.getByRole('heading').textContent(),'租用柯基犬');assert.equal(await dialog.locator('.guard-dog-price').textContent(),days===7?'7 天 · 500 金幣':'1 天 · 100 金幣');}
+    assert.equal(calls.filter(c=>c.name==='gameOpsGuardDog').length,before,'presets only change the current dialog');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),false);
+    await page.screenshot({path:'/tmp/gugu-corgi-seven-days-'+viewport.width+'.png'});await dialog.getByRole('button',{name:'取消',exact:true}).tap();assert.equal(await dialog.count(),0);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),true);
+   }
+   assert.equal(own().coins,12345);own().coins=400;await page.evaluate(()=>window.__privateEmitAll());await tap('corgi');await dialog.getByRole('button',{name:'7 天',exact:true}).tap();await dialog.getByRole('button',{name:'確認租用',exact:true}).tap();await dialog.locator('.guard-dog-error').filter({hasText:'金幣不足'}).waitFor();assert.equal(await input.inputValue(),'7');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),false);assert.equal(own().guardDogs?.length||0,0);assert.equal(own().coins,400);await dialog.getByRole('button',{name:'取消',exact:true}).tap();assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),true);own().coins=12345;await page.evaluate(()=>window.__privateEmitAll());await tap('corgi');await dialog.getByRole('button',{name:'7 天',exact:true}).tap();await dialog.getByRole('button',{name:'確認租用',exact:true}).tap();await dialog.waitFor({state:'detached'});assert.equal(own().coins,11845);assert.equal(own().guardDogs.length,1);assert.equal(own().guardDogs[0].breedId,'corgi');assert.equal(own().guardDogs[0].days,7);assert.equal(own().guardDogs[0].remainingMs,7*86400000);assert.equal(own().guardDogs[0].startedAt,null);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),true);
+   await tap('beagle');await dialog.getByRole('heading',{name:'租用米格魯',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await dialog.count(),0);assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),true);await tap('beagle');await dialog.getByRole('heading',{name:'租用米格魯',exact:true}).waitFor();await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').scene.start('MyFarmScene'));await dialog.waitFor({state:'detached'});await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked);await page.locator('.farm-hud-bottom button[aria-label=商店]').tap();await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene'));assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').input.enabled),true);await tap('dogs');await tap('beagle');await dialog.getByRole('heading',{name:'租用米格魯',exact:true}).waitFor();await dialog.getByRole('button',{name:'取消',exact:true}).tap();assert.deepEqual(errors,[]);
+   console.log('PASS actual shop touch entry: corgi 1/7 day presets retain breed/price at320/390/430px, no background catalogue requests, cancel/Escape/error/scene-exit restore input, one seven-day lease costs500 and waits in warehouse');return;
+  }
   if(dailyGroupTests){
    releaseSettlement();releaseHarvest();releaseCollection();const farmOf=g=>db.data.get(`groups/${g}/users/alice`).farm;
    const tasks=page.locator('.farm-hud-side button[aria-label="每日任務"]'),claim=page.locator('.farm-daily-claim'),close=page.locator('.farm-daily-close');
