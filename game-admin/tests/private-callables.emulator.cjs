@@ -100,6 +100,21 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const honeySale={groupId:'emulator-group',action:'sellItem',item:'honey',quantity:1,price:999999,requestId:'emulator-honey-sale'},beforeHoneySale=(await ownerRef.get()).data().farm.coins;
  assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);
  assert.equal((await ownerRef.get()).data().farm.coins,beforeHoneySale+300);assert.equal((await ownerRef.get()).data().farm.honey,0);
+ // Same login in a second group must have its own checkin and all task counters.
+ const secondGroupId='emulator-second-group',secondOwner=db.doc(`groups/${secondGroupId}/users/${accountId}`);
+ await db.doc('groups/'+secondGroupId).set({members:[accountId],farmVillageVisibility:'closed'});
+ await secondOwner.set({farm:{...(await ownerRef.get()).data().farm,coins:100}});
+ const scoped=await call('nexusIdentity',{action:'groupToken',groupId:secondGroupId},signed.data.idToken);assert.equal(scoped.status,200);
+ const signedSecond=await signIn(scoped.data.result.token);assert.equal(signedSecond.status,200);const secondToken=signedSecond.data.idToken;
+ const scopeHelper=require('../functions/daily-scope.cjs'),dailyModule=require('../functions/daily-challenges.cjs');
+ await scopeHelper.legacyRef(db,'ops_daily_days','emulator-profile','mission',dailyModule.dateKey(Date.now())).set({tasks:dailyModule.DEFAULT_CONFIG.mission.tasks,rewards:dailyModule.DEFAULT_CONFIG.mission.rewards,policyVersion:'legacy-aggregate',missedDayPolicy:'reset',progress:{COLLECT_EGG_ACTION:3},grantId:null});
+ const secondStatus=await call('gameOpsDailyChallenges',{groupId:secondGroupId,action:'status'},secondToken);assert.equal(secondStatus.status,200,JSON.stringify(secondStatus.data.error||{}));
+ const secondDay=secondStatus.data.result.challenges.checkin;assert.equal(secondDay.claimed,false);assert.equal(secondDay.day,1);assert.ok(secondStatus.data.result.challenges.mission.tasks.every(t=>t.count===0));
+ const coinsBeforeSecondClaim=(await ownerRef.get()).data().farm.coins;
+ const secondClaims=await Promise.all(['a','b'].map(suffix=>call('gameOpsDailyChallenges',{groupId:secondGroupId,action:'claim',type:'checkin',dateKey:secondStatus.data.result.dateKey,cycleId:secondDay.cycleId,day:secondDay.day,requestId:'emulator-second-checkin-'+suffix},secondToken)));
+ for(const claimed of secondClaims){assert.equal(claimed.status,200,JSON.stringify(claimed.data.error||{}));assert.equal(claimed.data.result.groupId,secondGroupId);}
+ assert.equal(new Set(secondClaims.map(c=>c.data.result.transactionId)).size,1);assert.equal((await secondOwner.get()).data().farm.coins,200);assert.equal((await ownerRef.get()).data().farm.coins,coinsBeforeSecondClaim);
+ const originalAgain=await call('gameOpsDailyChallenges',{groupId:'emulator-group',action:'status'},token);assert.equal(originalAgain.status,200);assert.equal(originalAgain.data.result.challenges.checkin.claimed,true);assert.equal(originalAgain.data.result.challenges.mission.tasks.find(t=>t.type==='COLLECT_EGG_ACTION').count,1);
  const changed=await call('nexusIdentity',{action:'changePassword',currentSecret:'old-secret',newSecret:'new-secret'},signed.data.idToken);assert.equal(changed.status,200);
  const stale=await call('gameOpsFarmTransaction',{...trade,requestId:'emulator-trade-002'},token);assert.equal(stale.status,401);
  const newLogin=await call('nexusIdentity',{action:'login',identifier:'emulator_player',secret:'new-secret'});assert.equal(newLogin.status,200);assert.equal((await signIn(newLogin.data.result.token)).status,200);

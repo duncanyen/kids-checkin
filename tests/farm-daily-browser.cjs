@@ -32,6 +32,11 @@ const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8012';
  await page.route('**/js/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const db={};'}));
  await page.route('**/js/farm/mail-ui.js',r=>r.fulfill({contentType:'text/javascript',body:'export function mountFarmMail(){}'}));
  await page.route('**/js/farm/operations-client.js',r=>r.fulfill({contentType:'text/javascript',body:"export const GAME_ANNOUNCEMENTS_ENABLED=false,GAME_REDEMPTION_ENABLED=false;export const createGameOperationsClient=()=>({dailyChallenges:(action,payload)=>window.__dailyApi(action,payload)});"}));
+ // This visual fixture uses legacy Firestore scenes; production private gameplay
+ // is exercised separately by farm-private-backend-browser's DAILY_GROUP_TESTS.
+ await page.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=false;'}));
+ await page.route('**/js/farm/backend-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('FARM_BACKEND_ENABLED = true','FARM_BACKEND_ENABLED = false')});});
+ await page.addInitScript(()=>{Math.random=()=>.99;});
  await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
  await page.addInitScript(()=>sessionStorage.setItem('familyCheckInUser',JSON.stringify({accountId:'self',groupId:'dragon-test',name:'測試玩家'})));
  await page.goto(base+'/farmgame.html');

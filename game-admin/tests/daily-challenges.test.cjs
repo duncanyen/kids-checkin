@@ -5,9 +5,9 @@ const config=()=>structuredClone(DEFAULT_CONFIG);
 const start=Date.parse('2026-11-12T16:01:00Z'),DAY=86400000;
 async function setup(){const f=await fixture();f.clock(start);return f;}
 const request=(f,action='status',extra={},user='alice',group='A')=>{const r=f.request(user,undefined,undefined,group);r.data={...r.data,action,...extra};return r;};
-async function status(f){return f.service.dailyChallenges(request(f));}
+async function status(f,group='A'){return f.service.dailyChallenges(request(f,'status',{},'alice',group));}
 async function claim(f,type='checkin',state,group='A'){
- state||=await status(f);const c=state.challenges[type];
+ state||=await status(f,group);const c=state.challenges[type];
  return f.service.dailyChallenges(request(f,'claim',{type,dateKey:state.dateKey,cycleId:c.cycleId,day:c.day},'alice',group));
 }
 test('seven-day rewards, server Taiwan midnight, cycle rollover and independent mission state',async()=>{
@@ -26,13 +26,14 @@ test('seven-day rewards, server Taiwan midnight, cycle rollover and independent 
  assert.equal((await f.db.collection('ops_daily_grants').get()).size,8);
  assert.equal(dateKey(Date.parse('2026-11-12T15:59:59Z')),'2026-11-12');assert.equal(dateKey(Date.parse('2026-11-12T16:00:00Z')),'2026-11-13');
 });
-test('same-day concurrent devices, altered request ID and cross-group replay grant once',async()=>{
+test('same-group concurrent devices grant once; the same account in another group has an independent grant',async()=>{
  const f=await setup(),s=await status(f);
  const results=await Promise.all(Array.from({length:8},()=>claim(f,'checkin',s)));
  assert.equal(results.filter(r=>!r.replayed).length,1);assert.equal(new Set(results.map(r=>r.transactionId)).size,1);
- const replay=await claim(f,'checkin',s,'B');assert.equal(replay.replayed,true);assert.equal(replay.groupId,'A');
+ await assert.rejects(claim(f,'checkin',s,'B'),{code:'failed-precondition'});
+ const b=await status(f,'B'),other=await claim(f,'checkin',b,'B');assert.equal(other.groupId,'B');assert.notEqual(other.transactionId,results[0].transactionId);
  assert.equal((await f.db.doc('groups/A/users/alice').get()).data().farm.coins,200);
- assert.equal((await f.db.doc('groups/B/users/alice').get()).data().farm.coins,100);
+ assert.equal((await f.db.doc('groups/B/users/alice').get()).data().farm.coins,200);
 });
 test('missed default resets, configurable continue retains streak and snapshot reward is stable',async()=>{
  const f=await setup();await claim(f);f.clock(start+DAY);let s=await status(f);assert.equal(s.challenges.checkin.day,2);
@@ -103,7 +104,7 @@ test('future trusted events from an earlier Taiwan date cannot retroactively gra
 test('admin-only config, per-player state and paginated grant lookup use real records',async()=>{
  const f=await setup();await claim(f);
  const c=await f.admin('dailyConfig');assert.deepEqual(c.config.checkin.rewards,[100,100,100,100,100,100,1000]);assert.deepEqual(c.verifiedProducers,{});
- const p=await f.admin('dailyPlayer',{uid:'alice'});assert.equal(p.rows.find(r=>r.type==='checkin').day.grantId.length,64);
+ const p=await f.admin('dailyPlayer',{uid:'alice',groupId:'A',accountId:'alice'});assert.equal(p.rows.find(r=>r.type==='checkin').day.grantId.length,64);
  const list=await f.admin('dailyGrants',{uid:'alice',pageSize:1});assert.equal(list.rows.length,1);assert.equal(list.rows[0].response.amount,100);
  await assert.rejects(f.service.adminAPI({...f.request(),data:{action:'dailyGrants',payload:{uid:'alice'}}}),{code:'permission-denied'});
 });

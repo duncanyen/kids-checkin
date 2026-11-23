@@ -1,6 +1,7 @@
 /** Read-only, account/group-scoped UI preview. A preview NEVER authorizes a reward. */
-const VERSION=1,DAY=86400000;
-const key=context=>'gugu.daily.preview.v1:'+JSON.stringify([context.accountId,context.groupId]);
+const VERSION=2,DAY=86400000;
+const key=context=>'gugu.daily.preview.v2:'+JSON.stringify([context.accountId,context.groupId]);
+const sameScope=(value,context)=>value?.scopeVersion===VERSION&&value.accountId===context.accountId&&value.groupId===context.groupId;
 function validState(value){
     if(!value||!Number.isFinite(value.serverNow)||!Number.isFinite(value.nextResetAt)||value.nextResetAt<=value.serverNow||value.nextResetAt-value.serverNow>DAY||!/^\d{4}-\d{2}-\d{2}$/.test(value.dateKey))return false;
     return ['checkin','mission'].every(type=>{
@@ -16,7 +17,7 @@ export function readDailyPreview(context,{storage,now=Date.now()}={}){
         const saved=JSON.parse(storage.getItem(key(context))||'null');
         if(!saved)return null;
         const elapsed=now-saved.savedAt;
-        if(saved.version!==VERSION||!Number.isFinite(elapsed)||elapsed<0||elapsed>=DAY||!validState(saved.state)||saved.state.serverNow+elapsed>=saved.state.nextResetAt){storage.removeItem(key(context));return null;}
+        if(saved.version!==VERSION||!Number.isFinite(elapsed)||elapsed<0||elapsed>=DAY||!validState(saved.state)||!sameScope(saved.state,context)||saved.state.serverNow+elapsed>=saved.state.nextResetAt){storage.removeItem(key(context));return null;}
         const result=saved.state;result.serverNow+=elapsed;
         for(const challenge of Object.values(result.challenges))challenge.canClaim=false;
         return result;
@@ -25,9 +26,9 @@ export function readDailyPreview(context,{storage,now=Date.now()}={}){
 export function writeDailyPreview(context,value,{storage,now=Date.now()}={}){
     try{
         storage ||= globalThis.localStorage;
-        if(!validState(value))return;
+        if(!validState(value)||!sameScope(value,context))return;
         // Store only display data, never credentials or Auth tokens.
-        const state={serverNow:value.serverNow,nextResetAt:value.nextResetAt,dateKey:value.dateKey,timeZone:'Asia/Taipei',challenges:{}};
+        const state={scopeVersion:VERSION,accountId:context.accountId,groupId:context.groupId,serverNow:value.serverNow,nextResetAt:value.nextResetAt,dateKey:value.dateKey,timeZone:'Asia/Taipei',challenges:{}};
         for(const type of ['checkin','mission']){
             const c=value.challenges[type];
             state.challenges[type]={type,day:c.day,cycleId:c.cycleId,rewards:c.rewards,tasks:c.tasks.map(t=>({type:t.type,name:t.name,target:t.target,enabled:t.enabled,count:t.count,verified:t.verified,reason:t.reason})),
@@ -42,7 +43,7 @@ export function removeDailyPreview(context,{storage}={}){try{storage ||= globalT
 /** 合併同日、同循環的後端交易顯示進度；重送／較慢回覆不能倒退已完成或已領取狀態。 */
 export function mergeDailyProgress(state,update){
     const current=state?.challenges?.mission,incoming=update?.mission;
-    if(!current||!incoming||typeof update.dateKey!=='string'||!Number.isFinite(update.serverNow))return null;
+    if(!current||!incoming||!sameScope(update,state)||typeof update.dateKey!=='string'||!Number.isFinite(update.serverNow))return null;
     if(update.dateKey<state.dateKey)return state;
     if(update.dateKey!==state.dateKey||incoming.cycleId!==current.cycleId||incoming.day!==current.day||
         incoming.policyVersion!==current.policyVersion||incoming.enabled!==current.enabled||incoming.blocked!==current.blocked||

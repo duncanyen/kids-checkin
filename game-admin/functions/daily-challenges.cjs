@@ -1,5 +1,6 @@
 /** 每日挑戰只使用伺服器時間及既有 farm.coins；未驗證的遊戲事件不可累計。 */
 const D=require('./domain.cjs');
+const Scope=require('./daily-scope.cjs');
 const {reuseTransactionReads}=require('./transaction-reads.cjs');
 const TYPES=['checkin','mission'];
 const TASKS=[
@@ -8,7 +9,7 @@ const TASKS=[
     {type:'DEFEAT_MONSTER',name:'擊退怪物',target:3,enabled:true}
 ];
 const DEFAULT_CONFIG={version:'v2-checkin-100',checkin:{enabled:true,rewards:[100,100,100,100,100,100,1000],missedDayPolicy:'reset'},mission:{enabled:true,rewards:[200,400,600,800,1000,1200,2000],missedDayPolicy:'reset',tasks:TASKS}};
-// 這三項目前仍為客戶端 Firestore 交易，不能冒充已有可信任 producer。
+// 外部事件 consumer 預設停用；農場交易 producer 由正式安全切換狀態啟用。
 const VERIFIED_PRODUCERS=Object.freeze({});
 const FARM_PRODUCERS=Object.freeze(Object.fromEntries(TASKS.map(task=>[task.type,'farm-transactions-v1'])));
 const DAY_MS=86400000;
@@ -34,26 +35,44 @@ function configValue(input){
 function nextDay(state,today,policy,uid,type){
     if(state?.lastClaimDate>today)D.fail('failed-precondition','伺服器日期早於上次領獎日期，請聯絡管理員');
     if(state?.lastClaimDate===today)return{day:state.day,cycleId:state.cycleId};
-    const continues=state&&(state.lastClaimDate===previousDate(today)||policy==='continue');
+    const continues=state?.lastClaimDate&&(state.lastClaimDate===previousDate(today)||policy==='continue');
     const day=continues?state.day%7+1:1;
     return{day,cycleId:day===1?D.hash(`${uid}:${type}:${today}`).slice(0,24):state.cycleId};
 }
 function createDailyChallenges({db,now,player,playerSession,throttle,verifiedProducers=VERIFIED_PRODUCERS,trustedReady=async()=>false}){
     const configRef=db.doc('ops_daily_configs/current');
-    const refFor=(collection,uid,type,date)=>db.doc(`${collection}/${D.hash([uid,type,date].filter(Boolean).join(':'))}`);
+    const refFor=(collection,identity,type,date)=>Scope.scopedRef(db,collection,identity,type,date);
     async function prepare(t,identity,types,stamp){
         const config=configValue((await t.get(configRef)).data());
         const today=dateKey(stamp);
         // 所有讀取先於寫入；status 的日快照鎖定今日金額及任務規格。
         const rows=await Promise.all(types.map(async type=>{
-            const stateRef=refFor('ops_daily_states',identity.uid,type),dayRef=refFor('ops_daily_days',identity.uid,type,today);
-            // 今日快照已包含七日循環；只有新的一天才需要讀取上次領獎狀態。
-            const snapshot=await t.get(dayRef),state=snapshot.exists?null:(await t.get(stateRef)).data();
-            const data=snapshot.data()||{uid:identity.uid,accountId:identity.accountId,type,dateKey:today,
-                ...nextDay(state,today,config[type].missedDayPolicy,identity.uid,type),
-                rewards:config[type].rewards,policyVersion:config.version,missedDayPolicy:config[type].missedDayPolicy,
-                tasks:type==='mission'?config.mission.tasks:[],progress:{},claimedAt:null,grantId:null,createdAt:stamp};
-            return{type,stateRef,dayRef,data,isNew:!snapshot.exists};
+            const stateRef=refFor('ops_daily_states',identity,type),dayRef=refFor('ops_daily_days',identity,type,today);
+            const snapshot=await t.get(dayRef),stateSnapshot=snapshot.exists?null:await t.get(stateRef);
+            const isNewState=!!stateSnapshot&&!stateSnapshot.exists;
+            const legacy=isNewState?await Scope.legacyDay({db,t,identity,type,today,yesterday:previousDate(today),policy:config[type].missedDayPolicy}):null;
+            const state=stateSnapshot?.data()||legacy?.state;
+            const stateSeed={uid:identity.uid,...Scope.scopeOf(identity),...legacy?.state,migratedAt:stamp};
+            let data=snapshot.data();
+            if(!data){
+                data={uid:identity.uid,...Scope.scopeOf(identity),type,dateKey:today,
+                    ...nextDay(state,today,config[type].missedDayPolicy,Scope.scopeKey(identity),type),
+                    rewards:config[type].rewards,policyVersion:config.version,missedDayPolicy:config[type].missedDayPolicy,
+                    tasks:type==='mission'?config.mission.tasks:[],progress:{},claimedAt:null,grantId:null,createdAt:stamp};
+                if(legacy?.snapshot){
+                    const old=legacy.snapshot;
+                    for(const key of ['rewards','policyVersion','missedDayPolicy','tasks'])if(old[key]!==undefined)data[key]=old[key];
+                }
+                if(legacy?.grant){
+                    const grant=legacy.grant;
+                    Object.assign(data,{day:grant.response.day,cycleId:grant.response.cycleId,claimedAt:grant.createdAt,grantId:grant.id,claimedGroupId:identity.groupId,legacyGrantId:grant.id});
+                    data.rewards=[...data.rewards];data.rewards[data.day-1]=grant.response.amount;
+                    if(type==='mission')data.progress=legacy.snapshot?.progress||Object.fromEntries(data.tasks.filter(task=>task.enabled).map(task=>[task.type,task.target]));
+                }else if(type==='mission'&&legacy?.snapshot){
+                    data.progress=await Scope.legacyProgress({db,t,identity,today,tasks:data.tasks});
+                }
+            }
+            return{type,stateRef,dayRef,data,isNew:!snapshot.exists,isNewState,stateSeed};
         }));
         const producers=await trustedReady(t)?{...verifiedProducers,...FARM_PRODUCERS}:verifiedProducers;
         return{config,today,rows,producers};
@@ -70,10 +89,10 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             canClaim:c.enabled&&!d.grantId&&(row.type==='checkin'||(!blocked&&completed)),policyVersion:d.policyVersion,
             missedDayPolicy:d.missedDayPolicy};
     }
-    function initialize(t,rows){for(const row of rows)if(row.isNew)t.create(row.dayRef,row.data);}
+    function initialize(t,rows){for(const row of rows){if(row.isNewState)t.create(row.stateRef,row.stateSeed);if(row.isNew)t.create(row.dayRef,row.data);}}
     async function handle(request){
         const identity=await playerSession(request);
-        await throttle('daily:'+identity.uid,60,60000);
+        await throttle('daily:'+Scope.scopeKey(identity),60,60000);
         const action=request.data?.action;
         if(!['status','claim'].includes(action))D.fail('invalid-argument','未知的每日挑戰操作');
         return db.runTransaction(async transaction=>{
@@ -82,31 +101,31 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             if(action==='status'){
                 const prepared=await prepare(t,current,TYPES,stamp);
                 initialize(t,prepared.rows);
-                return{serverNow:stamp,nextResetAt:(Math.floor((stamp+8*3600000)/DAY_MS)+1)*DAY_MS-8*3600000,dateKey:prepared.today,timeZone:'Asia/Taipei',challenges:Object.fromEntries(prepared.rows.map(row=>[row.type,view(row,prepared.config,prepared.producers)]))};
+                return{...Scope.scopeOf(current),serverNow:stamp,nextResetAt:(Math.floor((stamp+8*3600000)/DAY_MS)+1)*DAY_MS-8*3600000,dateKey:prepared.today,timeZone:'Asia/Taipei',challenges:Object.fromEntries(prepared.rows.map(row=>[row.type,view(row,prepared.config,prepared.producers)]))};
             }
             const type=D.enumValue(request.data.type,TYPES);
             D.requestId(request.data.requestId);
             const prepared=await prepare(t,current,[type],stamp),row=prepared.rows[0],d=row.data;
             if(request.data.dateKey!==prepared.today)D.fail('deadline-exceeded','已跨過台灣午夜，請重新載入今日挑戰後再領取');
             if(request.data.cycleId!==d.cycleId||request.data.day!==d.day)D.fail('failed-precondition','挑戰資料已更新，請重新載入');
-            const grantRef=refFor('ops_daily_grants',current.uid,type,prepared.today),prior=await t.get(grantRef);
-            if(prior.exists)return{...prior.data().response,replayed:true};
+            const grantRef=refFor('ops_daily_grants',current,type,prepared.today),prior=await t.get(d.grantId?db.doc('ops_daily_grants/'+D.id(d.grantId)):grantRef);
+            if(prior.exists){if(!Scope.owns(prior.data(),current))D.fail('failed-precondition','領獎紀錄與群組不符');initialize(t,prepared.rows);return{...prior.data().response,...Scope.scopeOf(current),replayed:true};}
             const status=view(row,prepared.config,prepared.producers);
             if(!status.canClaim)D.fail('failed-precondition',status.blocked?'任務尚未接上可信任事件，暫不可領取':!status.enabled?'此挑戰目前已停用':'尚未完成今日任務');
             const ownerRef=db.doc(`groups/${current.groupId}/users/${current.accountId}`),owner=await t.get(ownerRef);
             const amount=d.rewards[d.day-1];
             const farm=await D.award(owner.data()?.farm,[{kind:'coins',amount}],stamp);
-            const response={transactionId:grantRef.id,type,dateKey:prepared.today,cycleId:d.cycleId,day:d.day,amount,groupId:current.groupId,createdAt:stamp};
+            const response={...Scope.scopeOf(current),transactionId:grantRef.id,type,dateKey:prepared.today,cycleId:d.cycleId,day:d.day,amount,groupId:current.groupId,createdAt:stamp};
             t.update(ownerRef,{farm});
             t.set(row.dayRef,{...d,claimedAt:stamp,grantId:grantRef.id,claimedGroupId:current.groupId});
-            t.set(row.stateRef,{uid:current.uid,accountId:current.accountId,day:d.day,cycleId:d.cycleId,lastClaimDate:prepared.today,updatedAt:stamp});
-            t.create(grantRef,{uid:current.uid,accountId:current.accountId,groupId:current.groupId,type,dateKey:prepared.today,cycleId:d.cycleId,createdAt:stamp,result:'success',requestId:request.data.requestId,response});
+            t.set(row.stateRef,{uid:current.uid,...Scope.scopeOf(current),day:d.day,cycleId:d.cycleId,lastClaimDate:prepared.today,updatedAt:stamp});
+            t.create(grantRef,{uid:current.uid,...Scope.scopeOf(current),type,dateKey:prepared.today,cycleId:d.cycleId,createdAt:stamp,result:'success',requestId:request.data.requestId,response});
             return response;
         });
     }
     /**
      * 未對外提供 callable 的可信任事件接點。
-     * 必須先由已驗證的遊戲後端寫入不可由客戶端存取的事件；現階段無 producer，預設拒絕。
+     * 必須先由已驗證的遊戲後端寫入不可由客戶端存取的事件；未登錄的外部 producer 預設拒絕。
      * 未來應由後端事件派送器呼叫；事件與日進度去重在同一交易，數量一律按有效操作 +1。
      */
     async function consumeVerifiedEvent(eventId){
@@ -122,10 +141,10 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             const receiptRef=db.doc(`ops_daily_events/${eventId}`),receipt=await t.get(receiptRef);
             if(receipt.exists)return{replayed:true};
             const prepared=await prepare(t,current,['mission'],now()),row=prepared.rows[0],task=row.data.tasks.find(task=>task.type===event.type&&task.enabled);
-            if(!prepared.config.mission.enabled||!task||row.data.grantId){t.create(receiptRef,{uid:current.uid,result:'ignored',createdAt:now()});return{ignored:true};}
+            if(!prepared.config.mission.enabled||!task||row.data.grantId){initialize(t,prepared.rows);t.create(receiptRef,{uid:current.uid,...Scope.scopeOf(current),result:'ignored',createdAt:now()});return{ignored:true};}
             const progress={...row.data.progress,[event.type]:Math.min(task.target,(row.data.progress[event.type]||0)+1)};
-            t.set(row.dayRef,{...row.data,progress});
-            t.create(receiptRef,{uid:current.uid,accountId:current.accountId,type:event.type,dateKey:prepared.today,result:'counted',createdAt:now()});
+            initialize(t,[{...row,data:{...row.data,progress}}]);if(!row.isNew)t.set(row.dayRef,{...row.data,progress});
+            t.create(receiptRef,{uid:current.uid,...Scope.scopeOf(current),type:event.type,dateKey:prepared.today,result:'counted',createdAt:now()});
             return{progress};
         });
     }
@@ -141,9 +160,9 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         const counted=prepared.config.mission.enabled&&task&&!row.data.grantId;
         const progress=counted?{...row.data.progress,[event.type]:Math.min(task.target,(row.data.progress[event.type]||0)+1)}:row.data.progress;
         const increased=counted&&progress[event.type]>(row.data.progress[event.type]||0);
-        const write=()=>{if(increased)t.set(row.dayRef,{...row.data,progress});t.create(receiptRef,{uid:current.uid,accountId:current.accountId,groupId:current.groupId,type:event.type,dateKey:prepared.today,result:counted?'counted':'ignored',createdAt:stamp});};
+        const write=()=>{initialize(t,[{...row,data:{...row.data,progress}}]);if(increased&&!row.isNew)t.set(row.dayRef,{...row.data,progress});t.create(receiptRef,{uid:current.uid,...Scope.scopeOf(current),type:event.type,dateKey:prepared.today,result:counted?'counted':'ignored',createdAt:stamp});};
         // 進度與經濟變更同筆提交後才回傳；UI 不必為同一次操作再查詢完整 status。
-        write.dailyProgress={serverNow:stamp,dateKey:prepared.today,mission:view({...row,data:{...row.data,progress}},prepared.config,prepared.producers)};
+        write.dailyProgress={...Scope.scopeOf(current),serverNow:stamp,dateKey:prepared.today,mission:view({...row,data:{...row.data,progress}},prepared.config,prepared.producers)};
         return write;
     }
     async function adminRead(action,payload={}) {
@@ -152,8 +171,9 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         if(action==='dailyPlayer'){
             const requestedDate=payload.dateKey||dateKey(now());
             if(!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate))D.fail('invalid-argument','日期格式不正確');
-            const rows=await Promise.all(TYPES.map(async type=>({type,state:(await refFor('ops_daily_states',uid,type).get()).data()||null,day:(await refFor('ops_daily_days',uid,type,requestedDate).get()).data()||null})));
-            return{uid,dateKey:requestedDate,rows};
+            const identity={uid,groupId:D.id(payload.groupId),accountId:D.id(payload.accountId)};
+            const rows=await Promise.all(TYPES.map(async type=>({type,state:(await refFor('ops_daily_states',identity,type).get()).data()||null,day:(await refFor('ops_daily_days',identity,type,requestedDate).get()).data()||null})));
+            return{uid,...Scope.scopeOf(identity),dateKey:requestedDate,rows};
         }
         const size=payload.pageSize===undefined?25:D.integer(payload.pageSize,1,50);
         let query=db.collection('ops_daily_grants').where('uid','==',uid).orderBy('createdAt','desc');

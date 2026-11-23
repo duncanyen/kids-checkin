@@ -1,6 +1,6 @@
 import { createGameOperationsClient } from './operations-client.js';
 import { prepareDailyAssets } from './daily-assets-cache.js';
-import { readDailyPreview, writeDailyPreview, removeDailyPreview, mergeDailyProgress } from './daily-preview-cache.js?v=20261115-read-opt';
+import { readDailyPreview, writeDailyPreview, removeDailyPreview, mergeDailyProgress } from './daily-preview-cache.js?v=20261123-group-scope';
 import { hasFarmHudEncounter } from './hud-ui.js';
 const ASSETS='assets/farm/daily-missions/v2/';
 const el=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n;};
@@ -31,7 +31,7 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
     const hen=art('hen.png','farm-daily-hen'),reward=el('div','farm-daily-reward-panel'),rewardLabel=el('span','farm-daily-reward-label'),rewardAmount=el('strong','farm-daily-reward-amount');
     reward.append(rewardLabel,rewardAmount);
     body.append(date,description,cards,taskDay,missions,notice,retry);footer.append(hen,reward,claim,status);panel.append(header,tabs,body,footer);root.append(panel);document.querySelector('#game-container').append(root);
-    const tabKey=`gugu.daily.tab:${context.accountId}`;
+    const tabKey=`gugu.daily.tab.v2:${JSON.stringify([context.groupId,context.accountId])}`;
     let selected=sessionStorage.getItem(tabKey)==='mission'?'mission':'checkin';
     let state=readDailyPreview(context),busy=false,loading=false,disposed=false,generation=0,clockStart=performance.now(),refreshTimer,lastFocus;
     let confirmed=false,freshAt=0,pendingLoad=null,changed=0,renderedKey=null;
@@ -125,6 +125,7 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
         pendingLoad=(async()=>{
             try{
                 const data=await client.dailyChallenges('status');
+                if(data.scopeVersion!==2||data.groupId!==context.groupId||data.accountId!==context.accountId)throw new Error('每日挑戰資料正在更新，請稍後重新載入。');
                 if(disposed||token!==generation||version!==changed)return;
                 state=data;clockStart=performance.now();freshAt=clockStart;confirmed=true;savePreview();status.textContent='';
             }catch(error){
@@ -146,7 +147,7 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
     }
     async function claimToday(){
         const challenge=state?.challenges?.[selected];if(busy||loading||!confirmed||!challenge?.canClaim)return;
-        const type=selected,key=`gugu.daily.pending:${context.accountId}:${type}`;
+        const type=selected,key=`gugu.daily.pending.v2:${JSON.stringify([context.groupId,context.accountId,type])}`;
         let pending;
         try{pending=JSON.parse(sessionStorage.getItem(key)||'null');}catch{}
         if(!pending||pending.dateKey!==state.dateKey||pending.cycleId!==challenge.cycleId||pending.day!==challenge.day){
@@ -155,10 +156,11 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
         busy=true;status.textContent='';render();
         try{
             const result=await client.dailyChallenges('claim',pending);
+            if(result.scopeVersion!==2||result.groupId!==context.groupId||result.accountId!==context.accountId)throw new Error('領獎結果與目前群組不符，請重新載入確認。');
             sessionStorage.removeItem(key);
             // 正式餘額沿用 BootScene 的存檔監聽器；不在客戶端自行相加金幣。
             state.challenges[type]={...challenge,claimed:true,canClaim:false,grantId:result.transactionId};
-            status.textContent=`${result.replayed?'已確認先前領取':'領取成功'}：${number(result.amount)} 金幣${result.groupId!==context.groupId?'（發至先前領取的群組農場）':''}。`;
+            status.textContent=`${result.replayed?'已確認先前領取':'領取成功'}：${number(result.amount)} 金幣。`;
             freshAt=performance.now();savePreview();
             game.events.emit('dailyChallengeClaimed',result);
         }catch(error){confirmed=false;removeDailyPreview(context);status.textContent=error.message||'領取結果未確認，請重新載入或重試，同一天不會重複發獎。';}

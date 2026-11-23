@@ -28,7 +28,7 @@ test('Taiwan midnight, device clock rollback, old/schema-invalid data and privat
 });
 test('verified progress merges monotonically; stale dates, changed rules and different cycles never overwrite current state',async()=>{
  const {mergeDailyProgress}=await moduleReady,state=await snapshot();
- const update={serverNow:state.serverNow,dateKey:state.dateKey,mission:structuredClone(state.challenges.mission)};
+ const update={scopeVersion:2,accountId:state.accountId,groupId:state.groupId,serverNow:state.serverNow,dateKey:state.dateKey,mission:structuredClone(state.challenges.mission)};
  update.mission.tasks[0].count=2;
  const merged=mergeDailyProgress(state,update);assert.equal(merged.challenges.mission.tasks[0].count,2);assert.equal(state.challenges.mission.tasks[0].count,0);
  update.mission.tasks[0].count=1;assert.equal(mergeDailyProgress(merged,update).challenges.mission.tasks[0].count,2);
@@ -39,4 +39,11 @@ test('verified progress merges monotonically; stale dates, changed rules and dif
  for(const mutate of [m=>m.cycleId='other',m=>m.policyVersion='other',m=>m.tasks[0].target++,m=>m.tasks[0].count=-1]){
   const next=structuredClone(update);mutate(next.mission);assert.equal(mergeDailyProgress(state,next),null);
  }
+});
+
+test('group scope metadata rejects old previews and cross-group progress even when dates and cycles match',async()=>{
+ const {readDailyPreview,writeDailyPreview,mergeDailyProgress}=await moduleReady,data=await snapshot(),store=storage();
+ writeDailyPreview(context,{...data,groupId:'B'},{storage:store,now:stamp});assert.equal(store.values.size,0);
+ writeDailyPreview(context,data,{storage:store,now:stamp});const key=[...store.values.keys()][0],saved=JSON.parse(store.values.get(key));saved.state.groupId='B';store.values.set(key,JSON.stringify(saved));assert.equal(readDailyPreview(context,{storage:store,now:stamp}),null);
+ const update={...data,mission:structuredClone(data.challenges.mission),groupId:'B'};update.mission.tasks[0].count=3;assert.equal(mergeDailyProgress(data,update),null);
 });
