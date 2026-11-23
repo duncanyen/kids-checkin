@@ -3,6 +3,9 @@ export const ASSET_MANIFEST = {
     hornet:{type:'atlas',image:'hornet-sheet.png',json:'hornet-sheet.json'},
     honey:{type:'image',image:'honey.png'},
     chest_inventory:{type:'image',image:'chest/v1/chest_inventory_icon.png'},
+    scene_arctic_thumb:{type:'image',image:'scenes/arctic-aurora-v1-thumb.webp'},
+    scene_arctic_portrait:{type:'image',image:'scenes/arctic-aurora-v1-portrait.webp'},
+    scene_arctic_landscape:{type:'image',image:'scenes/arctic-aurora-v1-landscape.webp'},
     scene_default_thumb:{type:'image',image:'scenes/default-thumb.webp'},
     scene_fuji_thumb:{type:'image',image:'scenes/fuji-japanese-v2-thumb.webp'},
     scene_fuji_portrait:{type:'image',image:'scenes/fuji-japanese-v2-portrait.webp'},
@@ -26,7 +29,7 @@ export const ASSET_MANIFEST = {
 // Both map orientations remain ready for immediate mobile/tablet resizing.
 export const CORE_ASSETS = ['hen','farm_map','farm_panorama','ui_parchment','signboard','egg','coin','worm','earthworm'];
 // Seasonal art is demand-loaded only while its explicitly dated event is active.
-export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026' && !['scene_fuji_portrait','scene_fuji_landscape'].includes(key));
+export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026' && !/^scene_.+_(portrait|landscape)$/.test(key));
 // Catalogues need item/hen/dog art, not every full combat animation.
 const combatOnly=new Set(['wolf','tiger','dragon','gorilla','eagle','cobra','mole','giant','hornet','arrow']);
 export const CATALOG_ASSETS=ALL_ASSETS.filter(key=>!combatOnly.has(key));

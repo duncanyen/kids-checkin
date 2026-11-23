@@ -141,3 +141,14 @@ test('Japanese Fuji doorway remains inside painted entrance and map references s
         }
     }
 });
+
+test('Arctic egg and nesting doorway remain inside the igloo hit area across orientations',()=>{
+ for(const [width,height] of [[320,568],[390,844],[430,932],[768,1024],[1024,768]]){
+  const scene={scale:{width,height},displayedFarmSceneId:'arctic'},map=getFarmMapLayout(scene),door=farmEggPosition(scene),coop=map.point(370,322.5);
+  assert.ok(Math.abs(door.x-coop.x)<130*map.scale);
+  assert.ok(door.y>map.point(370,210).y&&door.y<map.point(370,435).y);
+  const original={x:217,y:961},point=map.point(original.x,original.y),restored=map.reference(point.x,point.y);
+  assert.ok(Math.abs(restored.x-original.x)<1e-8&&Math.abs(restored.y-original.y)<1e-8);
+  if(map.texture==='farm_map')assert.deepEqual(door,map.point(320,358));
+ }
+});

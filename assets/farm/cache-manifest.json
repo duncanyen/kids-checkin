@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "ddf2874534af1ee411b2",
+  "revision": "c41077ed2e7959b38e3f",
   "files": {
     "assets/farm/arrow.png": "bd46dad3607d1a7a60a6",
     "assets/farm/background.webp": "d8f6a8b344ad59cbb207",
@@ -170,6 +170,9 @@
     "assets/farm/reference-ui/v2/eggs_panel_dynamic_base.png": "e80e0e4e6c4d72420d97",
     "assets/farm/reference-ui/v2/mail_unread_badge.png": "938b1809c9e5a7279e74",
     "assets/farm/reference-ui/v2/manifest.json": "07c12008a40b225995db",
+    "assets/farm/scenes/arctic-aurora-v1-landscape.webp": "b040834324b8e3304691",
+    "assets/farm/scenes/arctic-aurora-v1-portrait.webp": "48651816b2288eec49e1",
+    "assets/farm/scenes/arctic-aurora-v1-thumb.webp": "78169b83e53dce2a59ea",
     "assets/farm/scenes/default-thumb.webp": "d8d5275b127173168d12",
     "assets/farm/scenes/fuji-japanese-v2-landscape.webp": "338d68f873b2f49ad233",
     "assets/farm/scenes/fuji-japanese-v2-portrait.webp": "7e0ef1fb9983c1887579",

@@ -153,7 +153,7 @@ export function addFarmCoop(scene, onClick) {
 function positionCoopLevel(coop, map) {
     const point = map.texture === 'farm_panorama'
         ? { x: map.offsetX + (map.artId==='fuji'?1023:1033) * map.artScale, y: map.offsetY + (map.artId==='fuji'?208:224) * map.artScale }
-        : map.artId==='fuji'?map.point(325,325):map.point(334, 316);
+        : map.artId==='fuji'?map.point(325,325):map.artId==='arctic'?map.point(320,327):map.point(334, 316);
     coop.levelBadge?.setPosition(point.x, point.y).setFontSize(16 * map.artScale);
 }
 
@@ -163,7 +163,7 @@ export function farmEggPosition(scene) {
     // The panoramic painting's doorway does not follow the generic y mapping.
     return map.texture === 'farm_panorama'
         ? { x: map.offsetX + (map.artId==='fuji'?1020:1034) * map.artScale, y: map.offsetY + 254 * map.artScale }
-        : map.artId==='fuji'?map.point(325,364):map.point(334, 358);
+        : map.artId==='fuji'?map.point(325,364):map.artId==='arctic'?map.point(320,358):map.point(334, 358);
 }
 
 export function positionFarmEgg(scene, egg) {

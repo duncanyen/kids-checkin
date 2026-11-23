@@ -32,7 +32,7 @@ export function openScenePurchase(scene,id) {
 export function openSceneSettings(scene) {
     const dialog=farmDialog(scene,'更換場景');dialog.panel.classList.add('farm-scenes-panel');
     const farm=currentFarm(scene),owned=ownedSceneIds(farm);let active=activeSceneId(farm);
-    dialog.message.textContent=owned.length>1?'選擇已擁有的場景，免費切換。':'目前只有初始場景，其他場景開賣後可到商店「場景」購買。';
+    dialog.message.textContent=owned.length>1?'選擇已擁有的場景，免費切換。':'目前只有初始場景，可到商店「場景」購買其他場景，再回此切換。';
     const list=document.createElement('div');list.className='farm-scene-list';dialog.panel.append(list);
     let busy=false;const controls=[];
     for(const id of owned){

@@ -116,3 +116,20 @@ test('transaction retry revalidates but charges admission only once and commits 
  await f.service.handle(f.req('buyMedicine',{quantity:1}),{admit:async()=>{admissions++;}});
  assert.equal(admissions,1);assert.equal(f.farm().coins,9990);assert.equal(f.farm().medicines,1);
 });
+
+test('Arctic scene uses server price, charges once, keeps ownership and switches freely',async()=>{
+ const f=fixture();
+ await assert.rejects(f.service.handle(f.req('setScene',{sceneId:'arctic'})),/尚未擁有/);
+ await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:'arctic',price:1,coins:999999})),/金幣不足/);
+ assert.equal(f.farm().coins,10000);assert.equal(f.farm().ownedSceneIds,undefined);
+ f.farm().coins=600000;
+ const buy=f.req('buyScene',{sceneId:'arctic',price:0});
+ const result=await f.service.handle(buy),replay=await f.service.handle(buy);
+ assert.deepEqual(replay.result,result.result);assert.equal(f.farm().coins,100000);
+ assert.deepEqual(f.farm().ownedSceneIds,['arctic']);assert.equal(f.farm().activeSceneId,undefined);
+ await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:'arctic'})),/已擁有/);
+ await f.service.handle(f.req('setScene',{sceneId:'arctic'}));assert.equal(f.farm().activeSceneId,'arctic');
+ await f.service.handle(f.req('setScene',{sceneId:'default'}));assert.equal(f.farm().activeSceneId,'default');
+ assert.equal(f.farm().coins,100000);assert.equal(f.db.data.get('groups/A/users/bob').farm.ownedSceneIds,undefined);
+ assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
+});
