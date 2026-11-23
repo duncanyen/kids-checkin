@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="css/farm-loading.css">
    
     <link rel="stylesheet" href="css/farm-layout.css">
+    <link rel="stylesheet" href="css/farm-visit.css">
     <link rel="stylesheet" href="css/farm-hud.css">
     <link rel="stylesheet" href="css/farm-daily.css">
     <link rel="stylesheet" href="css/farm-egg-result.css?v=20261116-coop-clean">
@@ -51,8 +52,9 @@
     </div>
     <div class="top-nav">
         <button class="btn-back" onclick="window.location.href='games.html'">❮ 返回遊戲大廳</button>
-        <div>
-            <strong id="playerName">載入中...</strong> 的農莊
+        <div class="farm-owner-label">
+            <span data-farm-own-label><strong id="playerName">載入中...</strong> 的農莊</span>
+            <span class="farm-visit-owner" data-farm-visit-label hidden></span>
         </div>
     </div>
 

@@ -3,6 +3,7 @@ exports.run=async({page,calls,db,errors})=>{
  const own=()=>db.data.get('groups/A/users/alice').farm,dialog=page.getByRole('dialog');
  const ready=key=>page.waitForFunction(key=>{const s=window.__farmGame?.scene.getScene(key);return s?.sys.isActive()&&(key!=='MyFarmScene'||s.entryChecked)&&(key!=='VisitScene'||s.entryChecked);},key);
  const click=async(key,kind)=>{
+  if(key==='VisitScene'&&kind==='back'){await page.getByRole('button',{name:'離開',exact:true}).click();return;}
   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   const p=await page.evaluate(({key,kind})=>{const s=window.__farmGame.scene.getScene(key),o=kind==='category'?s.categoryTabs.tabs.get('scenes').background:kind==='product'?s.buyContainer.list.find(o=>o.type==='Rectangle'&&o.catalogKey==='scene:arctic'):kind==='farm'?s.content.list.find(o=>o.texture?.key==='coop'):s.children.list.find(o=>o.input?.enabled&&o.x===(key==='LobbyScene'?42:55)&&o.y===(['ShopScene','WarehouseScene'].includes(key)?60:50));if(!o)throw Error('Missing '+key+'/'+kind);const w=o.getWorldTransformMatrix().transformPoint(0,0),q=s.cameras.main.matrix.transformPoint(w.x-s.cameras.main.scrollX,w.y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+q.x/s.scale.width*r.width,y:r.y+q.y/s.scale.height*r.height};},{key,kind});await page.mouse.click(p.x,p.y);
  };

@@ -1,3 +1,4 @@
+import { mountVisitHud } from './visit-hud.js';
 import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
 import { farmLoading } from './loading-ui.js';
 import { GiantEncounter } from './giant.js';
@@ -121,21 +122,7 @@ export default class VisitScene extends Phaser.Scene {
             this.showNoticeText('幫忙抓菜園裡的蟲子\n有機率獲得一些寶貝哦!', '#FFF', 14, sign.x + 95, sign.y - 20);
         });
 
-        this.add.rectangle(195, 50, 240, 50, 0x000000, 0.6).setOrigin(0.5).setDepth(30);
-        this.add.text(195, 50, `潛入 [${this.targetName}] 的家`, { fontSize: '16px', color: '#FFD54F', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
-
-        const btnBack = this.add.rectangle(55, 50, 70, 40, 0x757575, 0.9).setOrigin(0.5).setInteractive({ cursor: 'pointer' }).setDepth(30);
-        this.add.text(55, 50, '溜走', { fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(30);
-        const updateBack = () => {
-            const blocked = farmActionsBlocked(this, hasPendingBackendBattle());
-            btnBack.setAlpha(blocked ? .4 : 1);
-        };
-        btnBack.on('pointerdown', () => {
-            if (farmActionsBlocked(this, hasPendingBackendBattle())) return;
-            this.scene.start('LobbyScene', { targetGroupId: this.targetGroupId });
-        });
-        this.events.on('update', updateBack);
-        onSceneExit(this, () => this.events.off('update', updateBack));
+        mountVisitHud(this, { pendingBattle: hasPendingBackendBattle });
 
         mountHalloween(this);
         this.initFirebase();
