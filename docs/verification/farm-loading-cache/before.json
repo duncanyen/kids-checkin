@@ -1,0 +1,85 @@
+{
+  "label": "before",
+  "viewport": "390x844",
+  "environment": "local Chromium / isolated SDK / real Phaser / SW blocked for request instrumentation",
+  "warmRoutes": [
+    {
+      "route": "ShopScene",
+      "ms": 599,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "WarehouseScene",
+      "ms": 435,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "ShopScene",
+      "ms": 467,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "WarehouseScene",
+      "ms": 427,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "ShopScene",
+      "ms": 451,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "WarehouseScene",
+      "ms": 452,
+      "textureRequests": 0,
+      "masks": 0
+    }
+  ],
+  "visits": [
+    {
+      "ms": 257,
+      "textureRequests": 0,
+      "masks": 1
+    },
+    {
+      "ms": 185,
+      "textureRequests": 0,
+      "masks": 1
+    },
+    {
+      "ms": 236,
+      "textureRequests": 0,
+      "masks": 1
+    },
+    {
+      "ms": 154,
+      "textureRequests": 0,
+      "masks": 1
+    },
+    {
+      "ms": 191,
+      "textureRequests": 0,
+      "masks": 1
+    }
+  ],
+  "sourceRetainedWhileLoading": false,
+  "overlayAt80ms": true,
+  "firstWarehouseMs": 2609,
+  "firstWarehouseTextureRequests": 58,
+  "loadedCombatSprites": [
+    "wolf",
+    "tiger",
+    "dragon",
+    "gorilla",
+    "eagle",
+    "cobra",
+    "mole",
+    "giant",
+    "hornet"
+  ]
+}

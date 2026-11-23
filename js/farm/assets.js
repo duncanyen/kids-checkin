@@ -7,9 +7,10 @@ import { registerEagleAnimations } from './eagle.js';
 import { registerGiantAnimations } from './giant.js';
 import { registerCobraAnimations } from './cobra.js';
 import { farmLoading } from './loading-ui.js';
-import { ASSET_MANIFEST as manifest, CORE_ASSETS, ALL_ASSETS } from './asset-manifest.js';
+import { onSceneExit } from './scene-cleanup.js';
+import { ASSET_MANIFEST as manifest, CORE_ASSETS, ALL_ASSETS, SCENE_ASSETS } from './asset-manifest.js';
 export { CORE_ASSETS, ALL_ASSETS } from './asset-manifest.js';
-const bundles = {LobbyScene:['farm_background','coop','ui_wood','ui_wood_selected','ui_parchment','ui_page'],ShopScene:ALL_ASSETS,WarehouseScene:ALL_ASSETS,VisitScene:ALL_ASSETS};
+const bundles=SCENE_ASSETS;
 export function bossAssets(kind) { return kind === 'gorilla' ? ['gorilla'] : [kind,...(kind==='hornet'?['honey']:[]),'shortbow','huntingbow','paladinbow','arrow','ui_wood']; }
 export function queueAssets(scene, keys) {
     const missing = [...new Set(keys)].filter(key => !scene.textures.exists(key));
@@ -88,13 +89,14 @@ export function preloadSceneAssets(scene) {
     const keys=bundles[scene.sys.settings.key] || CORE_ASSETS;
     const token=scene.farmAssetToken=Symbol();scene.farmAssetError=false;
     if (keys.every(key=>scene.textures.exists(key))) return;
-    farmLoading.begin('準備功能素材');
+    const timer=setTimeout(()=>{if(scene.farmAssetToken===token)farmLoading.begin('準備功能素材');},200);
+    scene.events.once('shutdown',()=>clearTimeout(timer));
     class BundleFile extends Phaser.Loader.File {
         load() {
             ensureAssets(scene,keys,n=>farmLoading.progress(n*95,'載入功能素材')).then(()=>{
-                if(this.loader.inflight?.contains(this))this.loader.nextFile(this,true);
+                clearTimeout(timer);if(this.loader.inflight?.contains(this))this.loader.nextFile(this,true);
             },()=>{
-                if(scene.farmAssetToken===token)scene.farmAssetError=true;
+                clearTimeout(timer);if(scene.farmAssetToken===token)scene.farmAssetError=true;
                 if(this.loader.inflight?.contains(this))this.loader.nextFile(this,false);
             });
         }
@@ -109,4 +111,26 @@ export function finishSceneAssets(scene) {
     }
     if(scene.game.registry.get('farmInitialReady'))farmLoading.complete(true);
     return true;
+}
+
+/** Keep the current screen visible while genuinely missing art is prepared. */
+export async function navigateFarmScene(scene,target){
+    const keys=bundles[target]||CORE_ASSETS;
+    if(!scene.sys.isActive()||scene.farmNavigationToken)return false;
+    if(keys.every(key=>scene.textures.exists(key))){scene.scene.start(target);return true;}
+    const token=scene.farmNavigationToken=Symbol('navigation'),input=scene.input,before=input.enabled;
+    input.enabled=false;let shown=false,handoff=false;
+    const active=()=>scene.sys.isActive()&&scene.farmNavigationToken===token;
+    const timer=setTimeout(()=>{if(active()){shown=true;farmLoading.begin('準備功能素材');}},200);
+    const cleanup=()=>{if(scene.farmNavigationToken!==token)return;clearTimeout(timer);scene.farmNavigationToken=null;input.enabled=before;if(shown&&!handoff)farmLoading.complete(true);};
+    const teardown=onSceneExit(scene,cleanup);
+    try{
+        await ensureAssets(scene,keys,n=>{if(shown&&active())farmLoading.progress(n*95,'載入功能素材');});
+        if(!active())return false;
+        handoff=true;input.enabled=before;scene.scene.start(target);return true;
+    }catch(error){
+        const current=active();teardown();
+        if(current)farmLoading.error('功能素材載入失敗，存檔未變更。請重試。',()=>{farmLoading.begin('重新載入功能素材');void navigateFarmScene(scene,target);});
+        return false;
+    }finally{teardown();}
 }

@@ -1,3 +1,7 @@
+// The existing daily-only worker remains compatible with old registrations.
+if(new URL(self.location.href).searchParams.has('art')){
+    importScripts('./js/farm/public-art-worker.js');
+}else{
 /* Scope is farmgame.html only. Cache public daily PNGs; never cache game/API data. */
 const revision=new URL(self.location.href).searchParams.get('v')||'1';
 const CACHE_PREFIX='gugu-daily-art-';
@@ -35,3 +39,5 @@ self.addEventListener('fetch',event=>{
         return response;
     })());
 });
+
+}

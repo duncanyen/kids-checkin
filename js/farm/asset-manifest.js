@@ -27,3 +27,10 @@ export const ASSET_MANIFEST = {
 export const CORE_ASSETS = ['hen','farm_map','farm_panorama','ui_parchment','signboard','egg','coin','worm','earthworm'];
 // Seasonal art is demand-loaded only while its explicitly dated event is active.
 export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026' && !['scene_fuji_portrait','scene_fuji_landscape'].includes(key));
+// Catalogues need item/hen/dog art, not every full combat animation.
+const combatOnly=new Set(['wolf','tiger','dragon','gorilla','eagle','cobra','mole','giant','hornet','arrow']);
+export const CATALOG_ASSETS=ALL_ASSETS.filter(key=>!combatOnly.has(key));
+export const SCENE_ASSETS=Object.freeze({
+    LobbyScene:['farm_background','coop','ui_wood','ui_wood_selected','ui_parchment','ui_page'],
+    ShopScene:CATALOG_ASSETS,WarehouseScene:CATALOG_ASSETS,VisitScene:ALL_ASSETS
+});

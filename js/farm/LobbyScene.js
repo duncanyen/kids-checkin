@@ -55,6 +55,7 @@ export default class LobbyScene extends Phaser.Scene {
 
     // 共用啟動時的母雞動畫；只結束本場景發起的載入，避免關閉其他流程的遮罩。
     finishEntryLoading() {
+        clearTimeout(this.entryLoadingTimer);this.entryLoadingTimer=null;
         if (!this.entryLoading) return;
         this.entryLoading = false;
         farmLoading.complete(true);
@@ -223,7 +224,7 @@ export default class LobbyScene extends Phaser.Scene {
                 house.setTint(0xffdf91);
                 this.loadingText.setVisible(false);
                 this.entryLoading = true; this.entryLoadingHandoff = false;
-                farmLoading.begin('正在載入村落…');
+                this.entryLoadingTimer=setTimeout(()=>{if(active())farmLoading.begin('正在確認村落與怪物狀態…');},200);
                 try {
                     const groupId = group.id;
                     // 原本進場後的素材與驗證工作移到列表載入階段；不重複下載已完成的紋理。
@@ -241,6 +242,7 @@ export default class LobbyScene extends Phaser.Scene {
                     if (!active()) return;
                     const preparedEntry = result ? { ...result, sourceGroupId: CURRENT_GROUP_ID, sourceAccountId: CURRENT_ACCOUNT_ID, group: verifiedGroup, farm: snapshot.data().farm } : null;
                     farmLoading.progress(95, '即將進入村落…');
+                    clearTimeout(this.entryLoadingTimer);this.entryLoadingTimer=null;
                     this.entryLoadingHandoff = true;
                     transitioning = true;
                     this.scene.start('VisitScene', { targetGroupId: groupId, targetGroupName: verifiedGroup.name, targetAccountId: member.accountId, targetName: member.name, preparedEntry });

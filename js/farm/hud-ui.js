@@ -209,7 +209,7 @@ export function mountFarmHud(game,{dailyChallenges,hasPendingBattle=()=>false}={
         const scene = game.scene.getScenes(true).find(scene=>['MyFarmScene','LobbyScene','VisitScene','ShopScene','WarehouseScene'].includes(scene.scene.key));
         // 村落入口在其他功能頁先回自家；在自家可繼續前往村落拜訪。
         const target = key === 'LobbyScene' && scene?.scene.key !== 'MyFarmScene' ? 'MyFarmScene' : key;
-        if (scene && scene.scene.key !== target) scene.scene.start(target);
+        if (scene && scene.scene.key !== target) void import('./assets.js').then(({navigateFarmScene})=>navigateFarmScene(scene,target));
     });
     function step(_time) {
         if (_time - lastCheck < 100) return;

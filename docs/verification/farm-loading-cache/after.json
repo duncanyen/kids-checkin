@@ -1,0 +1,75 @@
+{
+  "label": "after",
+  "viewport": "390x844",
+  "environment": "local Chromium / isolated SDK / real Phaser / SW blocked for request instrumentation",
+  "warmRoutes": [
+    {
+      "route": "ShopScene",
+      "ms": 704,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "WarehouseScene",
+      "ms": 624,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "ShopScene",
+      "ms": 618,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "WarehouseScene",
+      "ms": 605,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "ShopScene",
+      "ms": 621,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "route": "WarehouseScene",
+      "ms": 610,
+      "textureRequests": 0,
+      "masks": 0
+    }
+  ],
+  "visits": [
+    {
+      "ms": 209,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "ms": 202,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "ms": 182,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "ms": 180,
+      "textureRequests": 0,
+      "masks": 0
+    },
+    {
+      "ms": 231,
+      "textureRequests": 0,
+      "masks": 0
+    }
+  ],
+  "sourceRetainedWhileLoading": true,
+  "overlayAt80ms": false,
+  "firstWarehouseMs": 2191,
+  "firstWarehouseTextureRequests": 40,
+  "loadedCombatSprites": []
+}

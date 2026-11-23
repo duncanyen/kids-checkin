@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const navigationTests=process.env.NAVIGATION_LOAD_TESTS==='1',navigationBefore=process.env.NAVIGATION_LOAD_BEFORE==='1';
 const guardRentalTests=process.env.GUARD_RENTAL_TESTS==='1';
 const dailyGroupTests=process.env.DAILY_GROUP_TESTS==='1';
 const weeklyRankingTests=process.env.WEEKLY_RANKING_TESTS==='1';
@@ -21,7 +22,7 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
 const visitReturnTests=process.env.VISIT_RETURN_TESTS==='1';
 const visitReturnTheme=process.env.VISIT_RETURN_THEME==='default'?'default':'fuji';
-const visitPreloadTests=hornetTests||katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
+const visitPreloadTests=navigationTests||hornetTests||katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
 const costTests=process.env.FARM_READ_COST_TESTS==='1';
@@ -57,7 +58,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
- if(encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests||navigationTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
  if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
@@ -75,7 +76,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>weeklyRankingTests||hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:guardRentalTests}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
+  const page=await browser.newPage({serviceWorkers:'block',viewport:{width:390,height:844},hasTouch:guardRentalTests}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
   await page.exposeFunction('__saveDb',async op=>{if(op.kind==='query')return [...db.data].filter(([key,value])=>key.startsWith(op.path+'/')&&key.split('/').length===op.path.split('/').length+1&&(op.filters||[]).every(f=>f.op==='in'?f.value.includes(value[f.field]):value[f.field]===f.value)).map(([path,data])=>({path,data}));if(op.kind==='get')return structuredClone(db.data.get(op.path));throw Error('Private mode attempted direct Firestore write: '+op.kind);});
   await page.exposeFunction('__privateServer',async(name,data)=>{
    if(legacyBattlePageBackend&&data.action==='beginBattlePage')return{__fixtureError:{code:'functions/invalid-argument',message:'選項無效 [400]'}};
@@ -120,6 +121,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   await page.route('**/js/identity-config.js',r=>r.fulfill({contentType:'text/javascript',body:'export const PRIVATE_IDENTITY_ENABLED=true;'}));
   await page.route('**/js/farm/backend-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('FARM_BACKEND_ENABLED = false','FARM_BACKEND_ENABLED = true')});});
   await page.route('**/js/farm/main.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('const game =','const game = window.__farmGame =')});});
+  const navigationProbe=navigationTests?await require('./helpers/farm-navigation-loading.cjs').setup(page,navigationBefore):null;
   let releaseStealAssets,heldAssets=0;const assetGate=new Promise(resolve=>releaseStealAssets=resolve);
   if(holdStealAssets){await page.route('**/js/farm/steal-result-ui.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('export const prepareStealResultAssets',"for(const key in assets)assets[key]+='?held-assets';\nexport const prepareStealResultAssets")});});await page.route('**/*?held-assets',async r=>{heldAssets++;await assetGate;await r.continue();});}
   if(stealFlowTests||coopCleanTests||ownCleanTests||chestFlowTests)await page.route('**/js/farm/operations-client.js',async r=>{const response=await r.fetch();await r.fulfill({response,body:(await response.text()).replace('reject(timeoutFailure()),timeoutMs);','reject(timeoutFailure()),globalThis.__fixtureTimeoutMs||timeoutMs);')});});
@@ -133,6 +135,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(navigationTests){releaseSettlement();await require('./helpers/farm-navigation-loading.cjs').run({page,probe:navigationProbe,before:navigationBefore,calls,db,errors});return;}
   if(guardRentalTests){
    releaseSettlement();const own=()=>db.data.get('groups/A/users/alice').farm;
    await page.locator('.farm-hud-bottom button[aria-label="商店"]').tap();await page.waitForFunction(()=>window.__farmGame.scene.isActive('ShopScene')&&window.__farmGame.scene.getScene('ShopScene').categoryTabs);

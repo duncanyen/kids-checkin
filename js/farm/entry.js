@@ -4,6 +4,8 @@
  * @module
  */
 import { farmLoading } from './loading-ui.js';
+import {prepareFarmArtCache,artCacheStartup} from './public-art-cache.js';
+const artCacheReady=prepareFarmArtCache();
 farmLoading.begin();
 // A rejected module graph stays rejected in this document (including failed dependencies).
 // Use one fresh document, rather than importing main repeatedly or creating another Phaser game.
@@ -56,6 +58,7 @@ engine.then(async () => {
     // 不等待 membershipReady 的查詢結果，只等帳號／常數 export 初始化；避免平行 dynamic import 的載入競態。
     stage = 'game-context'; window.farmStartupDiagnostics?.stage(stage);
     await contextModule;
+    await artCacheStartup(artCacheReady);
     stage = 'game-module'; window.farmStartupDiagnostics?.stage(stage);
     farmLoading.progress(5, '載入遊戲程式');
     // Fresh root URL on recovery avoids reusing a cached failed response. A fresh document

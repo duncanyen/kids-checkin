@@ -41,7 +41,7 @@ export function runTransaction(_,callback){const next=queue.catch(()=>{}).then(a
 (async () => {
     const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
     try {
-        const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+        const page = await browser.newPage({ serviceWorkers:'block', viewport: { width: 390, height: 844 } });
         const errors = [],diagnostics=[]; page.on('pageerror', error => errors.push(error.message));
         // Offline/deleted-save cases intentionally raise native startup alerts.
         // Handle them before navigating/closing so Playwright does not race its

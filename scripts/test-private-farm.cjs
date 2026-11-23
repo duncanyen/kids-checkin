@@ -19,7 +19,8 @@ async function main(){
   if(!ready)throw Error('隔離 HTTP Server 未啟動');
   const env={...process.env,AUTH_BASE_URL:base,SETTINGS_BASE_URL:base,FARM_BASE_URL:base,ADMIN_BASE_URL:base};
   for(const file of ['account-login.cjs','private-auth-browser.cjs','settings-profile-browser.cjs','private-admin-browser.cjs','farm-save-browser.cjs','farm-private-backend-browser.cjs'])run(process.execPath,['tests/'+file],env);
-  for(const mode of [{GUARD_RENTAL_TESTS:'1'},{DAILY_GROUP_TESTS:'1'},{WEEKLY_RANKING_TESTS:'1'},{HORNET_TESTS:'1'},{KATANA_TESTS:'1'},{ENCOUNTER_CONFIG_TESTS:'1'},{CHEST_FLOW_TESTS:'1'},{CHEST_FLOW_TESTS:'1',CHEST_ART_FAIL:'1'}])run(process.execPath,['tests/farm-private-backend-browser.cjs'],{...env,...mode});
+  for(const mode of [{NAVIGATION_LOAD_TESTS:'1'},{GUARD_RENTAL_TESTS:'1'},{DAILY_GROUP_TESTS:'1'},{WEEKLY_RANKING_TESTS:'1'},{HORNET_TESTS:'1'},{KATANA_TESTS:'1'},{ENCOUNTER_CONFIG_TESTS:'1'},{CHEST_FLOW_TESTS:'1'},{CHEST_FLOW_TESTS:'1',CHEST_ART_FAIL:'1'}])run(process.execPath,['tests/farm-private-backend-browser.cjs'],{...env,...mode});
+  for(const file of ['farm-public-art-cache-browser.cjs','farm-daily-assets-browser.cjs'])run(process.execPath,['tests/'+file],env);
   run(process.execPath,['game-admin/tests/management.browser.cjs'],{...env,OPS_UI_BASE:'http://127.0.0.1:'+port+'/game-admin/site'});
   report.browserPassed=true;
  }finally{server.kill();}
