@@ -26,10 +26,10 @@ test('sale lock ignores forged client flags, funds and storage while other weapo
  }
  await f.api.handle(f.req('buyWeapon',{item:'mace',quantity:1}));assert.equal(f.farm().coins,998000);assert.equal(f.farm().mace,1);
 });
-test('actual backend attack and settlement require exactly the requested katana hits for each ground monster',async()=>{
- const {CONFIG}=require('../functions/farm-combat.cjs');
+test('legacy in-flight katana battles retain their old health and damage until settlement',async()=>{
+ const {CONFIG}=require('../functions/farm-combat.cjs'),{LEGACY_ENEMY_HEALTH}=await import('../../js/farm/combat-rules.js');
  for(const [kind,hits]of Object.entries({wolf:1,tiger:1,mole:50,cobra:40,gorilla:10,giant:50})){
-  const f=setup(),id='katana-'+kind,challenge={id,kind,groupId:'A',targetGroupId:'A',targetAccountId:'alice',startedAt:f.stamp-4000,approachEndsAt:f.stamp-1,deadline:f.stamp+60000,health:CONFIG[kind].health,attacks:{melee:0,ranged:0},milestone:50};
+  const f=setup(),id='katana-'+kind,challenge={id,kind,groupId:'A',targetGroupId:'A',targetAccountId:'alice',startedAt:f.stamp-4000,approachEndsAt:f.stamp-1,deadline:f.stamp+60000,health:LEGACY_ENEMY_HEALTH[kind],attacks:{melee:0,ranged:0},milestone:50};
   f.farm().katana=1;f.farm().equippedWeapon='katana';if(['mole','cobra','giant'].includes(kind))f.farm()[kind+'Challenge']=challenge;
   f.db.data.set('ops_farm_active/'+D.hash('profile:A'),challenge);
   if(hits>1){const partial=await f.api.handle(f.req('battleAttack',{battleId:id,mode:'melee',count:hits-1}));assert.ok(partial.result.health>0,kind+' must survive one hit short');}
@@ -37,12 +37,12 @@ test('actual backend attack and settlement require exactly the requested katana 
   const settled=await f.api.handle(f.req('battleSettle',{battleId:id}));assert.equal(settled.result.outcome,'win',kind);const item=CONFIG[kind].item;assert.equal(f.farm()[item],1);
   await f.api.handle(f.req('battleSettle',{battleId:id}));assert.equal(f.farm()[item],1);
  }
- for(const kind of ['dragon','eagle']){const f=setup();f.farm().katana=1;f.farm().equippedWeapon='katana';f.db.data.set('ops_farm_active/'+D.hash('profile:A'),{id:'flying',kind,groupId:'A',targetGroupId:'A',targetAccountId:'alice',startedAt:f.stamp-4000,deadline:f.stamp+60000,health:CONFIG[kind].health,attacks:{melee:0,ranged:0}});await assert.rejects(f.api.handle(f.req('battleAttack',{battleId:'flying',mode:'melee',count:1})),/無法攻擊/);}
+ for(const kind of ['dragon','eagle']){const f=setup();f.farm().katana=1;f.farm().equippedWeapon='katana';f.db.data.set('ops_farm_active/'+D.hash('profile:A'),{id:'flying',kind,groupId:'A',targetGroupId:'A',targetAccountId:'alice',startedAt:f.stamp-4000,deadline:f.stamp+60000,health:LEGACY_ENEMY_HEALTH[kind],attacks:{melee:0,ranged:0}});await assert.rejects(f.api.handle(f.req('battleAttack',{battleId:'flying',mode:'melee',count:1})),/無法攻擊/);}
 });
 test('existing operations reward and chest catalogs recognize the new weapon using its actual item ID',async()=>{
  assert.equal(D.rewards([{kind:'item',itemKey:'katana',amount:1}])[0].itemKey,'katana');assert.equal(D.ITEM_NAMES.katana,'武士刀');
  const product=(await require('../functions/chests.cjs').catalog()).find(item=>item.id==='katana');assert.equal(product.name,'武士刀');assert.equal(product.enabled,true);
  const f=await require('./fixture.cjs').fixture(),balance=await f.admin('gameBalance');assert.equal(balance.weapons.katana.buyPrice,500000);assert.equal(balance.weapons.katana.sellPrice,30000);
  assert.equal(balance.weapons.katana.purchasable,false);
- assert.deepEqual(balance.weaponHitCounts.katana,{wolf:1,tiger:1,dragon:null,gorilla:10,eagle:null,cobra:40,mole:50,giant:50,hornet:null});
+ assert.deepEqual(balance.weaponHitCounts.katana,{wolf:1,tiger:1,dragon:null,gorilla:10,eagle:null,cobra:16,mole:10,giant:30,hornet:null});
 });

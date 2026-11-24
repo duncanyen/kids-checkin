@@ -7,7 +7,7 @@ const {assertBattlePage,changeBattlePage}=require('./battle-page.cjs');
 const pendingBattleOf=session=>session&&!session.result?{...session}:null;
 function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null}){
  let models;
- const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js'),import('./game/farm-scenes-core.js')]);
+ const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js'),import('./game/farm-scenes-core.js'),import('./game/combat-damage.js')]);
  const positive=value=>D.integer(value,1,1000);
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
  async function handle(request,{admit}={}){
@@ -23,7 +23,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
   const qty=['tradePoultry','buyWeapon','buyMedicine','sellItem','expandWarehouse'].includes(action)?positive(p.quantity):null;
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
   const ids=qty&&qty<=20?Array.from({length:qty},()=>crypto.randomUUID()):[];
-  const rolls=Array.from({length:20},()=>random());
+  const rolls=Array.from({length:20},()=>random()),damageSeed=crypto.randomBytes(16).toString('hex');
   return db.runTransaction(async transaction=>{
    const t=reuseTransactionReads(transaction);
    if(!await enabled(t))D.fail('failed-precondition','共用交易正在維護');
@@ -50,6 +50,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const current=sessionSnapshot.data()||null;
     if(action==='abandonBattlePage')assertBattlePage(current,p.battlePageId);
     const next=changeBattlePage({farm:owner.data()?.farm,session:current,pageId:p.battlePageId,stamp,close:action==='abandonBattlePage'});
+    next.session.combatProtocol=p.combatProtocol===2?2:0;
     if(Object.keys(next.patch).length)t.update(farmRef,next.patch);
     t.set(sessionRef,next.session);
     const response={result:{protocolVersion:1,battlePageId:p.battlePageId,abandoned:next.abandoned},serverNow:stamp};
@@ -121,8 +122,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }else if(combatActions.includes(action)){
     // 切換雞舍時仍可能需要先結算舊戰鬥；任何損失都必須使用原戰鬥目標，不能套到新雞舍。
     const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
-    const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id,encounterSettings:()=>require('./encounters.cjs').config(db,t)});
-    patch=response.patch;result=response.result;event=response.event;nextSession=response.session;
+    const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id,damageSeed,encounterSettings:()=>require('./encounters.cjs').config(db,t)});
+    patch=response.patch;result=response.result;event=response.event;nextSession=response.session;if(nextSession&&session?.combatProtocol!==undefined)nextSession={...nextSession,combatProtocol:session.combatProtocol};
     // Only a newly verified victory contributes, in the same atomic settlement.
     // readTarget already loaded the actor village; do not add another read.
     if(event?.type==='DEFEAT_MONSTER')Object.assign(patch,ranking.monsterRankingPatch(farm,{now:stamp,publicVillage:target.actorGroup?.farmVillageVisibility==='public',monster:event.monster}));

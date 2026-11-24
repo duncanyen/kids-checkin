@@ -8,7 +8,7 @@ function setup(){
  const player=async r=>{assert.equal(r.auth.uid,'profile');return{uid:'profile',accountId:'alice',groupId:'A'};};
  const daily=createDailyChallenges({db,now:()=>stamp,player,playerSession:player,throttle:async()=>{},trustedReady:async()=>true});
  const api=createFarmTransactions({db,player,now:()=>stamp,random:()=>typeof roll==='function'?roll():roll,enabled:()=>true,prepareProgress:daily.prepareProgress});
- const req=(action,p={})=>({auth:{uid:'profile'},data:{groupId:'A',action,requestId:crypto.randomUUID(),...p}});
+ const req=(action,p={})=>({auth:{uid:'profile'},data:{groupId:'A',action,requestId:crypto.randomUUID(),...(action==='battleAttack'&&db.data.get('ops_farm_active/'+require('../functions/domain.cjs').hash('profile:A'))?.combatVersion===2?{combatVersion:2,firstHit:db.data.get('ops_farm_active/'+require('../functions/domain.cjs').hash('profile:A')).attacks[p.mode]||0}:{}),...p}});
  return{db,api,daily,req,clock:ms=>stamp+=ms,roll:n=>roll=n,farm:()=>db.data.get('groups/A/users/alice').farm,status:async()=>(await daily.handle(req('status'))).challenges.mission};
 }
 test('three real harvests and three effective cleanings update progress atomically and idempotently',async()=>{
@@ -31,7 +31,7 @@ test('forged win, unknown battle, excessive attacks, equipped weapon and deadlin
 test('server-computed victory generates one mission operation even with late settlement and concurrent retries',async()=>{
  const f=setup();f.farm().ironhammer=1;f.farm().equippedWeapon='ironhammer';f.roll(0);
  const start=(await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}))).result;f.clock(1000);
- await f.api.handle(f.req('battleAttack',{battleId:start.challenge.id,mode:'melee',count:20}));f.clock(50000);
+ await f.api.handle(f.req('battleAttack',{battleId:start.challenge.id,mode:'melee',count:22}));f.clock(50000);
  const req=f.req('battleSettle',{battleId:start.challenge.id});const results=await Promise.all([f.api.handle(req),f.api.handle(req)]);
  assert.equal(results[0].result.outcome,'win');assert.equal(f.farm().gorillaFangs,1);assert.equal((await f.status()).tasks.find(t=>t.type==='DEFEAT_MONSTER').count,1);
 });
@@ -165,11 +165,12 @@ test('all monster settlements keep canonical rewards, penalties and one verified
  const D=require('../functions/domain.cjs'),{CONFIG}=require('../functions/farm-combat.cjs');
  for(const [kind,config]of Object.entries(CONFIG)){
   const f=setup(),id='server-'+kind,started=Date.parse('2026-11-23T10:00:00+08:00');
-  const challenge={id,kind,startedAt:started,deadline:started+config.durationMs,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:config.health,attacks:{melee:0,ranged:0},milestone:100};
+  Object.assign(f.farm(),{battleaxe:1,equippedWeapon:'battleaxe',shortbow:1,equippedBow:'shortbow'});
+  const M=await import('../../js/farm/combat-damage.js'),snapshot=M.makeCombatSnapshot(f.farm(),kind,'settlement-'+kind);
+  const challenge={...snapshot,id,kind,startedAt:started,deadline:started+config.durationMs,groupId:'A',targetGroupId:'A',targetAccountId:'bob',health:snapshot.maxHealth,attacks:{melee:0,ranged:0},milestone:100};
   f.db.data.set('ops_farm_active/'+D.hash('profile:A'),challenge);
   if(['giant','cobra','mole'].includes(kind))f.farm()[kind+'Challenge']=challenge;
-  Object.assign(f.farm(),{battleaxe:1,equippedWeapon:'battleaxe',shortbow:1,equippedBow:'shortbow'});
-  const models=await import('../../js/farm/combat-rules.js'),mode=['eagle','dragon','hornet'].includes(kind)?'ranged':'melee',weapon=models.WEAPONS_CONFIG[mode==='ranged'?'shortbow':'battleaxe'],hits=Math.ceil(config.health/models.weaponDamage(weapon,kind));
+  const mode=['eagle','dragon','hornet'].includes(kind)?'ranged':'melee';let hits=0,total=0;while(total<challenge.health)total+=M.hitDamage(challenge,mode,hits++);
   f.clock(Math.ceil(hits/(mode==='ranged'?10:20))*1000);
   await f.api.handle(f.req('battleAttack',{battleId:id,mode,count:hits,damage:999999}));
   const settled=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result,replayed=(await f.api.handle(f.req('battleSettle',{battleId:id}))).result;

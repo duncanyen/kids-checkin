@@ -1,3 +1,5 @@
+import {BattleHealthHUD,battleContext,battleHit} from './combat-feedback.js';
+import {maximumHealth} from './combat-damage.js';
 import { mountVisitHud } from './visit-hud.js';
 import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
 import { farmLoading } from './loading-ui.js';
@@ -6,7 +8,7 @@ import { CobraEncounter } from './cobra.js';
 import { farmActionsBlocked } from './entry-encounter.js';
 import { readGameContext } from '../game-context.js';
 import { confirmStealRequest, isUncertainSteal } from './steal-request.js';
-import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,hasPendingBackendBattle,farmNow,routeBackendChallenge,pendingStealCommand} from './backend-client.js';
+import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,settleBackendBattle,hasPendingBackendBattle,farmNow,routeBackendChallenge,pendingStealCommand} from './backend-client.js';
 import { reportingCounterPatch } from './reporting-config.js';
 import { maybeStartGiant, giantBlocksFarm } from './giant-trigger.js';
 import { outdoorHens } from './poultry-housing.js';
@@ -531,18 +533,17 @@ export default class VisitScene extends Phaser.Scene {
     spawnTigerEvent() {
         warmBattleReward();
         if(giantBlocksFarm(this))return;
-        this.isTigerDefeated = false; this.tigerHitCount = FARM_BACKEND_ENABLED?ENEMY_HEALTH.tiger-(this.backendChallenge?.health??ENEMY_HEALTH.tiger):0;
+        this.isTigerDefeated = false;
+        const battle=battleContext(this,'tiger',crypto.randomUUID()),health=maximumHealth(battle,'tiger');
+        this.tigerHitCount=health-battle.health;
         const weapon = equippedWeapon(this.myFarmData);
         const damage = weaponDamage(weapon, 'tiger');
-        const health = ENEMY_HEALTH.tiger;
-        const totalHitsNeeded = Math.ceil(health / damage);
         const spawn = predatorSpawnPoint(this, 'tiger');
         this.tiger = createPredator(this, 'tiger', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(weapon.icon === 'katana' ? 86 : 64, 86).setDepth(30).setVisible(false);
-        const warnText = this.add.text(195, 120, `危機：猛虎出閘！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#FF9800', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(30);
-        // Keep the warning above the clearing, clear of the patrol and hens.
-        this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 400 });
-        this.tiger.warning = warnText;
+        const warnText=this.add.text(195,184,'',{fontSize:'13px',color:'#fff0cf'}).setOrigin(.5).setDepth(35);
+        this.tiger.warning=warnText;
+        this.tigerHUD=new BattleHealthHUD(this,{battle,kind:'tiger',sprite:this.tiger,status:warnText,onSync:value=>{this.tigerHitCount=health-value;}});
 
         this.tigerTween = this.tweens.add({
             targets: this.tiger, ...predatorDestination(this, 'tiger'), duration: PREDATOR_APPROACH_MS, ease: 'Linear',
@@ -556,25 +557,21 @@ export default class VisitScene extends Phaser.Scene {
         });
         this.tiger.on('pointerdown', (pointer) => {
             if (this.isTigerDefeated || !this.tiger.active || this.tiger.getData('resolved')) return;
-            this.tigerHitCount += damage;
-            if(FARM_BACKEND_ENABLED)recordBattleHit(this.backendChallenge.id);
+            const dealt=battleHit(this,battle,'melee',weapon);if(!dealt)return;
+            this.tigerHitCount += dealt;this.tigerHUD.damage(dealt,this.tiger);this.tigerHUD.setHealth(Math.max(0,health-this.tigerHitCount));
             hitPredator(this.tiger);
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
             this.tweens.add({ targets: this.club, angle: 45, duration: 50, yoyo: true, onComplete: () => this.club.setVisible(false) });
             
             if (damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
             if (this.tigerHitCount >= health) { this.defeatTiger(); }
-            else {
-                const hitsLeft = Math.ceil(Math.max(0, health - this.tigerHitCount) / damage);
-                if (this.tigerHitCount % 20 === 0 || damage > 1) {
-                    this.showFloatingText(`還差 ${hitsLeft} 下!`, '#FF9800', 16, this.tiger.x, this.tiger.y - 50); 
-                }
-            }
+
         });
         this.avoidPredators();
     }
 
     defeatTiger() {
+        this.tigerHUD?.stop();
         this.isTigerDefeated = true; if (this.tigerTween) this.tigerTween.stop();
         if (!finishPredator(this.tiger, 'dead')) return;
         this.club.setVisible(false);
@@ -594,6 +591,7 @@ export default class VisitScene extends Phaser.Scene {
         }).then(success=>({id:encounterId,outcome:'win',hasSpace:success}))).then(async result => {
             if(!this.sys.isActive()||this.visitToken!==token)return;
             const presented=await showBattleReward(this,result,'tiger',{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
+            this.tigerHUD?.hide();
             if(!this.sys.isActive()||this.visitToken!==token)return;
             if(!presented)this.showFloatingText(result.outcome==='win'?(result.hasSpace?'獲得 虎皮 +1':'打贏了！但倉庫滿了...'):'未獲得戰利品', '#FFF',20,195,422);
             if(result.outcome==='win'&&result.hasSpace)this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退老虎`);
@@ -601,6 +599,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     tigerEscapes() {
+        this.tigerHUD?.stop();this.tigerHUD?.hide();
         if (!finishPredator(this.tiger, 'run')) return;
         this.club.setVisible(false);
         this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
@@ -616,17 +615,17 @@ export default class VisitScene extends Phaser.Scene {
     spawnWolfEvent() {
         warmBattleReward();
         if(giantBlocksFarm(this))return;
-        this.isWolfDefeated = false; this.wolfHitCount = FARM_BACKEND_ENABLED?ENEMY_HEALTH.wolf-(this.backendChallenge?.health??ENEMY_HEALTH.wolf):0;
+        this.isWolfDefeated = false;
+        const battle=battleContext(this,'wolf',crypto.randomUUID()),health=maximumHealth(battle,'wolf');
+        this.wolfHitCount=health-battle.health;
         const weapon = equippedWeapon(this.myFarmData);
         const damage = weaponDamage(weapon, 'wolf');
-        const health = ENEMY_HEALTH.wolf;
-        const totalHitsNeeded = Math.ceil(health / damage);
         const spawn = predatorSpawnPoint(this, 'wolf');
         this.wolf = createPredator(this, 'wolf', spawn.x, spawn.y);
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(weapon.icon === 'katana' ? 86 : 64, 86).setDepth(30).setVisible(false);
-        const warnText = this.add.text(195, 120, `警告：大野狼來襲！\n快用[${weapon.name}]打退牠 (需 ${totalHitsNeeded} 下)`, { fontSize: '18px', color: '#F44336', fontStyle: 'bold', align: 'center', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(30);
-        this.tweens.add({ targets: warnText, scale: 1.1, yoyo: true, repeat: -1, duration: 500 });
-        this.wolf.warning = warnText;
+        const warnText=this.add.text(195,184,'',{fontSize:'13px',color:'#fff0cf'}).setOrigin(.5).setDepth(35);
+        this.wolf.warning=warnText;
+        this.wolfHUD=new BattleHealthHUD(this,{battle,kind:'wolf',sprite:this.wolf,status:warnText,onSync:value=>{this.wolfHitCount=health-value;}});
 
         this.wolfTween = this.tweens.add({
             targets: this.wolf, ...predatorDestination(this, 'wolf'), duration: PREDATOR_APPROACH_MS, ease: 'Linear',
@@ -640,8 +639,8 @@ export default class VisitScene extends Phaser.Scene {
         });
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
-            this.wolfHitCount += damage;
-            if(FARM_BACKEND_ENABLED)recordBattleHit(this.backendChallenge.id);
+            const dealt=battleHit(this,battle,'melee',weapon);if(!dealt)return;
+            this.wolfHitCount += dealt;this.wolfHUD.damage(dealt,this.wolf);this.wolfHUD.setHealth(Math.max(0,health-this.wolfHitCount));
             hitPredator(this.wolf);
             
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
@@ -649,17 +648,13 @@ export default class VisitScene extends Phaser.Scene {
             
             if (damage > 1) { this.showDizzyEffect(pointer.x, pointer.y - 30); }
             if (this.wolfHitCount >= health) { this.defeatWolf(); }
-            else {
-                const hitsLeft = Math.ceil(Math.max(0, health - this.wolfHitCount) / damage);
-                if (this.wolfHitCount % 20 === 0 || damage > 1) {
-                    this.showFloatingText(`還差 ${hitsLeft} 下!`, '#FF9800', 16, this.wolf.x, this.wolf.y - 40); 
-                }
-            }
+
         });
         this.avoidPredators();
     }
 
     defeatWolf() {
+        this.wolfHUD?.stop();
         this.isWolfDefeated = true; if (this.wolfTween) this.wolfTween.stop();
         if (!finishPredator(this.wolf, 'dead')) return;
         this.club.setVisible(false);
@@ -679,6 +674,7 @@ export default class VisitScene extends Phaser.Scene {
         }).then(success=>({id:encounterId,outcome:'win',hasSpace:success}))).then(async result => {
             if(!this.sys.isActive()||this.visitToken!==token)return;
             const presented=await showBattleReward(this,result,'wolf',{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});
+            this.wolfHUD?.hide();
             if(!this.sys.isActive()||this.visitToken!==token)return;
             if(!presented)this.showFloatingText(result.outcome==='win'?(result.hasSpace?'獲得 狼牙 +1':'打贏了！但倉庫滿了...'):'未獲得戰利品', '#FFF',20,195,422);
             if(result.outcome==='win'&&result.hasSpace)this.sendSystemNotification(`${playerName}在${this.targetName}家中擊退大野狼`);
@@ -686,6 +682,7 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     wolfEscapes() {
+        this.wolfHUD?.stop();this.wolfHUD?.hide();
         if (!finishPredator(this.wolf, 'run')) return;
         this.club.setVisible(false);
         this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336', 18, this.wolf.x, this.wolf.y - 30);

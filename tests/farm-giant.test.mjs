@@ -15,8 +15,8 @@ test('giant uses own Lv.3 and every 50 actual wolf/tiger wins; eagles and sold l
  for(const milestone of [50,100,150,200]){f.combatKills.wolf=200;assert.equal(nextGiantMilestone(f),milestone);f.giantLastMilestone=milestone;}
  assert.equal(nextGiantMilestone({coopLevel:3,wolfFangs:500,tigerPelts:500}),null);
 });
-test('all seven requested weapon hit counts are exact',()=>{
- for(const [key,hits]of Object.entries({club:900,mace:800,battleaxe:600,ironhammer:400,shortbow:300,huntingbow:200,paladinbow:150}))assert.equal(hitsToDefeat(W[key],'giant'),hits,key);
+test('base attack estimates match giant HP and weapon power',()=>{
+ for(const [key,hits]of Object.entries({club:600,mace:200,battleaxe:100,ironhammer:60,shortbow:150,huntingbow:75,paladinbow:38}))assert.equal(hitsToDefeat(W[key],'giant'),hits,key);
  assert.equal(GIANT_CONFIG.durationMs,70000);assert.equal(ANCIENT_STONE_PRICE,600);
 });
 test('giant victory is idempotent and loot occupies inventory even when full',()=>{

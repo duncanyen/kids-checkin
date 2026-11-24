@@ -1,5 +1,7 @@
+import {BattleHealthHUD,battleContext,battleHit} from './combat-feedback.js';
+import {maximumHealth} from './combat-damage.js';
 import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
-import {FARM_BACKEND_ENABLED,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
+import {FARM_BACKEND_ENABLED,settleBackendBattle,farmNow} from './backend-client.js';
 import { ArcheryControls } from './archery.js';
 import { clearPoultryEggs } from './poultry.js';
 import { equippedWeapon } from './combat-rules.js';
@@ -89,7 +91,9 @@ export class BossEncounter {
         if(FARM_BACKEND_ENABLED&&authorized?.kind!==spec.key)throw Error('缺少後端戰鬥會話');
         this.id = FARM_BACKEND_ENABLED?authorized.id:crypto.randomUUID();
         if(FARM_BACKEND_ENABLED){this.deadline=authorized.deadline;this.config={...this.config,flightMs:Math.max(0,authorized.approachEndsAt-farmNow()),durationMs:Math.max(1,authorized.deadline-farmNow())};}
-        this.health = FARM_BACKEND_ENABLED?authorized.health:this.config.health;
+        this.battle=battleContext(scene,spec.key,this.id);
+        this.maxHealth=maximumHealth(this.battle,spec.key);this.config={...this.config,health:this.maxHealth};
+        this.health = this.battle.health;
         this.phase = 'flight';
         this.result = null;
         this.destroyed = false;
@@ -113,8 +117,8 @@ export class BossEncounter {
             fontSize: '13px', color: '#FFF2CC', fontStyle: 'bold', align: 'center',
             backgroundColor: '#542723', padding: { x: 12, y: 8 },
         }).setOrigin(0.5).setDepth(31);
-        this.healthBack = scene.add.rectangle(195, 164, 220, 8, 0x522422).setDepth(31);
-        this.healthBar = scene.add.rectangle(85, 164, 220, 8, 0xffae45).setOrigin(0, 0.5).setDepth(32);
+        this.healthHUD=new BattleHealthHUD(scene,{battle:this.battle,kind:spec.key,sprite:this.sprite,status:this.warning,onSync:health=>{this.health=health;}});
+        this.healthBack=this.healthHUD.track;this.healthBar=this.healthHUD.bar;
         this.flame = scene.add.graphics().setDepth(24).setVisible(false);
         this.flight = scene.tweens.add({ targets: this.sprite, ...this.destination, duration: this.config.flightMs, ease: spec.approachEase || 'Cubic.Out' });
         this.arrivalTimer = scene.time.delayedCall(this.config.flightMs, () => this.startFire());
@@ -136,11 +140,7 @@ export class BossEncounter {
 
     refresh() {
         if (this.destroyed || this.result) return;
-        const remaining = Math.max(0, Math.ceil((this.deadline ? this.deadline - (FARM_BACKEND_ENABLED?farmNow():Date.now()) : this.deadlineTimer.getRemaining()) / 1000));
-        const weapon = this.spec.flying || this.archery?.selected ? this.rangedWeapon : this.weapon;
-        const damage = weapon ? bossWeaponDamage(weapon, this.spec.key) : 0;
-        this.warning.setText(`${this.spec.name}來襲！${remaining} 秒\n${damage ? `${weapon.name}${weapon.ranged ? '再中' : '再打'} ${Math.ceil(this.health/damage)} ${weapon.ranged ? '箭' : '下'}` : '請切換弓箭（近戰無效）'}・${this.phase === this.spec.attackPhase ? this.spec.attackLabel : this.spec.movingLabel}`);
-        this.healthBar.width = 220 * this.health / this.config.health;
+        this.healthHUD.setHealth(this.health);
         if (this.phase === 'fire') {
             const mouthX = this.sprite.x + 57, mouthY = this.sprite.y - 70;
             const endX = Math.max(mouthX + 55, this.scene.coop.x + 15);
@@ -164,8 +164,8 @@ export class BossEncounter {
         if (this.destroyed || this.result) return;
         if (this.spec.flying || this.archery?.selected) return; // A pointer tap never counts as an arrow.
         if (this.expired()) { this.resolve('loss'); return; }
-        if(FARM_BACKEND_ENABLED&&this.damage>0)recordBattleHit(this.id,'melee');
-        this.health = Math.max(0, this.health - this.damage);
+        const damage=battleHit(this.scene,this.battle,'melee',this.weapon);if(!damage)return;
+        this.health = Math.max(0, this.health - damage);this.healthHUD.damage(damage,this.sprite);this.healthHUD.setHealth(this.health);
         this.sprite.play(`${this.spec.key}_hit`);
         this.scene.tweens.killTweensOf(this.weaponSprite);
         this.weaponSprite.setPosition(pointer?.x ?? this.sprite.x + 35, pointer?.y ?? this.sprite.y - 40).setAngle(-45).setVisible(true);
@@ -177,10 +177,9 @@ export class BossEncounter {
     arrowHit(weapon) {
         if (!(this.spec.flying || this.spec.archery) || !weapon?.ranged || this.destroyed || this.result) return;
         if (this.expired()) { this.resolve('loss'); return; }
-        const damage = bossWeaponDamage(weapon, this.spec.key);
+        const damage=battleHit(this.scene,this.battle,'ranged',weapon);
         if (!damage) return;
-        if(FARM_BACKEND_ENABLED)recordBattleHit(this.id,'ranged');
-        this.health = Math.max(0,this.health-damage);
+        this.health = Math.max(0,this.health-damage);this.healthHUD.damage(damage,this.sprite);this.healthHUD.setHealth(this.health);
         this.sprite.play(`${this.spec.key}_hit`);
         if (!this.health) this.resolve('win'); else this.refresh();
     }
@@ -200,7 +199,7 @@ export class BossEncounter {
         this.flame.setVisible(false);
         this.scene.tweens.killTweensOf(this.weaponSprite);
         this.weaponSprite.setVisible(false);
-        this.healthBar.width = 220 * this.health / this.config.health;
+        this.healthHUD.setHealth(this.health);this.healthHUD.stop();
         this.warning.setText('戰鬥結算中…');
         this.sprite.play(`${this.spec.key}_${outcome === 'win' ? 'dead' : this.spec.travel}`);
         this.scene.tweens.add({ targets: this.sprite, alpha: 0, ...(outcome === 'loss' ? { x: -120, y: this.sprite.y + (this.spec.escapeRise ?? -100) } : {}), duration: 1200, delay: outcome === 'win' ? 850 : 0 });
@@ -223,11 +222,10 @@ export class BossEncounter {
                 ? (result.hasSpace===false?'擊退'+this.spec.name+'！但倉庫滿了，戰利品未入庫':`擊退${this.spec.name}！${this.spec.reward} ×1 已收入倉庫`)
                 : `${this.spec.lossText || (this.spec.key === 'eagle' ? '巨飛鷹離開了！' : '防守失敗！雞舍內的蛋已全數損失')}\n扣除 ${result.coinsLost} 金幣`);
             this.scene.time.delayedCall(6000, () => { if (!this.destroyed) this.warning.setVisible(false); });
-            this.healthBack.setVisible(false);
-            this.healthBar.setVisible(false);
+            this.healthHUD.hide();
         } catch (error) {
             console.error(`${this.spec.name}結算失敗`, error);
-            if (!this.destroyed) this.warning.setText('結算尚未完成，點此重試').setInteractive({ cursor: 'pointer' });
+            if (!this.destroyed) this.warning.setVisible(true).setText('結算尚未完成，點此重試').setInteractive({ cursor: 'pointer' });
         } finally { this.settling = false; }
         if (!this.destroyed && !this.settled) this.warning.once('pointerdown', () => this.settle());
     }
@@ -235,12 +233,13 @@ export class BossEncounter {
     destroy() {
         if (this.destroyed) return;
         this.destroyed = true;
+        this.healthHUD.destroy();
         this.archery?.destroy();
         this.arrivalTimer.remove();
         this.deadlineTimer.remove();
         this.displayTimer.remove();
         this.flight.stop();
-        for (const object of [this.sprite, this.flame, this.weaponSprite, this.warning, this.healthBack, this.healthBar]) {
+        for (const object of [this.sprite, this.flame, this.weaponSprite, this.warning]) {
             this.scene.tweens.killTweensOf(object);
             object.destroy();
         }

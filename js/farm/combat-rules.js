@@ -1,6 +1,6 @@
 // Shared combat balance. Explicit enemy damage avoids accidental changes to other fights.
-export const ENEMY_HEALTH = Object.freeze({ wolf: 200, tiger: 200, dragon: 600, gorilla: 1000, eagle: 200, cobra: 6000, mole: 600, giant: 36000, hornet: 600 });
-export const WEAPONS_CONFIG = {
+export const LEGACY_ENEMY_HEALTH = Object.freeze({ wolf: 200, tiger: 200, dragon: 600, gorilla: 1000, eagle: 200, cobra: 6000, mole: 600, giant: 36000, hornet: 600 });
+export const LEGACY_WEAPONS_CONFIG = {
     club: { name: '木棒', damage: 1, damageByEnemy: { hornet: 0, giant: 40, mole: 2, wolf: 1, tiger: 1, dragon: 0, eagle: 0, gorilla: 1, cobra: 12 }, icon: 'club' },
     mace: { name: '狼牙棒', damage: 10, damageByEnemy: { hornet: 0, giant: 45, mole: 3, wolf: 10, tiger: 10, dragon: 0, eagle: 0, gorilla: 5, cobra: 20 }, icon: 'mace', buyPrice: 2000, sellPrice: 1000 },
     battleaxe: { name: '雙手斧', damage: 20, damageByEnemy: { hornet: 0, giant: 60, mole: 4, wolf: 40, tiger: 20, dragon: 0, eagle: 0, gorilla: 25, cobra: 30 }, icon: 'battleaxe', buyPrice: 5000, sellPrice: 2500 },
@@ -10,6 +10,10 @@ export const WEAPONS_CONFIG = {
     huntingbow: { name: '獵弓', ranged: true, damage: 0, damageByEnemy: { hornet: 30, giant: 180, dragon: 60, eagle: 40, cobra: 150 }, icon: 'huntingbow', buyPrice: 5000, sellPrice: 2500 },
     paladinbow: { name: '聖騎士弓', ranged: true, damage: 0, damageByEnemy: { hornet: 60, giant: 240, dragon: 120, eagle: 70, cobra: 300 }, icon: 'paladinbow', buyPrice: 10000, sellPrice: 5000 }
 };
+// Versioned balance: existing battle sessions retain the legacy snapshot.
+export const ENEMY_HEALTH=Object.freeze({wolf:300,tiger:400,eagle:800,dragon:1600,hornet:2400,gorilla:4000,mole:4000,cobra:6400,giant:12000});
+export const WEAPON_ATTACK=Object.freeze({club:20,mace:60,battleaxe:120,ironhammer:200,katana:400,shortbow:80,huntingbow:160,paladinbow:320});
+export const WEAPONS_CONFIG=Object.fromEntries(Object.entries(LEGACY_WEAPONS_CONFIG).map(([key,weapon])=>[key,{...weapon,damage:weapon.ranged?0:WEAPON_ATTACK[key],damageByEnemy:Object.fromEntries(Object.entries(weapon.damageByEnemy).map(([enemy,value])=>[enemy,value>0?WEAPON_ATTACK[key]:0]))}]));
 export function weaponDamage(weapon, enemy) {
     return Math.max(0, Number(weapon.damageByEnemy?.[enemy] ?? weapon.damage) || 0);
 }

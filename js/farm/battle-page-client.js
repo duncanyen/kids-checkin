@@ -13,7 +13,7 @@ export function createBattlePage({ request, storage, events, resume = () => {}, 
     }
     const error = () => Object.assign(Error('遊戲頁面已離開，請重新載入'), { code: 'ops/battle-page-closed' });
     async function open() {
-        if (!ready) ready = request('beginBattlePage', { battlePageId: id }, openId).then(response => {
+        if (!ready) ready = request('beginBattlePage', { battlePageId: id, combatProtocol:2 }, openId).then(response => {
             supported = response.result?.protocolVersion === 1 && response.result.battlePageId === id;
             if (!supported) throw Error('後端戰鬥頁面協定不符，請重新載入');
         }).catch(failure => {

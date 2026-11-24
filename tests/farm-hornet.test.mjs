@@ -5,9 +5,9 @@ import {HORNET_CONFIG as C,HONEY_PRICE,hornetPosition} from '../js/farm/hornet-c
 import {getUsedSpace} from '../js/farm/inventory-core.js';
 import {farmActionsBlocked} from '../js/farm/entry-encounter.js';
 import {battleRewardView} from '../js/farm/battle-reward.js';
-test('hornet bow hits are exactly 30/20/10, every melee weapon is ineffective and reward uses original inventory',()=>{
- assert.equal(ENEMY_HEALTH.hornet,600);assert.equal(C.health,600);assert.equal(C.durationMs,50000);assert.equal(C.flightMs,10000);assert.equal(C.coinPenalty,100);assert.equal(HONEY_PRICE,300);
- for(const [id,hits]of [['shortbow',30],['huntingbow',20],['paladinbow',10]])assert.equal(hitsToDefeat(W[id],'hornet'),hits);
+test('hornet base bow estimates are 30/15/8, every melee weapon is ineffective and reward uses original inventory',()=>{
+ assert.equal(ENEMY_HEALTH.hornet,2400);assert.equal(C.health,2400);assert.equal(C.durationMs,50000);assert.equal(C.flightMs,10000);assert.equal(C.coinPenalty,100);assert.equal(HONEY_PRICE,300);
+ for(const [id,hits]of [['shortbow',30],['huntingbow',15],['paladinbow',8]])assert.equal(hitsToDefeat(W[id],'hornet'),hits);
  for(const id of ['club','mace','battleaxe','ironhammer','katana'])assert.equal(weaponDamage(W[id],'hornet'),0);
  assert.equal(getUsedSpace({honey:2,worms:3}),5);assert.equal(farmActionsBlocked({entryChecked:true,hornetEncounter:{destroyed:false,settled:false}}),true);
  const v=battleRewardView({id:'h',outcome:'win',monster:'hornet',inventoryUpdated:true,rewards:[{itemId:'honey',quantity:1}]},'hornet');assert.equal(v.monsterName,'虎頭蜂');assert.equal(v.loot[0].name,'蜂蜜');assert.equal(v.loot[0].icon,'honey');

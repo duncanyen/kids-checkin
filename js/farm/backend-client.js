@@ -1,3 +1,4 @@
+import {hitDamage,batchDamage} from './combat-damage.js';
 import { PRIVATE_IDENTITY_ENABLED } from '../private-auth-client.js';
 import { createGameOperationsClient } from './operations-client.js';
 import { isUncertainSteal } from './steal-request.js';
@@ -62,21 +63,27 @@ export function pendingStealCommand(target) {
  return null;
 }
 export const farmCommandOrLegacy=(action,payload,legacy)=>FARM_BACKEND_ENABLED?farmCommand(action,payload):legacy();
-function rowFor(id){let row=attacks.get(id);if(!row){row={melee:0,ranged:0,batch:null,flushing:null,timer:null};attacks.set(id,row);}return row;}
+function rowFor(id,battle){let row=attacks.get(id);if(!row){row={melee:0,ranged:0,batch:null,flushing:null,timer:null,confirmed:{melee:battle?.attacks?.melee||0,ranged:battle?.attacks?.ranged||0},battle,health:battle?.health};attacks.set(id,row);}if(!row.battle&&battle){row.battle=battle;row.health=battle.health;row.confirmed={melee:battle.attacks?.melee||0,ranged:battle.attacks?.ranged||0};}return row;}
 async function flushBattle(id){
  const row=rowFor(id);if(row.flushing)return row.flushing;
  row.flushing=(async()=>{
   for(const mode of ['melee','ranged']){
-   if(!row.batch&&row[mode])row.batch={battleId:id,mode,count:row[mode]};
+   if(!row.batch&&row[mode])row.batch={battleId:id,mode,count:row[mode],...(row.battle?.combatVersion===2?{combatVersion:2,firstHit:row.confirmed[mode]}:{})};
    if(!row.batch)continue;
    const batch=row.batch;
-   await farmCommand('battleAttack',batch);row[batch.mode]=Math.max(0,row[batch.mode]-batch.count);row.batch=null;
+   const result=await farmCommand('battleAttack',batch);row[batch.mode]=Math.max(0,row[batch.mode]-batch.count);row.confirmed[batch.mode]+=batch.count;row.batch=null;
+   if(row.battle?.combatVersion===2&&Number.isFinite(result.health)){
+    const pending=['melee','ranged'].reduce((sum,kind)=>sum+batchDamage(row.battle,kind,row.confirmed[kind],row[kind]),0);
+    row.health=Math.max(0,result.health-pending);
+    window.dispatchEvent(new CustomEvent('nexus-farm-battle-health',{detail:{battleId:id,health:row.health}}));
+   }
   }
  })().finally(()=>{row.flushing=null;});return row.flushing;
 }
-export function recordBattleHit(id,mode='melee'){
- if(!FARM_BACKEND_ENABLED)return;const row=rowFor(id);row[mode]++;
+export function recordBattleHit(id,mode='melee',battle,weapon,kind){
+ if(!FARM_BACKEND_ENABLED)return 0;const row=rowFor(id,battle),damage=hitDamage(battle,mode,row.confirmed[mode]+row[mode],weapon,kind);row[mode]++;if(Number.isFinite(row.health))row.health=Math.max(0,row.health-damage);
  if(!row.timer)row.timer=setTimeout(()=>{row.timer=null;void flushBattle(id).catch(()=>{});},500);
+ return damage;
 }
 /** 每批皆有固定收據。逾時保留原批次，勝負只由伺服器實際接受的攻擊決定。 */
 export function settleBackendBattle(id){

@@ -21,8 +21,8 @@ test('combined kill milestones use the challenger level and persist independentl
  assert.equal(killTotal({}),0); // Legacy inventories cannot reconstruct historic kills.
  assert.throws(()=>killProgressPatch(farm,'dragon','x'));
 });
-test('all six weapons take the requested exact numbers of hits',()=>{
- for(const [key,hits] of Object.entries({club:500,mace:300,battleaxe:200,shortbow:60,huntingbow:40,paladinbow:20}))assert.equal(hitsToDefeat(W[key],'cobra'),hits,key);
+test('base attack estimates use the new cobra health and fixed weapon power',()=>{
+ for(const [key,hits] of Object.entries({club:320,mace:107,battleaxe:54,shortbow:80,huntingbow:40,paladinbow:20}))assert.equal(hitsToDefeat(W[key],'cobra'),hits,key);
  assert.equal(COBRA_CONFIG.durationMs,50000);assert.equal(COBRA_FANG_PRICE,600);
 });
 test('victory awards one fang even with a full warehouse and repeated settlement is inert',()=>{

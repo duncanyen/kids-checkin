@@ -1,4 +1,5 @@
-export const HORNET_CONFIG=Object.freeze({health:600,flightMs:10000,durationMs:50000,coinPenalty:100,size:104,arrivalMs:2000,diveEveryMs:5000});
+import {ENEMY_HEALTH} from './combat-rules.js';
+export const HORNET_CONFIG=Object.freeze({health:ENEMY_HEALTH.hornet,flightMs:10000,durationMs:50000,coinPenalty:100,size:104,arrivalMs:2000,diveEveryMs:5000});
 export const HONEY_PRICE=300;
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 /** Pure visual route; no damage, rewards or egg writes happen here. */

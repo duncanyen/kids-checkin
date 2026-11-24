@@ -1,4 +1,5 @@
-import {FARM_BACKEND_ENABLED,recordBattleHit,farmNow,routeBackendChallenge} from './backend-client.js';
+import {battleHit} from './combat-feedback.js';
+import {FARM_BACKEND_ENABLED,farmNow,routeBackendChallenge} from './backend-client.js';
 import { BossEncounter } from './dragon.js';
 import { MOLE_CONFIG, moleCells, moleDue, nextMoleCells } from './mole-rules.js';
 import { claimMoleEncounter, settleMoleEncounter } from './mole-store.js';
@@ -94,8 +95,8 @@ export class MoleEncounter extends BossEncounter {
     hit(pointer, sprite = this.sprite) {
         if (this.destroyed || this.result || !this.moles.includes(sprite)) return;
         if (this.expired()) { this.resolve('loss');return; }
-        if(FARM_BACKEND_ENABLED&&this.damage>0)recordBattleHit(this.id,'melee');
-        this.health=Math.max(0,this.health-this.damage);
+        const damage=battleHit(this.scene,this.battle,'melee',this.weapon);if(!damage)return;
+        this.health=Math.max(0,this.health-damage);this.healthHUD.damage(damage,sprite);this.healthHUD.setHealth(this.health);
         sprite.play('mole_hit');
         this.scene.tweens.killTweensOf(this.weaponSprite);
         this.weaponSprite.setPosition(pointer?.x ?? sprite.x+35,pointer?.y ?? sprite.y-40).setAngle(-45).setVisible(true);

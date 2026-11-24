@@ -8,6 +8,7 @@ const guardRentalTests=process.env.GUARD_RENTAL_TESTS==='1';
 const dailyGroupTests=process.env.DAILY_GROUP_TESTS==='1';
 const weeklyRankingTests=process.env.WEEKLY_RANKING_TESTS==='1';
 let legacyRankingPeriod=false;
+const combatFeedbackTests=process.env.COMBAT_FEEDBACK_TESTS==='1';
 const hornetTests=process.env.HORNET_TESTS==='1';
 const katanaTests=process.env.KATANA_TESTS==='1';
 const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
@@ -23,7 +24,7 @@ const resumeMode=process.env.RESUME_PENDING_BATTLE;
 const battleExitTests=process.env.BATTLE_EXIT_TESTS==='1';
 const visitReturnTests=process.env.VISIT_RETURN_TESTS==='1';
 const visitReturnTheme=process.env.VISIT_RETURN_THEME==='default'?'default':'fuji';
-const visitPreloadTests=visitHudTests||navigationTests||hornetTests||katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
+const visitPreloadTests=combatFeedbackTests||visitHudTests||navigationTests||hornetTests||katanaTests||encounterConfigTests||process.env.VISIT_PRELOAD_TESTS==='1'||visitReturnTests||predatorRewardTests;
 const dragonStartupTests=process.env.DRAGON_STARTUP_TESTS==='1';
 const legacyAnnouncements=process.env.LEGACY_ANNOUNCEMENT_BACKEND==='1';
 const costTests=process.env.FARM_READ_COST_TESTS==='1';
@@ -58,11 +59,11 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  if(dragonStartupTests)farm.coopLevel=2;
  if(predatorRewardTests)Object.assign(farm,{equippedWeapon:'ironhammer',ironhammer:1});
  if(hornetTests)Object.assign(farm,{shortbow:1,huntingbow:1,paladinbow:1,equippedBow:'paladinbow'});
- if(battleRewardTests)Object.assign(farm,{equippedWeapon:'ironhammer',ironhammer:1,equippedBow:'paladinbow',paladinbow:1});
+ if(battleRewardTests||combatFeedbackTests)Object.assign(farm,{equippedWeapon:'ironhammer',ironhammer:1,equippedBow:'paladinbow',paladinbow:1});
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
- if(encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests||navigationTests||arcticSceneTests||hallstattSceneTests||visitHudTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(combatFeedbackTests||encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests||navigationTests||arcticSceneTests||hallstattSceneTests||visitHudTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
  if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
@@ -77,7 +78,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  if(battleRewardTests&&!chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:Object.fromEntries(Object.entries(require('../game-admin/functions/chests.cjs').DEFAULTS).map(([kind,value])=>[kind,{...value,dropRate:0}]))});
  if(chestFlowTests)db.data.set('ops_game_config/chests',{revision:1,monsters:{eagle:{dropRate:100,coins:{enabled:true,min:137,max:137},items:[]}}});
  if(dailyGroupTests){db.data.set('groups/B',{name:'另一個群組',members:['alice'],farmVillageVisibility:'public'});db.data.set('groups/B/users/alice',{farm:structuredClone(farm)});}
- const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>weeklyRankingTests||hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
+ const service=createService({db,auth:{getUser:async()=>({disabled:false})},now:()=>combatFeedbackTests||weeklyRankingTests||hornetTests||readOptimizationTests||stealResultTests||entryEncounterTests||battleExitTests?backendNow:Date.now(),privateIdentityEnabled:()=>true,farmBackendEnabled:()=>true,farmRandom:()=>typeof serverRoll==='function'?serverRoll():serverRoll});
  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
   const page=await browser.newPage({serviceWorkers:'block',viewport:{width:390,height:844},hasTouch:guardRentalTests||visitHudTests}),startupLogs=[];page.on('console',message=>{if(message.type()==='error')startupLogs.push(message.text());if(message.text().includes('farm-entry-encounter'))console.log(message.text());});page.setDefaultTimeout(15000);page.on('pageerror',e=>{errors.push(e.message);if(visitReturnTests)console.error('RETURN_PAGE_ERROR',e.stack);});
@@ -85,7 +86,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
   await page.exposeFunction('__privateServer',async(name,data)=>{
    if(legacyBattlePageBackend&&data.action==='beginBattlePage')return{__fixtureError:{code:'functions/invalid-argument',message:'選項無效 [400]'}};
    if(battleRewardTests&&data.action==='battleSettle'&&failBattleSettlement)return{__fixtureError:{code:'functions/unavailable',message:'隔離測試：入庫交易暫時失敗'}};
-   calls.push({name,action:data.action,requestId:data.requestId,verifyOnly:data.verifyOnly===true,collectWhenClear:data.collectWhenClear===true,stealWhenClear:data.stealWhenClear===true});
+   calls.push({name,...(combatFeedbackTests?{mode:data.mode,count:data.count,combatVersion:data.combatVersion,firstHit:data.firstHit}:{}),action:data.action,requestId:data.requestId,verifyOnly:data.verifyOnly===true,collectWhenClear:data.collectWhenClear===true,stealWhenClear:data.stealWhenClear===true});
    if(legacyScenePurchase&&data.action==='buySceneAtPrice')return{__fixtureError:{code:'functions/invalid-argument',message:'選項無效 [400]'}};
    if(stealFlowTests&&data.stealWhenClear&&stealDelay)await new Promise(resolve=>setTimeout(resolve,stealDelay));
    if(coopCleanTests&&data.action==='helpClean'||ownCleanTests&&data.action==='cleanOwn'){if(cleanDenied)return{__fixtureError:{code:'functions/permission-denied',message:'隔離測試：清潔被拒絕'}};if(cleanGate)await cleanGate;}
@@ -140,6 +141,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(combatFeedbackTests){releaseSettlement();await require('./helpers/combat-feedback-browser.cjs').run({page,calls,db,errors,advance:ms=>backendNow+=ms});return;}
   if(visitHudTests){releaseSettlement();await require('./helpers/visit-hud-browser.cjs').run({page,calls,db,errors});return;}
   if(navigationTests){releaseSettlement();await require('./helpers/farm-navigation-loading.cjs').run({page,probe:navigationProbe,before:navigationBefore,calls,db,errors});return;}
   if(guardRentalTests){
@@ -206,9 +208,9 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
     else if(find==='public')o=s.publicVillageButton;else if(find==='village')o=s.content.list.find(o=>o.getData('villageGroupId')==='B');else if(find==='farm')o=s.content.list.find(o=>o.texture?.key==='coop');
     if(!o)throw Error('Missing hornet test target '+find);const world=o.getWorldTransformMatrix().transformPoint(0,0);return{x:world.x,y:world.y};},{key,find}),q=await point(key,p.x,p.y);await page.mouse.click(q.x,q.y);};
    await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter?.sprite?.active);
-   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.health),600);
+   assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.health),2400);
    await page.waitForTimeout(2200);await page.screenshot({path:'/tmp/gugu-hornet-home.png'});
-   const beforeHit=calls.filter(c=>c.action==='battleAttack').length;await click('MyFarmScene','hornet');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.health),600);assert.equal(calls.filter(c=>c.action==='battleAttack').length,beforeHit);
+   const beforeHit=calls.filter(c=>c.action==='battleAttack').length;await click('MyFarmScene','hornet');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('MyFarmScene').hornetEncounter.health),2400);assert.equal(calls.filter(c=>c.action==='battleAttack').length,beforeHit);
    await page.locator('.farm-hud-bottom button[aria-label="倉庫"]').dispatchEvent('click');assert.equal(await page.evaluate(()=>window.__farmGame.scene.isActive('WarehouseScene')),false);
    // Stabilize only target movement for repeatable projectile collision testing.
    // Screenshots above and pure route tests cover the actual moving entry route.
@@ -249,6 +251,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    own().coins=1100000;await page.evaluate(()=>window.__privateEmitAll());await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.coins===1100000);
    await shop();await page.screenshot({path:'/tmp/gugu-katana-shop.png'});
    await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene');window.__katanaGuide=s.weaponGuide.list.filter(o=>o.type==='Text').map(o=>o.text).join('\n');});assert.match(await page.evaluate(()=>window.__katanaGuide),/武士刀/);
+   const guideMetrics=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene'),p=s.weaponGuide;p.setVisible(true);const guide=p.list.find(o=>o.type==='Text'&&o.text.includes('傷害為攻擊力')),close=p.list.find(o=>o.type==='Rectangle'&&o.input?.enabled&&o.y===577),metrics={bottom:guide.getBounds().bottom,closeTop:close.getBounds().top,height:guide.height};p.setVisible(false);return metrics;});assert.ok(guideMetrics.bottom<guideMetrics.closeTop,JSON.stringify(guideMetrics));
    const purchases=()=>calls.filter(c=>c.action==='buyWeapon').length;
    await click('ShopScene','buykatana');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').dialogContainer.visible),false);assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').msgText.text),/尚未開賣/);assert.equal(purchases(),0);assert.equal(own().coins,1100000);assert.equal(own().katana,undefined);
    await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('ShopScene');s.openTradeModal('buy','katana','武士刀',1);await s.executeBuyWeapon('katana',1,1);});assert.equal(purchases(),0);assert.equal(own().coins,1100000);

@@ -8,7 +8,7 @@ function fixture(){
  for(const who of ['alice','bob'])db.data.set('groups/A/users/'+who,{farm:structuredClone(farm)});
  const actor={uid:'p',groupId:'A',accountId:'alice'};
  const service=createFarmTransactions({db,player:async()=>actor,now:()=>stamp,random:()=>roll,enabled:()=>true});
- const req=(action,page,body={},requestId=crypto.randomUUID())=>({data:{action,requestId,battlePageId:page,...body}});
+ const req=(action,page,body={},requestId=crypto.randomUUID())=>({data:{action,requestId,battlePageId:page,combatProtocol:2,...(action==='battleAttack'&&db.data.get(key)?.combatVersion===2?{combatVersion:2,firstHit:db.data.get(key).attacks[body.mode]||0}:{}),...body}});
  const api=(action,page,body={},id)=>service.handle(req(action,page,body,id));
  const key='ops_farm_active/'+D.hash('p:A');
  return{db,api,req,service,key,farm:()=>db.data.get('groups/A/users/alice').farm,clock:n=>stamp+=n,roll:n=>roll=n};
@@ -21,7 +21,7 @@ test('new page discards unfinished/zero-health/expired battles without rewards, 
   await assert.rejects(f.api('battleSettle','old-page-123',{battleId:'old-battle'}),{code:'failed-precondition'});
   await assert.rejects(f.api('battleSettle','new-page-123',{battleId:'old-battle'}),{code:'failed-precondition'});
   assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
-  const next=(await f.api('homeEncounter','new-page-123')).result;assert.equal(next.kind,'gorilla');assert.notEqual(next.challenge.id,'old-battle');assert.equal(next.challenge.health,1000);
+  const next=(await f.api('homeEncounter','new-page-123')).result;assert.equal(next.kind,'gorilla');assert.notEqual(next.challenge.id,'old-battle');assert.equal(next.challenge.health,4000);
  }
 });
 test('close request is idempotent; stale close/attack cannot cancel a new page; same-page completed wins remain valid',async()=>{
@@ -32,7 +32,7 @@ test('close request is idempotent; stale close/attack cannot cancel a new page; 
  await f.service.handle(close);assert.equal(f.db.data.get(f.key).id,fresh.id);
  await assert.rejects(f.api('abandonBattlePage','first-page-123'),{code:'failed-precondition'});
  await assert.rejects(f.api('battleAttack','first-page-123',{battleId:fresh.id,mode:'melee',count:20}),{code:'failed-precondition'});
- f.clock(1000);await f.api('battleAttack','second-page-123',{battleId:fresh.id,mode:'melee',count:20});const won=(await f.api('battleSettle','second-page-123',{battleId:fresh.id})).result;
+ f.clock(1000);await f.api('battleAttack','second-page-123',{battleId:fresh.id,mode:'melee',count:22});const won=(await f.api('battleSettle','second-page-123',{battleId:fresh.id})).result;
  assert.equal(won.outcome,'win');assert.equal(f.farm().gorillaFangs,1);
  await f.api('beginBattlePage','third-page-123');assert.equal(f.farm().gorillaFangs,1);assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,1);
  assert.notEqual(battle.id,fresh.id);

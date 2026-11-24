@@ -12,9 +12,9 @@ test('Lv.3+ exact exclusive gorilla 1/30 and dragon 1/20; Lv.2 dragon stays 1/20
         assert.equal(counts.gorilla/60,1/30);assert.equal(counts.dragon/60,1/20);assert.equal(counts.eagle,3);assert.equal(counts.none,52);
     }
 });
-test('1000 club hits, 200 mace hits, configurable future damage and encounter timing',()=>{
-    assert.equal(GORILLA_CONFIG.health/bossWeaponDamage({damage:1},'gorilla'),1000);
-    assert.equal(GORILLA_CONFIG.health/bossWeaponDamage({damage:10,damageByEnemy:{gorilla:5}},'gorilla'),200);
+test('4000 HP, configurable damage and original encounter timing',()=>{
+    assert.equal(GORILLA_CONFIG.health/bossWeaponDamage({damage:1},'gorilla'),4000);
+    assert.equal(GORILLA_CONFIG.health/bossWeaponDamage({damage:10,damageByEnemy:{gorilla:5}},'gorilla'),800);
     assert.equal(bossWeaponDamage({damage:10,damageByEnemy:{gorilla:5}},'dragon'),10);
     assert.equal(bossWeaponDamage({damage:25},'gorilla'),25);
     assert.equal(GORILLA_CONFIG.flightMs,10000);assert.equal(GORILLA_CONFIG.durationMs-GORILLA_CONFIG.flightMs,30000);

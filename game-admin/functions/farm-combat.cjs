@@ -1,13 +1,15 @@
 /** 後端怪物會話與結算。客戶端只送攻擊命令，不接受 damage／outcome／reward。 */
 const D=require('./domain.cjs'),Encounters=require('./encounters.cjs');
-const CONFIG={hornet:{health:600,durationMs:50000,flightMs:10000,item:'honey',penalty:100},wolf:{health:200,durationMs:60000,flightMs:0,item:'wolfFangs'},tiger:{health:200,durationMs:50000,flightMs:0,item:'tigerPelts',penalty:5},dragon:{health:600,durationMs:60000,flightMs:10000,item:'dragonScales',penalty:100,clearEggs:true},gorilla:{health:1000,durationMs:40000,flightMs:10000,item:'gorillaFangs',penalty:100,clearEggs:true},eagle:{health:200,durationMs:60000,flightMs:10000,item:'eagleFeathers',penalty:100},cobra:{health:6000,durationMs:50000,flightMs:8000,item:'cobraFangs',penalty:200},giant:{health:36000,durationMs:70000,flightMs:7000,item:'ancientStones',penalty:300},mole:{health:600,durationMs:60000,flightMs:0,item:'sweetPotatoes',penalty:100}};
+const CONFIG={hornet:{health:2400,durationMs:50000,flightMs:10000,item:'honey',penalty:100},wolf:{health:300,durationMs:60000,flightMs:0,item:'wolfFangs'},tiger:{health:400,durationMs:50000,flightMs:0,item:'tigerPelts',penalty:5},dragon:{health:1600,durationMs:60000,flightMs:10000,item:'dragonScales',penalty:100,clearEggs:true},gorilla:{health:4000,durationMs:40000,flightMs:10000,item:'gorillaFangs',penalty:100,clearEggs:true},eagle:{health:800,durationMs:60000,flightMs:10000,item:'eagleFeathers',penalty:100},cobra:{health:6400,durationMs:50000,flightMs:8000,item:'cobraFangs',penalty:200},giant:{health:12000,durationMs:70000,flightMs:7000,item:'ancientStones',penalty:300},mole:{health:4000,durationMs:60000,flightMs:0,item:'sweetPotatoes',penalty:100}};
 const apply=(farm,patch)=>({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
-async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id,encounterSettings=async()=>({monsters:Encounters.DEFAULTS,revision:0})}){
- const [P,inventory,C,,G,giant,cobra,mole,progress]=models;
+async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id,damageSeed=id,encounterSettings=async()=>({monsters:Encounters.DEFAULTS,revision:0})}){
+ const [P,inventory,C,,G,giant,cobra,mole,progress]=models,damageModel=models[14];
  const patch={},result={};let next=session,event=null,targetChanged=false,targetFarm=target?.farm||null;
  const start=(kind,milestone)=>{
   const config=CONFIG[kind];
-  next={id,kind,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,targetName:target.name||target.accountId,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),startedAt:stamp,approachEndsAt:stamp+config.flightMs,deadline:stamp+config.durationMs,health:config.health,attacks:{melee:0,ranged:0},milestone:milestone??null};
+  if(session?.combatProtocol===0)D.fail('failed-precondition','戰鬥已更新，請重新載入遊戲');
+  const snapshot=damageModel.makeCombatSnapshot(farm,kind,damageSeed);
+  next={id,kind,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,targetName:target.name||target.accountId,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),startedAt:stamp,approachEndsAt:stamp+config.flightMs,deadline:stamp+config.durationMs,...snapshot,health:snapshot.maxHealth,attacks:{melee:0,ranged:0},milestone:milestone??null};
   if(milestone!==undefined){next.previousMilestone=farm[kind+'LastMilestone']||0;patch['farm.'+kind+'LastMilestone']=milestone;patch['farm.'+kind+'Challenge']={id,milestone,startedAt:stamp,approachEndsAt:next.approachEndsAt,deadline:next.deadline};}
   return{challenge:{...next},kind};
  };
@@ -55,7 +57,7 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
   // Resume outstanding challenges even if an operator has disabled new spawns.
   if(!requested&&!next)requested=['giant','mole','cobra'].find(kind=>farm[kind+'Challenge'])||null;
   let kind=requested,milestone;
-  if(requested&&farm[requested+'Challenge']&&!next){const old=farm[requested+'Challenge'];next={...old,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:requested,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,health:CONFIG[requested].health,attacks:{melee:0,ranged:0}};if(stamp>=old.deadline)return{patch,result:{expired:true,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:requested},session:next};}
+  if(requested&&farm[requested+'Challenge']&&!next){const old=farm[requested+'Challenge'];next={...old,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:requested,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,health:C.LEGACY_ENEMY_HEALTH[requested],attacks:{melee:0,ranged:0}};if(stamp>=old.deadline)return{patch,result:{expired:true,result:resolve()},session:next,event,targetFarm:targetChanged?targetFarm:null};return{patch,result:{challenge:{...next},kind:requested},session:next};}
   // A previously cleared home keeps its random-boss permit, but newly earned
   // milestones must still be considered on entry (as the old client precheck did).
   // verifyOnly returned above, so harvest/theft never perform this check.
@@ -76,11 +78,18 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
  if(stamp>=next.deadline)D.fail('deadline-exceeded','戰鬥時間已到，請結算');
  const mode=D.enumValue(p.mode,['melee','ranged']),count=D.integer(p.count,1,1000),weapon=mode==='ranged'?C.equippedBow(farm):C.equippedWeapon(farm);
  if(!weapon||mode==='ranged'&&!['dragon','eagle','cobra','giant','hornet'].includes(next.kind)||mode==='melee'&&['dragon','eagle','hornet'].includes(next.kind))D.fail('failed-precondition','此武器無法攻擊怪物');
- const damage=C.weaponDamage(weapon,next.kind);if(!damage)D.fail('failed-precondition','此武器無法造成傷害');
+ let damage=next.combatVersion===2?(next.baseDamage?.[mode]||0):C.weaponDamage(C.LEGACY_WEAPONS_CONFIG[damageModel.weaponKey(weapon)],next.kind);if(!damage)D.fail('failed-precondition','此武器無法造成傷害');
  // 每個會話累計速率與小幅 burst；重送由外層收據去重，不能跨裝備／跨裝置重設額度。
  const attacks={...next.attacks},cap=Math.floor((stamp-next.startedAt)/1000*(mode==='ranged'?10:20))+4;
  if((attacks[mode]||0)+count>cap)D.fail('resource-exhausted','攻擊過於密集，請稍候重試');
- attacks[mode]=(attacks[mode]||0)+count;next={...next,attacks,health:Math.max(0,next.health-damage*count),lastAttackAt:stamp};
- return{patch,result:{id:next.id,health:next.health,deadline:next.deadline},session:next};
+ const first=attacks[mode]||0;
+ if(next.combatVersion===2){
+  if(p.combatVersion!==2)D.fail('failed-precondition','戰鬥已更新，請重新載入遊戲');
+  if(p.firstHit!==first)D.fail('failed-precondition','戰鬥進度已更新，請重新確認原攻擊');
+  if(damageModel.weaponKey(weapon)!==next.weapons?.[mode])D.fail('failed-precondition','戰鬥裝備已變更，請重新進入');
+  damage=damageModel.batchDamage(next,mode,first,count);
+ }else damage*=count;
+ attacks[mode]=first+count;next={...next,attacks,health:Math.max(0,next.health-damage),lastAttackAt:stamp};
+ return{patch,result:{id:next.id,health:next.health,attacks:next.attacks,damage,deadline:next.deadline},session:next};
 }
 module.exports={combatCommand,CONFIG};

@@ -187,8 +187,9 @@ export default class ShopScene extends Phaser.Scene {
         const paper = this.add.rectangle(195, 398, 370, 450, 0xffefd0).setStrokeStyle(3, 0x735038);
         const title = this.add.text(195, 205, '武器圖鑑', { fontSize: '22px', color: '#593b27', fontStyle: 'bold' }).setOrigin(0.5);
         panel.add([shade, paper, title]);
-        const hits = (enemy, keys, suffix) => keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
+        const hits = (enemy, keys, suffix) => '約 '+keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
         const guide = [
+            '傷害為攻擊力 ±10；下列次數僅供估算',
             '近戰：木棒／狼牙棒／雙手斧／大鐵槌／武士刀',
             ...[['giant', '遠古巨人'], ['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer', 'katana'], ' 下')}`),
             '', '弓箭：短弓／獵弓／聖騎士弓',
@@ -196,7 +197,7 @@ export default class ShopScene extends Phaser.Scene {
             '蛇王可用近戰或弓；飛行怪物需用弓。',
             `地鼠：Lv.2，每抓到${MOLE_CONFIG.catchInterval}隻蟲，限時60秒。`
         ].join('\n');
-        panel.add(this.add.text(195, 260, guide, { fontSize: '14px', color: '#593b27', align: 'center', lineSpacing: 5 }).setOrigin(.5,0));
+        panel.add(this.add.text(195, 244, guide, { fontSize: '14px', color: '#593b27', align: 'center', lineSpacing: 3 }).setOrigin(.5,0));
         const close = this.add.rectangle(195, 577, 130, 38, 0x735038).setInteractive({ cursor: 'pointer' });
         panel.add([close, this.add.text(195, 577, '返回商店', { fontSize: '16px', color: '#fff2cc' }).setOrigin(0.5)]);
         button.on('pointerdown', () => panel.setVisible(true));

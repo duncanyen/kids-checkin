@@ -21,9 +21,9 @@ test('legacy 20/40-catch milestones advance to the next 30 boundary; active figh
     assert.equal(moleDue({coopLevel:2,gardenCatchCount:20,moleLastMilestone:20,moleChallenge:{id:'legacy',milestone:20}}),true);
 });
 test('exact melee counts and iron hammer balance; bows never hurt mole',()=>{
-    for(const [key,n]of Object.entries({club:300,mace:200,battleaxe:150,ironhammer:100}))assert.equal(hitsToDefeat(WEAPONS_CONFIG[key],'mole'),n);
+    for(const [key,n]of Object.entries({club:200,mace:67,battleaxe:34,ironhammer:20}))assert.equal(hitsToDefeat(WEAPONS_CONFIG[key],'mole'),n);
     for(const key of ['shortbow','huntingbow','paladinbow'])assert.equal(hitsToDefeat(WEAPONS_CONFIG[key],'mole'),Infinity);
-    for(const [enemy,n]of Object.entries({wolf:2,tiger:4,gorilla:20,cobra:100,dragon:Infinity,eagle:Infinity}))assert.equal(hitsToDefeat(WEAPONS_CONFIG.ironhammer,enemy),n);
+    for(const [enemy,n]of Object.entries({wolf:2,tiger:2,gorilla:20,cobra:32,dragon:Infinity,eagle:Infinity}))assert.equal(hitsToDefeat(WEAPONS_CONFIG.ironhammer,enemy),n);
     assert.equal(equippedWeapon({equippedWeapon:'ironhammer',ironhammer:0}),WEAPONS_CONFIG.club);
     assert.equal(WEAPONS_CONFIG.ironhammer.buyPrice,15000);assert.equal(WEAPONS_CONFIG.ironhammer.sellPrice,7500);
 });
