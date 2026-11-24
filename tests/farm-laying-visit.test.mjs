@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LayingVisit } from '../js/farm/laying-visit.js';
 import { BREEDS, nextEggStatus, collectPoultry, poultryPatch, settlePoultry } from '../js/farm/poultry.js';
-import { farmEggPosition, getFarmMapLayout } from '../js/farm/scenery.js';
+import { farmEggPosition, getFarmMapLayout, getHenWalkArea } from '../js/farm/scenery.js';
 
 globalThis.document = { hidden: false };
 const dueAt = 100000000;
@@ -150,5 +150,19 @@ test('Arctic egg and nesting doorway remain inside the igloo hit area across ori
   const original={x:217,y:961},point=map.point(original.x,original.y),restored=map.reference(point.x,point.y);
   assert.ok(Math.abs(restored.x-original.x)<1e-8&&Math.abs(restored.y-original.y)<1e-8);
   if(map.texture==='farm_map')assert.deepEqual(door,map.point(320,358));
+ }
+});
+
+test('Hallstatt smaller cottage and shifted garden keep exact inverse mapping and reachable doorway',()=>{
+ for(const [width,height]of [[320,568],[390,844],[430,932],[768,1024],[1024,768]]){
+  const scene={scale:{width,height},displayedFarmSceneId:'hallstatt'},map=getFarmMapLayout(scene),door=farmEggPosition(scene),coop=map.point(map.coopX,322.5);
+  assert.equal(map.coopWidth,208);
+  scene.coop={y:coop.y,displayHeight:map.point(370,435).y-map.point(370,210).y};const area=getHenWalkArea(scene);assert.ok(area.bottom-area.top>=30,'all orientations retain a usable roaming clearing');
+  assert.ok(Math.abs(door.x-coop.x)<104*map.scale);
+  assert.ok(door.y>map.point(370,210).y&&door.y<map.point(370,435).y);
+  assert.ok(map.point(0,495).y>map.point(0,435).y,'roaming area stays below the cottage');
+  for(const x of [190,370,530])for(const y of [210,322.5,435,495,900,961,993,1027,1062,1099,1137,1194]){
+   const point=map.point(x,y),back=map.reference(point.x,point.y);assert.ok(Math.abs(back.x-x)<1e-8&&Math.abs(back.y-y)<1e-8);
+  }
  }
 });

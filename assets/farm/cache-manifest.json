@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "c41077ed2e7959b38e3f",
+  "revision": "8ad02b6f5d3e04924b03",
   "files": {
     "assets/farm/arrow.png": "bd46dad3607d1a7a60a6",
     "assets/farm/background.webp": "d8f6a8b344ad59cbb207",
@@ -180,6 +180,9 @@
     "assets/farm/scenes/fuji-landscape.webp": "338d68f873b2f49ad233",
     "assets/farm/scenes/fuji-portrait.webp": "7e0ef1fb9983c1887579",
     "assets/farm/scenes/fuji-thumb.webp": "13ce5e402981b38ea727",
+    "assets/farm/scenes/hallstatt-v2-landscape.webp": "f37d42301678f6ef8e8a",
+    "assets/farm/scenes/hallstatt-v2-portrait.webp": "614a8364032c80c3239a",
+    "assets/farm/scenes/hallstatt-v2-thumb.webp": "399905dde1acc6385ac5",
     "assets/farm/shortbow.png": "0b339295db3f8cb30dfc",
     "assets/farm/signboard.webp": "5d0ca5756a72be31ce61",
     "assets/farm/silkie-egg.png": "adf2dd8b773d9158ad1f",

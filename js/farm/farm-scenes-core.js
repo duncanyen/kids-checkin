@@ -2,7 +2,8 @@
 export const FARM_SCENES = Object.freeze({
     default: Object.freeze({ id:'default', name:'初始場景', price:0, thumbnail:'assets/farm/scenes/default-thumb.webp', thumbTexture:'scene_default_thumb', portrait:'farm_map', landscape:'farm_panorama' }),
     fuji: Object.freeze({ id:'fuji', name:'富士山農莊', price:500000, purchasable:false, thumbnail:'assets/farm/scenes/fuji-japanese-v2-thumb.webp', thumbTexture:'scene_fuji_thumb', portrait:'scene_fuji_portrait', landscape:'scene_fuji_landscape' }),
-    arctic: Object.freeze({ id:'arctic', name:'北極極光農莊', price:500000, purchasable:true, thumbnail:'assets/farm/scenes/arctic-aurora-v1-thumb.webp', thumbTexture:'scene_arctic_thumb', portrait:'scene_arctic_portrait', landscape:'scene_arctic_landscape' })
+    arctic: Object.freeze({ id:'arctic', name:'北極極光農莊', price:500000, purchasable:true, thumbnail:'assets/farm/scenes/arctic-aurora-v1-thumb.webp', thumbTexture:'scene_arctic_thumb', portrait:'scene_arctic_portrait', landscape:'scene_arctic_landscape' }),
+    hallstatt: Object.freeze({ id:'hallstatt', name:'哈修塔特湖農莊', price:500000, purchasable:true, thumbnail:'assets/farm/scenes/hallstatt-v2-thumb.webp', thumbTexture:'scene_hallstatt_thumb', portrait:'scene_hallstatt_portrait', landscape:'scene_hallstatt_landscape' })
 });
 export function ownedSceneIds(farm) {
     return ['default', ...Object.keys(FARM_SCENES).filter(id=>id!=='default' && Array.isArray(farm?.ownedSceneIds) && farm.ownedSceneIds.includes(id))];

@@ -107,14 +107,15 @@ export default class ShopScene extends Phaser.Scene {
                 const category = itemCategory(key);
                 const index = categoryIndexes[category] || 0;
                 categoryIndexes[category] = index + 1;
-                const slot = index % 6;
+                const pageSize = category === 'scenes' ? 2 : 6;
+                const slot = index % pageSize;
                 const objects = this.addShopItem(container, slot % 2 ? 295 : 95, 40 + Math.floor(slot / 2) * 100, icon, text, 0x735038, action);
                 if (mode === 'buy' && (BREEDS[key]?.purchasable === false || WEAPONS_CONFIG[key]?.purchasable === false)) {
                     objects[0].setFillStyle(0x635a50,.9);
                     objects[0].setData('purchaseDisabled',true);
                 }
                 if(mode==='buy'&&key.startsWith('guard:')){const dog=GUARD_DOG_BREEDS[key.slice(6)];objects[0].setData('rentalDisabled',dog.rentable===false);if(dog.rentable===false)objects[2].setFontSize(11);}
-                for (const object of objects) { object.catalogPage = Math.floor(index / 6); object.catalogCategory = category; object.catalogKey = key; }
+                for (const object of objects) { object.catalogPage = Math.floor(index / pageSize); object.catalogCategory = category; object.catalogKey = key; }
             });
         }
         this.previousPage = this.add.rectangle(70, 640, 90, 36, 0x735038).setInteractive({ cursor: 'pointer' });
@@ -164,7 +165,7 @@ export default class ShopScene extends Phaser.Scene {
     changeShopPage(delta) {
         const mode = this.shopMode, category = this.shopCategory;
         const count = this.catalog[mode].filter(([key]) => itemCategory(key) === category).length;
-        const total = Math.max(1, Math.ceil(count / 6));
+        const total = Math.max(1, Math.ceil(count / (category === 'scenes' ? 2 : 6)));
         const page = this.shopPages[mode][category] = Phaser.Math.Clamp((this.shopPages[mode][category] || 0) + delta, 0, total - 1);
         for (const [name, container] of [['buy', this.buyContainer], ['sell', this.sellContainer]]) {
             container.setVisible(name === mode);

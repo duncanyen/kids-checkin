@@ -37,10 +37,10 @@ test('optional worker startup wait is bounded and failures fall back to normal l
  assert.equal(await artCacheStartup(Promise.reject(Error('offline'))),false);
  assert.equal(await artCacheStartup(new Promise(()=>{}),5),false);
 });
-test('Arctic catalogue uses a small thumbnail and defers both full-size orientations',async()=>{
+for(const sceneId of ['arctic','hallstatt'])test(sceneId+' catalogue uses a small thumbnail and defers both full-size orientations',async()=>{
  const {ASSET_MANIFEST,ALL_ASSETS}=await import('../js/farm/asset-manifest.js');
  const {FARM_SCENES}=await import('../js/farm/farm-scenes-core.js');
- const scene=FARM_SCENES.arctic;assert.equal(scene.price,500000);assert.equal(scene.purchasable,true);
+ const scene=FARM_SCENES[sceneId];assert.equal(scene.price,500000);assert.equal(scene.purchasable,true);
  assert.ok(ALL_ASSETS.includes(scene.thumbTexture));
  for(const key of [scene.portrait,scene.landscape]){assert.ok(ASSET_MANIFEST[key]);assert.ok(!ALL_ASSETS.includes(key));}
 });
