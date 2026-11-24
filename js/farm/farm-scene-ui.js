@@ -15,12 +15,12 @@ export function openScenePurchase(scene,id) {
     const buy=dialog.button('確認購買',async()=>{
         if(busy||item.purchasable===false)return;busy=true;buy.disabled=true;buy.textContent='購買中…';
         try {
-            await farmCommand('buyScene',{sceneId:id});
+            await farmCommand('buySceneAtPrice',{sceneId:id,expectedPrice:item.price});
             if(!dialog.root.isConnected)return;
             buy.remove();dialog.message.textContent='購買成功！場景已放入倉庫，請回到村落右上角設定切換。';
         } catch(error) {
             if(!dialog.root.isConnected)return;
-            dialog.message.textContent=error.message||'購買未確認，請重試確認原交易';buy.disabled=false;buy.textContent='重試確認購買';
+            dialog.message.textContent=['functions/invalid-argument','invalid-argument'].includes(error.code)?'場景商店更新中，請稍後重新進入再購買':error.message||'購買未確認，請重試確認原交易';buy.disabled=false;buy.textContent='重試確認購買';
         } finally {busy=false;}
     });
     const owned=ownedSceneIds(currentFarm(scene)).includes(id);

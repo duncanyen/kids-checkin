@@ -86,12 +86,9 @@ test('independent regional handlers share committed harvest receipt without dupl
  assert.equal((await f.db.collection('ops_farm_transactions').get()).size,1);
 });
 
-test('unreleased Fuji cannot be purchased; existing owners keep free scene selection',async()=>{
+test('existing scene owners keep ownership and free selection after price changes',async()=>{
  const f=fixture();f.farm().coins=600000;
  await assert.rejects(f.service.handle(f.req('setScene',{sceneId:'fuji'})),/尚未擁有/);
- for(const extra of [{},{price:0,purchasable:true}])await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:'fuji',...extra})),/尚未開賣/);
- assert.equal(f.farm().coins,600000);assert.equal(f.farm().ownedSceneIds,undefined);
- assert.equal((await f.db.collection('ops_farm_transactions').get()).size,0);
  f.farm().ownedSceneIds=['fuji'];
  await f.service.handle(f.req('setScene',{sceneId:'fuji'}));assert.equal(f.farm().activeSceneId,'fuji');
  await f.service.handle(f.req('setScene',{sceneId:'default'}));assert.equal(f.farm().activeSceneId,'default');
@@ -102,7 +99,7 @@ test('unreleased Fuji cannot be purchased; existing owners keep free scene selec
 test('scene purchase and switching cannot bypass an unfinished monster battle',async()=>{
  const f=fixture();f.farm().coins=600000;f.farm().ownedSceneIds=['fuji'];
  f.db.data.set('ops_farm_active/'+D.hash('profile:A'),{id:'pending',kind:'gorilla',targetGroupId:'A',targetAccountId:'alice'});
- for(const action of ['buyScene','setScene'])await assert.rejects(f.service.handle(f.req(action,{sceneId:'fuji'})),/請先完成怪物戰鬥結算/);
+ for(const action of ['buyScene','buySceneAtPrice','setScene'])await assert.rejects(f.service.handle(f.req(action,{sceneId:'fuji',expectedPrice:100000})),/請先完成怪物戰鬥結算/);
  assert.equal(f.farm().coins,600000);assert.equal(f.farm().activeSceneId,undefined);
 });
 
@@ -117,19 +114,29 @@ test('transaction retry revalidates but charges admission only once and commits 
  assert.equal(admissions,1);assert.equal(f.farm().coins,9990);assert.equal(f.farm().medicines,1);
 });
 
-for(const sceneId of ['arctic','hallstatt'])test(sceneId+' scene uses server price, charges once, keeps ownership and switches freely',async()=>{
- const f=fixture();
+for(const sceneId of ['fuji','arctic','hallstatt'])test(sceneId+' scene uses server price, charges once, keeps ownership and switches freely',async()=>{
+ const f=fixture(),price=sceneId==='hallstatt'?500000:100000;
  await assert.rejects(f.service.handle(f.req('setScene',{sceneId:sceneId})),/尚未擁有/);
  await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:sceneId,price:1,coins:999999})),/金幣不足/);
  assert.equal(f.farm().coins,10000);assert.equal(f.farm().ownedSceneIds,undefined);
  f.farm().coins=600000;
  const buy=f.req('buyScene',{sceneId:sceneId,price:0});
  const result=await f.service.handle(buy),replay=await f.service.handle(buy);
- assert.deepEqual(replay.result,result.result);assert.equal(f.farm().coins,100000);
+ assert.deepEqual(replay.result,result.result);assert.equal(f.farm().coins,600000-price);
  assert.deepEqual(f.farm().ownedSceneIds,[sceneId]);assert.equal(f.farm().activeSceneId,undefined);
  await assert.rejects(f.service.handle(f.req('buyScene',{sceneId:sceneId})),/已擁有/);
  await f.service.handle(f.req('setScene',{sceneId:sceneId}));assert.equal(f.farm().activeSceneId,sceneId);
  await f.service.handle(f.req('setScene',{sceneId:'default'}));assert.equal(f.farm().activeSceneId,'default');
- assert.equal(f.farm().coins,100000);assert.equal(f.db.data.get('groups/A/users/bob').farm.ownedSceneIds,undefined);
+ assert.equal(f.farm().coins,600000-price);assert.equal(f.db.data.get('groups/A/users/bob').farm.ownedSceneIds,undefined);
  assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,0);
+});
+
+for(const [sceneId,price]of [['fuji',100000],['arctic',100000],['hallstatt',500000]])test(sceneId+' quoted purchase refuses stale prices and replays one authoritative debit',async()=>{
+ const f=fixture();f.farm().coins=600000;
+ for(const expectedPrice of [0,price+1])await assert.rejects(f.service.handle(f.req('buySceneAtPrice',{sceneId,expectedPrice})),/商店售價已更新/);
+ assert.equal(f.farm().coins,600000);assert.equal(f.farm().ownedSceneIds,undefined);assert.equal((await f.db.collection('ops_farm_transactions').get()).size,0);
+ const request=f.req('buySceneAtPrice',{sceneId,expectedPrice:price,price:0}),first=await f.service.handle(request),replay=await f.service.handle(request);
+ assert.deepEqual(first.result,replay.result);assert.equal(f.farm().coins,600000-price);assert.deepEqual(f.farm().ownedSceneIds,[sceneId]);
+ await assert.rejects(f.service.handle(f.req('buySceneAtPrice',{sceneId,expectedPrice:price})),/已擁有/);
+ assert.equal(f.farm().coins,600000-price);
 });

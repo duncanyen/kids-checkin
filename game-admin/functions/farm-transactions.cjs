@@ -12,7 +12,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
  async function handle(request,{admit}={}){
   let admission;
-  const p=request.data||{},action=D.enumValue(p.action,['openChest','listChests','buyScene','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  const p=request.data||{},action=D.enumValue(p.action,['openChest','listChests','buyScene','buySceneAtPrice','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  if(action==='buySceneAtPrice')D.integer(p.expectedPrice,0,Number.MAX_SAFE_INTEGER);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
   if(p.verifyOnly!==undefined&&typeof p.verifyOnly!=='boolean')D.fail('invalid-argument','進場驗證模式不正確');
@@ -160,10 +161,11 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const risk=state.cleanliness>80?.5:state.cleanliness>50?.2:0;
     if(added>0)state.hens.forEach((hen,i)=>{if(!hen.isSick&&rolls[i]<risk){hen.isSick=true;hen.sickTimestamp=stamp;}});
     patch=P.poultryPatch(state);
-   }else if(action==='buyScene'||action==='setScene'){
+   }else if(action==='buyScene'||action==='buySceneAtPrice'||action==='setScene'){
     const id=D.enumValue(p.sceneId,Object.keys(scenes.FARM_SCENES));
-    try{patch=action==='buyScene'?scenes.scenePurchasePatch(farm,id):scenes.sceneSelectionPatch(farm,id);}catch(error){D.fail('failed-precondition',error.message);}
-    result={sceneId:id,ownedSceneIds:action==='buyScene'?scenes.ownedSceneIds({...farm,ownedSceneIds:patch['farm.ownedSceneIds']}):scenes.ownedSceneIds(farm),activeSceneId:action==='setScene'?id:scenes.activeSceneId(farm),coins:patch['farm.coins']??farm.coins};
+    if(action==='buySceneAtPrice'&&p.expectedPrice!==scenes.FARM_SCENES[id].price)D.fail('failed-precondition','商店售價已更新，請重新整理後再購買');
+    try{patch=action!=='setScene'?scenes.scenePurchasePatch(farm,id):scenes.sceneSelectionPatch(farm,id);}catch(error){D.fail('failed-precondition',error.message);}
+    result={sceneId:id,ownedSceneIds:action!=='setScene'?scenes.ownedSceneIds({...farm,ownedSceneIds:patch['farm.ownedSceneIds']}):scenes.ownedSceneIds(farm),activeSceneId:action==='setScene'?id:scenes.activeSceneId(farm),coins:patch['farm.coins']??farm.coins};
    }else if(action==='cleanOwn'){
     if(!(farm.cleanliness>0))D.fail('failed-precondition','雞舍已經乾淨');patch={'farm.cleanliness':0};
    }else if(action==='helpClean'){
