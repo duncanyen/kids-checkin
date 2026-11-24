@@ -63,7 +63,8 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const stillActive=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-custom-mole-active'},token);assert.equal(stillActive.status,200);assert.equal(stillActive.data.result.result.challenge.id,customEntry.data.result.result.challenge.id);
  await activeRef.delete();await ownerRef.update({'farm.moleChallenge':null,'farm.moleLastMilestone':0});
  const disabledEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-disabled-mole'},token);assert.equal(disabledEntry.status,200,JSON.stringify(disabledEntry.data.error||{}));assert.equal(disabledEntry.data.result.result,null);
- // New weapon is priced, equipped and applied by the actual callable backend.
+ // Existing-owner weapon pricing/equipment plus an intentionally legacy battle.
+ // A battle without combatVersion must still finish under its original rules.
  await ownerRef.update({'farm.coins':500000,'farm.katana':0});
  const swordBuy={groupId:'emulator-group',action:'buyWeapon',item:'katana',quantity:1,price:1,requestId:'emulator-katana-buy'};
  const boughtSword=await call('gameOpsFarmTransaction',swordBuy,token);assert.equal(boughtSword.status,400,JSON.stringify(boughtSword.data));assert.match(boughtSword.data.error.message,/尚未開賣/);assert.equal((await ownerRef.get()).data().farm.coins,500000);assert.equal((await ownerRef.get()).data().farm.katana,0);
@@ -84,20 +85,42 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  await activeRef.delete();await ownerRef.update({'farm.coopLevel':2,'farm.paladinbow':1,'farm.equippedBow':'paladinbow','farm.honey':0});
  await db.doc('groups/emulator-group').update({farmVillageVisibility:'public'});
  const beforeHornetRank=(await ownerRef.get()).data().farm.monsterKills20261123||0;
- const hornetEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',requestId:'emulator-hornet-entry'},token);
+ // Negotiate the same V2 page protocol as the real browser before spawning.
+ const battlePageId=require('node:crypto').randomUUID();
+ const openedPage=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'beginBattlePage',battlePageId,combatProtocol:2,requestId:'emulator-hornet-page'},token);
+ assert.equal(openedPage.status,200,JSON.stringify(openedPage.data.error||{}));assert.equal(openedPage.data.result.result.battlePageId,battlePageId);
+ const hornetEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',battlePageId,requestId:'emulator-hornet-entry'},token);
  assert.equal(hornetEntry.status,200,JSON.stringify(hornetEntry.data.error||{}));const hornetBattle=hornetEntry.data.result.result.challenge;
- assert.equal(hornetBattle.kind,'hornet');assert.equal(hornetBattle.deadline-hornetBattle.startedAt,50000);
+ assert.equal(hornetBattle.kind,'hornet');assert.equal(hornetBattle.combatVersion,2);assert.equal(hornetBattle.health,2400);assert.equal(hornetBattle.deadline-hornetBattle.startedAt,50000);
  await activeRef.update({startedAt:Date.now()-5000});
- const hornetMelee=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battleId:hornetBattle.id,mode:'melee',count:1,requestId:'emulator-hornet-melee'},token);assert.equal(hornetMelee.status,400);
- const hornetHit=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battleId:hornetBattle.id,mode:'ranged',count:10,requestId:'emulator-hornet-bow'},token);assert.equal(hornetHit.status,200,JSON.stringify(hornetHit.data.error||{}));assert.equal(hornetHit.data.result.result.health,0);
- const hornetWins=await Promise.all(['a','b'].map(suffix=>call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleSettle',battleId:hornetBattle.id,requestId:'emulator-hornet-settle-'+suffix},token)));
+ const hornetMelee=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:0,mode:'melee',count:1,requestId:'emulator-hornet-melee'},token);assert.equal(hornetMelee.status,400);assert.match(hornetMelee.data.error.message,/此武器無法攻擊怪物/);
+ // Outdated packets and skipped hit indices stay rejected; do not weaken checks
+ // to make a stale test pass.
+ const oldPacket=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,mode:'ranged',count:1,requestId:'emulator-hornet-old-packet'},token);
+ assert.equal(oldPacket.status,400);assert.match(oldPacket.data.error.message,/戰鬥已更新/);
+ const skipped=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:1,mode:'ranged',count:1,requestId:'emulator-hornet-skipped-hit'},token);
+ assert.equal(skipped.status,400);assert.match(skipped.data.error.message,/戰鬥進度已更新/);
+ const damageModel=await import('../functions/game/combat-damage.js');
+ let hitCount=0,totalDamage=0;
+ while(totalDamage<hornetBattle.health)totalDamage+=damageModel.hitDamage(hornetBattle,'ranged',hitCount++);
+ const partialAttack={groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:0,mode:'ranged',count:hitCount-1,requestId:'emulator-hornet-bow-partial'};
+ const partialHit=await call('gameOpsFarmTransaction',partialAttack,token);
+ assert.equal(partialHit.status,200,JSON.stringify(partialHit.data.error||{}));
+ const remaining=hornetBattle.health-damageModel.batchDamage(hornetBattle,'ranged',0,hitCount-1);
+ assert.ok(remaining>0);assert.equal(partialHit.data.result.result.health,remaining);
+ const repeatedHit=await call('gameOpsFarmTransaction',partialAttack,token);
+ assert.equal(repeatedHit.status,200,JSON.stringify(repeatedHit.data.error||{}));assert.equal(repeatedHit.data.result.replayed,true);assert.equal(repeatedHit.data.result.result.health,remaining);
+ assert.equal((await activeRef.get()).data().health,remaining);assert.equal((await activeRef.get()).data().attacks.ranged,hitCount-1);
+ const hornetHit=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:hitCount-1,mode:'ranged',count:1,requestId:'emulator-hornet-bow-final'},token);
+ assert.equal(hornetHit.status,200,JSON.stringify(hornetHit.data.error||{}));assert.equal(hornetHit.data.result.result.health,0);
+ const hornetWins=await Promise.all(['a','b'].map(suffix=>call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleSettle',battlePageId,battleId:hornetBattle.id,requestId:'emulator-hornet-settle-'+suffix},token)));
  for(const win of hornetWins){assert.equal(win.status,200,JSON.stringify(win.data.error||{}));assert.equal(win.data.result.result.outcome,'win');}
  assert.equal((await ownerRef.get()).data().farm.honey,1);
  const rankingCore=await import('../functions/game/ranking-core.js'),settledAt=hornetWins[0].data.result.serverNow;
  const hornetRank=beforeHornetRank+(settledAt>=rankingCore.THEFT_RANKING_START&&settledAt<rankingCore.THEFT_RANKING_END?1:0);
  assert.equal((await ownerRef.get()).data().farm.monsterKills20261123||0,hornetRank);
  const monsterRank=await call('gameOpsAnnouncements',{groupId:'emulator-group',action:'ranking',ranking:'monsterKills'},token);assert.equal(monsterRank.status,200,JSON.stringify(monsterRank.data.error||{}));assert.equal(monsterRank.data.result.ranking,'monsterKills');assert.equal(monsterRank.data.result.rows.find(r=>r.accountId===accountId)?.score||0,hornetRank);
- const honeySale={groupId:'emulator-group',action:'sellItem',item:'honey',quantity:1,price:999999,requestId:'emulator-honey-sale'},beforeHoneySale=(await ownerRef.get()).data().farm.coins;
+ const honeySale={groupId:'emulator-group',battlePageId,action:'sellItem',item:'honey',quantity:1,price:999999,requestId:'emulator-honey-sale'},beforeHoneySale=(await ownerRef.get()).data().farm.coins;
  assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);assert.equal((await call('gameOpsFarmTransaction',honeySale,token)).status,200);
  assert.equal((await ownerRef.get()).data().farm.coins,beforeHoneySale+300);assert.equal((await ownerRef.get()).data().farm.honey,0);
  // Same login in a second group must have its own checkin and all task counters.
