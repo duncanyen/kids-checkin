@@ -1,10 +1,10 @@
 import { farmView } from './viewport.js';
 
-export const PREDATOR_APPROACH_MS = 10000;
+export const PREDATOR_APPROACH_MS = 5000;
 export const TIGER_DEADLINE_MS = 50000;
 export const WOLF_DEADLINE_MS = 60000;
 export const PREDATOR_ATTACK_INTERVAL_MS = 5000;
-const PREDATOR_PATROL_SPEED = 45;
+export const PREDATOR_PATROL_SPEED = 90;
 
 // Use the painted landmarks, so the route stays in the hens' clearing on both
 // portrait and panoramic maps. Coordinates describe the predator's grounded feet.
@@ -35,7 +35,7 @@ function walkPredatorPatrol(scene, sprite) {
     const x = sprite.patrolDirection > 0 ? area.right : area.left;
     sprite.moveTween = scene.tweens.add({
         targets: sprite, x, y: area.y,
-        duration: Math.max(200, Math.abs(x - sprite.x) / PREDATOR_PATROL_SPEED * 1000), ease: 'Linear',
+        duration: Math.max(100, Math.abs(x - sprite.x) / PREDATOR_PATROL_SPEED * 1000), ease: 'Linear',
         onComplete: () => {
             sprite.patrolDirection *= -1;
             walkPredatorPatrol(scene, sprite);
@@ -57,7 +57,7 @@ export function registerPredatorAnimations(scene) {
     for (const kind of ['wolf', 'tiger']) {
         if (!scene.textures.exists(kind)) continue;
         const actions = [
-            ['idle', 0, 1, -1, 0], ['walk', 0, 6, -1], ['run', 0, 12, -1],
+            ['idle', 0, 1, -1, 0], ['walk', 0, 12, -1], ['run', 0, 12, -1],
             ['attack', 4, 8, 0], ['hit', 8, 8, 0], ['dead', 12, 7, 0],
         ];
         for (const [action, start, rate, repeat, end = start + 3] of actions) {

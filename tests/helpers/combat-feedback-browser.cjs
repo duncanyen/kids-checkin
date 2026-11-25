@@ -24,6 +24,16 @@ exports.run=async({page,calls,db,errors,advance,criticalMode=false,zeroMode=fals
   db.data.set('ops_game_config/encounters',{monsters,revision:results.length+2});
   await click('farm');
   await page.waitForFunction(kind=>{const s=window.__farmGame.scene.getScene('VisitScene');return s?.entryChecked&&s.backendChallenge?.kind===kind&&!!(s[kind+'Encounter']?.healthHUD||s[kind+'HUD']);},kind);
+  if(['wolf','tiger'].includes(kind)){
+   const motion=await page.evaluate(kind=>{const s=window.__farmGame.scene.getScene('VisitScene');return {approach:s[kind+'Tween'].duration,deadline:s.backendChallenge.deadline-s.backendChallenge.startedAt,walk:s.anims.get(kind+'_walk').frameRate};},kind);
+   assert.equal(motion.approach,5000);assert.equal(motion.deadline,kind==='wolf'?60000:50000);assert.equal(motion.walk,12);
+  }
+  if(['eagle','dragon'].includes(kind)){
+   await page.evaluate(kind=>{const b=window.__farmGame.scene.getScene('VisitScene')[kind+'Encounter'];b.arrivalTimer.remove();b.startFire();},kind);
+   const motion=await page.evaluate(async kind=>{const b=window.__farmGame.scene.getScene('VisitScene')[kind+'Encounter'],{aerialPatrolPoint}=await import('/js/farm/aerial-patrol.js');const original=b.deadlineTimer.getRemaining;b.deadlineTimer.getRemaining=()=>b.config.durationMs-b.config.flightMs-4500;b.refresh();const expected=aerialPatrolPoint(4.5,b.scene.coop.x,b.scene.coop.getBounds().top);const result={phase:b.phase,x:b.sprite.x,y:b.sprite.y,expected,fireVisible:b.flame.visible,flipX:b.sprite.flipX,animation:b.sprite.anims.currentAnim.key,deadline:b.deadline};b.deadlineTimer.getRemaining=original;return result;},kind);
+   assert.equal(motion.phase,'circle');assert.equal(motion.flipX,kind==='dragon'?!motion.expected.flipX:motion.expected.flipX);assert.ok(Math.abs(motion.x-motion.expected.x)<.001);assert.ok(Math.abs(motion.y-motion.expected.y)<.001);
+   if(kind==='dragon'){assert.equal(motion.fireVisible,false);assert.equal(motion.animation,'dragon_fly');await page.screenshot({path:'/tmp/gugu-dragon-eagle-route-mobile.png'});}
+  }
   const battle=structuredClone(db.data.get(key));assert.equal(battle.combatVersion,2);assert.equal(battle.health,db.data.get('ops_game_config/combat')?.monsters?.[kind]?.hp??ENEMY_HEALTH[kind]);advance(6000);
   const mode=['eagle','dragon','hornet'].includes(kind)?'ranged':'melee',weapon=WEAPONS_CONFIG[mode==='ranged'?'paladinbow':'ironhammer'];
   const initial=await state(kind);assert.ok(Math.abs(initial.bar-250/3)<1e-8);assert.equal(initial.textObjects,0);assert.equal(initial.statusVisible,false);assert.ok(Math.abs(initial.gap-96/2.54*.3)<.1);assert.ok(Math.abs(initial.barX-initial.headX)<.1);

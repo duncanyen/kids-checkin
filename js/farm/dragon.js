@@ -1,3 +1,4 @@
+import {aerialDestination,animateAerialPatrol} from './aerial-patrol.js';
 import {BattleHealthHUD,battleContext,battleHit} from './combat-feedback.js';
 import {maximumHealth} from './combat-damage.js';
 import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
@@ -73,10 +74,11 @@ export async function settleDragonEncounter(id, outcome, targetAccountId, target
 }
 
 // 載入模組時 constants 可能仍在等待 Auth 初始化；戰鬥建立時才讀設定與售價。
-function dragonSpec() { return {
+function dragonSpec(scene) { return {
     key: 'dragon', flying: true, name: '烈火龍', config: DRAGON_CONFIG, size: 176,
-    travel: 'fly', attack: 'fire', attackPhase: 'fire',
-    movingLabel: '飛近雞舍中', attackLabel: '噴火中', reward: '龍麟',
+    travel: 'fly', attack: 'fly', attackPhase: 'circle', spawnX:335, spawnFlipX:true,
+    destination:()=>aerialDestination(scene),
+    movingLabel: '飛近雞舍中', attackLabel: '盤旋俯衝中', reward: '龍麟',
     salePrice: DRAGON_SCALE_PRICE, settle: settleDragonEncounter,
 }; }
 
@@ -104,7 +106,7 @@ export class BossEncounter {
         this.destination = spec.destination ? spec.destination() : { x: Math.max(spec.minX || 80, scene.coop.getBounds().left - (spec.approachInset || 34)), y: scene.coop.getBounds().bottom + 10 };
         const spawn=spec.spawnPoint?.() || {x:spec.spawnX || 58,y:844-140};
         this.sprite = scene.add.sprite(spawn.x, spawn.y, spec.key, 0)
-            .setOrigin(0.5, 0.875).setDisplaySize(spec.size, spec.size).setDepth(25)
+            .setOrigin(0.5, 0.875).setDisplaySize(spec.size, spec.size).setDepth(25).setFlipX(spec.spawnFlipX===true)
             .setInteractive({ cursor: 'pointer', hitArea: new Phaser.Geom.Rectangle(12, 12, spec.frameSize - 24, spec.frameSize - 24), hitAreaCallback: Phaser.Geom.Rectangle.Contains });
         scene[spec.key] = this.sprite;
         this.sprite.play(`${spec.key}_${spec.travel}`);
@@ -247,5 +249,16 @@ export class BossEncounter {
 }
 
 export class DragonEncounter extends BossEncounter {
-    constructor(scene) { super(scene, { ...dragonSpec(), frameSize: 256 }); }
+    constructor(scene) {
+        super(scene, { ...dragonSpec(scene), frameSize: 256 });
+        this.motion=()=>animateAerialPatrol(this);
+        scene.events.on('update',this.motion);
+    }
+    startFire() {
+        if(this.destroyed||this.result)return;
+        this.phase='circle';this.flight.stop();this.flame.clear().setVisible(false);
+        this.sprite.play('dragon_fly');this.refresh();
+    }
+    refresh() {super.refresh();animateAerialPatrol(this);}
+    destroy() {this.scene.events.off('update',this.motion);super.destroy();}
 }

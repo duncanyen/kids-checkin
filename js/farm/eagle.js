@@ -1,3 +1,4 @@
+import {aerialDestination,animateAerialPatrol} from './aerial-patrol.js';
 import {FARM_BACKEND_ENABLED,settleBackendBattle} from './backend-client.js';
 import { BossEncounter } from './dragon.js';
 import { killProgressPatch } from './combat-progress.js';
@@ -39,7 +40,7 @@ export class EagleEncounter extends BossEncounter {
     constructor(scene){
         super(scene,{key:'eagle',flying:true,name:'巨飛鷹',config:EAGLE_CONFIG,size:160,frameSize:352,spawnX:335,
             travel:'fly',attack:'fly',attackPhase:'circle',movingLabel:'飛近雞舍中',attackLabel:'盤旋俯衝中',reward:'巨鷹羽毛',salePrice:300,settle:settleEagleEncounter,
-            destination:()=>({x:scene.coop.x+75,y:scene.coop.getBounds().top+70})});
+            destination:()=>aerialDestination(scene)});
         this.motion=()=>this.animateCircle();
         scene.events.on('update',this.motion);
     }
@@ -55,15 +56,5 @@ export class EagleEncounter extends BossEncounter {
         super.refresh();
         this.animateCircle();
     }
-    animateCircle(){
-        if(this.destroyed||this.result||this.phase!=='circle')return;
-        const t=(this.config.durationMs-this.deadlineTimer.getRemaining()-this.config.flightMs)/1000;
-        const center=this.scene.coop, bounds=center.getBounds();
-        const phase=(t%5+5)%5, dive=phase>=4;
-        // Every fifth second: a smooth feint toward the hen clearing, then rise.
-        const drop=dive?Math.sin((phase-4)*Math.PI)*135:0;
-        const x=center.x+Math.cos(t*1.2)*75,y=bounds.top+70+Math.sin(t*1.8)*12+drop;
-        this.sprite.setFlipX(-Math.sin(t*1.2)>0).setPosition(x,y);
-        if(!this.sprite.anims.currentAnim?.key.endsWith('_hit'))this.sprite.play(dive?'eagle_dive':'eagle_fly',true);
-    }
+    animateCircle(){animateAerialPatrol(this);}
 }

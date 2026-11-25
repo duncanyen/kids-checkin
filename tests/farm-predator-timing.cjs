@@ -49,7 +49,7 @@ const {execFileSync}=require('node:child_process');
    if(kind==='wolf'?bounds.left<view.left+view.width:bounds.right>view.left)throw Error('Predator must enter from beyond its side edge '+kind);
    if(Math.abs(a.y-area.y)>.1||a.flipX!==(kind==='wolf'))throw Error('Incorrect entry height or facing '+kind);
    window.__entry={x:a.x,y:a.y};
-   if(a.moveTween.duration!==10000||a.deadlineTimer.delay!==(kind==='wolf'?60000:50000))throw Error('Incorrect approach/deadline '+kind);
+   if(a.moveTween.duration!==5000||a.deadlineTimer.delay!==(kind==='wolf'?60000:50000))throw Error('Incorrect approach/deadline '+kind);
    a.moveTween.on('complete',()=>{window.__arrivedAt=a.deadlineTimer.elapsed;});
    a.on('animationstart',animation=>{
     if(animation.key!==kind+'_attack')return;
