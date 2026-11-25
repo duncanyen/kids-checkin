@@ -1,5 +1,5 @@
 import {FARM_BACKEND_ENABLED,recordBattleHit} from './backend-client.js';
-import {makeCombatSnapshot,hitDamage,maximumHealth} from './combat-damage.js';
+import {makeCombatSnapshot,hitResult,maximumHealth} from './combat-damage.js';
 import {farmView} from './viewport.js';
 import {monsterHead,screenUnits} from './monster-head.js';
 import {onSceneExit} from './scene-cleanup.js';
@@ -10,8 +10,8 @@ export function battleContext(scene,kind,id){
  return {...stats,id,kind,health:stats.maxHealth,attacks:{melee:0,ranged:0}};
 }
 export function battleHit(scene,battle,mode,weapon){
- if(FARM_BACKEND_ENABLED)return recordBattleHit(battle.id,mode,battle,weapon,battle.kind);
- battle.localAttacks||={melee:0,ranged:0};return hitDamage(battle,mode,battle.localAttacks[mode]++,weapon,battle.kind);
+ if(FARM_BACKEND_ENABLED)return recordBattleHit(battle.id,mode,battle,weapon,battle.kind,hit=>battle.lastHit=hit);
+ battle.localAttacks||={melee:0,ranged:0};battle.lastHit=hitResult(battle,mode,battle.localAttacks[mode]++,weapon,battle.kind);return battle.lastHit.damage;
 }
 /** One lightweight HUD per fight; at most eight reusable floating damage labels. */
 export class BattleHealthHUD{
@@ -29,8 +29,9 @@ export class BattleHealthHUD{
    const head=monsterHead(this.sprite),gap=screenUnits(scene,96/2.54*.3);
    this.root.setPosition(head.x,head.y-gap-this.height/2);
    for(const text of this.pool)if(text.visible&&text.anchorSprite?.active){
-    const anchor=monsterHead(text.anchorSprite),view=farmView(scene);
-    text.setPosition(Math.max(view.left+42,Math.min(view.left+view.width-42,anchor.x+text.floatX)),Math.max(view.top+screenUnits(scene,38),anchor.y-screenUnits(scene,1)+text.floatY));
+    const anchor=monsterHead(text.anchorSprite),view=farmView(scene),margin=Math.min(view.width/2-4,Math.max(42,text.displayWidth/2+18));
+    text.setPosition(Math.max(view.left+margin,Math.min(view.left+view.width-margin,anchor.x+text.floatX)),Math.max(view.top+screenUnits(scene,38),anchor.y-screenUnits(scene,1)+text.floatY));
+    if(text.burst)text.burst.setPosition(text.x,text.y-text.displayHeight/2).setScale(text.scaleX).setAlpha(text.alpha).setVisible(text.getData('combatCritical')===true);
    }
   };
   this.layout();scene.events.on('postupdate',this.layout);scene.events.on('farm-viewport-resize',this.layout);
@@ -54,13 +55,26 @@ export class BattleHealthHUD{
   const x=Math.max(view.left+42,Math.min(view.left+view.width-42,head.x+[-8,8,0,12,-4][index%5]));
   const y=Math.max(view.top+screenUnits(this.scene,38),head.y-screenUnits(this.scene,1));
   text.anchorSprite=sprite;text.floatX=[-8,8,0,12,-4][index%5];text.floatY=0;
-  text.setText(`−${value}`).setFontSize([32,36,30][index%3]).setPosition(x,y).setAlpha(1).setScale(1.12).setVisible(true);
+  const hit=this.battle.lastHit,critical=hit?.critical===true;
+  text.setData('combatCritical',critical);text.setData('combatCriticalStreak',hit?.streak||0);text.setData('combatMultiplier',critical?hit.multiplier:1);
+  text.setColor(critical?'#fff6af':'#fff0c4').setStroke(critical?'#6b160a':'#6c2513',critical?6:4);
+  text.setText(`−${value}`).setFontSize(critical?[40,44,42][index%3]:[32,36,30][index%3]).setPosition(x,y).setAlpha(1).setScale(1.12).setVisible(true);
   text.setData('combatDamage',value);text.setData('battleId',this.battle.id);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(critical){
+   text.burst||=this.scene.add.graphics().setDepth(40);
+   const g=text.burst,w=text.width/2+17,h=text.height/2+10,points=[];
+   for(let i=0;i<24;i++){const a=i*Math.PI/12,r=i%2?.75:1;points.push({x:Math.cos(a)*w*r,y:Math.sin(a)*h*r});}
+   g.clear().fillStyle(hit?.streak>1?0xb52312:0xd74612,.95).lineStyle(3,0xffd44a,1).fillPoints(points,true).strokePoints(points,true);
+   g.lineStyle(2,0xfff1b0,.95);
+   for(let i=0;i<6;i++){const a=i*Math.PI/3;g.lineBetween(Math.cos(a)*w*1.05,Math.sin(a)*h*1.05,Math.cos(a)*(w+7),Math.sin(a)*(h+6));}
+  }else text.burst?.setVisible(false);
+  if(reduced)text.setScale(1);else if(critical)text.setScale(hit?.streak>1?1.3:1.24);
+  this.layout();
   this.scene.tweens.add({targets:text,floatY:-screenUnits(this.scene,reduced?4:18),scale:1,duration:reduced?220:500,ease:'Cubic.Out'});
-  this.scene.tweens.add({targets:text,alpha:0,delay:reduced?0:120,duration:reduced?220:380,ease:reduced?'Linear':'Quad.In',onComplete:()=>{if(text.active)text.setVisible(false);}});
+  this.scene.tweens.add({targets:text,alpha:0,delay:reduced?0:120,duration:reduced?220:380,ease:reduced?'Linear':'Quad.In',onComplete:()=>{if(text.active)text.setVisible(false);text.burst?.setVisible(false);}});
  }
  stop(){this.finished=true;}
  hide(){if(this.alive)this.root.setVisible(false);}
- destroy(){if(!this.alive)return;this.alive=false;window.removeEventListener('nexus-farm-battle-health',this.sync);this.scene.events.off('postupdate',this.layout);this.scene.events.off('farm-viewport-resize',this.layout);this.scene.tweens.killTweensOf(this.trail);for(const text of this.pool){this.scene.tweens.killTweensOf(text);text.destroy();}this.root.destroy();}
+ destroy(){if(!this.alive)return;this.alive=false;window.removeEventListener('nexus-farm-battle-health',this.sync);this.scene.events.off('postupdate',this.layout);this.scene.events.off('farm-viewport-resize',this.layout);this.scene.tweens.killTweensOf(this.trail);for(const text of this.pool){this.scene.tweens.killTweensOf(text);text.burst?.destroy();text.destroy();}this.root.destroy();}
 }

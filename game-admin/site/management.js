@@ -7,7 +7,7 @@ import {createFarmReportUI} from './report.js?v=20261114-report';
  * @description 操作識別碼按管理員與內容雜湊保存至 sessionStorage，確認成功才移除。
  */
 export function createManagementUI({root,api,node,button,table,formatTime,wallTime,utc,status,getAdminUid}){
-    const views=['players','balance','events','settings','reports'];
+    const views=['players','balance','combat','events','settings','reports'];
     const report=createFarmReportUI({root,api,node,button,table,formatTime,status});
     const names={draft:'草稿',scheduled:'排程',active:'進行中',ended:'已結束',cancelled:'已取消'};
     const dialog=node('dialog');dialog.id='managementEditor';document.body.append(dialog);
@@ -140,6 +140,22 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
             input(fields,'reason','出現設定修改原因','textarea','');
         },v=>({action:'saveEncounterConfig',value:{monster:kind,expectedRevision:settings.revision,reason:v.reason,config:{enabled:v.enabled==='true',...Object.fromEntries(['home','visit'].map(place=>[place,place==='home'&&['wolf','tiger'].includes(kind)?value.home:{enabled:v[place+'Enabled']==='true',minLevel:Number(v[place+'MinLevel']),rate:Number(v[place+'Rate'])}])),...(milestone?{interval:Number(v.interval)}:{}),...(['cobra','giant'].includes(kind)?{killTypes:settings.killTypes.filter(id=>v['count_'+id]==='on')}:{} )}}}),`確認更新「${settings.names[kind]}」的新進場出現條件？既有戰鬥與已領獎紀錄維持不變。`);
     }
+    function editCombat(type,id){
+        const settings=data.combat,value=settings[type][id],monster=type==='monsters';
+        const name=monster?(data.encounters?.names[id]||id):data.weapons[id].name;
+        edit(`戰鬥設定 · ${name}`,fields=>{
+            fields.append(node('p','設定只影響之後建立的新戰鬥；進行中的戰鬥保留開戰時數值。一般傷害為攻擊力 ±10（最低 1），爆擊為該次一般傷害的 1.5 倍（四捨五入）。武器售價與攻擊對象不變。','full muted'));
+            if(monster){const hp=input(fields,'hp','怪物 HP','number',value.hp);hp.min='1';hp.max=String(settings.maxHP);hp.step='1';}
+            else{
+                const attack=input(fields,'attack','武器攻擊力','number',value.attack);attack.min='1';attack.max=String(settings.maxAttack);attack.step='1';
+                const rate=input(fields,'criticalRate','爆擊率（%）','number',value.criticalRate);rate.min='0';rate.max='100';rate.step='any';
+                const chain=input(fields,'chainCriticalRate','連續爆擊率（%）','number',value.chainCriticalRate);chain.min='0';chain.max='100';chain.step='any';
+                const preview=node('p',undefined,'full muted'),update=()=>{const p=Number(rate.value),q=Number(chain.value);preview.textContent=`上一擊爆擊後，下一次同武器有效命中的合計爆擊機率約 ${Number((p+(100-p)*q/100).toFixed(4))}%。未爆擊時恢復一般機率；每次爆擊仍為 1.5 倍，不連乘倍率。基礎爆擊率為 0% 時，連續爆擊不會自行啟動。`;};rate.addEventListener('input',update);chain.addEventListener('input',update);update();fields.append(preview);
+
+            }
+            input(fields,'reason','戰鬥數值修改原因','textarea','');
+        },v=>({action:'saveCombatConfig',value:{type,id,expectedRevision:settings.revision,reason:v.reason,config:monster?{hp:Number(v.hp)}:{attack:Number(v.attack),criticalRate:Number(v.criticalRate),chainCriticalRate:Number(v.chainCriticalRate)}}}),`確認更新「${name}」的新戰鬥數值？`);
+    }
     function balance(){
         let card=section('護衛犬 · 可即時調整','這些設定已接到新版村落商店與後端租用交易。全域暫停租用時，個別商品仍保留自己的開放設定。');
         let wrap=node('div',undefined,'table-wrap');wrap.append(table(['犬種','日租','週租','攔截率','目前狀態','操作'],Object.entries(data.guardDogs.breeds).map(([id,b])=>[b.name,b.dayPrice,b.weekPrice,`${Math.round(b.biteChance*100)}%`,b.availability==='paused'?'租用服務暫停':b.rentable?'可租用':'尚未開放',button('編輯',()=>editGuard(id,b))])));card.append(wrap,button('重新讀取數值',()=>load()));
@@ -154,12 +170,21 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
         }
         card=section('雞種 · 版本設定／唯讀','產蛋、買賣與戰鬥仍由既有遊戲版本決定；第一版不提供會與玩家端不一致的線上編輯。');
         wrap=node('div',undefined,'table-wrap');wrap.append(table(['雞種','購買','回售','產蛋間隔','每日產能','蛋售價','狀態'],Object.values(data.chickens).map(b=>[b.name,b.buy,b.sell,`${b.interval/3600000} 小時`,b.daily,b.eggPrice,b.purchasable===false?'展示':'開賣'])));card.append(wrap);
-        card=section('武器與怪物 · 版本設定／唯讀');
-        wrap=node('div',undefined,'table-wrap');wrap.append(table(['武器','購買','回售','基礎傷害'],Object.values(data.weapons).map(w=>[w.name,w.buyPrice??'不可購買',w.sellPrice??'不可回售',w.damage])));card.append(wrap);
+
+        card=section('武器與怪物 · 參考數值','武器售價沿用原設定；戰鬥數值可至左側「戰鬥設定」調整。');
+        wrap=node('div',undefined,'table-wrap');wrap.append(table(['武器','購買','回售','基礎攻擊力'],Object.values(data.weapons).map(w=>[w.name,w.buyPrice??'不可購買',w.sellPrice??'不可回售',w.attack??w.damage])));card.append(wrap);
         const details=node('details'),summary=node('summary','查看怪物生命值與參考攻擊次數');details.append(summary);
-        const enemies={wolf:'野狼',tiger:'老虎',dragon:'暴龍',gorilla:'巨猩',eagle:'巨鷹',cobra:'眼鏡蛇王',mole:'地鼠',giant:'遠古巨人',hornet:'虎頭蜂'};
+        const enemies=data.encounters?.names||{};
         details.append(table(['怪物','生命值'],Object.entries(data.enemyHealth).map(([id,hp])=>[enemies[id]||id,hp])));
-        const matrix=node('div',undefined,'table-wrap');matrix.append(table(['武器',...Object.keys(enemies).map(id=>enemies[id])],Object.entries(data.weapons).map(([id,w])=>[w.name,...Object.keys(enemies).map(enemy=>data.weaponHitCounts[id][enemy]??'無效')])));details.append(node('p','攻擊次數依版本傷害換算，不含操作速度與戰鬥時限。','muted'),matrix);card.append(details);
+        const matrix=node('div',undefined,'table-wrap');matrix.append(table(['武器',...Object.keys(data.enemyHealth).map(id=>enemies[id]||id)],Object.entries(data.weapons).map(([id,w])=>[w.name,...Object.keys(data.enemyHealth).map(enemy=>data.weaponHitCounts[id][enemy]??'無效')])));details.append(node('p','次數僅依基礎攻擊力估算，未計入 ±10、爆擊、連續爆擊、操作速度及戰鬥時限。','muted'),matrix);card.append(details);
+
+
+    }
+    function combat(){
+        let card=section('怪物 HP','僅套用於之後建立的新戰鬥，保留進行中戰鬥的原有數值與時限。');
+        let wrap=node('div',undefined,'table-wrap');wrap.append(table(['怪物','HP','操作'],Object.entries(data.combat.monsters).map(([id,v])=>[data.encounters.names[id]||id,v.hp.toLocaleString(),button('編輯 HP',()=>editCombat('monsters',id))])));card.append(wrap);
+        card=section('武器攻擊力、爆擊與連續爆擊','每把武器預設爆擊率 5%、連續爆擊率 5%。一般傷害保留 ±10（最低 1），爆擊為 1.5 倍。連續爆擊是上一擊爆擊後的額外獨立判定；近戰與遠程各自計算，新戰鬥歸零。');
+        wrap=node('div',undefined,'table-wrap');wrap.append(table(['武器','攻擊力','爆擊率','連續爆擊率','爆擊後下一擊合計','操作'],Object.entries(data.combat.weapons).map(([id,v])=>[data.weapons[id].name,v.attack.toLocaleString(),v.criticalRate+'%',v.chainCriticalRate+'%',Number((v.criticalRate+(100-v.criticalRate)*v.chainCriticalRate/100).toFixed(4))+'%',button('編輯攻擊／爆擊',()=>editCombat('weapons',id))])));card.append(wrap,button('重新讀取戰鬥設定',()=>load()));
     }
     function eventEditor(event){
         const stamp=Date.now();
@@ -203,10 +228,10 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
     async function load(){
         const token=++version,selected=view;status('正在讀取管理資料…');
         try{
-            const action={players:'listPlayers',balance:'gameBalance',events:'listEvents',settings:'getSettings'}[selected];
+            const action={players:'listPlayers',balance:'gameBalance',combat:'combatBalance',events:'listEvents',settings:'getSettings'}[selected];
             const payload=selected==='players'?{accountId:search,cursor:pages[page]}:selected==='events'?{search,status:filter,cursor:pages[page]}:{};
             const result=await api(action,payload);if(token!==version||view!==selected)return;
-            data=result;next=result.nextCursor||null;root.replaceChildren();({players,balance,events,settings})[selected]();status('');
+            data=result;next=result.nextCursor||null;root.replaceChildren();({players,balance,combat,events,settings})[selected]();status('');
         }catch(e){if(token===version){root.replaceChildren(node('p',e.message||'管理資料讀取失敗','empty'),button('重試',()=>load()));status(e.message||'讀取失敗',true);}}
     }
     return{has:key=>views.includes(key),isBusy:()=>busy||report.isBusy(),open:async key=>{report.deactivate();view=key;if(key==='reports'){version++;return report.open();}search='';filter='';pages=[null];page=0;return load();},deactivate:()=>{report.deactivate();view=null;version++;if(dialog.open&&!busy)dialog.close();}};

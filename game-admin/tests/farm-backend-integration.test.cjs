@@ -8,7 +8,7 @@ function setup(){
  const player=async r=>{assert.equal(r.auth.uid,'profile');return{uid:'profile',accountId:'alice',groupId:'A'};};
  const daily=createDailyChallenges({db,now:()=>stamp,player,playerSession:player,throttle:async()=>{},trustedReady:async()=>true});
  const api=createFarmTransactions({db,player,now:()=>stamp,random:()=>typeof roll==='function'?roll():roll,enabled:()=>true,prepareProgress:daily.prepareProgress});
- const req=(action,p={})=>({auth:{uid:'profile'},data:{groupId:'A',action,requestId:crypto.randomUUID(),...(action==='battleAttack'&&db.data.get('ops_farm_active/'+require('../functions/domain.cjs').hash('profile:A'))?.combatVersion===2?{combatVersion:2,firstHit:db.data.get('ops_farm_active/'+require('../functions/domain.cjs').hash('profile:A')).attacks[p.mode]||0}:{}),...p}});
+ const req=(action,p={})=>({auth:{uid:'profile'},data:{groupId:'A',action,requestId:crypto.randomUUID(),...(action==='battleAttack'&&db.data.get('ops_farm_active/'+require('../functions/domain.cjs').hash('profile:A'))?.combatVersion===2?{combatVersion:2,damageVersion:4,firstHit:db.data.get('ops_farm_active/'+require('../functions/domain.cjs').hash('profile:A')).attacks[p.mode]||0}:{}),...p}});
  return{db,api,daily,req,clock:ms=>stamp+=ms,roll:n=>roll=n,farm:()=>db.data.get('groups/A/users/alice').farm,status:async()=>(await daily.handle(req('status'))).challenges.mission};
 }
 test('three real harvests and three effective cleanings update progress atomically and idempotently',async()=>{

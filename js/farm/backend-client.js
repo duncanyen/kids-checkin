@@ -1,4 +1,4 @@
-import {hitDamage,batchDamage} from './combat-damage.js';
+import {hitResult,batchDamage} from './combat-damage.js';
 import { PRIVATE_IDENTITY_ENABLED } from '../private-auth-client.js';
 import { createGameOperationsClient } from './operations-client.js';
 import { isUncertainSteal } from './steal-request.js';
@@ -68,7 +68,7 @@ async function flushBattle(id){
  const row=rowFor(id);if(row.flushing)return row.flushing;
  row.flushing=(async()=>{
   for(const mode of ['melee','ranged']){
-   if(!row.batch&&row[mode])row.batch={battleId:id,mode,count:row[mode],...(row.battle?.combatVersion===2?{combatVersion:2,firstHit:row.confirmed[mode]}:{})};
+   if(!row.batch&&row[mode])row.batch={battleId:id,mode,count:row[mode],...(row.battle?.combatVersion===2?{combatVersion:2,...(row.battle.damageVersion?{damageVersion:row.battle.damageVersion}:{}),firstHit:row.confirmed[mode]}:{})};
    if(!row.batch)continue;
    const batch=row.batch;
    const result=await farmCommand('battleAttack',batch);row[batch.mode]=Math.max(0,row[batch.mode]-batch.count);row.confirmed[batch.mode]+=batch.count;row.batch=null;
@@ -80,8 +80,8 @@ async function flushBattle(id){
   }
  })().finally(()=>{row.flushing=null;});return row.flushing;
 }
-export function recordBattleHit(id,mode='melee',battle,weapon,kind){
- if(!FARM_BACKEND_ENABLED)return 0;const row=rowFor(id,battle),damage=hitDamage(battle,mode,row.confirmed[mode]+row[mode],weapon,kind);row[mode]++;if(Number.isFinite(row.health))row.health=Math.max(0,row.health-damage);
+export function recordBattleHit(id,mode='melee',battle,weapon,kind,onHit){
+ if(!FARM_BACKEND_ENABLED)return 0;const row=rowFor(id,battle),hit=hitResult(battle,mode,row.confirmed[mode]+row[mode],weapon,kind),damage=hit.damage;onHit?.(hit);if(!damage)return 0;row[mode]++;if(Number.isFinite(row.health))row.health=Math.max(0,row.health-damage);
  if(!row.timer)row.timer=setTimeout(()=>{row.timer=null;void flushBattle(id).catch(()=>{});},500);
  return damage;
 }

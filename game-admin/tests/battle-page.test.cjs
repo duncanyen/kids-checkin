@@ -8,7 +8,7 @@ function fixture(){
  for(const who of ['alice','bob'])db.data.set('groups/A/users/'+who,{farm:structuredClone(farm)});
  const actor={uid:'p',groupId:'A',accountId:'alice'};
  const service=createFarmTransactions({db,player:async()=>actor,now:()=>stamp,random:()=>roll,enabled:()=>true});
- const req=(action,page,body={},requestId=crypto.randomUUID())=>({data:{action,requestId,battlePageId:page,combatProtocol:2,...(action==='battleAttack'&&db.data.get(key)?.combatVersion===2?{combatVersion:2,firstHit:db.data.get(key).attacks[body.mode]||0}:{}),...body}});
+ const req=(action,page,body={},requestId=crypto.randomUUID())=>({data:{action,requestId,battlePageId:page,combatProtocol:4,...(action==='battleAttack'&&db.data.get(key)?.combatVersion===2?{combatVersion:2,damageVersion:4,firstHit:db.data.get(key).attacks[body.mode]||0}:{}),...body}});
  const api=(action,page,body={},id)=>service.handle(req(action,page,body,id));
  const key='ops_farm_active/'+D.hash('p:A');
  return{db,api,req,service,key,farm:()=>db.data.get('groups/A/users/alice').farm,clock:n=>stamp+=n,roll:n=>roll=n};

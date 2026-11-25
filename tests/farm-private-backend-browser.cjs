@@ -8,7 +8,9 @@ const guardRentalTests=process.env.GUARD_RENTAL_TESTS==='1';
 const dailyGroupTests=process.env.DAILY_GROUP_TESTS==='1';
 const weeklyRankingTests=process.env.WEEKLY_RANKING_TESTS==='1';
 let legacyRankingPeriod=false;
-const combatFeedbackTests=process.env.COMBAT_FEEDBACK_TESTS==='1';
+const criticalFeedbackTests=process.env.CRITICAL_FEEDBACK_TESTS==='1';
+const criticalZeroTests=process.env.CRITICAL_ZERO_TESTS==='1';
+const combatFeedbackTests=process.env.COMBAT_FEEDBACK_TESTS==='1'||criticalFeedbackTests||criticalZeroTests;
 const hornetTests=process.env.HORNET_TESTS==='1';
 const katanaTests=process.env.KATANA_TESTS==='1';
 const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
@@ -64,6 +66,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
  if(combatFeedbackTests||encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests||navigationTests||arcticSceneTests||hallstattSceneTests||visitHudTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(criticalFeedbackTests||criticalZeroTests){const C=await import('../js/farm/combat-rules.js');db.data.set('ops_game_config/combat',{revision:1,monsters:{gorilla:{hp:5000}},weapons:Object.fromEntries(Object.entries(C.WEAPON_ATTACK).map(([id,attack])=>[id,{attack:id==='ironhammer'?194:attack,criticalRate:criticalFeedbackTests?100:0,chainCriticalRate:criticalFeedbackTests?5:0}]))});}
  if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
  if(resumeMode)db.data.set(pendingKey,{id:'resume-gorilla',kind:'gorilla',groupId:'A',targetGroupId:'A',targetAccountId:resumeMode==='visit'?'bob':'alice',startedAt:stamp-1000,approachEndsAt:stamp-1,deadline:stamp+40000,health:700,attacks:{melee:1,ranged:0}});
@@ -141,7 +144,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
-  if(combatFeedbackTests){releaseSettlement();await require('./helpers/combat-feedback-browser.cjs').run({page,calls,db,errors,advance:ms=>backendNow+=ms});return;}
+  if(combatFeedbackTests){releaseSettlement();await require('./helpers/combat-feedback-browser.cjs').run({page,calls,db,errors,criticalMode:criticalFeedbackTests,zeroMode:criticalZeroTests,advance:ms=>backendNow+=ms});return;}
   if(visitHudTests){releaseSettlement();await require('./helpers/visit-hud-browser.cjs').run({page,calls,db,errors});return;}
   if(navigationTests){releaseSettlement();await require('./helpers/farm-navigation-loading.cjs').run({page,probe:navigationProbe,before:navigationBefore,calls,db,errors});return;}
   if(guardRentalTests){
@@ -251,7 +254,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    own().coins=1100000;await page.evaluate(()=>window.__privateEmitAll());await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').farmData.coins===1100000);
    await shop();await page.screenshot({path:'/tmp/gugu-katana-shop.png'});
    await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene');window.__katanaGuide=s.weaponGuide.list.filter(o=>o.type==='Text').map(o=>o.text).join('\n');});assert.match(await page.evaluate(()=>window.__katanaGuide),/武士刀/);
-   const guideMetrics=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene'),p=s.weaponGuide;p.setVisible(true);const guide=p.list.find(o=>o.type==='Text'&&o.text.includes('傷害為攻擊力')),close=p.list.find(o=>o.type==='Rectangle'&&o.input?.enabled&&o.y===577),metrics={bottom:guide.getBounds().bottom,closeTop:close.getBounds().top,height:guide.height};p.setVisible(false);return metrics;});assert.ok(guideMetrics.bottom<guideMetrics.closeTop,JSON.stringify(guideMetrics));
+   const guideMetrics=await page.evaluate(()=>{const s=window.__farmGame.scene.getScene('ShopScene'),p=s.weaponGuide;p.setVisible(true);const guide=p.list.find(o=>o.type==='Text'&&o.text.includes('下列為預設估算')),close=p.list.find(o=>o.type==='Rectangle'&&o.input?.enabled&&o.y===577),metrics={bottom:guide.getBounds().bottom,closeTop:close.getBounds().top,height:guide.height};p.setVisible(false);return metrics;});assert.ok(guideMetrics.bottom<guideMetrics.closeTop,JSON.stringify(guideMetrics));
    const purchases=()=>calls.filter(c=>c.action==='buyWeapon').length;
    await click('ShopScene','buykatana');assert.equal(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').dialogContainer.visible),false);assert.match(await page.evaluate(()=>window.__farmGame.scene.getScene('ShopScene').msgText.text),/尚未開賣/);assert.equal(purchases(),0);assert.equal(own().coins,1100000);assert.equal(own().katana,undefined);
    await page.evaluate(async()=>{const s=window.__farmGame.scene.getScene('ShopScene');s.openTradeModal('buy','katana','武士刀',1);await s.executeBuyWeapon('katana',1,1);});assert.equal(purchases(),0);assert.equal(own().coins,1100000);

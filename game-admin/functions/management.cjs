@@ -2,9 +2,10 @@ const crypto=require('node:crypto');
 const D=require('./domain.cjs');
 const Chests=require('./chests.cjs');
 const Encounters=require('./encounters.cjs');
+const Combat=require('./combat-balance.cjs');
 const DEFAULT_SETTINGS=Object.freeze({announcementsEnabled:true,redemptionEnabled:true,guardDogRentalsEnabled:true,pauseMessage:'此營運功能暫停開放，請稍後再試。'});
-const READ_ACTIONS=['listPlayers','playerDetail','gameBalance','listEvents','getSettings'];
-const WRITE_ACTIONS=['savePlayerControl','adjustPlayerCoins','saveGuardConfig','saveChestConfig','saveEncounterConfig','saveEvent','saveSettings'];
+const READ_ACTIONS=['listPlayers','playerDetail','gameBalance','combatBalance','listEvents','getSettings'];
+const WRITE_ACTIONS=['savePlayerControl','adjustPlayerCoins','saveGuardConfig','saveChestConfig','saveEncounterConfig','saveCombatConfig','saveEvent','saveSettings'];
 const boolean=value=>{if(typeof value!=='boolean')D.fail('invalid-argument','開關格式不正確');return value;};
 const revision=value=>D.integer(value,0,Number.MAX_SAFE_INTEGER-1);
 const profile=(snap)=>{const p=snap.data()||{};return{uid:snap.id,accountId:p.accountId||'',name:p.name||p.accountId||'',role:p.role||'member'};};
@@ -73,9 +74,15 @@ function createManagement({db,now}){
         if(action==='playerDetail')return playerDetail(payload);
         if(action==='listEvents')return listEvents(payload);
         if(action==='getSettings')return settings();
+        if(action==='combatBalance'){
+            const {WEAPONS_CONFIG}=await import('./game/combat-rules.js');
+            return{combat:{...await Combat.config(db),maxHP:Combat.MAX_HP,maxAttack:Combat.MAX_ATTACK},encounters:{names:Encounters.NAMES},weapons:WEAPONS_CONFIG};
+        }
         if(action==='gameBalance'){
-            const [{BREEDS},{WEAPONS_CONFIG,ENEMY_HEALTH,hitsToDefeat},dogs]=await Promise.all([import('./game/poultry.js'),import('./game/combat-rules.js'),guardCatalog()]);
-            return{encounters:{...await Encounters.config(db),names:Encounters.NAMES,killTypes:Encounters.KILL_TYPES},chests:{...await Chests.config(db),names:Chests.MONSTERS,catalog:await Chests.catalog(),maxCoins:Chests.MAX_COINS},chickens:BREEDS,weapons:WEAPONS_CONFIG,enemyHealth:ENEMY_HEALTH,weaponHitCounts:Object.fromEntries(Object.entries(WEAPONS_CONFIG).map(([id,w])=>[id,Object.fromEntries(Object.keys(ENEMY_HEALTH).map(enemy=>{const hits=hitsToDefeat(w,enemy);return[enemy,Number.isFinite(hits)?hits:null];}))])),guardDogs:dogs};
+            const weaponDamageForGuide=(w,enemy)=>(w.damageByEnemy?.[enemy]??w.damage)>0;
+            const [{BREEDS},{WEAPONS_CONFIG,ENEMY_HEALTH},dogs]=await Promise.all([import('./game/poultry.js'),import('./game/combat-rules.js'),guardCatalog()]);
+            const combat=await Combat.config(db);
+            return{combat:{...combat,maxHP:Combat.MAX_HP,maxAttack:Combat.MAX_ATTACK},encounters:{...await Encounters.config(db),names:Encounters.NAMES,killTypes:Encounters.KILL_TYPES},chests:{...await Chests.config(db),names:Chests.MONSTERS,catalog:await Chests.catalog(),maxCoins:Chests.MAX_COINS},chickens:BREEDS,weapons:Object.fromEntries(Object.entries(WEAPONS_CONFIG).map(([id,w])=>[id,{...w,attack:combat.weapons[id].attack,criticalRate:combat.weapons[id].criticalRate}])),enemyHealth:Object.fromEntries(Object.entries(combat.monsters).map(([id,v])=>[id,v.hp])),weaponHitCounts:Object.fromEntries(Object.entries(WEAPONS_CONFIG).map(([id,w])=>[id,Object.fromEntries(Object.keys(ENEMY_HEALTH).map(enemy=>{const hits=weaponDamageForGuide(w,enemy)?Math.ceil(combat.monsters[enemy].hp/combat.weapons[id].attack):Infinity;return[enemy,Number.isFinite(hits)?hits:null];}))])),guardDogs:dogs};
         }
         D.fail('invalid-argument','未知管理查詢');
     }
@@ -112,6 +119,13 @@ function createManagement({db,now}){
                     before={coins:farm.coins};after={coins,delta,reason,accountId:p.accountId,groupId};target=ref.path;
                     commit=()=>t.update(ref,{farm:{...farm,coins}});response={coins,accountId:p.accountId,groupId};
                 }
+            }else if(action==='saveCombatConfig'){
+                const type=D.enumValue(payload.type,['monsters','weapons']),ref=db.doc('ops_game_config/combat'),old=await t.get(ref);
+                requireVersion(old.data(),payload.expectedRevision);
+                const previous=await Combat.merge(old.data()),id=D.enumValue(payload.id,Object.keys(previous[type])),value=Combat.validate(type,payload.config);
+                before={type,id,config:previous[type][id],revision:previous.revision};after={type,id,config:value,revision:previous.revision+1};target=ref.path;
+                const next={...previous,[type]:{...previous[type],[id]:value},revision:after.revision,updatedAt:stamp,updatedBy:uid};
+                commit=()=>t.set(ref,next);response={type,id,revision:next.revision};
             }else if(action==='saveEncounterConfig'){
                 const kind=D.enumValue(payload.monster,Object.keys(Encounters.NAMES)),ref=db.doc('ops_game_config/encounters'),old=await t.get(ref);
                 requireVersion(old.data(),payload.expectedRevision);

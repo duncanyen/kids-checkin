@@ -189,7 +189,7 @@ export default class ShopScene extends Phaser.Scene {
         panel.add([shade, paper, title]);
         const hits = (enemy, keys, suffix) => '約 '+keys.map(key => `${hitsToDefeat(WEAPONS_CONFIG[key], enemy)}`).join('／') + suffix;
         const guide = [
-            '傷害為攻擊力 ±10；下列次數僅供估算',
+            '±10／爆擊依後台；下列為預設估算',
             '近戰：木棒／狼牙棒／雙手斧／大鐵槌／武士刀',
             ...[['giant', '遠古巨人'], ['wolf', '大野狼'], ['tiger', '老虎'], ['gorilla', '大金剛'], ['cobra', '毒牙眼鏡蛇王'], ['mole', '地鼠']].map(([key, name]) => `${name}：${hits(key, ['club', 'mace', 'battleaxe', 'ironhammer', 'katana'], ' 下')}`),
             '', '弓箭：短弓／獵弓／聖騎士弓',

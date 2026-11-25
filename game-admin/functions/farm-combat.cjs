@@ -2,13 +2,13 @@
 const D=require('./domain.cjs'),Encounters=require('./encounters.cjs');
 const CONFIG={hornet:{health:2400,durationMs:50000,flightMs:10000,item:'honey',penalty:100},wolf:{health:300,durationMs:60000,flightMs:0,item:'wolfFangs'},tiger:{health:400,durationMs:50000,flightMs:0,item:'tigerPelts',penalty:5},dragon:{health:1600,durationMs:60000,flightMs:10000,item:'dragonScales',penalty:100,clearEggs:true},gorilla:{health:4000,durationMs:40000,flightMs:10000,item:'gorillaFangs',penalty:100,clearEggs:true},eagle:{health:800,durationMs:60000,flightMs:10000,item:'eagleFeathers',penalty:100},cobra:{health:6400,durationMs:50000,flightMs:8000,item:'cobraFangs',penalty:200},giant:{health:12000,durationMs:70000,flightMs:7000,item:'ancientStones',penalty:300},mole:{health:4000,durationMs:60000,flightMs:0,item:'sweetPotatoes',penalty:100}};
 const apply=(farm,patch)=>({...farm,...Object.fromEntries(Object.entries(patch).map(([key,value])=>[key.slice(5),value]))});
-async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id,damageSeed=id,encounterSettings=async()=>({monsters:Encounters.DEFAULTS,revision:0})}){
+async function combatCommand({action,p,actor,farm,target,stamp,session,random,models,id,damageSeed=id,combatSettings=()=>require('./combat-balance.cjs').merge(),encounterSettings=async()=>({monsters:Encounters.DEFAULTS,revision:0})}){
  const [P,inventory,C,,G,giant,cobra,mole,progress]=models,damageModel=models[14];
  const patch={},result={};let next=session,event=null,targetChanged=false,targetFarm=target?.farm||null;
- const start=(kind,milestone)=>{
+ const start=async(kind,milestone)=>{
   const config=CONFIG[kind];
-  if(session?.combatProtocol===0)D.fail('failed-precondition','戰鬥已更新，請重新載入遊戲');
-  const snapshot=damageModel.makeCombatSnapshot(farm,kind,damageSeed);
+  if(session?.combatProtocol!==undefined&&(session.combatProtocol===0||session.damageProtocol!==4))D.fail('failed-precondition','戰鬥已更新，請重新載入遊戲');
+  const snapshot=damageModel.makeCombatSnapshot(farm,kind,damageSeed,await combatSettings());
   next={id,kind,groupId:actor.groupId,targetGroupId:target.groupId,targetAccountId:target.accountId,targetName:target.name||target.accountId,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),startedAt:stamp,approachEndsAt:stamp+config.flightMs,deadline:stamp+config.durationMs,...snapshot,health:snapshot.maxHealth,attacks:{melee:0,ranged:0},milestone:milestone??null};
   if(milestone!==undefined){next.previousMilestone=farm[kind+'LastMilestone']||0;patch['farm.'+kind+'LastMilestone']=milestone;patch['farm.'+kind+'Challenge']={id,milestone,startedAt:stamp,approachEndsAt:next.approachEndsAt,deadline:next.deadline};}
   return{challenge:{...next},kind};
@@ -70,7 +70,7 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
   else if(clearedHome)return{patch,result:null,session:next};
   else kind=Encounters.rollRandom(settings,place,action==='homeEncounter'?farm.coopLevel:targetFarm?.coopLevel||1,random);
   if(!kind){if(action==='visitEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,targetGroupId:target.groupId,targetAccountId:target.accountId,visitPermit:true,result:{outcome:'clear'}};if(action==='homeEncounter')next={id,...(p.battlePageId?{ownerPageId:p.battlePageId}:{}),kind:null,groupId:actor.groupId,targetGroupId:actor.groupId,targetAccountId:actor.accountId,harvestPermit:true,harvested:false,result:{outcome:'clear'}};return{patch,result:null,session:next};}
-  return{patch,result:start(kind,milestone),session:next};
+  return{patch,result:await start(kind,milestone),session:next};
  }
  if(!next||!next.id||p.battleId!==next.id)D.fail('failed-precondition','戰鬥會話已變更');
  if(next.result)return{patch,result:next.result,session:next};
@@ -84,7 +84,7 @@ async function combatCommand({action,p,actor,farm,target,stamp,session,random,mo
  if((attacks[mode]||0)+count>cap)D.fail('resource-exhausted','攻擊過於密集，請稍候重試');
  const first=attacks[mode]||0;
  if(next.combatVersion===2){
-  if(p.combatVersion!==2)D.fail('failed-precondition','戰鬥已更新，請重新載入遊戲');
+  if(p.combatVersion!==2||next.damageVersion>=3&&p.damageVersion!==next.damageVersion)D.fail('failed-precondition','戰鬥已更新，請重新載入遊戲');
   if(p.firstHit!==first)D.fail('failed-precondition','戰鬥進度已更新，請重新確認原攻擊');
   if(damageModel.weaponKey(weapon)!==next.weapons?.[mode])D.fail('failed-precondition','戰鬥裝備已變更，請重新進入');
   damage=damageModel.batchDamage(next,mode,first,count);

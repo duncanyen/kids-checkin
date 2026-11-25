@@ -6,7 +6,7 @@ const guard=(f,action,payload={})=>f.service.guardDog({...f.request(),data:{acti
 
 test('all new management reads/writes require current server admin claims',async()=>{
  const f=await fixture();
- for(const action of ['listPlayers','playerDetail','gameBalance','listEvents','getSettings','savePlayerControl','adjustPlayerCoins','saveGuardConfig','saveEvent','saveSettings']){
+ for(const action of ['listPlayers','playerDetail','gameBalance','combatBalance','saveCombatConfig','listEvents','getSettings','savePlayerControl','adjustPlayerCoins','saveGuardConfig','saveEvent','saveSettings']){
   await assert.rejects(f.admin(action,{}, {auth:null}),{code:'unauthenticated'});
   await assert.rejects(f.admin(action,{}, {auth:{uid:'alice',token:{role:'player'}}}),{code:'permission-denied'});
  }

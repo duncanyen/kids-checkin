@@ -87,23 +87,23 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const beforeHornetRank=(await ownerRef.get()).data().farm.monsterKills20261123||0;
  // Negotiate the same V2 page protocol as the real browser before spawning.
  const battlePageId=require('node:crypto').randomUUID();
- const openedPage=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'beginBattlePage',battlePageId,combatProtocol:2,requestId:'emulator-hornet-page'},token);
+ const openedPage=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'beginBattlePage',battlePageId,combatProtocol:4,requestId:'emulator-hornet-page'},token);
  assert.equal(openedPage.status,200,JSON.stringify(openedPage.data.error||{}));assert.equal(openedPage.data.result.result.battlePageId,battlePageId);
  const hornetEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',battlePageId,requestId:'emulator-hornet-entry'},token);
  assert.equal(hornetEntry.status,200,JSON.stringify(hornetEntry.data.error||{}));const hornetBattle=hornetEntry.data.result.result.challenge;
  assert.equal(hornetBattle.kind,'hornet');assert.equal(hornetBattle.combatVersion,2);assert.equal(hornetBattle.health,2400);assert.equal(hornetBattle.deadline-hornetBattle.startedAt,50000);
  await activeRef.update({startedAt:Date.now()-5000});
- const hornetMelee=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:0,mode:'melee',count:1,requestId:'emulator-hornet-melee'},token);assert.equal(hornetMelee.status,400);assert.match(hornetMelee.data.error.message,/此武器無法攻擊怪物/);
+ const hornetMelee=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,damageVersion:4,firstHit:0,mode:'melee',count:1,requestId:'emulator-hornet-melee'},token);assert.equal(hornetMelee.status,400);assert.match(hornetMelee.data.error.message,/此武器無法攻擊怪物/);
  // Outdated packets and skipped hit indices stay rejected; do not weaken checks
  // to make a stale test pass.
  const oldPacket=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,mode:'ranged',count:1,requestId:'emulator-hornet-old-packet'},token);
  assert.equal(oldPacket.status,400);assert.match(oldPacket.data.error.message,/戰鬥已更新/);
- const skipped=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:1,mode:'ranged',count:1,requestId:'emulator-hornet-skipped-hit'},token);
+ const skipped=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,damageVersion:4,firstHit:1,mode:'ranged',count:1,requestId:'emulator-hornet-skipped-hit'},token);
  assert.equal(skipped.status,400);assert.match(skipped.data.error.message,/戰鬥進度已更新/);
  const damageModel=await import('../functions/game/combat-damage.js');
  let hitCount=0,totalDamage=0;
  while(totalDamage<hornetBattle.health)totalDamage+=damageModel.hitDamage(hornetBattle,'ranged',hitCount++);
- const partialAttack={groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:0,mode:'ranged',count:hitCount-1,requestId:'emulator-hornet-bow-partial'};
+ const partialAttack={groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,damageVersion:4,firstHit:0,mode:'ranged',count:hitCount-1,requestId:'emulator-hornet-bow-partial'};
  const partialHit=await call('gameOpsFarmTransaction',partialAttack,token);
  assert.equal(partialHit.status,200,JSON.stringify(partialHit.data.error||{}));
  const remaining=hornetBattle.health-damageModel.batchDamage(hornetBattle,'ranged',0,hitCount-1);
@@ -111,7 +111,7 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const repeatedHit=await call('gameOpsFarmTransaction',partialAttack,token);
  assert.equal(repeatedHit.status,200,JSON.stringify(repeatedHit.data.error||{}));assert.equal(repeatedHit.data.result.replayed,true);assert.equal(repeatedHit.data.result.result.health,remaining);
  assert.equal((await activeRef.get()).data().health,remaining);assert.equal((await activeRef.get()).data().attacks.ranged,hitCount-1);
- const hornetHit=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,firstHit:hitCount-1,mode:'ranged',count:1,requestId:'emulator-hornet-bow-final'},token);
+ const hornetHit=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,damageVersion:4,firstHit:hitCount-1,mode:'ranged',count:1,requestId:'emulator-hornet-bow-final'},token);
  assert.equal(hornetHit.status,200,JSON.stringify(hornetHit.data.error||{}));assert.equal(hornetHit.data.result.result.health,0);
  const hornetWins=await Promise.all(['a','b'].map(suffix=>call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleSettle',battlePageId,battleId:hornetBattle.id,requestId:'emulator-hornet-settle-'+suffix},token)));
  for(const win of hornetWins){assert.equal(win.status,200,JSON.stringify(win.data.error||{}));assert.equal(win.data.result.result.outcome,'win');}
