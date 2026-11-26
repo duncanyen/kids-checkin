@@ -308,7 +308,11 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    };
    const shoot=async()=>{
     await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter?.archery);
-    await page.locator('.farm-battle-countdown').waitFor();const clockBounds=await page.locator('.farm-battle-clock').boundingBox(),resourceBounds=await page.locator('.farm-hud-status').boundingBox();assert.ok(clockBounds.y>=resourceBounds.y+resourceBounds.height,'home timer must be below resources');
+    await page.locator('.farm-battle-countdown').waitFor({state:'attached'});
+    await page.evaluate(()=>{const c=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.healthHUD.countdown;c.savedNow=c.now;c.now=()=>c.deadline-30000;c.tick(true);});
+    const clockBounds=await page.locator('.farm-battle-clock').boundingBox(),resourceBounds=await page.locator('.farm-hud-status').boundingBox();assert.ok(clockBounds.y>=resourceBounds.y+resourceBounds.height,'home timer must be below resources');
+    await page.screenshot({path:'/tmp/gugu-battle-countdown-home-30.png'});
+    await page.evaluate(()=>{const c=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.healthHUD.countdown;c.now=c.savedNow;c.tick(true);});
     const point=async(x,y)=>page.evaluate(({x,y})=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),p=s.cameras.main.matrix.transformPoint(x-s.cameras.main.scrollX,y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{x,y});
     const b=await page.evaluate(()=>{const o=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.button;return{x:o.x,y:o.y};}),p=await point(b.x,b.y);await page.mouse.click(p.x,p.y);
     for(let shot=0;shot<15;shot++){

@@ -36,18 +36,26 @@ exports.run=async({page,calls,db,errors,advance,countdownTests=false,releaseSett
    if(kind==='dragon'){assert.equal(motion.fireVisible,false);assert.equal(motion.animation,'dragon_fly');await page.screenshot({path:'/tmp/gugu-dragon-eagle-route-mobile.png'});}
   }
   if(countdownTests){
-   const clock=page.locator('.farm-battle-countdown');await clock.waitFor();assert.equal(await clock.count(),1);assert.equal(await clock.getAttribute('data-monster'),kind);
+   const clock=page.locator('.farm-battle-countdown');await clock.waitFor({state:'attached'});assert.equal(await clock.count(),1);assert.equal(await clock.isVisible(),false);assert.equal(await clock.getAttribute('data-monster'),kind);
    const combatCalls=()=>calls.filter(c=>c.name==='gameOpsFarmTransaction'&&['battleAttack','battleSettle','claimEncounter','homeEncounter','visitEncounter'].includes(c.action));const beforeCalls=combatCalls().length,deadline=db.data.get(key).deadline;
    assert.equal(await page.evaluate(kind=>{const s=window.__farmGame.scene.getScene('VisitScene');return(s[kind+'Encounter']?.healthHUD||s[kind+'HUD']).countdown.deadline;},kind),deadline);
-   if(kind==='wolf')await page.screenshot({path:'/tmp/gugu-battle-countdown-normal.png'});
-   for(const [seconds,phase]of [[10,'urgent'],[5,'danger'],[3,'final'],[0,'expired']]){
+   for(const [seconds,phase]of [[31,'normal'],[30,'normal'],[11,'normal'],[10,'urgent'],[5,'danger'],[3,'final'],[0,'expired']]){
     await page.evaluate(({kind,seconds})=>{const s=window.__farmGame.scene.getScene('VisitScene'),c=(s[kind+'Encounter']?.healthHUD||s[kind+'HUD']).countdown;c.originalNow??=c.now;c.now=()=>c.deadline-seconds*1000;c.tick(true);},{kind,seconds});
+    assert.equal(await clock.isVisible(),seconds<=30);
     assert.equal(await clock.getAttribute('data-phase'),phase);assert.equal(await clock.evaluate(n=>getComputedStyle(n).pointerEvents),'none');
     if(seconds)assert.equal(await clock.locator('.farm-battle-seconds').textContent(),String(seconds));else assert.match(await clock.textContent(),/時間到|確認戰鬥結果/);
+    if(seconds>0&&seconds<=30){
+     assert.equal(await clock.locator('.farm-battle-clock').evaluate(n=>getComputedStyle(n).color),seconds<=10?'rgb(255, 90, 80)':'rgb(255, 255, 255)');
+     assert.equal(await clock.locator('.farm-battle-seconds').evaluate(n=>getComputedStyle(n).fontSize),seconds<=3?'40px':'30px');
+     assert.equal(await clock.locator('img,.farm-battle-clock-track,.farm-battle-intro').count(),0);
+    }
+    if(kind==='wolf'&&seconds===30)await page.screenshot({path:'/tmp/gugu-battle-countdown-normal.png'});
+    if(kind==='wolf'&&seconds===3)await page.screenshot({path:'/tmp/gugu-battle-countdown-final-3.png'});
     if(kind==='wolf'&&seconds===5){
+     assert.equal(await clock.locator('.farm-battle-vignette').evaluate(n=>getComputedStyle(n).animationName),'battle-edge-pulse');
      await page.setViewportSize({width:320,height:568});await page.screenshot({path:'/tmp/gugu-battle-countdown-urgent-320.png'});
      const bounds=await clock.locator('.farm-battle-clock').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=320);
-     await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await clock.locator('img,.farm-battle-vignette,.farm-battle-clock-track,.farm-battle-intro').count(),0);assert.equal(await clock.locator('.farm-battle-seconds').evaluate(n=>getComputedStyle(n).animationName),'none');
+     await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await clock.locator('.farm-battle-vignette').evaluate(n=>getComputedStyle(n).display),'none');assert.equal(await clock.locator('.farm-battle-seconds').evaluate(n=>getComputedStyle(n).animationName),'none');
      await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:390,height:844});
     }
    }
@@ -114,6 +122,6 @@ exports.run=async({page,calls,db,errors,advance,countdownTests=false,releaseSett
  assert.ok(calls.some(c=>c.action==='battleAttack'&&c.count>1),'rapid hits still share a batch');
  assert.deepEqual(errors,[]);
  require('node:fs').writeFileSync('/tmp/gugu-combat-v2-browser-results.json',JSON.stringify(results,null,2));
- if(countdownTests)console.log('PASS battle countdown: real public-village entry all nine monsters, normal/10/5/3/0s phases, 320px layout, reduced motion, no added requests, settlement pending, expired-background attack guard/server loss, cleanup and plain seconds-only display');
+ if(countdownTests)console.log('PASS battle countdown: real public-village entry all nine monsters, hidden above 30s, 30/10/5/3/0s phases, 320px layout, reduced motion, no added requests, settlement pending, expired-background attack guard/server loss, cleanup, corner pulse and final enlarged seconds');
  console.log('PASS actual public-village entry all nine monsters: one-third head bar, 0.3cm gap, no combat text, nearby seeded ±10 damage, delayed trail, 500ms attack batching, one settlement/reward, small viewport, reduced motion and exit cleanup');
 };

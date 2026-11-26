@@ -1,4 +1,4 @@
-/* Only seconds: fixed above play, without a plaque, icon, bar or animation. */
+/* Only seconds: fixed above play, without a plaque, icon or bar. */
 .farm-battle-countdown{position:absolute;inset:0;z-index:47;pointer-events:none;user-select:none;font-family:system-ui,sans-serif;color:#fff;--battle-clock-top:12px}
 .farm-battle-clock{position:absolute;left:50%;top:max(var(--battle-clock-top),env(safe-area-inset-top,0px));transform:translateX(-50%);display:flex;align-items:baseline;justify-content:center;gap:5px;max-width:90%;white-space:nowrap;text-shadow:0 2px 2px #271b13,1px 0 2px #271b13,-1px 0 2px #271b13}
 .farm-battle-seconds{font-size:30px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;min-width:2ch;text-align:center}
@@ -7,3 +7,10 @@
 .farm-battle-clock-label:empty,.farm-battle-seconds:empty,.farm-battle-countdown [hidden]{display:none}
 .farm-battle-countdown:is([data-phase=urgent],[data-phase=danger],[data-phase=final]) .farm-battle-clock{color:#ff5a50}
 .farm-battle-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+.farm-battle-countdown[hidden]{display:none}
+.farm-battle-vignette{display:none;position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 60%,#b91f1f66 100%)}
+.farm-battle-countdown:is([data-phase=danger],[data-phase=final]) .farm-battle-vignette{display:block;animation:battle-edge-pulse 1.2s ease-in-out infinite}
+.farm-battle-countdown[data-phase=final] .farm-battle-seconds{font-size:40px}
+@keyframes battle-edge-pulse{0%,100%{opacity:.15}50%{opacity:.65}}
+@media(prefers-reduced-motion:reduce){.farm-battle-countdown[data-phase] .farm-battle-vignette{display:none;animation:none}}
