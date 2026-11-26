@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const {MemoryDB}=require('../game-admin/tests/memory-db.cjs'),{createService}=require('../game-admin/functions/service.cjs'),I=require('../functions/identity-domain.cjs');
 const base=process.env.FARM_BASE_URL||'http://127.0.0.1:8032';
+const shopStockTests=process.env.SHOP_STOCK_TESTS==='1';
 const visitHudTests=process.env.VISIT_HUD_TESTS==='1';
 const navigationTests=process.env.NAVIGATION_LOAD_TESTS==='1',navigationBefore=process.env.NAVIGATION_LOAD_BEFORE==='1';
 const guardRentalTests=process.env.GUARD_RENTAL_TESTS==='1';
@@ -65,7 +66,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
  db.data.set('groups/A',{name:'隔離測試村落',members:['alice','bob'],farmVillageVisibility:'public'});
  db.data.set('ops_identity_state/global',{ready:true,farmReady:true});
  for(const id of ['alice','bob']){db.data.set('users/'+id,{accountId:id,name:id,role:'member'});db.data.set('groups/A/users/'+id,{farm:structuredClone(farm)});db.data.set('ops_identity_credentials/'+id,{authUid:I.profileUid(id),accountId:id,sessionVersion:1,disabled:false});}
- if(combatFeedbackTests||encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests||navigationTests||arcticSceneTests||hallstattSceneTests||visitHudTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
+ if(shopStockTests||combatFeedbackTests||encounterConfigTests||weeklyRankingTests||dailyGroupTests||guardRentalTests||navigationTests||arcticSceneTests||hallstattSceneTests||visitHudTests){const E=require('../game-admin/functions/encounters.cjs');const config=structuredClone(E.DEFAULTS);for(const value of Object.values(config))value.enabled=false;db.data.set('ops_game_config/encounters',{monsters:config,revision:1});}
  if(criticalFeedbackTests||criticalZeroTests){const C=await import('../js/farm/combat-rules.js');db.data.set('ops_game_config/combat',{revision:1,monsters:{gorilla:{hp:5000}},weapons:Object.fromEntries(Object.entries(C.WEAPON_ATTACK).map(([id,attack])=>[id,{attack:id==='ironhammer'?194:attack,criticalRate:criticalFeedbackTests?100:0,chainCriticalRate:criticalFeedbackTests?5:0}]))});}
  if(hornetTests){const E=require('../game-admin/functions/encounters.cjs'),m=structuredClone(E.DEFAULTS);for(const v of Object.values(m))v.enabled=false;m.hornet.enabled=true;m.hornet.home.rate=m.hornet.visit.rate=100;db.data.set('ops_game_config/encounters',{monsters:m,revision:1});}
  const pendingKey='ops_farm_active/'+I.hash('alice:A');
@@ -108,7 +109,7 @@ const oldStealResultFields=process.env.OLD_STEAL_RESULT_FIELDS==='1';
 if(stealFlowTests&&data.stealWhenClear&&timeoutStealAlways)await new Promise(resolve=>setTimeout(resolve,550));
 if(battleRewardTests&&data.action==='battleSettle')lastBattleResult=structuredClone(response.result);
 if(chestFlowTests&&data.action==='openChest'&&chestReplyDelay)await new Promise(resolve=>setTimeout(resolve,chestReplyDelay));
-if(katanaTests||hornetTests||dailyGroupTests||arcticSceneTests||hallstattSceneTests)await page.evaluate(()=>window.__privateEmitAll?.());
+if(shopStockTests||katanaTests||hornetTests||dailyGroupTests||arcticSceneTests||hallstattSceneTests)await page.evaluate(()=>window.__privateEmitAll?.());
 if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();await gate;}return response;}
    if(name==='gameOpsDailyChallenges'){const result=await service.dailyChallenges(request);if(dailyGroupTests&&data.action==='claim')await page.evaluate(()=>window.__privateEmitAll?.());return result;}
    if(name==='gameOpsAnnouncements'){const result=await service.announcements(legacyAnnouncements?{...request,data:{...request.data,action:undefined}}:request);if(weeklyRankingTests&&legacyRankingPeriod&&data.action==='ranking')result.scoreField='stolenEggs20261116';if(costTests)feedResponses.push({action:data.action,notModified:!!result.notModified,rows:result.rows?.length});return result;}
@@ -144,6 +145,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
+  if(shopStockTests){releaseSettlement();await require('./helpers/shop-stock-browser.cjs').run({page,calls,db,errors});return;}
   if(combatFeedbackTests){releaseSettlement();await require('./helpers/combat-feedback-browser.cjs').run({page,calls,db,errors,criticalMode:criticalFeedbackTests,zeroMode:criticalZeroTests,advance:ms=>backendNow+=ms});return;}
   if(visitHudTests){releaseSettlement();await require('./helpers/visit-hud-browser.cjs').run({page,calls,db,errors});return;}
   if(navigationTests){releaseSettlement();await require('./helpers/farm-navigation-loading.cjs').run({page,probe:navigationProbe,before:navigationBefore,calls,db,errors});return;}

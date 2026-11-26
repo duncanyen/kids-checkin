@@ -38,7 +38,8 @@ export default class ShopScene extends Phaser.Scene {
         this.assetText = this.add.text(195, 120, '讀取中...', { fontSize: '16px', color: '#FFD54F', align: 'left', backgroundColor: '#000', padding: { left: 34, right: 10, top: 6, bottom: 6 } }).setOrigin(0.5);
         this.assetCoin = this.add.image(this.assetText.getBounds().left + 17, this.assetText.getBounds().top + 16, 'coin').setDisplaySize(24, 24);
 
-        this.isProcessing = false; 
+        this.isProcessing = false;
+        this.farmData = null;
         this.createConfirmDialog();
         this.createTabs();
         this.createWeaponGuide();
@@ -77,6 +78,8 @@ export default class ShopScene extends Phaser.Scene {
         this.categoryTabs = addCategoryTabs(this, 230, key => this.selectShopCategory(key));
         this.shopMode = 'buy';
         this.catalog = { buy: [], sell: [] };
+        this.shopItems = { buy: new Map(), sell: new Map() };
+        this.sellQuantities = new Map();
         const buy = this.catalog.buy, sell = this.catalog.sell;
         for(const item of Object.values(FARM_SCENES).filter(item=>item.price>0)) buy.push([`scene:${item.id}`,item.thumbTexture,`${item.name}\n${item.purchasable===false?'尚未開賣':item.price.toLocaleString()+'金幣'}`,()=>openScenePurchase(this,item.id)]);
         for(const [breedId,breed] of Object.entries(GUARD_DOG_BREEDS)) buy.push([`guard:${breedId}`,breed.texture,this.guardDogProductText(breed),()=>openGuardDogRental(this,breedId)]);
@@ -115,6 +118,11 @@ export default class ShopScene extends Phaser.Scene {
                     objects[0].setData('purchaseDisabled',true);
                 }
                 if(mode==='buy'&&key.startsWith('guard:')){const dog=GUARD_DOG_BREEDS[key.slice(6)];objects[0].setData('rentalDisabled',dog.rentable===false);if(dog.rentable===false)objects[2].setFontSize(11);}
+                if(mode==='sell'){
+                    const quantity=this.add.text(0,0,'',{fontSize:'12px',fontStyle:'bold',color:'#ffe7a0'}).setOrigin(.5);
+                    container.add(quantity);objects.push(quantity);
+                }
+                this.shopItems[mode].set(key,{objects,text,category});
                 for (const object of objects) { object.catalogPage = Math.floor(index / pageSize); object.catalogCategory = category; object.catalogKey = key; }
             });
         }
@@ -128,6 +136,7 @@ export default class ShopScene extends Phaser.Scene {
         btnBuy.on('pointerdown', () => { this.shopMode = 'buy'; this.changeShopPage(0); });
         btnSell.on('pointerdown', () => { this.shopMode = 'sell'; this.changeShopPage(0); });
         this.emptyCategoryText = this.add.text(195, 400, '', { fontSize: '17px', color: '#fff2cc', align: 'center', backgroundColor: '#593b27', padding: 12 }).setOrigin(0.5);
+        this.refreshSellInventory();
         this.changeShopPage(0);
     }
 
@@ -162,17 +171,41 @@ export default class ShopScene extends Phaser.Scene {
         return this.guardCatalogueLoading;
     }
 
+    // Derive the list from the existing farm snapshot; no extra subscriptions or reads.
+    refreshSellInventory() {
+        const counts={};
+        if(this.farmData)for(const hen of poultryState(this.farmData).hens)counts[hen.breed]=(counts[hen.breed]||0)+1;
+        const indexes={};this.sellQuantities.clear();
+        for(const [key] of this.catalog.sell){
+            const quantity=key.startsWith('bird:')?(counts[key.slice(5)]||0):(Number.isSafeInteger(this.farmData?.[key])&&this.farmData[key]>0?this.farmData[key]:0);
+            this.sellQuantities.set(key,quantity);
+            const item=this.shopItems.sell.get(key),[bg,icon,label,stock]=item.objects;
+            for(const object of item.objects)object.catalogAvailable=quantity>0;
+            stock.setData('stockQuantity',quantity);
+            if(!quantity){for(const object of item.objects)object.setVisible(false);bg.disableInteractive();continue;}
+            bg.setInteractive({cursor:'pointer'});
+            const index=indexes[item.category]||0;indexes[item.category]=index+1;
+            const slot=index%6,x=slot%2?295:95,y=40+Math.floor(slot/2)*100;
+            for(const object of item.objects)object.catalogPage=Math.floor(index/6);
+            bg.setPosition(x,y);icon.setPosition(x-45,y-9);label.setPosition(x+18,y-9);
+            const equipped=!!WEAPONS_CONFIG[key]&&(this.farmData.equippedWeapon===key||this.farmData.equippedBow===key);
+            stock.setText(`庫存：${quantity.toLocaleString('zh-TW')}${equipped?'（已裝備）':''}`).setPosition(x,y+27).setScale(1);
+            if(stock.width>156)stock.setScale(156/stock.width);
+            stock.setData('stockQuantity',quantity);
+        }
+    }
+
     changeShopPage(delta) {
         const mode = this.shopMode, category = this.shopCategory;
-        const count = this.catalog[mode].filter(([key]) => itemCategory(key) === category).length;
+        const count = this.catalog[mode].filter(([key]) => itemCategory(key) === category && (mode!=='sell'||this.sellQuantities.get(key)>0)).length;
         const total = Math.max(1, Math.ceil(count / (category === 'scenes' ? 2 : 6)));
         const page = this.shopPages[mode][category] = Phaser.Math.Clamp((this.shopPages[mode][category] || 0) + delta, 0, total - 1);
         for (const [name, container] of [['buy', this.buyContainer], ['sell', this.sellContainer]]) {
             container.setVisible(name === mode);
-            for (const object of container.list) object.setVisible(name === mode && object.catalogCategory === category && object.catalogPage === page);
+            for (const object of container.list) object.setVisible(name === mode && object.catalogCategory === category && object.catalogPage === page && (name!=='sell'||object.catalogAvailable===true));
         }
         this.categoryTabs.select(category);
-        this.emptyCategoryText?.setText(category === 'coops' ? '雞舍升級後直接使用，無法賣出。' : category === 'dogs' ? '護衛犬為租用品，請到倉庫啟用，無法販售。' : '此分類目前沒有可販售的商品。').setVisible(count === 0);
+        this.emptyCategoryText?.setText(category === 'coops' ? '雞舍升級後直接使用，無法賣出。' : category === 'dogs' ? '護衛犬為租用品，請到倉庫啟用，無法販售。' : mode==='sell'?'此分類目前沒有可賣出的庫存。':'此分類目前沒有可販售的商品。').setVisible(count === 0);
         this.pageText.setText(`${page + 1} / ${total}`);
         for (const object of [this.pageText, this.previousPage, this.previousLabel, this.nextPage, this.nextLabel]) object.setVisible(total > 1);
         this.previousPage.setAlpha(page > 0 ? 1 : 0.4);
@@ -278,6 +311,7 @@ export default class ShopScene extends Phaser.Scene {
         }
 
         this.tradeType = type;
+        this.tradeItemKey = itemKey;
         this.tradeUnitPrice = unitPrice;
         this.currentQty = 1;
 
@@ -302,7 +336,7 @@ export default class ShopScene extends Phaser.Scene {
                 this.currentMaxQty = Math.min(freeSpace, maxByCoins);
             }
         } else {
-            this.currentMaxQty = itemKey.startsWith('bird:') ? poultryState(this.farmData).hens.filter(h => h.breed === itemKey.slice(5)).length : (this.farmData[itemKey] || 0);
+            this.currentMaxQty = Math.min(1000,this.sellQuantities.get(itemKey)||0);
         }
 
         if (this.currentMaxQty <= 0) {
@@ -317,6 +351,7 @@ export default class ShopScene extends Phaser.Scene {
         this.dialogTitle.setText(`${type === 'buy' ? '買進' : '賣出'} [${itemName}]`);
         this.dialogSubText.setText(`單價: ${unitPrice} 金幣${type === 'buy' && BREEDS[itemKey] ? `・每 ${BREEDS[itemKey].interval / 3600000} 小時 1 顆蛋` : ''}`);
         if (type === 'sell' && itemKey.startsWith('bird:')) this.dialogSubText.setText(`單價: ${unitPrice} 金幣\n優先出售健康雞，已產出的蛋保留`);
+        if(type==='sell'&&this.sellQuantities.get(itemKey)>1000)this.dialogSubText.setText(`單價: ${unitPrice} 金幣\n單次最多賣出 1,000 個`);
         this.updateQuantity(0); 
 
         this.confirmTradeCallback = (qty) => {
@@ -362,10 +397,19 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     onFarmDataChanged(parent, value) {
+        if(!value||typeof value!=='object')return;
         this.farmData = value;
         const usedSpace = getUsedSpace(this.farmData);
         this.assetText.setText(`持有金幣: ${this.farmData.coins || 0}\n庫存容量: ${usedSpace}/${this.farmData.warehouseLimit || 10}`);
         this.assetCoin.setPosition(this.assetText.getBounds().left + 17, this.assetText.getBounds().top + 16);
+        this.refreshSellInventory();
+        this.changeShopPage(0);
+        if(this.tradeType==='sell'&&this.dialogContainer.visible){
+            this.currentMaxQty=Math.min(1000,this.sellQuantities.get(this.tradeItemKey)||0);
+            if(!this.currentMaxQty){this.dialogContainer.setVisible(false);this.showMsg('庫存已變更，此商品已無可賣出數量。','#FFD54F');}
+            else this.setQuantity(this.currentQty);
+        }
+
     }
 
     async executeBuyWeapon(key, qty, price) {
