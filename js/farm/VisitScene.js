@@ -543,7 +543,7 @@ export default class VisitScene extends Phaser.Scene {
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(weapon.icon === 'katana' ? 86 : 64, 86).setDepth(30).setVisible(false);
         const warnText=this.add.text(195,184,'',{fontSize:'13px',color:'#fff0cf'}).setOrigin(.5).setDepth(35);
         this.tiger.warning=warnText;
-        this.tigerHUD=new BattleHealthHUD(this,{battle,kind:'tiger',sprite:this.tiger,status:warnText,onSync:value=>{this.tigerHitCount=health-value;}});
+        this.tigerHUD=new BattleHealthHUD(this,{battle,kind:'tiger',durationMs:TIGER_DEADLINE_MS,sprite:this.tiger,status:warnText,onSync:value=>{this.tigerHitCount=health-value;}});
 
         this.tigerTween = this.tweens.add({
             targets: this.tiger, ...predatorDestination(this, 'tiger'), duration: PREDATOR_APPROACH_MS, ease: 'Linear',
@@ -557,6 +557,7 @@ export default class VisitScene extends Phaser.Scene {
         });
         this.tiger.on('pointerdown', (pointer) => {
             if (this.isTigerDefeated || !this.tiger.active || this.tiger.getData('resolved')) return;
+            if(FARM_BACKEND_ENABLED&&farmNow()>=battle.deadline){this.tigerEscapes();return;}
             const dealt=battleHit(this,battle,'melee',weapon);if(!dealt)return;
             this.tigerHitCount += dealt;this.tigerHUD.damage(dealt,this.tiger);this.tigerHUD.setHealth(Math.max(0,health-this.tigerHitCount));
             hitPredator(this.tiger);
@@ -599,17 +600,24 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     tigerEscapes() {
-        this.tigerHUD?.stop();this.tigerHUD?.hide();
+        const token=this.visitToken;
+        this.tigerHUD?.stop();
         if (!finishPredator(this.tiger, 'run')) return;
         this.club.setVisible(false);
-        this.showFloatingText('老虎在你身上搶走 5 枚金幣！', '#F44336', 16, this.tiger.x, this.tiger.y - 40);
         this.tweens.add({ targets: this.tiger, alpha: 0, x: this.tiger.x + 100, duration: 1000, onComplete: () => this.tiger.destroy() });
         (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id):this.runVisitTransaction(async (t) => {
             const snap = await t.get(myFarmRef);
             if (!snap.exists() || !snap.data()?.farm) return;
             const farm = snap.data().farm;
             t.update(myFarmRef, { "farm.coins": Math.max(0, (farm.coins || 0) - 5) });
-        })).catch(e => console.error(e));
+        })).then(async result=>{
+            if(!this.sys.isActive()||this.visitToken!==token)return;
+            this.tigerHUD?.hide();
+            if(result?.outcome==='win'){
+                await showBattleReward(this,result,'tiger',{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});return;
+            }
+            this.showFloatingText(`老虎離開了！損失 ${result?.coinsLost??5} 金幣`, '#F44336',16);
+        }).catch(e=>{if(!this.sys.isActive()||this.visitToken!==token)return;this.tigerHUD?.countdown.unconfirmed();console.error(e);});
     }
 
     spawnWolfEvent() {
@@ -625,7 +633,7 @@ export default class VisitScene extends Phaser.Scene {
         this.club = this.add.image(0, 0, weapon.icon).setOrigin(0.5).setDisplaySize(weapon.icon === 'katana' ? 86 : 64, 86).setDepth(30).setVisible(false);
         const warnText=this.add.text(195,184,'',{fontSize:'13px',color:'#fff0cf'}).setOrigin(.5).setDepth(35);
         this.wolf.warning=warnText;
-        this.wolfHUD=new BattleHealthHUD(this,{battle,kind:'wolf',sprite:this.wolf,status:warnText,onSync:value=>{this.wolfHitCount=health-value;}});
+        this.wolfHUD=new BattleHealthHUD(this,{battle,kind:'wolf',durationMs:WOLF_DEADLINE_MS,sprite:this.wolf,status:warnText,onSync:value=>{this.wolfHitCount=health-value;}});
 
         this.wolfTween = this.tweens.add({
             targets: this.wolf, ...predatorDestination(this, 'wolf'), duration: PREDATOR_APPROACH_MS, ease: 'Linear',
@@ -639,6 +647,7 @@ export default class VisitScene extends Phaser.Scene {
         });
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
+            if(FARM_BACKEND_ENABLED&&farmNow()>=battle.deadline){this.wolfEscapes();return;}
             const dealt=battleHit(this,battle,'melee',weapon);if(!dealt)return;
             this.wolfHitCount += dealt;this.wolfHUD.damage(dealt,this.wolf);this.wolfHUD.setHealth(Math.max(0,health-this.wolfHitCount));
             hitPredator(this.wolf);
@@ -682,10 +691,10 @@ export default class VisitScene extends Phaser.Scene {
     }
 
     wolfEscapes() {
-        this.wolfHUD?.stop();this.wolfHUD?.hide();
+        const token=this.visitToken;
+        this.wolfHUD?.stop();
         if (!finishPredator(this.wolf, 'run')) return;
         this.club.setVisible(false);
-        this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336', 18, this.wolf.x, this.wolf.y - 30);
         this.tweens.add({ targets: this.wolf, alpha: 0, x: this.wolf.x + 100, duration: 1000, onComplete: () => this.wolf.destroy() });
         (FARM_BACKEND_ENABLED?settleBackendBattle(this.backendChallenge.id):this.runVisitTransaction(async (t) => {
             const targetRef = doc(db, "groups", this.targetGroupId, "users", this.targetAccountId);
@@ -693,7 +702,14 @@ export default class VisitScene extends Phaser.Scene {
             if (!targetDoc.exists() || !targetDoc.data()?.farm) return;
             const targetFarm = targetDoc.data().farm;
             if (targetFarm && (targetFarm.eggsReady || 0) > 0) { t.update(targetRef, takePoultryEgg(targetFarm, Math.random()).patch); }
-        })).catch(e => console.error(e));
+        })).then(async result=>{
+            if(!this.sys.isActive()||this.visitToken!==token)return;
+            this.wolfHUD?.hide();
+            if(result?.outcome==='win'){
+                await showBattleReward(this,result,'wolf',{groupId:CURRENT_GROUP_ID,accountId:CURRENT_ACCOUNT_ID});return;
+            }
+            this.showFloatingText('大野狼偷走了一顆蛋逃跑了！', '#F44336',18);
+        }).catch(e=>{if(!this.sys.isActive()||this.visitToken!==token)return;this.wolfHUD?.countdown.unconfirmed();console.error(e);});
     }
 
     async searchCabbage(cabSprite) {

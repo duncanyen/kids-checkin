@@ -12,7 +12,8 @@ const weeklyRankingTests=process.env.WEEKLY_RANKING_TESTS==='1';
 let legacyRankingPeriod=false;
 const criticalFeedbackTests=process.env.CRITICAL_FEEDBACK_TESTS==='1';
 const criticalZeroTests=process.env.CRITICAL_ZERO_TESTS==='1';
-const combatFeedbackTests=process.env.COMBAT_FEEDBACK_TESTS==='1'||criticalFeedbackTests||criticalZeroTests;
+const countdownTests=process.env.COUNTDOWN_TESTS==='1';
+const combatFeedbackTests=countdownTests||process.env.COMBAT_FEEDBACK_TESTS==='1'||criticalFeedbackTests||criticalZeroTests;
 const hornetTests=process.env.HORNET_TESTS==='1';
 const katanaTests=process.env.KATANA_TESTS==='1';
 const encounterConfigTests=process.env.ENCOUNTER_CONFIG_TESTS==='1';
@@ -142,13 +143,13 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
   if(unavailableEggResult==='module')await page.route('**/js/farm/egg-result-ui.js',r=>r.fulfill({status:503,contentType:'text/javascript',body:'fixture optional module unavailable'}));
   if(unavailableEggResult==='image')await page.route('**/assets/farm/egg-result/v1/egg_result_panel.png',r=>r.fulfill({status:503,body:'fixture optional image unavailable'}));
   if(stealResultTests||entryEncounterTests||battleExitTests)await page.clock.setFixedTime(new Date(stamp));
-  if(hornetTests||weeklyRankingTests)await page.clock.install({time:new Date(stamp)});
+  if(countdownTests||hornetTests||weeklyRankingTests)await page.clock.install({time:new Date(stamp)});
   if(costTests)await page.clock.install({time:new Date(stamp)});
   await page.goto(base+'/farmgame.html');await page.waitForFunction(()=>window.__farmGame?.scene.getScene('MyFarmScene')?.farmData?.coins===12345);
   if(!resumeMode&&!entryEncounterTests)await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').entryChecked===true);
   if(chestBatchTests){releaseSettlement();await require('./helpers/chest-batch-browser.cjs').run({page,calls,db,errors,auth,service,setDelay:value=>{chestReplyDelay=value;}});return;}
   if(shopStockTests){releaseSettlement();await require('./helpers/shop-stock-browser.cjs').run({page,calls,db,errors});return;}
-  if(combatFeedbackTests){releaseSettlement();await require('./helpers/combat-feedback-browser.cjs').run({page,calls,db,errors,criticalMode:criticalFeedbackTests,zeroMode:criticalZeroTests,advance:ms=>backendNow+=ms});return;}
+  if(combatFeedbackTests){if(!countdownTests)releaseSettlement();await require('./helpers/combat-feedback-browser.cjs').run({page,calls,db,errors,countdownTests,releaseSettlement,criticalMode:criticalFeedbackTests,zeroMode:criticalZeroTests,advance:ms=>backendNow+=ms});return;}
   if(visitHudTests){releaseSettlement();await require('./helpers/visit-hud-browser.cjs').run({page,calls,db,errors});return;}
   if(navigationTests){releaseSettlement();await require('./helpers/farm-navigation-loading.cjs').run({page,probe:navigationProbe,before:navigationBefore,calls,db,errors});return;}
   if(guardRentalTests){
@@ -307,6 +308,7 @@ if(legacyDailyProgress)delete response.dailyProgress;if(gate){feedEntered?.();aw
    };
    const shoot=async()=>{
     await page.waitForFunction(()=>window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter?.archery);
+    await page.locator('.farm-battle-countdown').waitFor();const clockBounds=await page.locator('.farm-battle-clock').boundingBox(),resourceBounds=await page.locator('.farm-hud-status').boundingBox();assert.ok(clockBounds.y>=resourceBounds.y+resourceBounds.height,'home timer must be below resources');
     const point=async(x,y)=>page.evaluate(({x,y})=>{const s=window.__farmGame.scene.getScene('MyFarmScene'),p=s.cameras.main.matrix.transformPoint(x-s.cameras.main.scrollX,y-s.cameras.main.scrollY),r=s.game.canvas.getBoundingClientRect();return{x:r.x+p.x/s.scale.width*r.width,y:r.y+p.y/s.scale.height*r.height};},{x,y});
     const b=await page.evaluate(()=>{const o=window.__farmGame.scene.getScene('MyFarmScene').eagleEncounter.archery.button;return{x:o.x,y:o.y};}),p=await point(b.x,b.y);await page.mouse.click(p.x,p.y);
     for(let shot=0;shot<15;shot++){

@@ -1,4 +1,5 @@
-import {FARM_BACKEND_ENABLED,recordBattleHit} from './backend-client.js';
+import {BattleCountdown} from './battle-countdown.js';
+import {FARM_BACKEND_ENABLED,recordBattleHit,farmNow} from './backend-client.js';
 import {makeCombatSnapshot,hitResult,maximumHealth} from './combat-damage.js';
 import {farmView} from './viewport.js';
 import {monsterHead,screenUnits} from './monster-head.js';
@@ -15,8 +16,9 @@ export function battleHit(scene,battle,mode,weapon){
 }
 /** One lightweight HUD per fight; at most eight reusable floating damage labels. */
 export class BattleHealthHUD{
- constructor(scene,{battle,kind,sprite,onSync,status}){
+ constructor(scene,{battle,kind,sprite,onSync,status,durationMs}){
   this.scene=scene;this.battle=battle;this.sprite=sprite;this.max=maximumHealth(battle,kind);this.health=battle.health;this.alive=true;this.finished=false;this.ordinal=0;this.pool=[];
+  this.countdown=new BattleCountdown(scene,{battle,kind,durationMs,now:FARM_BACKEND_ENABLED?farmNow:Date.now});
   this.width=250/3;this.height=11/3;
   this.root=scene.add.container(0,0).setDepth(34);
   this.track=scene.add.rectangle(-this.width/2,0,this.width,this.height,0x45211b).setOrigin(0,.5).setStrokeStyle(1,0x392719);
@@ -25,6 +27,7 @@ export class BattleHealthHUD{
   this.root.add([this.track,this.trail,this.bar]);
   if(status)status.setVisible(false);
   this.layout=()=>{
+   this.countdown.tick();
    if(!this.alive||!this.sprite?.active)return;
    const head=monsterHead(this.sprite),gap=screenUnits(scene,96/2.54*.3);
    this.root.setPosition(head.x,head.y-gap-this.height/2);
@@ -74,7 +77,7 @@ export class BattleHealthHUD{
   this.scene.tweens.add({targets:text,floatY:-screenUnits(this.scene,reduced?4:18),scale:1,duration:reduced?220:500,ease:'Cubic.Out'});
   this.scene.tweens.add({targets:text,alpha:0,delay:reduced?0:120,duration:reduced?220:380,ease:reduced?'Linear':'Quad.In',onComplete:()=>{if(text.active)text.setVisible(false);text.burst?.setVisible(false);}});
  }
- stop(){this.finished=true;}
- hide(){if(this.alive)this.root.setVisible(false);}
- destroy(){if(!this.alive)return;this.alive=false;window.removeEventListener('nexus-farm-battle-health',this.sync);this.scene.events.off('postupdate',this.layout);this.scene.events.off('farm-viewport-resize',this.layout);this.scene.tweens.killTweensOf(this.trail);for(const text of this.pool){this.scene.tweens.killTweensOf(text);text.burst?.destroy();text.destroy();}this.root.destroy();}
+ stop(){this.finished=true;this.countdown.stop();}
+ hide(){this.countdown.destroy();if(this.alive)this.root.setVisible(false);}
+ destroy(){if(!this.alive)return;this.alive=false;this.countdown.destroy();window.removeEventListener('nexus-farm-battle-health',this.sync);this.scene.events.off('postupdate',this.layout);this.scene.events.off('farm-viewport-resize',this.layout);this.scene.tweens.killTweensOf(this.trail);for(const text of this.pool){this.scene.tweens.killTweensOf(text);text.burst?.destroy();text.destroy();}this.root.destroy();}
 }

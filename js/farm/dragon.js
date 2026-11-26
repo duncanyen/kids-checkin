@@ -119,7 +119,7 @@ export class BossEncounter {
             fontSize: '13px', color: '#FFF2CC', fontStyle: 'bold', align: 'center',
             backgroundColor: '#542723', padding: { x: 12, y: 8 },
         }).setOrigin(0.5).setDepth(31);
-        this.healthHUD=new BattleHealthHUD(scene,{battle:this.battle,kind:spec.key,sprite:this.sprite,status:this.warning,onSync:health=>{this.health=health;}});
+        this.healthHUD=new BattleHealthHUD(scene,{battle:this.battle,kind:spec.key,durationMs:this.config.durationMs,sprite:this.sprite,status:this.warning,onSync:health=>{this.health=health;}});
         this.healthBack=this.healthHUD.track;this.healthBar=this.healthHUD.bar;
         this.flame = scene.add.graphics().setDepth(24).setVisible(false);
         this.flight = scene.tweens.add({ targets: this.sprite, ...this.destination, duration: this.config.flightMs, ease: spec.approachEase || 'Cubic.Out' });
@@ -226,6 +226,7 @@ export class BossEncounter {
             this.scene.time.delayedCall(6000, () => { if (!this.destroyed) this.warning.setVisible(false); });
             this.healthHUD.hide();
         } catch (error) {
+            this.healthHUD.countdown.unconfirmed();
             console.error(`${this.spec.name}結算失敗`, error);
             if (!this.destroyed) this.warning.setVisible(true).setText('結算尚未完成，點此重試').setInteractive({ cursor: 'pointer' });
         } finally { this.settling = false; }

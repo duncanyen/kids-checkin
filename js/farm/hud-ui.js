@@ -117,7 +117,7 @@ export function mountFarmHud(game,{dailyChallenges,hasPendingBattle=()=>false}={
         timerPresentation = undefined;
     }
     function syncCountdown(scene) {
-        const show = scene?.scene.key === 'MyFarmScene' && scene.timerText?.active;
+        const show = scene?.scene.key === 'MyFarmScene' && scene.timerText?.active && !hasFarmHudEncounter(scene);
         countdown.hidden = !show;
         if (!show) { restoreTimerPresentation(); return; }
         if (timerPresentation?.[0][0] !== scene.timerText) {
