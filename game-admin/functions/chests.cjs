@@ -98,6 +98,21 @@ async function open({db,t,actor,farm,id,stamp,roll,blocked=false}){
  const result={chestId:id,monster:chest.monster,coins,items:awarded,openedAt:stamp,configRevision:chest.configRevision};
  return{patch,result,commit:()=>t.update(ref,{...chest,status:'opened',openedAt:stamp,result})};
 }
+// Prepare every box against the cumulative farm, then commit all awards atomically.
+// Each box keeps its original snapshot/result, including when batches overlap.
+async function openMany({db,t,actor,farm,ids,stamp,rolls,blocked=false}){
+ if(!Array.isArray(ids)||!ids.length||ids.length>20||new Set(ids).size!==ids.length)D.fail('invalid-argument','每次請選擇 1–20 個不同寶箱');
+ for(const id of ids)D.id(id);
+ let next=structuredClone(farm);const commits=[],items=new Map();let coins=0,replayed=true;
+ for(let index=0;index<ids.length;index++){
+  const opened=await open({db,t,actor,farm:next,id:ids[index],stamp,roll:rolls[index],blocked});
+  for(const [key,value]of Object.entries(opened.patch))next[key.slice(5)]=value;
+  commits.push(opened.commit);coins+=opened.result.coins;replayed&&=!!opened.result.replayed;
+  for(const item of opened.result.items){const existing=items.get(item.itemId);items.set(item.itemId,{...item,quantity:(existing?.quantity||0)+item.quantity});}
+ }
+ const patch=Object.fromEntries(Object.entries(next).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(farm[key])).map(([key,value])=>['farm.'+key,value]));
+ return{patch,result:{chestIds:[...ids],chestCount:ids.length,coins,items:[...items.values()],openedAt:stamp,replayed},commit:()=>{for(const commit of commits)commit();}};
+}
 async function list({db,t,actor,status='unopened',cursor}){
  D.enumValue(status,['unopened','opened']);const path=ownerPath(actor);
  let q=db.collection(path).where('status','==',status);
@@ -105,4 +120,4 @@ async function list({db,t,actor,status='unopened',cursor}){
  const snapshots=await t.get(q.limit(21)),rows=snapshots.docs.slice(0,20).map(doc=>{const value=doc.data();if(value.uid!==actor.uid||value.groupId!==actor.groupId||value.accountId!==actor.accountId)D.fail('permission-denied','寶箱歸屬異常');return{id:doc.id,monster:value.monster,droppedAt:value.droppedAt,status:value.status,configRevision:value.configRevision,...(status==='opened'?{result:value.result}:{})};});
  return{rows,nextCursor:snapshots.size>20?snapshots.docs[19].id:null};
 }
-module.exports={ownerPath,MONSTERS,DEFAULTS,MAX_COINS,catalog,validate,config,drops,coinAmount,drop,open,list};
+module.exports={ownerPath,MONSTERS,DEFAULTS,MAX_COINS,catalog,validate,config,drops,coinAmount,drop,open,openMany,list};

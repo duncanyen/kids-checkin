@@ -7,9 +7,6 @@
 .farm-chest-panel .farm-chest-button:disabled{opacity:.55;cursor:wait}
 .farm-chest-panel .farm-chest-dismiss{position:absolute;top:4px;right:4px;min-width:44px;min-height:44px;width:44px;height:44px;padding:0;font-size:0;background:url('../assets/farm/battle-reward/v1/battle_reward_close.png') center/contain no-repeat}
 .farm-chest-panel .farm-chest-dismiss::after{content:''}
-.farm-chest-tabs{display:flex;gap:8px;margin-top:16px}
-.farm-chest-tabs button{flex:1}
-.farm-chest-tabs [aria-pressed=true]{filter:brightness(1.1);text-decoration:underline}
 .farm-chest-inventory{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
 .farm-chest-box{display:flex;align-items:center;gap:8px;min-height:82px;padding:10px 3px;border-bottom:1px solid #bd965d}
 .farm-chest-box img{width:64px;height:64px;object-fit:contain;flex:none}
@@ -36,3 +33,10 @@
 
 /* Opaque inner parchment keeps the underlying warehouse readable only outside the frame. */
 .farm-chest-panel::after{content:'';position:absolute;inset:42px 24px 38px;border-radius:18px;background:#f7e4bc;z-index:-2;pointer-events:none}
+
+.farm-chest-summary{margin:16px 0 0;text-align:center;font-size:14px;flex:none}
+.farm-chest-selection{display:flex;gap:8px;flex:none}
+.farm-chest-selection button{flex:1;min-width:0;padding-inline:8px}
+.farm-chest-check{width:24px;height:24px;margin:0;flex:none;accent-color:#659b0a;cursor:pointer}
+.farm-chest-box:has(.farm-chest-check:checked){background:#e5efc1;border-radius:10px}
+@media(max-width:360px){.farm-chest-box{gap:5px}.farm-chest-box img{width:40px;height:40px}.farm-chest-box .farm-chest-button{min-width:52px;padding-inline:8px}.farm-chest-selection .farm-chest-button{font-size:13px}}

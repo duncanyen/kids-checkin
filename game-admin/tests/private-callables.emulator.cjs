@@ -51,6 +51,16 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  for(const opened of opens){assert.equal(opened.status,200,JSON.stringify(opened.data.error||{}));assert.equal(opened.data.result.result.coins,23);}
  const afterChest=(await ownerRef.get()).data().farm;assert.equal(afterChest.coins,beforeChest.coins+23);assert.equal(afterChest.medicines,(beforeChest.medicines||0)+1);assert.equal(afterChest.chestCount,0);
  const recorded=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'listChests',status:'opened',requestId:'emulator-chest-history'},token);assert.equal(recorded.status,200,JSON.stringify(recorded.data.error||{}));assert.equal(recorded.data.result.result.rows.find(row=>row.id===chestId).result.coins,23);
+ // A batch shares one real atomic transaction; concurrent/overlapping requests award once.
+ const batchIds=['emulator-batch-a','emulator-batch-b'];
+ await ownerRef.update({'farm.chestCount':2});
+ for(const id of batchIds)await db.doc(C.ownerPath(chestActor)+'/'+id).set({...chestActor,id,monster:'eagle',status:'unopened',droppedAt:Date.now(),configRevision:18,snapshot:{dropRate:100,coins:{enabled:true,min:11,max:11},items:[{itemId:'medicine',quantity:2}]}});
+ const batchBefore=(await ownerRef.get()).data().farm;
+ const batchRequests=['a','b'].map(suffix=>({groupId:'emulator-group',action:'openChests',chestIds:batchIds,requestId:'emulator-batch-open-'+suffix}));
+ const batchResults=await Promise.all(batchRequests.map(data=>call('gameOpsFarmTransaction',data,token)));
+ for(const value of batchResults){assert.equal(value.status,200,JSON.stringify(value.data.error||{}));assert.equal(value.data.result.result.coins,22);assert.equal(value.data.result.result.chestCount,2);assert.equal(value.data.result.result.items[0].quantity,4);}
+ const batchAfter=(await ownerRef.get()).data().farm;assert.equal(batchAfter.coins,batchBefore.coins+22);assert.equal(batchAfter.medicines,batchBefore.medicines+4);assert.equal(batchAfter.chestCount,0);
+ const batchReplay=await call('gameOpsFarmTransaction',batchRequests[0],token);assert.equal(batchReplay.status,200);assert.equal(batchReplay.data.result.replayed,true);assert.equal((await ownerRef.get()).data().farm.coins,batchAfter.coins);
  // Real Firestore/Functions must use the saved policy, below legacy client thresholds.
  const E=require('../functions/encounters.cjs'),encounters=structuredClone(E.DEFAULTS);
  for(const value of Object.values(encounters))value.enabled=false;

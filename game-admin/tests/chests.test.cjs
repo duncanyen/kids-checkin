@@ -87,3 +87,37 @@ test('a pending battle cannot open an unopened box, while an already completed b
  const f=setup(),b=await f.execute();f.db.data.get('ops_farm_active/'+D.hash('profile:A')).result=null;
  await assert.rejects(f.api.handle(f.req('openChest',{chestId:b.chest.id})),{code:'failed-precondition'});assert.equal(f.farm().chestCount,1);assert.equal(f.farm().coins,100);
 });
+
+test('batch opening preserves each snapshot, aggregates rewards and retries overlapping device batches without paying twice',async()=>{
+ const f=setup();f.configure('eagle',setting({items:[{itemId:'medicine',quantity:2}]}));const a=(await f.execute()).chest.id;
+ f.configure('eagle',setting({coins:{enabled:true,min:23,max:23},items:[{itemId:'medicine',quantity:3},{itemId:'worms',quantity:1}]}));const b=(await f.execute()).chest.id;
+ const request=f.req('openChests',{chestIds:[a,b]}),other=f.req('openChests',{chestIds:[b,a]});
+ const before=structuredClone(f.farm()),results=await Promise.all([f.api.handle(request),f.api.handle(other)]);
+ for(const {result}of results){assert.equal(result.chestCount,2);assert.equal(result.coins,40);assert.equal(result.items.find(i=>i.itemId==='medicine').quantity,5);assert.equal(result.items.find(i=>i.itemId==='worms').quantity,1);}
+ assert.equal(results[1].result.replayed,true);assert.equal(f.farm().coins,before.coins+40);assert.equal(f.farm().medicines,5);assert.equal(f.farm().worms,1);assert.equal(f.farm().chestCount,0);
+ f.farm().coins=999;assert.equal((await f.api.handle(request)).result.farm.coins,999);assert.equal(f.farm().coins,999);
+ const c=(await f.execute()).chest.id;await f.api.handle(f.req('openChests',{chestIds:[a,c]}));assert.equal(f.farm().coins,1022);assert.equal(f.farm().medicines,8);
+});
+test('a batch is all-or-nothing on capacity, invalid or foreign boxes and storage failure; same receipt can retry',async()=>{
+ const f=setup();f.configure('eagle',setting({items:[{itemId:'medicine',quantity:2}]}));const ids=[(await f.execute()).chest.id,(await f.execute()).chest.id];
+ const before=structuredClone(f.farm()),request=f.req('openChests',{chestIds:ids});f.farm().warehouseLimit=3;
+ await assert.rejects(f.api.handle(request),{code:'resource-exhausted'});assert.equal(f.farm().coins,before.coins);assert.equal(f.farm().chestCount,2);assert.equal(f.farm().medicines,undefined);
+ for(const id of ids)assert.equal(f.db.data.get(C.ownerPath(f.actor)+'/'+id).status,'unopened');
+ f.farm().warehouseLimit=100;
+ await assert.rejects(f.api.handle(f.req('openChests',{chestIds:[ids[0],'missing-chest']})),{code:'not-found'});
+ await assert.rejects(f.api.handle({...request,auth:{uid:'other'}}),{code:'not-found'});
+ f.db.failAward=true;await assert.rejects(f.api.handle(request),/simulated/);assert.equal(f.farm().chestCount,2);assert.equal(f.farm().coins,before.coins);
+ await f.api.handle(request);assert.equal(f.farm().chestCount,0);assert.equal(f.farm().medicines,4);assert.equal(f.farm().coins,before.coins+34);
+});
+test('batch validates unique 1–20 IDs, independent rolls and pending battle; 20-box limit is supported',async()=>{
+ const f=setup();f.configure('eagle',setting({coins:{enabled:true,min:10,max:20}}));const ids=[];
+ for(let i=0;i<20;i++)ids.push((await f.execute()).chest.id);
+ for(const chestIds of [[],null,ids.concat('extra'),[ids[0],ids[0]],[{}]])await assert.rejects(f.api.handle(f.req('openChests',{chestIds})),{code:'invalid-argument'});
+ f.db.data.get('ops_farm_active/'+D.hash('profile:A')).result=null;
+ await assert.rejects(f.api.handle(f.req('openChests',{chestIds:ids})),{code:'failed-precondition'});assert.equal(f.farm().chestCount,20);
+ f.db.data.get('ops_farm_active/'+D.hash('profile:A')).result={outcome:'win'};
+ const result=(await f.api.handle(f.req('openChests',{chestIds:ids}))).result;assert.equal(result.coins,200);assert.equal(f.farm().chestCount,0);
+ const g=setup();g.configure('eagle',setting({coins:{enabled:true,min:10,max:20}}));const pair=[(await g.execute()).chest.id,(await g.execute()).chest.id];
+ let rollIndex=0;const api=createFarmTransactions({db:g.db,player:async()=>g.actor,now:()=>Date.now(),random:()=>rollIndex++%2?1-Number.EPSILON:0,enabled:()=>true});
+ assert.equal((await api.handle(g.req('openChests',{chestIds:pair}))).result.coins,30);
+});

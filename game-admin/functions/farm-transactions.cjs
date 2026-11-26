@@ -12,7 +12,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
  async function handle(request,{admit}={}){
   let admission;
-  const p=request.data||{},action=D.enumValue(p.action,['openChest','listChests','buyScene','buySceneAtPrice','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  const p=request.data||{},action=D.enumValue(p.action,['openChest','openChests','listChests','buyScene','buySceneAtPrice','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='buySceneAtPrice')D.integer(p.expectedPrice,0,Number.MAX_SAFE_INTEGER);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
@@ -41,7 +41,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     if(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle'].includes(action)&&!response.result?.harvest&&!response.result?.steal){const current=(await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data();assertBattlePage(current,p.battlePageId);if(response.result?.challenge&&current?.id!==response.result.challenge.id)D.fail('failed-precondition','舊戰鬥已作廢，請重新進入村落');}
     // 通知準備的收據仍防重；戰鬥提示須讀取目前狀態，不能重播已結束的舊挑戰。
     if(action==='ensureWelcome')response.result={...response.result,pendingBattle:pendingBattleOf((await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data())};
-    if(action==='openChest')response.result={...response.result,farm:(await t.get(db.doc(`groups/${actor.groupId}/users/${actor.accountId}`))).data()?.farm};
+    if(['openChest','openChests'].includes(action))response.result={...response.result,farm:(await t.get(db.doc(`groups/${actor.groupId}/users/${actor.accountId}`))).data()?.farm};
     return response;
    }
    const farmRef=db.doc(`groups/${actor.groupId}/users/${actor.accountId}`),sessionRef=db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId));
@@ -64,13 +64,13 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }
    const farm=requireFarm(owner.data()?.farm),session=sessionSnapshot.data()||null;
    if(action==='listChests')return{serverNow:stamp,result:await Chests.list({db,t,actor,status:p.status,cursor:p.cursor})};
-   if(action!=='openChest')assertBattlePage(session,p.battlePageId);
+   if(!['openChest','openChests'].includes(action))assertBattlePage(session,p.battlePageId);
    if(!save.isFarmSave(farm))D.fail('failed-precondition','存檔資料不完整，停止交易');
    let patch={},result={},event=null,targetRef=null,targetPatch=null,targetFarm=null,nextSession=session;
    const mailWrites=[];
    const apply=(old,changes)=>{const value=structuredClone(old);for(const [path,next]of Object.entries(changes)){const keys=path.split('.').slice(1);let at=value;for(const key of keys.slice(0,-1))at=at[key]||=( {} );at[keys.at(-1)]=next;}return value;};
    const combatActions=['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle'];
-   if(session&&!session.result&&!combatActions.includes(action)&&!['openChest','settlePoultry','settleTarget','ensureWelcome','readMail','deleteMail'].includes(action))D.fail('failed-precondition','請先完成怪物戰鬥結算');
+   if(session&&!session.result&&!combatActions.includes(action)&&!['openChest','openChests','settlePoultry','settleTarget','ensureWelcome','readMail','deleteMail'].includes(action))D.fail('failed-precondition','請先完成怪物戰鬥結算');
    const readTarget=async(groupId,accountId,battle=false)=>{
     D.id(groupId);D.id(accountId);const group=(await t.get(db.doc('groups/'+groupId))).data(),own=groupId===actor.groupId?group:(await t.get(db.doc('groups/'+actor.groupId))).data();
     const allowed=!!group?.members?.includes(accountId)&&!!own?.members?.includes(actor.accountId)&&(groupId===actor.groupId||group.farmVillageVisibility==='public'&&own.farmVillageVisibility==='public');
@@ -120,6 +120,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    };
    if(action==='openChest'){
     const opened=await Chests.open({db,t,actor,farm,id:p.chestId,stamp,roll:rolls[19],blocked:!!session&&!session.result});patch=opened.patch;result=opened.result;mailWrites.push(opened.commit);
+   }else if(action==='openChests'){
+    const opened=await Chests.openMany({db,t,actor,farm,ids:p.chestIds,stamp,rolls,blocked:!!session&&!session.result});patch=opened.patch;result=opened.result;mailWrites.push(opened.commit);
    }else if(combatActions.includes(action)){
     // 切換雞舍時仍可能需要先結算舊戰鬥；任何損失都必須使用原戰鬥目標，不能套到新雞舍。
     const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
@@ -222,7 +224,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    }
    const chestWrite=await Chests.drop({db,t,actor,farm,patch,session:nextSession,event,stamp,roll:rolls[18]});if(chestWrite)mailWrites.push(chestWrite);
    const response={transactionId:receiptRef.id,action,serverNow:stamp,result};
-   if(action==='openChest')response.result={...result,farm:apply(farm,patch)};
+   if(['openChest','openChests'].includes(action))response.result={...result,farm:apply(farm,patch)};
    const progressWrite=event&&prepareProgress?await prepareProgress(t,actor,{...event,id:receiptRef.id,producer:'farm-transactions-v1',occurredAt:stamp},stamp):null;
    if(progressWrite?.dailyProgress)response.dailyProgress=progressWrite.dailyProgress;
    if(Object.keys(patch).length){const next=apply(farm,patch);if(!Number.isSafeInteger(next.coins)||next.coins<0||inventory.INVENTORY_KEYS.some(key=>key in next&&(!Number.isSafeInteger(next[key])||next[key]<0)))D.fail('failed-precondition','存檔數值不正確，未變更資源');t.update(farmRef,{farm:next});}if(targetRef)t.update(targetRef,{farm:apply(targetFarm,targetPatch)});
