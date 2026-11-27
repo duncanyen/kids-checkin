@@ -141,7 +141,7 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     selectShopCategory(key) {
-        if (!ITEM_CATEGORIES.some(c => c.key === key)) return;
+        if (!ITEM_CATEGORIES.some(c => c.key === key) || this.shopMode==='sell'&&['coops','dogs','scenes'].includes(key)) return;
         this.shopCategory = key;
         this.changeShopPage(0);
         if(key==='dogs')this.loadGuardDogCatalogue().catch(()=>{if(this.sys.isActive())this.showMsg('護衛犬設定讀取失敗，請稍後重試','#F44336');});
@@ -196,7 +196,11 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     changeShopPage(delta) {
-        const mode = this.shopMode, category = this.shopCategory;
+        const mode = this.shopMode;
+        const categories=ITEM_CATEGORIES.filter(c=>mode!=='sell'||!['coops','dogs','scenes'].includes(c.key)).map(c=>c.key);
+        if(!categories.includes(this.shopCategory))this.shopCategory=categories[0];
+        this.categoryTabs.setCategories(categories);
+        const category = this.shopCategory;
         const count = this.catalog[mode].filter(([key]) => itemCategory(key) === category && (mode!=='sell'||this.sellQuantities.get(key)>0)).length;
         const total = Math.max(1, Math.ceil(count / (category === 'scenes' ? 2 : 6)));
         const page = this.shopPages[mode][category] = Phaser.Math.Clamp((this.shopPages[mode][category] || 0) + delta, 0, total - 1);
