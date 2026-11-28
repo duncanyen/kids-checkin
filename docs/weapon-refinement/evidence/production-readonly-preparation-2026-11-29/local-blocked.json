@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "toolSha256": "b74c9818be617621082bd7e45f7360af8d5458b7a7184eec01edb796b0430966",
+  "project": "homebasedb",
+  "expectedProjectNumber": "476832900272",
+  "mode": "READ_ONLY",
+  "collectedAt": "2026-11-29T05:46:28.672971+08:00",
+  "productionWrites": false,
+  "playerDocumentReads": 0,
+  "releaseApproval": false,
+  "status": "BLOCKED",
+  "error": "GCLOUD_NOT_AVAILABLE; run in authenticated Cloud Shell",
+  "completedAt": "2026-11-29T05:46:28.673047+08:00",
+  "requests": [],
+  "configurationDocumentReads": 0
+}

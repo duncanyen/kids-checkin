@@ -1,5 +1,8 @@
 # 武器精煉相容版本：發布分支審查入口
 
+> 2026-11-29 正式唯讀盤點已獲使用者授權；[盤點工具與邊界](production-readonly-inventory.md)已完成。本機無可用GCP登入，尚未取得正式結果，須由既有Cloud Shell執行；不把候選檔當成正式狀態。此授權不包含任何正式寫入或部署。
+
+
 > 2026-11-29 新增：新精煉／解除與營運 API 的真實 Auth HTTP 驗收 **27/27** 通過（新增21情境），單元725項、Firestore57項通過且來源proof符合。詳見 [HTTP驗收](refinement-http-acceptance.md) 與 [更新後發布前審查](predeploy-review-refinement-http.md)。正式發布仍NO_GO，沒有部署或操作正式資料。
 
 
