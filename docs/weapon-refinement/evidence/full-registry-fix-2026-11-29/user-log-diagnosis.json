@@ -1,0 +1,18 @@
+{
+  "source": "user-provided partial terminal transcript",
+  "oldRunnerCommit": "dc0f85a",
+  "interpretation": {
+    "tests": 0,
+    "pass": 0,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "summaryPresent": false,
+    "observedPass": 7,
+    "observedFail": 0,
+    "exitCode": 2,
+    "passed": false
+  },
+  "remoteStackAvailable": false,
+  "completeRunPassed": false
+}
