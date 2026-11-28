@@ -102,7 +102,13 @@ test('actual custom-token refresh, scoped callable transaction, daily grant and 
  const hornetEntry=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'homeEncounter',battlePageId,requestId:'emulator-hornet-entry'},token);
  assert.equal(hornetEntry.status,200,JSON.stringify(hornetEntry.data.error||{}));const hornetBattle=hornetEntry.data.result.result.challenge;
  assert.equal(hornetBattle.kind,'hornet');assert.equal(hornetBattle.combatVersion,2);assert.equal(hornetBattle.health,2400);assert.equal(hornetBattle.deadline-hornetBattle.startedAt,50000);
- await activeRef.update({startedAt:Date.now()-5000});
+ // Arrival is now authoritative independently of startedAt. Verify the real
+ // callable rejects early hits before advancing only this demo test fixture.
+ const earlyHornet=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,damageVersion:4,firstHit:0,mode:'ranged',count:1,requestId:'emulator-hornet-before-arrival'},token);
+ assert.equal(earlyHornet.status,400);assert.match(earlyHornet.data.error.message,/怪物進場中/);
+ assert.equal((await activeRef.get()).data().health,2400);
+ assert.equal((await activeRef.get()).data().attacks.ranged,0);
+ await activeRef.update({startedAt:Date.now()-5000,approachEndsAt:Date.now()-1});
  const hornetMelee=await call('gameOpsFarmTransaction',{groupId:'emulator-group',action:'battleAttack',battlePageId,battleId:hornetBattle.id,combatVersion:2,damageVersion:4,firstHit:0,mode:'melee',count:1,requestId:'emulator-hornet-melee'},token);assert.equal(hornetMelee.status,400);assert.match(hornetMelee.data.error.message,/此武器無法攻擊怪物/);
  // Outdated packets and skipped hit indices stay rejected; do not weaken checks
  // to make a stale test pass.

@@ -11,7 +11,7 @@
 
 ## 驗證
 
-- 710項單元測試通過。
+- 715項單元測試通過。
 - 57項真正Firestore／candidate Rules測試、13個suite，來源hash符合；不是正式Rules或完整Auth／Storage／Functions E2E。
 - 前階段11組瀏覽器流程最終通過，另有獨立lab預檢；初跑失敗及時序紀錄保留。
 - Windows／iPhone／Safari實機及行動網路依使用者要求DEFERRED_BY_USER，未標成PASS。
@@ -28,3 +28,5 @@
 最新復核：`docs/weapon-refinement/predeploy-review-after-manual-skip.md`。
 
 本輪後續修正與最新證據：[原交易重試與安全更新審查](release-branch-followup-review.md)。
+
+最新多服務隔離驗收：[實際 Callable 整合結果](callable-emulator-integration-report.md)；核心 6 項通過，完整 RTDB／Storage 模式仍受官方下載 HTTP403 阻擋。草稿 PR 依使用者指示略過，不代表正式發布授權。
