@@ -1,0 +1,642 @@
+{
+  "schema": 1,
+  "project": "demo-nexus-private-farm",
+  "realAuth": true,
+  "realFunctionsHTTP": true,
+  "realFirestore": true,
+  "authOrHandlerMocks": false,
+  "productionData": false,
+  "deployed": false,
+  "checks": [
+    {
+      "name": "real Nexus login and Auth tokens; anonymous, invalid token and closed admission rejected",
+      "passed": true
+    },
+    {
+      "name": "real Auth admin read/edit/publish/risk separation and initial draft publication",
+      "passed": true
+    },
+    {
+      "name": "invalid settings rejected and current Auth claims override stale administrator ID tokens",
+      "passed": true
+    },
+    {
+      "name": "release API validates dependencies, scope and explicit preview before admitting test farms",
+      "passed": true
+    },
+    {
+      "name": "two real device tokens refining the same quote debit and grant once",
+      "passed": true
+    },
+    {
+      "name": "lost-success reply recovery is read-only, exact ID/content bound and safe on unknown results",
+      "passed": true
+    },
+    {
+      "name": "recovering an already reserved failed draw consumes once, retains level and cannot reroll",
+      "passed": true
+    },
+    {
+      "name": "reset preview is read-only and concurrent reset refunds historical successes only once",
+      "passed": true
+    },
+    {
+      "name": "zero-level reset cannot refund again while original reset receipts remain readable",
+      "passed": true
+    },
+    {
+      "name": "published config invalidates prior refinement quotes without charging or weakening snapshots",
+      "passed": true
+    },
+    {
+      "name": "reset quote version changes require reconfirmation and refunds use actual historic costs",
+      "passed": true
+    },
+    {
+      "name": "insufficient resources, forged cost/ownership and other-group tokens cannot mutate assets",
+      "passed": true
+    },
+    {
+      "name": "active battle blocks refinement and reset without consuming resources",
+      "passed": true
+    },
+    {
+      "name": "refinement versus sale race changes either inventory or refinement, never both incorrectly",
+      "passed": true
+    },
+    {
+      "name": "risk pause denies new refine/reset while preserving earned stats and ordinary weapon operations",
+      "passed": false
+    },
+    {
+      "name": "read-only statistics, idempotent reconciliation and audit agree with real HTTP receipts",
+      "passed": true
+    },
+    {
+      "name": "admin history rollback creates a new immutable version and retains acquired abilities",
+      "passed": true
+    },
+    {
+      "name": "password revocation invalidates old player tokens on all new refinement endpoints",
+      "passed": false
+    }
+  ],
+  "calls": [
+    {
+      "name": "nexusIdentity",
+      "action": "login",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "groupToken",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "login",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "groupToken",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "login",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "groupToken",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "login",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "groupToken",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "login",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "groupToken",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "login",
+      "requestId": null
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "groupToken",
+      "requestId": null
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "listWeapons",
+      "requestId": "a08ff61a-3824-4825-9471-2c12b607d9eb"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementCapabilities",
+      "requestId": "f4079b47-e13f-4fc1-8771-59958825c29f"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementCapabilities",
+      "requestId": "938d4fcc-f4cc-4405-b8d0-10adc1c98c62"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementCapabilities",
+      "requestId": "4e3481d0-b38e-44d2-885b-ec3e1427336b"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "423eec46-e21e-4f70-aa28-b57af37363e0"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getWeaponDetails",
+      "requestId": "a42c5964-ad5d-41bd-8de8-164cbd105093"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": null
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": null
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "078b6787-6d23-40a6-a4b6-d326e0768535"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "f8332e60-94fc-4270-be9a-81d8d089aec8"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "bd8f12c9-6efe-4e87-a7b4-93450d1f22d5"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementValidateDraft",
+      "requestId": "801d7ac8-be27-4a98-b806-610ee0dc1004"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishDraft",
+      "requestId": "a956ae35-baad-4d20-a12f-4200737ce625"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishDraft",
+      "requestId": "475262d5-f7d5-4681-9a10-679b7ad5e8fd"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishDraft",
+      "requestId": "b25df365-f31e-4df2-8cad-55a2b3fb22e9"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "3baf3fe3-fe59-4ea1-9c9f-d313846c296d"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "885191d2-3c76-4db0-b2aa-0583dcb87d98"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "6c12cea1-846e-4bfc-b7cf-83962e5b15fb"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "0ed65d7b-0a27-47ec-9042-6a90047d7479"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "50aabcef-af55-4af2-8281-5f8721329a5f"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "97e3c1a0-74a0-4041-9e1c-752094f2210c"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "3bb967c1-d04f-4e74-a1d2-988c69b11875"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "810a1802-fb1b-4990-8e78-78ca1b38149e"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementReleaseStatus",
+      "requestId": "68c52c38-a18e-49fb-a30d-185df67e557d"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPreviewRelease",
+      "requestId": "50b40d6e-def9-491b-881f-cd01a142922c"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPauseRelease",
+      "requestId": "25c8743d-478e-46fb-a315-0336ec633194"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementReleaseStatus",
+      "requestId": "dad67662-95b9-42c2-ae1c-0e6b8eef2e54"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPreviewRelease",
+      "requestId": "2d14f6b7-24fb-43d3-8b7b-975a3f0ac916"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishRelease",
+      "requestId": "d622bba3-d26b-4f72-8c6e-e7abd669d6e0"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementCapabilities",
+      "requestId": "e3571137-fea4-45bc-b63c-52379ef1386b"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "0fd72b89-d0f0-49ea-a896-f2b17359b231"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "93ab7960-6a2f-4a91-8351-49a6ff1b3011"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "93ab7960-6a2f-4a91-8351-49a6ff1b3011"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementResult",
+      "requestId": "31dacd60-b202-4320-9fe9-52e3b40f2cef"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getFarmTransactionResult",
+      "requestId": "fd49fde1-f776-42d7-909f-3acfcb4b8ba3"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getFarmTransactionResult",
+      "requestId": "a52fdddd-7950-4df9-af73-244279219799"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getFarmTransactionResult",
+      "requestId": "a5d27f82-6943-4010-86c1-36ae8ae1de28"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "3c12f7dc-ace1-4e5c-b93d-28c4177b3609"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getFarmTransactionResult",
+      "requestId": "42091884-4fc9-4c54-8aeb-7e3869b50fa9"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "53b67da3-cc69-4190-b3c2-e347cf60a0b6"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "53b67da3-cc69-4190-b3c2-e347cf60a0b6"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "7a580fa3-0fb8-42ed-a27c-4623777f3ea8"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinementReset",
+      "requestId": "92131dbf-95d2-426b-986b-b6ffcf4dedaa"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "resetRefinement",
+      "requestId": "a5382889-48f9-48d7-ad4c-57419ea5513f"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "resetRefinement",
+      "requestId": "a5382889-48f9-48d7-ad4c-57419ea5513f"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinementReset",
+      "requestId": "06ec5890-7c61-4687-b2d6-24ff1219cfcc"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "resetRefinement",
+      "requestId": "a5382889-48f9-48d7-ad4c-57419ea5513f"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementResetResult",
+      "requestId": "f4354002-cacc-4a4b-acbf-0d919cd3ddc9"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "22fc1d4a-afde-4990-acf9-83fb3441dd0a"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "674f7e0a-d35c-4daf-a0a2-4fb9dc19752d"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "934d4e9c-457e-4416-9b51-ecd1daccdbe6"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementValidateDraft",
+      "requestId": "c286a731-241d-4f49-8652-ba1b7469f67a"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishDraft",
+      "requestId": "ef47b920-59d8-462d-a18d-a54bc385335f"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "da28eb71-4e53-4bec-a9fe-c5041f4ab555"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementResult",
+      "requestId": "35803ae2-0ea8-4606-bd3d-b2550f4f67e9"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "46f91264-bd56-4989-bdb8-fe32e7ca9d97"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "00604a02-b9b7-400d-94aa-fa75ee16c978"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinementReset",
+      "requestId": "86ba80d5-1e43-4ac5-97db-e6ac732d3de3"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementOverview",
+      "requestId": "2844140f-bfd9-433b-b389-eafaf85f7126"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementSaveDraft",
+      "requestId": "2bf1dce8-2048-4f68-8196-dfd73f2004ab"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementValidateDraft",
+      "requestId": "53564d0a-f72b-4f70-b23c-5dba8fe38df4"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishDraft",
+      "requestId": "0b048aba-9b46-4ac3-bab5-6fd1619038f9"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "resetRefinement",
+      "requestId": "ba16be8d-e7f1-4ccc-b1c3-0c7576ef7313"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinementReset",
+      "requestId": "ba2ee100-0355-474e-9fe0-07e80eb5df57"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "6cf5104e-e82f-4580-8f0c-1db7d41b7659"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "listWeapons",
+      "requestId": "8c0832d9-62a2-4c95-8071-93f33c735505"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "ef726228-022c-45fd-aabd-8b5465175553"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "9b82d0cf-a8b2-4daa-a55c-34dd57d6670b"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "f1c938e8-6751-470c-b21f-e33c03667ca4"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "a29675c5-f0ea-4089-8abf-b43535ff1043"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getWeaponDetails",
+      "requestId": "479d0f27-f3cb-4623-9608-a876c7abd8c9"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "6020c3af-7870-4023-88c3-7cced342d325"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "9927b2f5-41db-4bee-a4da-4c84398a8659"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinementReset",
+      "requestId": "70e9b604-e648-45c5-8307-b6153527ea8e"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "ca11ac6c-ebf5-4326-b257-36804e541391"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "resetRefinement",
+      "requestId": "830b1d4d-b027-4ff1-885d-4f9b5c4bedb8"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "9c27d3ff-fa7d-4a30-8e8f-68ad3b161418"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "386b400b-1220-4998-ba83-dbb8cf6ed420"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "sellItem",
+      "requestId": "b5117bd4-644c-4694-84a7-b0e98bd257c3"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinement",
+      "requestId": "ca561b31-0154-477a-9a97-c184f53ada90"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "previewRefinementReset",
+      "requestId": "f44dec14-b7b1-4583-ad45-7511e815ebfd"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementReleaseStatus",
+      "requestId": "f5e0bbee-5032-4799-8d8b-1f4d9ab24f00"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPauseRelease",
+      "requestId": "509802ce-c0e6-4933-9a24-92ebbf7dd1e5"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "refineWeapon",
+      "requestId": "7625f58d-55cf-454f-8e61-e6150675e7c3"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "resetRefinement",
+      "requestId": "bca7516e-745f-45d3-9aa7-5d3e31e29026"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "getRefinementStats",
+      "requestId": "e2f8a007-db4d-4768-a59a-4614c8e15274"
+    },
+    {
+      "name": "gameOpsFarmTransaction",
+      "action": "equipWeapon",
+      "requestId": "8f516568-e154-43d4-be59-439638e8a211"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementReconcile",
+      "requestId": "2608747c-f573-49dc-844c-427f81c2cfe9"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementReconcile",
+      "requestId": "fe63ffee-2249-44db-9980-4b3b20c5cb85"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementStatistics",
+      "requestId": "de5b1bd8-a7d4-4632-8ffe-4e44ade1fe6f"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementReconcile",
+      "requestId": "ee720fa9-5301-4623-be87-4cf71d2e3d33"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementStatistics",
+      "requestId": "c924f156-cccb-46fe-9511-4d912eda89ea"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementAuditStatistics",
+      "requestId": "a6a0a8e8-a571-43cb-8e4b-ca334012d998"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementRestoreDraft",
+      "requestId": "c671f37f-7616-4e00-a6f1-4d769bbdc40a"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementValidateDraft",
+      "requestId": "58b91b92-0f6e-4bd1-b52f-7ee6fb2a3782"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementPublishDraft",
+      "requestId": "d244301a-ef7f-4e35-9fc2-c381a730158f"
+    },
+    {
+      "name": "gameOpsAdmin",
+      "action": "refinementHistory",
+      "requestId": "ed9912f2-aa95-4d1f-ae6c-8a66ebc37353"
+    },
+    {
+      "name": "nexusIdentity",
+      "action": "changePassword",
+      "requestId": null
+    }
+  ],
+  "expectedChecks": 18,
+  "passed": false,
+  "limitations": [
+    "App Check enforcement, physical devices and background observers are not exercised by this core HTTP suite",
+    "One failed recovered intent uses a private demo fixture roll; no RNG override is exposed through the callable"
+  ]
+}

@@ -1,5 +1,8 @@
 # Cloud Shell 完整 Emulator 合約驗收結果
 
+> 2026-11-29 新增：新精煉／解除與營運 API 的真實 Auth HTTP 驗收 **27/27** 通過（新增21情境），單元725項、Firestore57項通過且來源proof符合。詳見 [HTTP驗收](refinement-http-acceptance.md) 與 [更新後發布前審查](predeploy-review-refinement-http.md)。正式發布仍NO_GO，沒有部署或操作正式資料。
+
+
 登錄日期：2026-11-29（台灣時間）。本次由使用者在自己的獨立 Cloud Shell 目錄執行，非代理在本機重跑。
 
 ## 結果：9/9 通過

@@ -1,0 +1,802 @@
+i  emulators: Starting emulators: auth, functions
+i  emulators: Detected demo project ID "demo-nexus-private-farm", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+i  functions: Watching "/tmp/nexus-callable-source-pcobD8/live" for Cloud Functions...
+⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.
+⚠  functions: Please note that there will be breaking changes when you upgrade.
+✔  functions: Using node@22 from host.
+i  functions: Loaded environment variables from .env.local.
+Serving at port 8441
+
+✔  functions: Loaded functions definitions from source: nexusIdentity, liveFarmMirror, liveRoomMirror, liveMessageMirror, liveGroupMirror, liveIdentityMirror, liveProfileMirror, photoSession, liveSession, growthForest.
+✔  functions[asia-southeast1-nexusIdentity]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/nexusIdentity).
+i  functions[asia-southeast1-liveFarmMirror]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-southeast1-liveRoomMirror]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-southeast1-liveMessageMirror]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-southeast1-liveGroupMirror]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-southeast1-liveIdentityMirror]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-southeast1-liveProfileMirror]: function ignored because the firestore emulator does not exist or is not running.
+✔  functions[asia-southeast1-photoSession]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/photoSession).
+✔  functions[asia-southeast1-liveSession]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/liveSession).
+✔  functions[asia-southeast1-growthForest]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/growthForest).
+i  functions: Watching "/tmp/nexus-callable-source-pcobD8/ops" for Cloud Functions...
+⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory.
+⚠  functions: Please note that there will be breaking changes when you upgrade.
+✔  functions: Using node@22 from host.
+i  functions: Loaded environment variables from .env.local.
+Serving at port 8664
+
+✔  functions: Loaded functions definitions from source: gameOpsAdmin, gameOpsAnnouncements, gameOpsFarmTransaction, gameOpsGuardDog, gameOpsDailyChallenges, gameOpsRedeem, gameOpsFarmReportCapture, gameOpsAnnouncementVersion, gameOpsNotificationVersion, gameOpsRefinementReceipt, gameOpsRefinementDailyStone, gameOpsRefinementGiftStone, gameOpsRefinementChestStone, gameOpsRefinementEconomy, gameOpsRefinementBattle, gameOpsRefinementState, gameOpsRefinementFarmSnapshot.
+✔  functions[asia-southeast1-gameOpsAdmin]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/gameOpsAdmin).
+✔  functions[asia-southeast1-gameOpsAnnouncements]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/gameOpsAnnouncements).
+✔  functions[asia-southeast1-gameOpsFarmTransaction]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/gameOpsFarmTransaction).
+✔  functions[asia-southeast1-gameOpsGuardDog]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/gameOpsGuardDog).
+✔  functions[asia-southeast1-gameOpsDailyChallenges]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/gameOpsDailyChallenges).
+✔  functions[asia-southeast1-gameOpsRedeem]: http function initialized (http://127.0.0.1:5008/demo-nexus-private-farm/asia-southeast1/gameOpsRedeem).
+i  functions[asia-southeast1-gameOpsFarmReportCapture]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsAnnouncementVersion]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsNotificationVersion]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementReceipt]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementDailyStone]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementGiftStone]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementChestStone]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementEconomy]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementBattle]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementState]: function ignored because the firestore emulator does not exist or is not running.
+i  functions[asia-east1-gameOpsRefinementFarmSnapshot]: function ignored because the firestore emulator does not exist or is not running.
+i  Running script: '/tmp/nexus-node22-repair/node_modules/node-linux-x64/bin/node' '--test' '--test-concurrency=1' '/workspace/kids-checkin/game-admin/tests/private-callables.emulator.cjs' '/workspace/kids-checkin/game-admin/tests/private-farm-rules.emulator.cjs' '/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs'
+TAP version 13
+i  functions: Loaded environment variables from .env.local.
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 428.438697ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 41.815963ms
+i  functions: Loaded environment variables from .env.local.
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 376.94108ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 42.549566ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 49.918215ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 41.764922ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 94.116466ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 37.467886ms
+i  functions: Loaded environment variables from .env.local.
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 345.812392ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 78.369472ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 60.904585ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Loaded environment variables from .env.local.
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 67.605617ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 56.235482ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 108.914264ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 87.666734ms
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 372.803045ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 41.992727ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 53.360795ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 44.660491ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 48.877704ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 42.600398ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 44.672311ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 39.626239ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 39.907143ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 63.215603ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 45.477635ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 38.272149ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 36.017846ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 44.144112ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 45.698805ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 37.576111ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 34.962491ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 35.73729ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 42.353713ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 46.386639ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 32.097088ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 41.143482ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2065.781653ms
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 3476.655549ms
+i  functions: Loaded environment variables from .env.local.
+i  functions: Beginning execution of "asia-southeast1-gameOpsAnnouncements"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAnnouncements" in 252.914877ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 39.385825ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 28.233636ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 28.514831ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 131.898214ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+i  functions: Loaded environment variables from .env.local.
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 62.016759ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 50.323083ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsDailyChallenges"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsDailyChallenges" in 50.266102ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 141.666322ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 21.512476ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 100.80682ms
+# Subtest: actual custom-token refresh, scoped callable transaction, daily grant and credential revocation work together
+ok 1 - actual custom-token refresh, scoped callable transaction, daily grant and credential revocation work together
+  ---
+  duration_ms: 13294.333782
+  type: 'test'
+  ...
+# Warning: the environment variable FIREBASE_DATABASE_EMULATOR_HOST is set, but the Emulator hub reports the database emulator as not running. This may lead to errors such as connection refused.
+# Warning: config for the firestore emulator is specified, but the Emulator hub reports it as not running. This may lead to errors such as connection refused.
+# Warning: the environment variable FIREBASE_STORAGE_EMULATOR_HOST is set, but the Emulator hub reports the storage emulator as not running. This may lead to errors such as connection refused.
+# Subtest: anonymous, forged UID, revoked version and ordinary Firebase admin claims cannot act as Nexus player
+ok 2 - anonymous, forged UID, revoked version and ordinary Firebase admin claims cannot act as Nexus player
+  ---
+  duration_ms: 746.936151
+  type: 'test'
+  ...
+# [2026-11-28T21:13:17.707Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbed error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.739Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbee error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.766Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbef error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.789Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.814Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.846Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.856Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf3 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'delete' @ L49, false for 'delete' @ L57, false for 'delete' @ L71
+# [2026-11-28T21:13:17.873Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L45, false for 'create' @ L57, false for 'create' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.892Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L52, false for 'create' @ L57, false for 'create' @ L71, false for 'update' @ L52, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T21:13:17.905Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L52, false for 'create' @ L57, false for 'create' @ L71, false for 'update' @ L52, false for 'update' @ L57, false for 'update' @ L71
+# Subtest: all client routes to coins, chicken, inventory, lease, welcome receipt and creation receipt are denied
+ok 3 - all client routes to coins, chicken, inventory, lease, welcome receipt and creation receipt are denied
+  ---
+  duration_ms: 254.653845
+  type: 'test'
+  ...
+# [2026-11-28T21:13:17.942Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L42, false for 'update' @ L71
+# [2026-11-28T21:13:17.959Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L33:21 for 'update' @ L33, false for 'update' @ L71, false for 'update' @ L33, false for 'update' @ L71
+# [2026-11-28T21:13:17.987Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbf9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L33:21 for 'update' @ L33, false for 'update' @ L71, false for 'update' @ L33, false for 'update' @ L71
+# [2026-11-28T21:13:18.016Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbfb error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.027Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbfc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.046Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbfd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.057Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbfe error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.072Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cbff error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.082Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc00 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.098Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc01 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.107Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc02 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.122Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc03 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.130Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc04 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.145Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc05 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.155Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc06 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.169Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc07 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.178Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc08 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# Subtest: membership, credential and ops namespace have no broad allow bypass
+ok 4 - membership, credential and ops namespace have no broad allow bypass
+  ---
+  duration_ms: 272.115289
+  type: 'test'
+  ...
+# Subtest: own/private/public farm reads and real profile queries retain intended access
+ok 5 - own/private/public farm reads and real profile queries retain intended access
+  ---
+  duration_ms: 146.865662
+  type: 'test'
+  ...
+# [2026-11-28T21:13:18.352Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc0b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.371Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc0d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.385Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc0e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:13:18.416Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x2fc3cc0f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# Subtest: chest records, reward snapshots and chest settings cannot be forged through client SDK
+ok 6 - chest records, reward snapshots and chest settings cannot be forged through client SDK
+  ---
+  duration_ms: 91.22805
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 135.059522ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 25.499773ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 85.46526ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 17.724967ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 71.456955ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 20.732336ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 67.423803ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 19.484414ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 68.697749ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 17.408588ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 84.425109ms
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 16.977949ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 54.053661ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2.084758ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 1.623896ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 42.615297ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 31.565681ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 40.804367ms
+i  functions: Loaded environment variables from .env.local.
+# Subtest: real Nexus login and Auth tokens; anonymous, invalid token and closed admission rejected
+ok 7 - real Nexus login and Auth tokens; anonymous, invalid token and closed admission rejected
+  ---
+  duration_ms: 1545.552068
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 12.925421ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 4.747244ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 267.683907ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 15.817427ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 51.182529ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 48.599121ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 11.371735ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 34.558651ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 59.275365ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 52.417162ms
+# Subtest: real Auth admin read/edit/publish/risk separation and initial draft publication
+ok 8 - real Auth admin read/edit/publish/risk separation and initial draft publication
+  ---
+  duration_ms: 1390.464662
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 37.328762ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 14.528627ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 20.935265ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 18.066405ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 17.879578ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 10.22774ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 3.455802ms
+# Subtest: invalid settings rejected and current Auth claims override stale administrator ID tokens
+ok 9 - invalid settings rejected and current Auth claims override stale administrator ID tokens
+  ---
+  duration_ms: 144.572363
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 17.080991ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 15.430389ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 9.246873ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 14.478583ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 108.191283ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 70.373485ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 53.190463ms
+# Subtest: release API validates dependencies, scope and explicit preview before admitting test farms
+ok 10 - release API validates dependencies, scope and explicit preview before admitting test farms
+  ---
+  duration_ms: 310.441964
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 72.06221ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2151.076973ms
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2920.67756ms
+# Subtest: two real device tokens refining the same quote debit and grant once
+ok 11 - two real device tokens refining the same quote debit and grant once
+  ---
+  duration_ms: 3014.430321
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 35.828134ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 27.416743ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 24.076505ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 32.437276ms
+# Subtest: lost-success reply recovery is read-only, exact ID/content bound and safe on unknown results
+ok 12 - lost-success reply recovery is read-only, exact ID/content bound and safe on unknown results
+  ---
+  duration_ms: 135.250426
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 63.196542ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 40.170257ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2105.437049ms
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2837.92112ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 3.967241ms
+# Subtest: recovering an already reserved failed draw consumes once, retains level and cannot reroll
+ok 13 - recovering an already reserved failed draw consumes once, retains level and cannot reroll
+  ---
+  duration_ms: 2991.194026
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 56.473643ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2077.636099ms
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 2859.286917ms
+# Subtest: reset preview is read-only and concurrent reset refunds historical successes only once
+ok 14 - reset preview is read-only and concurrent reset refunds historical successes only once
+  ---
+  duration_ms: 2942.039366
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 45.953754ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 25.251971ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 45.363159ms
+# Subtest: zero-level reset cannot refund again while original reset receipts remain readable
+ok 15 - zero-level reset cannot refund again while original reset receipts remain readable
+  ---
+  duration_ms: 131.416132
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 54.181175ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 38.145297ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 41.535461ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 53.743961ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 124.212402ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 55.341291ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 25.036226ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 52.834162ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 108.266963ms
+# Subtest: published config invalidates prior refinement quotes without charging or weakening snapshots
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+ok 16 - published config invalidates prior refinement quotes without charging or weakening snapshots
+  ---
+  duration_ms: 582.052857
+  type: 'test'
+  ...
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 50.048686ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 30.610292ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 49.641799ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 48.829172ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 64.945146ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 63.755795ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 48.397519ms
+# Subtest: reset quote version changes require reconfirmation and refunds use actual historic costs
+ok 17 - reset quote version changes require reconfirmation and refunds use actual historic costs
+  ---
+  duration_ms: 382.673239
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 49.48418ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 57.56213ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 56.632697ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 62.795305ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 4.569402ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 42.367056ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 46.572259ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# Subtest: insufficient resources, forged cost/ownership and other-group tokens cannot mutate assets
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 3.387247ms
+ok 18 - insufficient resources, forged cost/ownership and other-group tokens cannot mutate assets
+  ---
+  duration_ms: 343.318117
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 59.268204ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 56.480858ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 32.562914ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 49.020065ms
+# Subtest: active battle blocks refinement and reset without consuming resources
+ok 19 - active battle blocks refinement and reset without consuming resources
+  ---
+  duration_ms: 228.550823
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 52.092284ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 59.737828ms
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 131.952677ms
+# Subtest: refinement versus sale race changes either inventory or refinement, never both incorrectly
+ok 20 - refinement versus sale race changes either inventory or refinement, never both incorrectly
+  ---
+  duration_ms: 213.192447
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 52.580131ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 59.541267ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 17.592419ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 22.891887ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 31.698074ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 33.818417ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 43.440706ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsFarmTransaction"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsFarmTransaction" in 35.545846ms
+# Subtest: risk pause denies new refine/reset while preserving earned stats and ordinary weapon operations
+not ok 21 - risk pause denies new refine/reset while preserving earned stats and ordinary weapon operations
+  ---
+  duration_ms: 331.298627
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:35:25'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"message":"裝備狀態已變更","status":"FAILED_PRECONDITION"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    good (/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:13:23)
+    farmOK (/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:16:30)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async /workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:141:2
+    async TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:35:69)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 11.500364ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 73.310664ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 20.191494ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 55.0681ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 15.264978ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 78.223914ms
+# Subtest: read-only statistics, idempotent reconciliation and audit agree with real HTTP receipts
+ok 22 - read-only statistics, idempotent reconciliation and audit agree with real HTTP receipts
+  ---
+  duration_ms: 273.725219
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 41.408792ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 41.34021ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 56.029597ms
+i  functions: Beginning execution of "asia-southeast1-gameOpsAdmin"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-gameOpsAdmin" in 19.0159ms
+# Subtest: admin history rollback creates a new immutable version and retains acquired abilities
+ok 23 - admin history rollback creates a new immutable version and retains acquired abilities
+  ---
+  duration_ms: 194.824447
+  type: 'test'
+  ...
+i  functions: Beginning execution of "asia-southeast1-nexusIdentity"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "asia-southeast1-nexusIdentity" in 22.083239ms
+# Subtest: password revocation invalidates old player tokens on all new refinement endpoints
+not ok 24 - password revocation invalidates old player tokens on all new refinement endpoints
+  ---
+  duration_ms: 32.496929
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:35:25'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"message":"欄位格式不正確","status":"INVALID_ARGUMENT"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    good (/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:13:23)
+    /workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:157:38
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs:35:69)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 22
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 31169.456506
+⚠  Script exited unsuccessfully (code 1)
+i  emulators: Shutting down emulators.
+i  functions: Stopping Functions Emulator
+i  auth: Stopping Authentication Emulator
+i  eventarc: Stopping Eventarc Emulator
+i  tasks: Stopping Cloud Tasks Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator
+
+Error: Script "'/tmp/nexus-node22-repair/node_modules/node-linux-x64/bin/node' '--test' '--test-concurrency=1' '/workspace/kids-checkin/game-admin/tests/private-callables.emulator.cjs' '/workspace/kids-checkin/game-admin/tests/private-farm-rules.emulator.cjs' '/workspace/kids-checkin/game-admin/tests/refinement-http.emulator.cjs'" exited with code 1

@@ -1,0 +1,9 @@
+{
+  "httpTests": 27,
+  "newCases": 21,
+  "requestCount": 145,
+  "walletRows": 8,
+  "receiptRows": 8,
+  "realAuth": true,
+  "productionData": false
+}

@@ -1,5 +1,8 @@
 # Phase 8－整合驗證及Step A正式發布前審查
 
+> 2026-11-29 新增：新精煉／解除與營運 API 的真實 Auth HTTP 驗收 **27/27** 通過（新增21情境），單元725項、Firestore57項通過且來源proof符合。詳見 [HTTP驗收](refinement-http-acceptance.md) 與 [更新後發布前審查](predeploy-review-refinement-http.md)。正式發布仍NO_GO，沒有部署或操作正式資料。
+
+
 > 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
 
 

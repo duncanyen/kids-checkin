@@ -20,8 +20,8 @@ test('runner accepts only local output selection, never deploy/project/apply',()
 });
 
 test('full mode selects only additional local emulators and keeps project/deploy overrides rejected',()=>{
- assert.deepEqual(R.options(['--full','--output','/tmp/full-proof']),{full:true,out:'/tmp/full-proof'});
- assert.deepEqual(R.options(['--output','/tmp/core-proof']),{full:false,out:'/tmp/core-proof'});
+ assert.deepEqual(R.options(['--full','--output','/tmp/full-proof']),{full:true,refinement:false,out:'/tmp/full-proof'});
+ assert.deepEqual(R.options(['--output','/tmp/core-proof']),{full:false,refinement:false,out:'/tmp/core-proof'});
  assert.throws(()=>R.options(['--full','--project','homebasedb']));assert.throws(()=>R.options(['--full','--full']));
  assert.equal(R.result('# tests 9\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n',0,9).passed,true);
  assert.equal(R.result('# tests 6\n# pass 6\n# fail 0\n# cancelled 0\n# skipped 0\n',0,9).passed,false);
@@ -50,4 +50,11 @@ test('official artifact checks reject missing or different bytes',()=>{
  try{const file=path.join(dir,'test.jar');fs.writeFileSync(file,'synthetic-test-bytes');const sha=crypto.createHash('sha256').update('synthetic-test-bytes').digest('hex');
  const a=R.verifyArtifacts([{file,expectedSha256:sha},{file,expectedSha256:'bad'},{file:path.join(dir,'missing.jar'),expectedSha256:sha}]);assert.deepEqual(a.map(x=>x.verified),[true,false,false]);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('refinement mode is explicit, composes with full and cannot pass through production arguments',()=>{
+ assert.deepEqual(R.options(['--full','--refinement','--output','/tmp/scoped-http']),{full:true,refinement:true,out:'/tmp/scoped-http'});
+ assert.throws(()=>R.options(['--refinement','--refinement']));
+ assert.throws(()=>R.options(['--refinement','--project','homebasedb']));
+ assert.equal(require('../game-admin/tests/helpers/refinement-http-spec.cjs').caseCount,21);
 });

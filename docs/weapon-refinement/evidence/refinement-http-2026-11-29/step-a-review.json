@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-28T21:25:44.536Z",
+  "purpose": "Local preparation review; unknown evidence remains false; not a deployment approval",
+  "git": {
+    "commit": "2fcd3bd768295fd0218935b82ecbe5ac00e58ef4",
+    "branch": "release/weapon-refinement-compat-20261128",
+    "dirty": true,
+    "changedPaths": 9
+  },
+  "flags": {
+    "refinementReleaseControlEnabled": false,
+    "refinementResetEnabled": false,
+    "refinementStoneRewardEnabled": false,
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementCombatBonusEnabled": false
+  },
+  "gateDependencies": {
+    "valid": true,
+    "problems": []
+  },
+  "expectedProduction": {
+    "project": "homebasedb",
+    "firestoreRegion": "asia-east1 (previous user inventory; not rechecked against production)",
+    "opsCallableRegions": [
+      "asia-southeast1",
+      "asia-east1"
+    ],
+    "adminTarget": "nexus-game-admin",
+    "hostingSite": "homebasedb (previous user input; binding unverified)"
+  },
+  "firestoreVerification": {
+    "verified": true,
+    "scope": "Firestore only; candidate Rules, not deployed Rules or Auth/Storage/Functions emulator",
+    "proof": "docs/weapon-refinement/evidence/refinement-http-2026-11-29/firestore/summary.json",
+    "tests": 57
+  },
+  "refinementHttpVerification": {
+    "verified": true,
+    "proof": "docs/weapon-refinement/evidence/refinement-http-2026-11-29/http/summary.json",
+    "tests": 27,
+    "newApiCases": 21,
+    "scope": "Real Auth/Functions HTTP + Firestore, isolated allowlisted fake farms; no App Check or individual observer acceptance"
+  },
+  "requirements": {
+    "immutableReleaseCommit": false,
+    "allPriorPhasesAccepted": false,
+    "unitAndIntegrationPassed": false,
+    "realEmulatorPassed": true,
+    "rulesCompatibleVerified": false,
+    "indexesReadyVerified": false,
+    "productionIdentityVerified": false,
+    "backupRestoredVerified": false,
+    "assetReconciliationPassed": false,
+    "productionMigrationAdapterReviewed": false,
+    "productionAllowlistGateReviewed": false,
+    "oldPwaCompatibilityAccepted": false,
+    "combatSecurityAccepted": false,
+    "physicalMobileAndNetworkAccepted": false
+  },
+  "decision": "NO_GO",
+  "blockers": [
+    "immutableReleaseCommit",
+    "allPriorPhasesAccepted",
+    "unitAndIntegrationPassed",
+    "rulesCompatibleVerified",
+    "indexesReadyVerified",
+    "productionIdentityVerified",
+    "backupRestoredVerified",
+    "assetReconciliationPassed",
+    "productionMigrationAdapterReviewed",
+    "productionAllowlistGateReviewed",
+    "oldPwaCompatibilityAccepted",
+    "combatSecurityAccepted",
+    "physicalMobileAndNetworkAccepted"
+  ],
+  "nextStep": "STOP_AND_WAIT_FOR_EXPLICIT_STEP_B_AUTHORIZATION",
+  "executesProductionActions": false,
+  "configurationHashes": {
+    "firebase.json": "00ff262cadc524bbf3c4a3e18a6000b3d6ca7b074b766622950a37fce0d3716d",
+    "game-admin/firebase.json": "a1be2aaa1c7fe47d9416a1f285828ab7cbff8dc2c6a98c04a7a2e14f541fbb48",
+    "rules/firestore.private-farm.candidate.rules": "7a11f36306c195c659426b8e01641dc984ebbcb4c6c994710f80bae9cd693a3b",
+    "game-admin/rules/firestore.indexes.json": "848b0b4734705ae749f2fd4b6bb084b892d5b621c3eb64d0e431f089d012c06e",
+    "docs/weapon-refinement/phase-07-indexes.proposed.json": "e22433a2df51c16e552b34ca83f57f9b8ccbea93e881e60924f14dc2d45489cf",
+    "game-admin/functions/weapon-instance-config.cjs": "f78daa2608ca38b4f4af32c2a5f3bd96478d6f0e487fa8b7ebf8b12c6c610fad",
+    "scripts/weapon-instance-migration.cjs": "5869f8de91666a8f923e08e1bcd3b4f2e6ee7d4fd6d8db1e4e2e62197cedd08b"
+  },
+  "notes": [
+    "Git commit/worktree state is recorded above; local evidence never authorizes a production deployment. Phase commit history is recorded in the release branch.",
+    "A scoped production-capable adapter now exists and is tested in Emulator; production approval, backup restoration and scoped execution have not been performed.",
+    "Server-side scoped release admission is implemented and locally tested; master gate and empty whitelist remain closed, and production acceptance is still pending.",
+    "This script does not query cloud identity, backups, Rules releases or index readiness.",
+    "Test-only inputProtocol 1 derives hits using shared physics; legacy non-admitted combat remains aggregate, safe update UI, tab ownership and receipt recovery are locally implemented; production rollout, historical loaded-page coverage and physical mobile acceptance remain unaccepted; combatSecurityAccepted remains false.",
+    "Real Auth HTTP evidence is reported separately; it does not automatically accept all prior phases, production metadata, observers or physical devices.",
+    "Re-run after authorized fixes and attach actual test evidence; never edit failed flags to true."
+  ]
+}

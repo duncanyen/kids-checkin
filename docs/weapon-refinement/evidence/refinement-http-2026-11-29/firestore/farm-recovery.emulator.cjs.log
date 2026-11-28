@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: committed lost response is queried after a different page begins, with no second debit or receipt write
+ok 1 - committed lost response is queried after a different page begins, with no second debit or receipt write
+  ---
+  duration_ms: 579.585755
+  type: 'test'
+  ...
+# Subtest: unknown receipt remains unknown without executing action; combat and forged group queries are rejected
+ok 2 - unknown receipt remains unknown without executing action; combat and forged group queries are rejected
+  ---
+  duration_ms: 104.894757
+  type: 'test'
+  ...
+# Subtest: refinement/reset receipts remain queryable after admission is paused and are never reexecuted
+ok 3 - refinement/reset receipts remain queryable after admission is paused and are never reexecuted
+  ---
+  duration_ms: 497.862046
+  type: 'test'
+  ...
+# Subtest: rejected refinement intent reports rejected; forged owner row cannot expose stored results
+ok 4 - rejected refinement intent reports rejected; forged owner row cannot expose stored results
+  ---
+  duration_ms: 106.855881
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1451.927106

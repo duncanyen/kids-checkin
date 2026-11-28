@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: real production path without testEnvironment admits two devices, same ID concurrent refinement charges once
+ok 1 - real production path without testEnvironment admits two devices, same ID concurrent refinement charges once
+  ---
+  duration_ms: 4017.19058
+  type: 'test'
+  ...
+# Subtest: real pause racing economic commit remains atomic; no successful debit after a rejected operation
+ok 2 - real pause racing economic commit remains atomic; no successful debit after a rejected operation
+  ---
+  duration_ms: 400.871726
+  type: 'test'
+  ...
+# Subtest: real whitelist removal and master shutdown preserve earned abilities and normal V2 purchase/equip
+ok 3 - real whitelist removal and master shutdown preserve earned abilities and normal V2 purchase/equip
+  ---
+  duration_ms: 573.820586
+  type: 'test'
+  ...
+# Subtest: real old chest locked materials pay once after source pause while new captures stop
+ok 4 - real old chest locked materials pay once after source pause while new captures stop
+  ---
+  duration_ms: 2885.985513
+  type: 'test'
+  ...
+# [2026-11-28T21:20:21.806Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x6f0df05f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:20:21.819Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x6f0df060 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:20:21.833Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x6f0df061 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:20:21.878Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x6f0df063 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:20:21.888Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x6f0df064 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T21:20:21.899Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x6f0df065 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# Subtest: candidate Rules prevent valid player or client admin from reading/writing release policy and whitelist
+ok 5 - candidate Rules prevent valid player or client admin from reading/writing release policy and whitelist
+  ---
+  duration_ms: 455.954765
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8464.651854
