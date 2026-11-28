@@ -1,0 +1,44 @@
+TAP version 13
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 12,
+#   transactionMs: 116,
+#   handlerMs: 127
+# }
+# Subtest: V4: pre-arrival forged time ignored, exact boundary accepts, expiry rejects; no early receipt/assets/event
+ok 1 - V4: pre-arrival forged time ignored, exact boundary accepts, expiry rejects; no early receipt/assets/event
+  ---
+  duration_ms: 1461.429802
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 54,
+#   handlerMs: 59
+# }
+# Subtest: V5: pre-arrival forged time ignored, exact boundary accepts, expiry rejects; no early receipt/assets/event
+ok 2 - V5: pre-arrival forged time ignored, exact boundary accepts, expiry rejects; no early receipt/assets/event
+  ---
+  duration_ms: 803.126629
+  type: 'test'
+  ...
+# Subtest: all nine monster windows obey authoritative arrival; zero-flight enemies remain immediately attackable
+ok 3 - all nine monster windows obey authoritative arrival; zero-flight enemies remain immediately attackable
+  ---
+  duration_ms: 1.815215
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2604.706497

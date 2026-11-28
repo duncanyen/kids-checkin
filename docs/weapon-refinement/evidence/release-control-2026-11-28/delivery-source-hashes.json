@@ -1,0 +1,22 @@
+{
+  "game-admin/functions/refinement-release.cjs": "c59d57c21da0fa7de728d27d5e75b47f2a977f9e9898e11322dae472b5683d32",
+  "game-admin/functions/service.cjs": "558c70e5dd10451b015a9048d808a7146b62d2103f3114d465bbbab92d01b933",
+  "game-admin/functions/index.cjs": "ed099a156ea0524f6bd12a80287d38a8d0b858e22c23c8b72781de73a2405453",
+  "game-admin/functions/weapon-instance-config.cjs": "f78daa2608ca38b4f4af32c2a5f3bd96478d6f0e487fa8b7ebf8b12c6c610fad",
+  "game-admin/functions/refinement-service.cjs": "5e266ee8abd8e626fe3ed7e440b7492e0e96bbf0afdaade491bfbfc23a165549",
+  "game-admin/functions/refinement-player-service.cjs": "ffd1c40567d97c9e18c65517bcee6cddc48c0e6b1e86108a2bf30cdfc09b5d7b",
+  "game-admin/functions/weapon-repository.cjs": "43e6e37c3405c2d51f065eb669c82f7964f10fed589846729f7f02452ecf3518",
+  "game-admin/functions/farm-transactions.cjs": "b361aa6e4c4f3db5f7fe7a4e4cbe797974d5bae417a69eb2fb651978e33880be",
+  "game-admin/functions/refinement-stone-rewards.cjs": "e3efcee4ff45442ba90513ca44485e87a4392fda4a45ef202b80f1073d1ba495",
+  "game-admin/functions/daily-challenges.cjs": "dd6f1ed042bc9097d105ddd13caeaeb0914fc362149be3cbf8ee56d044bab47e",
+  "game-admin/functions/chests.cjs": "13f162399755e3377a8befb6b92da1174aa52eac1de911f0b3a82e41cff0076c",
+  "game-admin/site/refinement.js": "9823e9a1dc608fb2759b5b45c2268e5d28caf5c393d19c3846f405eda8243e60",
+  "game-admin/tests/helpers/release-fixture.cjs": "1d108e8bf08f7a396b88fad108788b4b046c8049cee6d41564a1b904be074bd6",
+  "game-admin/tests/refinement-release.test.cjs": "90df97ef27de1dc039605d2b7e493a414945ca77b6b51441d82aca79945895d5",
+  "game-admin/tests/refinement-release.emulator.cjs": "1c020eb6783d116ee484d4a9e1183fc714ed6e369b29ff15e8d276be08ddb38c",
+  "game-admin/tests/refinement-release.browser.cjs": "9f30baf20339b4b13fe6bfc8dd1c2abee55f3e3e14ea80d771493b827a38d32c",
+  "tests/helpers/refinement-release-player.cjs": "90a36de1c9cf5228b20d15eabd29940e7cd7ff0e5e6a2ecbb2fe30cff0d3e6df",
+  "tests/farm-private-backend-browser.cjs": "d8633fa80937bcf6c709dd7d22af2f101544a1d61b649375ab9b4459b52133f8",
+  "scripts/weapon-release-review.cjs": "bb82665c7a69f3ace21778c6bf6994852752321b3ea735d08b5ba4777604a0fa",
+  "docs/weapon-refinement/release-control-report.md": "f5a0ecbd9a13fbd43bfd085b6bf00c4b935312ca8cabc9c06f52766ae06522fd"
+}

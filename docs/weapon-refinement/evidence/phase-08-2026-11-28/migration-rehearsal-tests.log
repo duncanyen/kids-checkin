@@ -1,0 +1,16 @@
+TAP version 13
+# Subtest: migration interruption/replay, newer unrelated assets, staging conflicts and forward-only rule after new trade
+ok 1 - migration interruption/replay, newer unrelated assets, staging conflicts and forward-only rule after new trade
+  ---
+  duration_ms: 72.723786
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 344.754777

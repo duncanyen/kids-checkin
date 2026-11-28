@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "planHash": "32d73d1c754b0e507cf02364d30b8b4b2ba83258d4d3d4838093a0a89c4c021f",
+  "exports": [
+    {
+      "schemaVersion": 1,
+      "source": {
+        "kind": "localhost-demo-readonly-transaction",
+        "project": "demo-nexus-private-farm",
+        "exportedAt": 1795827503987
+      },
+      "actors": [
+        {
+          "uid": "migrate-327a7dc9f5bb",
+          "groupId": "cohort-327a7dc9f5bb",
+          "accountId": "player"
+        }
+      ],
+      "documents": [
+        {
+          "path": "groups/cohort-327a7dc9f5bb/users/player",
+          "data": {
+            "keep": "unchanged",
+            "farm": {
+              "coins": 1000000,
+              "refinementStones": 1000,
+              "mace": 1001,
+              "ironhammer": 3,
+              "equippedWeapon": "ironhammer",
+              "equippedBow": null,
+              "hens": 0,
+              "hensState": [],
+              "poultryVersion": 2,
+              "readyEggs": {
+                "hen": 0,
+                "silkie": 0,
+                "bresse": 0,
+                "onagadori": 0
+              },
+              "eggsReady": 0,
+              "warehouseLimit": 10000,
+              "weaponMigrationState": "complete",
+              "weaponSchemaVersion": 2,
+              "weaponGeneration": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+              "weaponInstanceRevision": 0
+            }
+          }
+        },
+        {
+          "path": "ops_weapon_owners/761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+          "data": {
+            "schemaVersion": 2,
+            "instanceIdVersion": 2,
+            "ownerId": "761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+            "profileId": "migrate-327a7dc9f5bb",
+            "groupId": "cohort-327a7dc9f5bb",
+            "accountId": "player",
+            "generation": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+            "status": "active",
+            "counts": {
+              "mace": 1001,
+              "battleaxe": 0,
+              "ironhammer": 3,
+              "katana": 0,
+              "shortbow": 0,
+              "huntingbow": 0,
+              "paladinbow": 0
+            },
+            "revision": 0,
+            "equippedWeapon": "ironhammer",
+            "equippedBow": null,
+            "equippedMeleeInstanceId": "a8bdcfc1c652d2cd8f7e2d0f798ce0de7eeb613470f257b0590b25e7b1ea0017_0",
+            "equippedBowInstanceId": null,
+            "createdAt": 1795827503026,
+            "updatedAt": 1795827503478
+          }
+        },
+        {
+          "path": "ops_refining_migrations/761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+          "data": {
+            "generation": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+            "instanceIdVersion": 2,
+            "status": "active",
+            "fingerprint": "48af34d745b1f7af93ffaa171b6c54681a84a59d405e3d143348c8f06b7c4bbd",
+            "sourceSnapshot": {
+              "counts": {
+                "mace": 1001,
+                "battleaxe": 0,
+                "ironhammer": 3,
+                "katana": 0,
+                "shortbow": 0,
+                "huntingbow": 0,
+                "paladinbow": 0
+              },
+              "equippedWeapon": "ironhammer",
+              "equippedBow": null,
+              "schemaVersion": null
+            },
+            "counts": {
+              "mace": 1001,
+              "battleaxe": 0,
+              "ironhammer": 3,
+              "katana": 0,
+              "shortbow": 0,
+              "huntingbow": 0,
+              "paladinbow": 0
+            },
+            "total": 1004,
+            "allocationCount": 3,
+            "completed": 3,
+            "validatedCounts": {
+              "mace": 1001,
+              "battleaxe": 0,
+              "ironhammer": 3,
+              "katana": 0,
+              "shortbow": 0,
+              "huntingbow": 0,
+              "paladinbow": 0
+            },
+            "createdAt": 1795827503026,
+            "updatedAt": 1795827503478
+          }
+        },
+        {
+          "path": "ops_weapon_owners/761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda/allocations/50a78a133dd9a1aaf631f1119487fda4e1d6ae682624d14627d4178070952b6b",
+          "data": {
+            "id": "50a78a133dd9a1aaf631f1119487fda4e1d6ae682624d14627d4178070952b6b",
+            "ownerId": "761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+            "generation": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+            "weaponId": "mace",
+            "quantity": 1000,
+            "removed": [],
+            "schemaVersion": 2,
+            "createdAt": 1795827503026,
+            "updatedAt": 1795827503026,
+            "source": "migration"
+          }
+        },
+        {
+          "path": "ops_weapon_owners/761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda/allocations/58ddbaf9c2f8f100649b02e0bf926d80f63280463dfd09ec56f6fa8f3d544f3e",
+          "data": {
+            "id": "58ddbaf9c2f8f100649b02e0bf926d80f63280463dfd09ec56f6fa8f3d544f3e",
+            "ownerId": "761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+            "generation": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+            "weaponId": "mace",
+            "quantity": 1,
+            "removed": [],
+            "schemaVersion": 2,
+            "createdAt": 1795827503026,
+            "updatedAt": 1795827503026,
+            "source": "migration"
+          }
+        },
+        {
+          "path": "ops_weapon_owners/761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda/allocations/a8bdcfc1c652d2cd8f7e2d0f798ce0de7eeb613470f257b0590b25e7b1ea0017",
+          "data": {
+            "id": "a8bdcfc1c652d2cd8f7e2d0f798ce0de7eeb613470f257b0590b25e7b1ea0017",
+            "ownerId": "761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+            "generation": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+            "weaponId": "ironhammer",
+            "quantity": 3,
+            "removed": [],
+            "schemaVersion": 2,
+            "createdAt": 1795827503026,
+            "updatedAt": 1795827503026,
+            "source": "migration"
+          }
+        }
+      ],
+      "attestation": {
+        "consistentSnapshot": true,
+        "historyComplete": true,
+        "scopeComplete": true,
+        "walletEvidence": "same-commit ops_refinement_wallet documents where present; missing historical journals remain unverified"
+      }
+    }
+  ]
+}

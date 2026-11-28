@@ -1,0 +1,28 @@
+{
+  "dateTaipei": "2026-11-28",
+  "unit": {
+    "tests": 709,
+    "passed": 709
+  },
+  "newLabCases": 4,
+  "browserPreflight": {
+    "passed": true,
+    "fullGame": true,
+    "memoryDB": true,
+    "physicalIPhone": false,
+    "externalRequests": [],
+    "errors": [],
+    "configBlocked": true,
+    "privateDocsBlocked": true,
+    "realShopOneDebit": true,
+    "lostResponseRecoveryOneDebit": true,
+    "offlineErrorsRemainUncertain": true,
+    "runId": "iphone-a1b620e8da56"
+  },
+  "physicalDeviceCases": "NOT_RUN",
+  "productionAuth": "BLOCKED: simulated only",
+  "privateHttpsPreview": "BLOCKED: current environment reports portals=[]",
+  "productionDeployed": false,
+  "productionDataAccessed": false,
+  "releaseDecision": "NO_GO"
+}

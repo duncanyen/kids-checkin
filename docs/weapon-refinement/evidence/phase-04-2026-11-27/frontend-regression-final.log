@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: public-art manifest matches file contents and excludes code, saves and APIs
+ok 1 - public-art manifest matches file contents and excludes code, saves and APIs
+  ---
+  duration_ms: 212.012416
+  type: 'test'
+  ...
+# Subtest: private-mode and quota failures preserve successful public image responses
+ok 2 - private-mode and quota failures preserve successful public image responses
+  ---
+  duration_ms: 53.568743
+  type: 'test'
+  ...
+# Subtest: HTML, JavaScript, private/API requests and POST never enter the art cache
+ok 3 - HTML, JavaScript, private/API requests and POST never enter the art cache
+  ---
+  duration_ms: 4.864562
+  type: 'test'
+  ...
+# Subtest: catalogues retain item, hen and dog art without full combat atlases
+ok 4 - catalogues retain item, hen and dog art without full combat atlases
+  ---
+  duration_ms: 5.296137
+  type: 'test'
+  ...
+# Subtest: optional worker startup wait is bounded and failures fall back to normal loading
+ok 5 - optional worker startup wait is bounded and failures fall back to normal loading
+  ---
+  duration_ms: 9.533035
+  type: 'test'
+  ...
+# Subtest: fuji catalogue uses a small thumbnail and defers both full-size orientations
+ok 6 - fuji catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 1.131301
+  type: 'test'
+  ...
+# Subtest: arctic catalogue uses a small thumbnail and defers both full-size orientations
+ok 7 - arctic catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 0.436932
+  type: 'test'
+  ...
+# Subtest: hallstatt catalogue uses a small thumbnail and defers both full-size orientations
+ok 8 - hallstatt catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 0.328265
+  type: 'test'
+  ...
+# Subtest: read-only preview persists display fields, not credentials, and never grants claim authority
+ok 9 - read-only preview persists display fields, not credentials, and never grants claim authority
+  ---
+  duration_ms: 16.435233
+  type: 'test'
+  ...
+# Subtest: Taiwan midnight, device clock rollback, old/schema-invalid data and private-mode storage safely discard previews
+ok 10 - Taiwan midnight, device clock rollback, old/schema-invalid data and private-mode storage safely discard previews
+  ---
+  duration_ms: 3.641364
+  type: 'test'
+  ...
+# Subtest: verified progress merges monotonically; stale dates, changed rules and different cycles never overwrite current state
+ok 11 - verified progress merges monotonically; stale dates, changed rules and different cycles never overwrite current state
+  ---
+  duration_ms: 2.848188
+  type: 'test'
+  ...
+# Subtest: group scope metadata rejects old previews and cross-group progress even when dates and cycles match
+ok 12 - group scope metadata rejects old previews and cross-group progress even when dates and cycles match
+  ---
+  duration_ms: 1.850599
+  type: 'test'
+  ...
+# Subtest: private-mode cache reads and quota write failures keep successful HTTP images usable
+ok 13 - private-mode cache reads and quota write failures keep successful HTTP images usable
+  ---
+  duration_ms: 51.843483
+  type: 'test'
+  ...
+# Subtest: requests outside daily public PNGs never enter the worker cache
+ok 14 - requests outside daily public PNGs never enter the worker cache
+  ---
+  duration_ms: 2.206562
+  type: 'test'
+  ...
+# Subtest: cache miss verifies the server without changing any existing asset or unrelated field
+ok 15 - cache miss verifies the server without changing any existing asset or unrelated field
+  ---
+  duration_ms: 13.46277
+  type: 'test'
+  ...
+# Subtest: display copies preserve timestamp readers and cannot mutate saved hen state
+ok 16 - display copies preserve timestamp readers and cannot mutate saved hen state
+  ---
+  duration_ms: 12.751017
+  type: 'test'
+  ...
+# Subtest: offline initialization queues no defaults; reconnect preserves the server save
+ok 17 - offline initialization queues no defaults; reconnect preserves the server save
+  ---
+  duration_ms: 3.316704
+  type: 'test'
+  ...
+# Subtest: two first visits create exactly one farm and receipt; a concurrent save always wins
+ok 18 - two first visits create exactly one farm and receipt; a concurrent save always wins
+  ---
+  duration_ms: 6.100764
+  type: 'test'
+  ...
+# Subtest: partial, malformed, cached transaction data and revoked membership never create a farm
+ok 19 - partial, malformed, cached transaction data and revoked membership never create a farm
+  ---
+  duration_ms: 22.860147
+  type: 'test'
+  ...
+# Subtest: delayed verification cannot replace a newer confirmed farm; stale cache and missing events preserve the display
+ok 20 - delayed verification cannot replace a newer confirmed farm; stale cache and missing events preserve the display
+  ---
+  duration_ms: 4.371212
+  type: 'test'
+  ...
+# Subtest: permission/read failure and pending default writes are never presented as a new game
+ok 21 - permission/read failure and pending default writes are never presented as a new game
+  ---
+  duration_ms: 3.032079
+  type: 'test'
+  ...
+# Subtest: a pending create with no metadata-only acknowledgement still becomes ready after commit
+ok 22 - a pending create with no metadata-only acknowledgement still becomes ready after commit
+  ---
+  duration_ms: 2.438659
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 400.420055

@@ -1,0 +1,28 @@
+PAGEERROR TypeError: Cannot read properties of undefined (reading 'realWidth')
+    at animate (http://127.0.0.1:3064/js/farm/loading-ui.js:13:43)
+PAGEERROR TypeError: Cannot read properties of undefined (reading 'cutWidth')
+    at initialize.setFrame (http://127.0.0.1:3064/lab/phaser.js:1:198739)
+    at initialize.setTexture (http://127.0.0.1:3064/lab/phaser.js:1:198528)
+    at new initialize (http://127.0.0.1:3064/lab/phaser.js:1:358156)
+    at initialize.sprite (http://127.0.0.1:3064/lab/phaser.js:1:359566)
+    at addPoultrySprite (http://127.0.0.1:3064/js/farm/poultry-art.js:13:30)
+    at MyFarmScene.syncHens (http://127.0.0.1:3064/js/farm/MyFarmScene.js:401:26)
+    at apply (http://127.0.0.1:3064/js/farm/MyFarmScene.js:205:182)
+    at http://127.0.0.1:3064/js/farm/MyFarmScene.js:180:61
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   "Cannot read properties of undefined (reading 'realWidth')",
++   "Cannot read properties of undefined (reading 'cutWidth')"
++ ]
+- []
+
+    at /workspace/kids-checkin/tests/iphone-lab/smoke.cjs:2:1092 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}

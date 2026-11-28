@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "scope": "localhost demo only",
+  "unit": {
+    "tests": 671,
+    "pass": 671,
+    "fail": 0
+  },
+  "realFirestore": {
+    "suites": 11,
+    "tests": 46,
+    "pass": 46,
+    "scope": "Firestore transactions and candidate Rules, not deployed Rules/full Firebase emulator"
+  },
+  "browserUniqueCases": 8,
+  "browserLatestResults": [
+    {
+      "id": "save-reload",
+      "exitCode": 0,
+      "durationMs": 9672,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "core-game",
+      "exitCode": 0,
+      "durationMs": 36095,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "weapon-instances",
+      "exitCode": 0,
+      "durationMs": 11570,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "refined-combat",
+      "exitCode": 0,
+      "durationMs": 17494,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "battle-exit",
+      "exitCode": 0,
+      "durationMs": 8535,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "public-art-cache",
+      "exitCode": 0,
+      "durationMs": 1422,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "combat-feedback",
+      "exitCode": 0,
+      "durationMs": 53850,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    }
+  ],
+  "legacyModuleWorker": {
+    "passed": true,
+    "log": "legacy-browser.log",
+    "productionArtifactVerified": false,
+    "physicalMobile": false
+  },
+  "SEC-02": "FIXED: before-arrival rejected in V4/V5, client no predicted damage/batch, boundary accepts",
+  "SEC-01": "OPEN: post-arrival rate-compliant fabricated hits can still earn loot",
+  "COMPAT-01": "OPEN: complete safe client-update UX is designed, not implemented",
+  "releaseDecision": "NO_GO",
+  "productionDataAccess": false,
+  "deployed": false,
+  "gitCommitOrPush": false,
+  "originalFlagsDefaultFalse": true,
+  "firstAttemptsPreserved": true
+}

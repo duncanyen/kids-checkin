@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "valid": true,
+  "releaseReady": false,
+  "scope": "provided local snapshot only",
+  "summary": {
+    "actors": 1,
+    "legacyFarms": 0,
+    "v2Farms": 1,
+    "allocations": 2,
+    "explicitWeapons": 5,
+    "implicitClubs": 1,
+    "states": 1,
+    "transactions": 11,
+    "walletDeltasVerified": 0
+  },
+  "errors": [],
+  "gaps": [
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/25aa7e06fa1414d43d3cfe351944af83f6400c3aa21e363e52246f8658d46fd5",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/eb1aadb115c51d2ca82ca3c21608115848275952ecc5e6217903165f90efb7ad",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/682cce7aa067d45b2e4c8a626fdb406f770798e7fa9fa1d21623934b8ac0c0ed",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/04e4996a2e48f9ca27461a728a9bb0f16f8abc0246ce72e30d0cc28725a88424",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/c5bec4da43deb602809bc9caa2c9a564c0281e6e188b0c95dd580e9b340b7212",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/859803719aedd7843a21e13178c79055435826678e4a6b5a94faf158dc7c15de",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/248b367ea922ade0ffd92e258570399b88181a7b8b9d0b02d7fe1659d16bc565",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/088d49ca6554b69776c792b137ae69cc403d8b379e0a29a82e9650bca334ee44",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/8a66ee766f77d8980d3807f76ddfc550102277b39695c998c69d26540fc1a856",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/7a25a48bfe1a5fa9a2ec01e8074b01b285c9868172c5d96923b78d9f0c61cb6e",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    },
+    {
+      "code": "WALLET_DELTA_UNVERIFIED",
+      "path": "ops_refinement_transactions/cbb785d355d8783505f518b213e1f1faf886274bc86a603e0adf9ae0aa6273d4",
+      "detail": "收據只保存結算後餘額，不能單憑目前餘額證明原子扣款；需同次提交前後資源證據"
+    }
+  ],
+  "notes": [
+    "離線報告依輸入來源與attestation；不是正式Firestore時間點快照或獨立簽章證明。",
+    "僅核對已列入scope；不代表全服覆蓋。",
+    "walletJournal需來自同一已提交交易的可信任前後證據；自行填寫不能成為正式驗收。"
+  ]
+}

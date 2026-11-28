@@ -1,0 +1,46 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 10,
+  handlerMs: 10
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 5,
+  handlerMs: 5
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 4
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 3,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 5
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+page.waitForFunction: Timeout 15000ms exceeded.
+    at exports.run (/workspace/kids-checkin/tests/helpers/verified-input-browser.cjs:20:759)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:164:46 {
+  log: [],
+  name: 'TimeoutError'
+}

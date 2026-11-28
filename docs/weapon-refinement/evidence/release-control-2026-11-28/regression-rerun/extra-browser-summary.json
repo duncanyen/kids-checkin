@@ -1,0 +1,23 @@
+[
+  {
+    "id": "countdown",
+    "exitCode": 0,
+    "durationMs": 64064,
+    "flag": "COUNTDOWN_TESTS",
+    "log": "countdown.log"
+  },
+  {
+    "id": "combat-feedback",
+    "exitCode": 0,
+    "durationMs": 53368,
+    "flag": "COMBAT_FEEDBACK_TESTS",
+    "log": "combat-feedback.log"
+  },
+  {
+    "id": "critical-feedback",
+    "exitCode": 0,
+    "durationMs": 51052,
+    "flag": "CRITICAL_FEEDBACK_TESTS",
+    "log": "critical-feedback.log"
+  }
+]

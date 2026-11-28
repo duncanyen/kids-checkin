@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: real simultaneous reset requests return one refund and one reset epoch
+ok 1 - real simultaneous reset requests return one refund and one reset epoch
+  ---
+  duration_ms: 5172.658318
+  type: 'test'
+  ...
+# Subtest: real refinement versus reset contention settles one approved quote
+ok 2 - real refinement versus reset contention settles one approved quote
+  ---
+  duration_ms: 3534.981075
+  type: 'test'
+  ...
+# [2026-11-28T00:14:22.980Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x48a0152f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:14:23.007Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x48a01530 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:14:23.025Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x48a01531 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:14:23.042Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x48a01532 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:14:23.059Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x48a01533 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:14:23.083Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x48a01534 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# Subtest: candidate Rules deny reset config/quotes/receipts and direct material/refund writes for valid member
+ok 3 - candidate Rules deny reset config/quotes/receipts and direct material/refund writes for valid member
+  ---
+  duration_ms: 853.049542
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9968.647438

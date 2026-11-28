@@ -1,0 +1,19 @@
+{
+  "game-admin/functions/farm-combat.cjs": "5def7d6df16e1cc228326061ac8d4a5a543292d3a8a660e6afe4b461f0a5fb37",
+  "js/farm/combat-damage.js": "b21bdf699cf7c999123edb764430c48ffae750a17f41bfee534631176bea6a8c",
+  "js/farm/backend-client.js": "1c4fc237b693ea1a67bcfa2b1190bc5f11bcb12092c4c93715e6b312837b081a",
+  "js/farm/dragon.js": "af91dc721e9ee7ad9f89279e944afff2c5ea563d90f49a708aba15e950fa003d",
+  "js/farm/archery.js": "079ff0b3ed2e4597ebcde1a7de7cbdaa0f96382bbb76d5afc307fd6b9f9ceaff",
+  "game-admin/tests/approach-guard.cases.cjs": "610cc0b175b0f7ee5899c6eb5bdefed36a8bef80ddbde961d4fa00bd2e27ced3",
+  "game-admin/tests/approach-guard.test.cjs": "7a723ad8fb6a7d1b5c117a516677913ac8adc58b7ff1c75b55266e761ded86ac",
+  "game-admin/tests/approach-guard.emulator.cjs": "07eb25b2bb8ce3cb0abea82195c0add567ed893841fbe1345d3f0c358e76e1a0",
+  "game-admin/tests/compatibility-security.cases.cjs": "c1e7c6ee6387f8ebde5788c84b58532090b8d3dfd76a342086375975343c9606",
+  "tests/farm-attack-window.test.mjs": "0f6d100c40c77cf5c76619c25de1a671e0d62fd534d87ab4a55320c7c8374a59",
+  "tests/farm-private-backend-browser.cjs": "fa1e98a0b6b9382b8d1e5d45b444f4bd1c9d4948046c65b6b2fe84f88611dc56",
+  "tests/helpers/refinement-combat-browser.cjs": "5bc56fa6856f498755450594788dd76ed3448363df5110a658a94f8abbb33d49",
+  "tests/helpers/combat-feedback-browser.cjs": "1cab25fc559cc0b2fb4f4cf065a390d8ab7f5de9899ddf64cee13574e45ff25d",
+  "scripts/run-refinement-firestore-tests.cjs": "34566ab20a4b15ae5bc6a69f9424ce6b54bbaf774e573b609b40384ef5e8f346",
+  "scripts/lib/firestore-emulator-proof.cjs": "90f49e80ea8c81489800153ba46652de200740d090b6c9d4be45868c1cbd1bdd",
+  "docs/weapon-refinement/approach-guard-report.md": "0ed9f83c93428c015ce224e428c00f1691f73973c00e76b00f72825f1d0e9619",
+  "docs/weapon-refinement/batched-combat-and-update-design.md": "f00b836f45465c7e357bac5e1a306d1433b548230d7bab65b5acb805e0d65e88"
+}

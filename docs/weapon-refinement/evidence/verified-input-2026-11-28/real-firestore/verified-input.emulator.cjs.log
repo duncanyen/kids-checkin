@@ -1,0 +1,252 @@
+TAP version 13
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 12,
+#   transactionMs: 55,
+#   handlerMs: 66
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 9,
+#   transactionMs: 60,
+#   handlerMs: 69
+# }
+# Subtest: default off cannot negotiate, explicit scoped fixture admits; sticky private minimum prevents protocol downgrade
+ok 1 - default off cannot negotiate, explicit scoped fixture admits; sticky private minimum prevents protocol downgrade
+  ---
+  duration_ms: 797.799869
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 6,
+#   transactionMs: 54,
+#   handlerMs: 60
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 6,
+#   transactionMs: 45,
+#   handlerMs: 51
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 13,
+#   transactionMs: 42,
+#   handlerMs: 54
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 4,
+#   transactionMs: 37,
+#   handlerMs: 41
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 6,
+#   transactionMs: 36,
+#   handlerMs: 42
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 6,
+#   transactionMs: 43,
+#   handlerMs: 49
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 7,
+#   transactionMs: 42,
+#   handlerMs: 50
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 7,
+#   transactionMs: 38,
+#   handlerMs: 46
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 38,
+#   handlerMs: 43
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 41,
+#   handlerMs: 47
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 46,
+#   handlerMs: 51
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 38,
+#   handlerMs: 43
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 50,
+#   handlerMs: 55
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 4,
+#   transactionMs: 40,
+#   handlerMs: 44
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 45,
+#   handlerMs: 50
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 38,
+#   handlerMs: 43
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 41,
+#   handlerMs: 46
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 40,
+#   handlerMs: 45
+# }
+# Subtest: all nine monsters and +0/+1 use true server models; valid taps/arrows award original damage, misses never damage
+ok 2 - all nine monsters and +0/+1 use true server models; valid taps/arrows award original damage, misses never damage
+  ---
+  duration_ms: 5304.17219
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 4,
+#   transactionMs: 41,
+#   handlerMs: 45
+# }
+# Subtest: aggregate fake hits, client velocity/hit/HP fields, wrong seq, early/stale input and excessive rate never mutate state
+ok 3 - aggregate fake hits, client velocity/hit/HP fields, wrong seq, early/stale input and excessive rate never mutate state
+  ---
+  duration_ms: 595.06539
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 47,
+#   handlerMs: 52
+# }
+# Subtest: cross-device duplicate batches/replay and settlement are atomic, late response uses original ID, active battle conflicts persist
+ok 4 - cross-device duplicate batches/replay and settlement are atomic, late response uses original ID, active battle conflicts persist
+  ---
+  duration_ms: 5736.283416
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 4,
+#   transactionMs: 41,
+#   handlerMs: 46
+# }
+# Subtest: server advances stored arrow physics on settlement, rejects forged origin and no hit event can grant rewards
+ok 5 - server advances stored arrow physics on settlement, rejects forged origin and no hit event can grant rewards
+  ---
+  duration_ms: 219.515248
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 4,
+#   transactionMs: 30,
+#   handlerMs: 34
+# }
+# Subtest: page abandonment closes admitted physics without rewards; stale page and state injection cannot revive it
+ok 6 - page abandonment closes admitted physics without rewards; stale page and state injection cannot revive it
+  ---
+  duration_ms: 198.76293
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 4,
+#   transactionMs: 34,
+#   handlerMs: 38
+# }
+# Subtest: old client handshake keeps economic recovery and normal buys; cannot begin combat after sticky upgrade
+ok 7 - old client handshake keeps economic recovery and normal buys; cannot begin combat after sticky upgrade
+  ---
+  duration_ms: 241.18824
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13240.471055

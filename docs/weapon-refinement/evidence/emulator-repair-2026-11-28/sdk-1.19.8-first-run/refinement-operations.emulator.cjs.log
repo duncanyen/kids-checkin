@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: real concurrent source projection is exact once and source receipt remains intact
+ok 1 - real concurrent source projection is exact once and source receipt remains intact
+  ---
+  duration_ms: 3824.107912
+  type: 'test'
+  ...
+# Subtest: real admin draft publish, stale pointer and immutable versions, permission revocation
+ok 2 - real admin draft publish, stale pointer and immutable versions, permission revocation
+  ---
+  duration_ms: 209.103392
+  type: 'test'
+  ...
+# [2026-11-27T23:54:13.107Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe263 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.120Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe264 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.129Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe265 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.145Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe266 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.159Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe267 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.168Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe268 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.225Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe26a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.235Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe26b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.247Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe26c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.259Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe26d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.274Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe26e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:13.285Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x79ffe26f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# Subtest: candidate Rules deny direct private management reads and writes even to client admin token
+ok 3 - candidate Rules deny direct private management reads and writes even to client admin token
+  ---
+  duration_ms: 477.441495
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4651.735002

@@ -1,0 +1,14 @@
+[
+  {
+    "mode": "CRITICAL_ZERO_TESTS",
+    "exitCode": 0
+  },
+  {
+    "mode": "NAVIGATION_LOAD_TESTS",
+    "exitCode": 0
+  },
+  {
+    "mode": "REFINEMENT_UI_TESTS",
+    "exitCode": 0
+  }
+]

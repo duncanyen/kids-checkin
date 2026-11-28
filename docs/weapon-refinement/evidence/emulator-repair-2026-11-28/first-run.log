@@ -1,0 +1,11 @@
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-nexus-private-farm", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+⚠  firestore: Env variable override detected. Using firestore emulator at /workspace/.kids-checkin-tools/google-cloud-emulators/firestore-1.23.0/platform/cloud-firestore-emulator/cloud-firestore-emulator.jar
+⚠  firestore: Env variable override detected. Using firestore emulator at /workspace/.kids-checkin-tools/google-cloud-emulators/firestore-1.23.0/platform/cloud-firestore-emulator/cloud-firestore-emulator.jar
+i  firestore: Firestore Emulator logging to firestore-debug.log
+⚠  firestore: Fatal error occurred: 
+   Firestore Emulator has exited with code: 1, 
+   stopping all running emulators
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub

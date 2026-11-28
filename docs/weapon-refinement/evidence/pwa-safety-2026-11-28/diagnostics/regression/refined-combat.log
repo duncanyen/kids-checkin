@@ -1,0 +1,37 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 17,
+  handlerMs: 17
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(payload.attackRuns.some(r=>r.type==='switch'))
+
+    at exports.run (/workspace/kids-checkin/tests/helpers/refinement-combat-browser.cjs:25:366)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:165:49 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

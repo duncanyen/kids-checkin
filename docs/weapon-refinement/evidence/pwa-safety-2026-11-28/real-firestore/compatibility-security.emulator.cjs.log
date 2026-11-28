@@ -1,0 +1,102 @@
+TAP version 13
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 9,
+#   transactionMs: 102,
+#   handlerMs: 112
+# }
+# Subtest: old V4 +0 protocol remains exact after individualization; forged V4 damage is ignored
+ok 1 - old V4 +0 protocol remains exact after individualization; forged V4 damage is ignored
+  ---
+  duration_ms: 1068.345471
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 7,
+#   transactionMs: 108,
+#   handlerMs: 115
+# }
+# Subtest: old protocol cannot downgrade earned V5, old stacked sale/equip cannot choose arbitrary new instance
+ok 2 - old protocol cannot downgrade earned V5, old stacked sale/equip cannot choose arbitrary new instance
+  ---
+  duration_ms: 1086.443458
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 6,
+#   transactionMs: 108,
+#   handlerMs: 115
+# }
+# Subtest: forged stats/order/version/weapon/speed rejected with no health or asset mutation; snapshot survives operator update
+ok 3 - forged stats/order/version/weapon/speed rejected with no health or asset mutation; snapshot survives operator update
+  ---
+  duration_ms: 1848.902216
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 37,
+#   transactionMs: 89,
+#   handlerMs: 125
+# }
+# Subtest: battle locks equip/refine/reset/sale; cross-device same-order attacks and repeated settlements only count once
+ok 4 - battle locks equip/refine/reset/sale; cross-device same-order attacks and repeated settlements only count once
+  ---
+  duration_ms: 8382.146128
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 22,
+#   transactionMs: 87,
+#   handlerMs: 109
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 7,
+#   transactionMs: 81,
+#   handlerMs: 88
+# }
+# Subtest: new page invalidates stale attack/settlement and old receipt; expired attack cannot forge victory
+ok 5 - new page invalidates stale attack/settlement and old receipt; expired attack cannot forge victory
+  ---
+  duration_ms: 1249.091703
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 6,
+#   transactionMs: 92,
+#   handlerMs: 97
+# }
+# Subtest: arrival guard blocks original early exploit; post-arrival untrusted-hit risk remains explicit
+ok 6 - arrival guard blocks original early exploit; post-arrival untrusted-hit risk remains explicit
+  ---
+  duration_ms: 1127.438257
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15155.273741

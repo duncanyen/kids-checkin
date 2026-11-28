@@ -1,0 +1,15 @@
+stage boot
+stage lost purchase
+stage handoff
+stage explicit retry
+stage update
+locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('heading', { name: '交易結果確認中' }) to be visible[22m
+
+    at /workspace/kids-checkin/tests/weapon-refinement/pwa-safety-browser.cjs:23:839 {
+  log: [
+    "  - waiting for getByRole('heading', { name: '交易結果確認中' }) to be visible"
+  ],
+  name: 'TimeoutError'
+}

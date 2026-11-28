@@ -1,0 +1,10 @@
+{
+  "environment": "local headless Chromium + real Phaser + MemoryDB/isolated SDK; no actual Firebase network or physical iPhone",
+  "sampleCount": 1,
+  "firstWarehouseToFourCardsMs": 2485,
+  "renderedCards": 4,
+  "serverPageLimit": 20,
+  "listRpcCount": 1,
+  "capabilitiesRpcCount": 1,
+  "perCardDetailRpcCount": 0
+}

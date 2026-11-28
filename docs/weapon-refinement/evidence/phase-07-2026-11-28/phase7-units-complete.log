@@ -1,0 +1,3750 @@
+TAP version 13
+# Subtest: announcement and system-notification codes are optional, validated, editable and included only in eligible feeds
+ok 1 - announcement and system-notification codes are optional, validated, editable and included only in eligible feeds
+  ---
+  duration_ms: 42.85199
+  type: 'test'
+  ...
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# Subtest: optional admin App Check preserves server authorization and enables announcement writes; read-only announcements authenticate players and optional redemption preserves authenticated transactional awards
+ok 2 - optional admin App Check preserves server authorization and enables announcement writes; read-only announcements authenticate players and optional redemption preserves authenticated transactional awards
+  ---
+  duration_ms: 379.183389
+  type: 'test'
+  ...
+# Subtest: new page discards unfinished/zero-health/expired battles without rewards, losses, eggs or task events
+ok 3 - new page discards unfinished/zero-health/expired battles without rewards, losses, eggs or task events
+  ---
+  duration_ms: 102.467767
+  type: 'test'
+  ...
+# Subtest: close request is idempotent; stale close/attack cannot cancel a new page; same-page completed wins remain valid
+ok 4 - close request is idempotent; stale close/attack cannot cancel a new page; same-page completed wins remain valid
+  ---
+  duration_ms: 29.03277
+  type: 'test'
+  ...
+# Subtest: milestone cancellation restores only the consumed threshold; real kill/garden progress is retained
+ok 5 - milestone cancellation restores only the consumed threshold; real kill/garden progress is retained
+  ---
+  duration_ms: 0.384328
+  type: 'test'
+  ...
+# Subtest: already committed economic receipts replay across pages without duplicating inventory
+ok 6 - already committed economic receipts replay across pages without duplicating inventory
+  ---
+  duration_ms: 15.16939
+  type: 'test'
+  ...
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+# Subtest: GitHub Pages preflight reaches each callable and anonymous POST stays denied with CORS headers
+ok 7 - GitHub Pages preflight reaches each callable and anonymous POST stays denied with CORS headers
+  ---
+  duration_ms: 418.042907
+  type: 'test'
+  ...
+# Subtest: three default tiers map all eight canonical monster IDs; drop thresholds and inclusive integer coins
+ok 8 - three default tiers map all eight canonical monster IDs; drop thresholds and inclusive integer coins
+  ---
+  duration_ms: 9.032784
+  type: 'test'
+  ...
+# Subtest: settings reject invalid rates, amounts, empty payouts and unsupported products; all existing bird breeds can be delivered
+ok 9 - settings reject invalid rates, amounts, empty payouts and unsupported products; all existing bird breeds can be delivered
+  ---
+  duration_ms: 33.228504
+  type: 'test'
+  ...
+# Subtest: admin saves each monster independently, preserves earlier settings, audits before/after and rejects players/stale revisions
+ok 10 - admin saves each monster independently, preserves earlier settings, audits before/after and rejects players/stale revisions
+  ---
+  duration_ms: 21.650375
+  type: 'test'
+  ...
+# Subtest: battle grants original loot plus one unopened chest atomically, without coins; all retries return the original box
+ok 11 - battle grants original loot plus one unopened chest atomically, without coins; all retries return the original box
+  ---
+  duration_ms: 39.259041
+  type: 'test'
+  ...
+# Subtest: 0% and missed rolls retain original loot; every monster gets the configured locked tier
+ok 12 - 0% and missed rolls retain original loot; every monster gets the configured locked tier
+  ---
+  duration_ms: 107.234349
+  type: 'test'
+  ...
+# Subtest: old box uses its locked snapshot after configuration changes, opens once across devices, and replay does not restore an old balance
+ok 13 - old box uses its locked snapshot after configuration changes, opens once across devices, and replay does not restore an old balance
+  ---
+  duration_ms: 6.489743
+  type: 'test'
+  ...
+# Subtest: items-only and coin-plus-multiple-item boxes deliver all contents with existing inventory fields
+ok 14 - items-only and coin-plus-multiple-item boxes deliver all contents with existing inventory fields
+  ---
+  duration_ms: 10.949721
+  type: 'test'
+  ...
+# Subtest: failed item delivery rolls back coins, chest consumption and receipt; same request can retry after making room
+ok 15 - failed item delivery rolls back coins, chest consumption and receipt; same request can retry after making room
+  ---
+  duration_ms: 5.848456
+  type: 'test'
+  ...
+# Subtest: chicken rewards reuse shop breed/capacity delivery without charging coins and remain retryable on a full coop
+ok 16 - chicken rewards reuse shop breed/capacity delivery without charging coins and remain retryable on a full coop
+  ---
+  duration_ms: 8.181693
+  type: 'test'
+  ...
+# Subtest: storage failure is atomic for both battle drop and opening; another player cannot open or list the box
+ok 17 - storage failure is atomic for both battle drop and opening; another player cannot open or list the box
+  ---
+  duration_ms: 6.962278
+  type: 'test'
+  ...
+# Subtest: a pending battle cannot open an unopened box, while an already completed box remains readable
+ok 18 - a pending battle cannot open an unopened box, while an already completed box remains readable
+  ---
+  duration_ms: 5.661226
+  type: 'test'
+  ...
+# Subtest: batch opening preserves each snapshot, aggregates rewards and retries overlapping device batches without paying twice
+ok 19 - batch opening preserves each snapshot, aggregates rewards and retries overlapping device batches without paying twice
+  ---
+  duration_ms: 11.745996
+  type: 'test'
+  ...
+# Subtest: a batch is all-or-nothing on capacity, invalid or foreign boxes and storage failure; same receipt can retry
+ok 20 - a batch is all-or-nothing on capacity, invalid or foreign boxes and storage failure; same receipt can retry
+  ---
+  duration_ms: 48.753238
+  type: 'test'
+  ...
+# Subtest: batch validates unique 1–20 IDs, independent rolls and pending battle; 20-box limit is supported
+ok 21 - batch validates unique 1–20 IDs, independent rolls and pending battle; 20-box limit is supported
+  ---
+  duration_ms: 149.734342
+  type: 'test'
+  ...
+# Subtest: balance defaults, permission, validation, revision, replay and audit protect configurable combat
+ok 22 - balance defaults, permission, validation, revision, replay and audit protect configurable combat
+  ---
+  duration_ms: 95.168567
+  type: 'test'
+  ...
+# Subtest: critical 0/100 boundaries, 5 percent distribution, integer 1.5x and deterministic batches
+ok 23 - critical 0/100 boundaries, 5 percent distribution, integer 1.5x and deterministic batches
+  ---
+  duration_ms: 436.879322
+  type: 'test'
+  ...
+# Subtest: saved settings snapshot only new fights, cannot forge crits, no balance reads on hit/retry, rewards once
+ok 24 - saved settings snapshot only new fights, cannot forge crits, no balance reads on hit/retry, rewards once
+  ---
+  duration_ms: 40.970668
+  type: 'test'
+  ...
+# Subtest: chain crit is an additional conditional roll, never multiplies the damage multiplier or crosses battles/modes
+ok 25 - chain crit is an additional conditional roll, never multiplies the damage multiplier or crosses battles/modes
+  ---
+  duration_ms: 291.465892
+  type: 'test'
+  ...
+# Subtest: every new monster uses requested HP and original total/arrival durations
+ok 26 - every new monster uses requested HP and original total/arrival durations
+  ---
+  duration_ms: 151.601728
+  type: 'test'
+  ...
+# Subtest: all eight weapon sequences include +/-10 endpoints and match batching/replays without client RNG
+ok 27 - all eight weapon sequences include +/-10 endpoints and match batching/replays without client RNG
+  ---
+  duration_ms: 142.55246
+  type: 'test'
+  ...
+# Subtest: server ignores forged damage/seed, validates hit sequence, caps rate and replays original batch once
+ok 28 - server ignores forged damage/seed, validates hit sequence, caps rate and replays original batch once
+  ---
+  duration_ms: 51.886096
+  type: 'test'
+  ...
+# Subtest: melee and bow sequences stay separate; changed equipment cannot apply the wrong weapon damage
+ok 29 - melee and bow sequences stay separate; changed equipment cannot apply the wrong weapon damage
+  ---
+  duration_ms: 4.969702
+  type: 'test'
+  ...
+# Subtest: variable-damage final hit grants one original loot/event/ranking result, even after repeated settlement
+ok 30 - variable-damage final hit grants one original loot/event/ranking result, even after repeated settlement
+  ---
+  duration_ms: 124.970047
+  type: 'test'
+  ...
+# Subtest: old pages receive a reload instruction before spawning a new incompatible fight
+ok 31 - old pages receive a reload instruction before spawning a new incompatible fight
+  ---
+  duration_ms: 17.54644
+  type: 'test'
+  ...
+# Subtest: seven-day rewards, server Taiwan midnight, cycle rollover and independent mission state
+ok 32 - seven-day rewards, server Taiwan midnight, cycle rollover and independent mission state
+  ---
+  duration_ms: 101.141861
+  type: 'test'
+  ...
+# Subtest: same-group concurrent devices grant once; the same account in another group has an independent grant
+ok 33 - same-group concurrent devices grant once; the same account in another group has an independent grant
+  ---
+  duration_ms: 36.095287
+  type: 'test'
+  ...
+# Subtest: missed default resets, configurable continue retains streak and snapshot reward is stable
+ok 34 - missed default resets, configurable continue retains streak and snapshot reward is stable
+  ---
+  duration_ms: 24.250494
+  type: 'test'
+  ...
+# Subtest: failed award is atomic, same request retries, disabled and impossible missions cannot claim
+ok 35 - failed award is atomic, same request retries, disabled and impossible missions cannot claim
+  ---
+  duration_ms: 5.230802
+  type: 'test'
+  ...
+# Subtest: stale midnight claim, forged time/identity/coins, invalid actions, anonymous, removed and blocked accounts
+ok 36 - stale midnight claim, forged time/identity/coins, invalid actions, anonymous, removed and blocked accounts
+  ---
+  duration_ms: 8.343293
+  type: 'test'
+  ...
+# Subtest: future server-only event integration counts operations once, caps progress, rejects invalid sources and completes independent mission cycles
+ok 37 - future server-only event integration counts operations once, caps progress, rejects invalid sources and completes independent mission cycles
+  ---
+  duration_ms: 72.400479
+  type: 'test'
+  ...
+# Subtest: future trusted events from an earlier Taiwan date cannot retroactively grant progress
+ok 38 - future trusted events from an earlier Taiwan date cannot retroactively grant progress
+  ---
+  duration_ms: 0.94033
+  type: 'test'
+  ...
+# Subtest: admin-only config, per-player state and paginated grant lookup use real records
+ok 39 - admin-only config, per-player state and paginated grant lookup use real records
+  ---
+  duration_ms: 4.175023
+  type: 'test'
+  ...
+# Subtest: disabling all tasks cannot accidentally turn the mission into a free reward
+ok 40 - disabling all tasks cannot accidentally turn the mission into a free reward
+  ---
+  duration_ms: 2.795586
+  type: 'test'
+  ...
+# Subtest: same profile in two groups has independent checkins, all three task counters, mission claims and coin balances
+ok 41 - same profile in two groups has independent checkins, all three task counters, mission claims and coin balances
+  ---
+  duration_ms: 262.122136
+  type: 'test'
+  ...
+# Subtest: seven-day cycles and missed-day resets remain independent when switching groups
+ok 42 - seven-day cycles and missed-day resets remain independent when switching groups
+  ---
+  duration_ms: 106.549796
+  type: 'test'
+  ...
+# Subtest: legacy money already credited to A stays claimed only in A, keeps cycle and original receipt, B may claim independently
+ok 43 - legacy money already credited to A stays claimed only in A, keeps cycle and original receipt, B may claim independently
+  ---
+  duration_ms: 36.12338
+  type: 'test'
+  ...
+# Subtest: legacy unclaimed mixed progress is reconstructed from group-tagged receipts, never copied from aggregate totals
+ok 44 - legacy unclaimed mixed progress is reconstructed from group-tagged receipts, never copied from aggregate totals
+  ---
+  duration_ms: 83.378406
+  type: 'test'
+  ...
+# Subtest: previous-day legacy grant resumes only its credited group; continue policy can find an older proven group grant
+ok 45 - previous-day legacy grant resumes only its credited group; continue policy can find an older proven group grant
+  ---
+  duration_ms: 26.381204
+  type: 'test'
+  ...
+# Subtest: legacy completed mission stays claimed in its credited farm; another group can earn its own mission reward
+ok 46 - legacy completed mission stays claimed in its credited farm; another group can earn its own mission reward
+  ---
+  duration_ms: 52.421725
+  type: 'test'
+  ...
+# Subtest: dashboard counts actual records with inclusive start and exclusive end times
+ok 47 - dashboard counts actual records with inclusive start and exclusive end times
+  ---
+  duration_ms: 35.121544
+  type: 'test'
+  ...
+# Subtest: dashboard time queries use the range ordering declared by the deployment indexes
+ok 48 - dashboard time queries use the range ordering declared by the deployment indexes
+  ---
+  duration_ms: 6.807049
+  type: 'test'
+  ...
+# Subtest: missing ops_announcements dashboard index has a useful error and safe diagnostics
+ok 49 - missing ops_announcements dashboard index has a useful error and safe diagnostics
+  ---
+  duration_ms: 4.466611
+  type: 'test'
+  ...
+# Subtest: missing ops_gifts dashboard index has a useful error and safe diagnostics
+ok 50 - missing ops_gifts dashboard index has a useful error and safe diagnostics
+  ---
+  duration_ms: 1.121311
+  type: 'test'
+  ...
+# Subtest: other database failures are propagated, never reported as zero or as missing indexes
+ok 51 - other database failures are propagated, never reported as zero or as missing indexes
+  ---
+  duration_ms: 1.370329
+  type: 'test'
+  ...
+# Subtest: preflight diagnostics distinguish network, missing deployment, rejected ingress and failed startup
+ok 52 - preflight diagnostics distinguish network, missing deployment, rejected ingress and failed startup
+  ---
+  duration_ms: 4.134242
+  type: 'test'
+  ...
+# Subtest: a successful HTTP response alone does not prove usable CORS
+ok 53 - a successful HTTP response alone does not prove usable CORS
+  ---
+  duration_ms: 0.286438
+  type: 'test'
+  ...
+# Subtest: proxy CONNECT response is not mistaken for the callable response
+ok 54 - proxy CONNECT response is not mistaken for the callable response
+  ---
+  duration_ms: 1.170087
+  type: 'test'
+  ...
+# Subtest: encounter defaults preserve exclusive boss rates, sequential tiger/wolf and level gates
+ok 55 - encounter defaults preserve exclusive boss rates, sequential tiger/wolf and level gates
+  ---
+  duration_ms: 3804.244486
+  type: 'test'
+  ...
+# Subtest: encounter validators reject invalid probabilities, level/counter gates and unsafe pooled totals
+ok 56 - encounter validators reject invalid probabilities, level/counter gates and unsafe pooled totals
+  ---
+  duration_ms: 2.109361
+  type: 'test'
+  ...
+# Subtest: per-monster configuration is privileged, versioned, audited, idempotent and keeps other saved monsters
+ok 57 - per-monster configuration is privileged, versioned, audited, idempotent and keeps other saved monsters
+  ---
+  duration_ms: 28.675063
+  type: 'test'
+  ...
+# Subtest: milestone conditions use configured interval, tracked kill types, player level and per-context switches
+ok 58 - milestone conditions use configured interval, tracked kill types, player level and per-context switches
+  ---
+  duration_ms: 0.41524
+  type: 'test'
+  ...
+# Subtest: fresh entry uses server settings even without legacy thresholds; snapshots/receipts/permits never re-roll
+ok 59 - fresh entry uses server settings even without legacy thresholds; snapshots/receipts/permits never re-roll
+  ---
+  duration_ms: 35.852763
+  type: 'test'
+  ...
+# Subtest: visit scope/min-level/0/100 and legacy claim endpoint are server-validated without new client conditions
+ok 60 - visit scope/min-level/0/100 and legacy claim endpoint are server-validated without new client conditions
+  ---
+  duration_ms: 16.318058
+  type: 'test'
+  ...
+# Subtest: settings read only for a fresh entry, not active battles, harvest verification or replayed permits
+ok 61 - settings read only for a fresh entry, not active battles, harvest verification or replayed permits
+  ---
+  duration_ms: 12.747803
+  type: 'test'
+  ...
+# Subtest: 進場清場後連續收蛋只驗證，不因抽怪亂數或上一次收蛋而生成怪物
+ok 62 - 進場清場後連續收蛋只驗證，不因抽怪亂數或上一次收蛋而生成怪物
+  ---
+  duration_ms: 76.517383
+  type: 'test'
+  ...
+# Subtest: 拜訪進場清場後偷蛋不重新抽怪，失效的其他目標許可只能拒絕不能生怪
+ok 63 - 拜訪進場清場後偷蛋不重新抽怪，失效的其他目標許可只能拒絕不能生怪
+  ---
+  duration_ms: 6.378848
+  type: 'test'
+  ...
+# Subtest: 沒有進場許可時不能用操作驗證抽怪；進場有怪時清潔及抓蟲由後端拒絕
+ok 64 - 沒有進場許可時不能用操作驗證抽怪；進場有怪時清潔及抓蟲由後端拒絕
+  ---
+  duration_ms: 9.287043
+  type: 'test'
+  ...
+# Subtest: 沒有待收蛋仍可在進場出現怪物，verifyOnly 必須是布林值
+ok 65 - 沒有待收蛋仍可在進場出現怪物，verifyOnly 必須是布林值
+  ---
+  duration_ms: 4.340137
+  type: 'test'
+  ...
+# Subtest: three real harvests and three effective cleanings update progress atomically and idempotently
+ok 66 - three real harvests and three effective cleanings update progress atomically and idempotently
+  ---
+  duration_ms: 88.136884
+  type: 'test'
+  ...
+# Subtest: forged win, unknown battle, excessive attacks, equipped weapon and deadline are server validated
+ok 67 - forged win, unknown battle, excessive attacks, equipped weapon and deadline are server validated
+  ---
+  duration_ms: 31.818727
+  type: 'test'
+  ...
+# Subtest: server-computed victory generates one mission operation even with late settlement and concurrent retries
+ok 68 - server-computed victory generates one mission operation even with late settlement and concurrent retries
+  ---
+  duration_ms: 38.528589
+  type: 'test'
+  ...
+# Subtest: private village changes cannot trap an unresolved battle or mutate the closed village
+ok 69 - private village changes cannot trap an unresolved battle or mutate the closed village
+  ---
+  duration_ms: 2.34445
+  type: 'test'
+  ...
+# Subtest: welcome mail awards once across different request IDs; deletion never resets the claim receipt
+ok 70 - welcome mail awards once across different request IDs; deletion never resets the claim receipt
+  ---
+  duration_ms: 14.735738
+  type: 'test'
+  ...
+# Subtest: entry welcome preparation is allowed during a battle without granting rewards or bypassing economic locks
+ok 71 - entry welcome preparation is allowed during a battle without granting rewards or bypassing economic locks
+  ---
+  duration_ms: 6.849711
+  type: 'test'
+  ...
+# Subtest: direct collection and stealing cannot bypass the server encounter check
+ok 72 - direct collection and stealing cannot bypass the server encounter check
+  ---
+  duration_ms: 5.383544
+  type: 'test'
+  ...
+# Subtest: rechecking a cleared visit reuses its permit without rerolling; a new visit still rolls normally
+ok 73 - rechecking a cleared visit reuses its permit without rerolling; a new visit still rolls normally
+  ---
+  duration_ms: 3.088015
+  type: 'test'
+  ...
+# Subtest: combined visit confirmation and theft commits once with the existing scoring, inventory and cooldown rules
+ok 74 - combined visit confirmation and theft commits once with the existing scoring, inventory and cooldown rules
+  ---
+  duration_ms: 4.614494
+  type: 'test'
+  ...
+# Subtest: combined theft never bypasses an active or expired monster battle
+ok 75 - combined theft never bypasses an active or expired monster battle
+  ---
+  duration_ms: 3.269218
+  type: 'test'
+  ...
+# Subtest: combined theft keeps guard-dog randomness independent from the preceding monster rolls
+ok 76 - combined theft keeps guard-dog randomness independent from the preceding monster rolls
+  ---
+  duration_ms: 2.654259
+  type: 'test'
+  ...
+# Subtest: combined theft preserves private access, warehouse capacity and atomic retry protection
+ok 77 - combined theft preserves private access, warehouse capacity and atomic retry protection
+  ---
+  duration_ms: 6.640754
+  type: 'test'
+  ...
+# Subtest: visit recheck cannot reuse another target permit and expired battles keep their original losses
+ok 78 - visit recheck cannot reuse another target permit and expired battles keep their original losses
+  ---
+  duration_ms: 5.031779
+  type: 'test'
+  ...
+# Subtest: new contest starts at zero despite archived scores; successful receipt replay scores only once
+ok 79 - new contest starts at zero despite archived scores; successful receipt replay scores only once
+  ---
+  duration_ms: 2.709142
+  type: 'test'
+  ...
+# Subtest: the November 23 contest window increments the existing leaderboard score atomically and replay adds nothing
+ok 80 - the November 23 contest window increments the existing leaderboard score atomically and replay adds nothing
+  ---
+  duration_ms: 3.920868
+  type: 'test'
+  ...
+# Subtest: successful theft after the November 30 deadline still updates inventory and lifetime report, not the closed leaderboard
+ok 81 - successful theft after the November 30 deadline still updates inventory and lifetime report, not the closed leaderboard
+  ---
+  duration_ms: 2.984761
+  type: 'test'
+  ...
+# Subtest: same account in another public village is a distinct farm; theft and replay update only the correct farms
+ok 82 - same account in another public village is a distinct farm; theft and replay update only the correct farms
+  ---
+  duration_ms: 5.240017
+  type: 'test'
+  ...
+# Subtest: same-group self theft stays forbidden and cross-group self theft keeps membership and public-village checks
+ok 83 - same-group self theft stays forbidden and cross-group self theft keeps membership and public-village checks
+  ---
+  duration_ms: 28.031117
+  type: 'test'
+  ...
+# Subtest: all monster settlements keep canonical rewards, penalties and one verified victory
+ok 84 - all monster settlements keep canonical rewards, penalties and one verified victory
+  ---
+  duration_ms: 104.253043
+  type: 'test'
+  ...
+# Subtest: prototype names and invalid stock cannot corrupt the wallet
+ok 85 - prototype names and invalid stock cannot corrupt the wallet
+  ---
+  duration_ms: 3.527984
+  type: 'test'
+  ...
+# Subtest: all monster deadlines preserve original coin and egg loss rules and never count a defeat
+ok 86 - all monster deadlines preserve original coin and egg loss rules and never count a defeat
+  ---
+  duration_ms: 34.923166
+  type: 'test'
+  ...
+# Subtest: same account in another public group can be cleaned once without changing other-player mission eligibility
+ok 87 - same account in another public group can be cleaned once without changing other-player mission eligibility
+  ---
+  duration_ms: 7.295513
+  type: 'test'
+  ...
+# Subtest: cross-group self cleaning retains public access, membership, dirt and battle guards
+ok 88 - cross-group self cleaning retains public access, membership, dirt and battle guards
+  ---
+  duration_ms: 6.687648
+  type: 'test'
+  ...
+# Subtest: full warehouse wolf victory returns no inventory reward, while defeat still counts once
+ok 89 - full warehouse wolf victory returns no inventory reward, while defeat still counts once
+  ---
+  duration_ms: 4.457477
+  type: 'test'
+  ...
+# Subtest: monster leaderboard is atomic with rewards, public-only and start-inclusive/end-exclusive; replay cannot score twice
+ok 90 - monster leaderboard is atomic with rewards, public-only and start-inclusive/end-exclusive; replay cannot score twice
+  ---
+  duration_ms: 46.889511
+  type: 'test'
+  ...
+# Subtest: score query stops early at 1000 players and returns exactly the original top ten
+ok 91 - score query stops early at 1000 players and returns exactly the original top ten
+  ---
+  duration_ms: 182.328583
+  type: 'test'
+  ...
+# Subtest: complete cutoff ties keep original locale ordering and separate group farms
+ok 92 - complete cutoff ties keep original locale ordering and separate group farms
+  ---
+  duration_ms: 45.379197
+  type: 'test'
+  ...
+# Subtest: private groups, removed members/profiles, zero scores and root profiles do not enter ranking
+ok 93 - private groups, removed members/profiles, zero scores and root profiles do not enter ranking
+  ---
+  duration_ms: 1.374111
+  type: 'test'
+  ...
+# Subtest: privacy changes during profile reads continue scanning to fill the next valid ten
+ok 94 - privacy changes during profile reads continue scanning to fill the next valid ten
+  ---
+  duration_ms: 29.080803
+  type: 'test'
+  ...
+# Subtest: monster Top10 queries only the new monster field and retains farm-scoped ranking/privacy rules
+ok 95 - monster Top10 queries only the new monster field and retains farm-scoped ranking/privacy rules
+  ---
+  duration_ms: 7.306174
+  type: 'test'
+  ...
+# Subtest: server prices ignore forged wallet and price; identical request is exactly once
+ok 96 - server prices ignore forged wallet and price; identical request is exactly once
+  ---
+  duration_ms: 174.571603
+  type: 'test'
+  ...
+# Subtest: empty harvest cannot generate mission progress; valid harvest creates one immutable operation
+ok 97 - empty harvest cannot generate mission progress; valid harvest creates one immutable operation
+  ---
+  duration_ms: 20.736375
+  type: 'test'
+  ...
+# Subtest: help cleaning rejects self/private group/zero dirt and atomically modifies both farms
+ok 98 - help cleaning rejects self/private group/zero dirt and atomically modifies both farms
+  ---
+  duration_ms: 19.525587
+  type: 'test'
+  ...
+# Subtest: insufficient coins, invalid quantity and disabled cutover leave resources unchanged
+ok 99 - insufficient coins, invalid quantity and disabled cutover leave resources unchanged
+  ---
+  duration_ms: 59.5566
+  type: 'test'
+  ...
+# Subtest: poultry transaction reuses canonical Japanese breed economy and safe capacity checks
+ok 100 - poultry transaction reuses canonical Japanese breed economy and safe capacity checks
+  ---
+  duration_ms: 8.840511
+  type: 'test'
+  ...
+# Subtest: warehouse operations validate ownership, unequip discarded last weapon and charge medicine once
+ok 101 - warehouse operations validate ownership, unequip discarded last weapon and charge medicine once
+  ---
+  duration_ms: 31.993216
+  type: 'test'
+  ...
+# Subtest: all existing sellable drops use canonical server prices
+ok 102 - all existing sellable drops use canonical server prices
+  ---
+  duration_ms: 70.776449
+  type: 'test'
+  ...
+# Subtest: independent regional handlers share committed harvest receipt without duplicate inventory or event
+ok 103 - independent regional handlers share committed harvest receipt without duplicate inventory or event
+  ---
+  duration_ms: 16.958299
+  type: 'test'
+  ...
+# Subtest: existing scene owners keep ownership and free selection after price changes
+ok 104 - existing scene owners keep ownership and free selection after price changes
+  ---
+  duration_ms: 83.190116
+  type: 'test'
+  ...
+# Subtest: scene purchase and switching cannot bypass an unfinished monster battle
+ok 105 - scene purchase and switching cannot bypass an unfinished monster battle
+  ---
+  duration_ms: 18.525464
+  type: 'test'
+  ...
+# Subtest: transaction retry revalidates but charges admission only once and commits inventory once
+ok 106 - transaction retry revalidates but charges admission only once and commits inventory once
+  ---
+  duration_ms: 1.337914
+  type: 'test'
+  ...
+# Subtest: fuji scene uses server price, charges once, keeps ownership and switches freely
+ok 107 - fuji scene uses server price, charges once, keeps ownership and switches freely
+  ---
+  duration_ms: 30.076659
+  type: 'test'
+  ...
+# Subtest: arctic scene uses server price, charges once, keeps ownership and switches freely
+ok 108 - arctic scene uses server price, charges once, keeps ownership and switches freely
+  ---
+  duration_ms: 14.25497
+  type: 'test'
+  ...
+# Subtest: hallstatt scene uses server price, charges once, keeps ownership and switches freely
+ok 109 - hallstatt scene uses server price, charges once, keeps ownership and switches freely
+  ---
+  duration_ms: 45.426005
+  type: 'test'
+  ...
+# Subtest: fuji quoted purchase refuses stale prices and replays one authoritative debit
+ok 110 - fuji quoted purchase refuses stale prices and replays one authoritative debit
+  ---
+  duration_ms: 15.17696
+  type: 'test'
+  ...
+# Subtest: arctic quoted purchase refuses stale prices and replays one authoritative debit
+ok 111 - arctic quoted purchase refuses stale prices and replays one authoritative debit
+  ---
+  duration_ms: 20.840003
+  type: 'test'
+  ...
+# Subtest: hallstatt quoted purchase refuses stale prices and replays one authoritative debit
+ok 112 - hallstatt quoted purchase refuses stale prices and replays one authoritative debit
+  ---
+  duration_ms: 39.78168
+  type: 'test'
+  ...
+# Subtest: out-of-order or repeated announcement events cannot restore a cached old revision
+ok 113 - out-of-order or repeated announcement events cannot restore a cached old revision
+  ---
+  duration_ms: 3.079597
+  type: 'test'
+  ...
+# Subtest: server rejects closed collie even with forged price/availability and leaves coins/leases/receipts untouched
+ok 114 - server rejects closed collie even with forged price/availability and leaves coins/leases/receipts untouched
+  ---
+  duration_ms: 23.79417
+  type: 'test'
+  ...
+# Subtest: trusted rental uses canonical price and identity, is atomic/idempotent, and preserves existing activation/release rules
+ok 115 - trusted rental uses canonical price and identity, is atomic/idempotent, and preserves existing activation/release rules
+  ---
+  duration_ms: 33.751306
+  type: 'test'
+  ...
+# Subtest: concurrent rental, insufficient coins, failed writes and unauthenticated/group-mismatched requests cannot create free leases
+ok 116 - concurrent rental, insufficient coins, failed writes and unauthenticated/group-mismatched requests cannot create free leases
+  ---
+  duration_ms: 8.985758
+  type: 'test'
+  ...
+# Subtest: closing rentals preserves previously rented collies and server-side expiry never refunds or extends them
+ok 117 - closing rentals preserves previously rented collies and server-side expiry never refunds or extends them
+  ---
+  duration_ms: 1.999971
+  type: 'test'
+  ...
+# Subtest: trusted corgi catalogue and rental enforce 100/500 pricing, idempotency and activation
+ok 118 - trusted corgi catalogue and rental enforce 100/500 pricing, idempotency and activation
+  ---
+  duration_ms: 6.204263
+  type: 'test'
+  ...
+# Subtest: server pauses exact balance, ignores forged time, resumes after storage and never reapplies old receipts
+ok 119 - server pauses exact balance, ignores forged time, resumes after storage and never reapplies old receipts
+  ---
+  duration_ms: 24.048135
+  type: 'test'
+  ...
+# Subtest: pause failure is atomic and concurrent resumes still allow only one active dog
+ok 120 - pause failure is atomic and concurrent resumes still allow only one active dog
+  ---
+  duration_ms: 21.773327
+  type: 'test'
+  ...
+# isolated harvest document reads: {"twoCalls":26,"combinedCall":17}
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 3,
+#   handlerMs: 3
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 4,
+#   handlerMs: 4
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'stealEgg',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: true,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 1,
+#   handlerMs: 2
+# }
+# isolated theft document reads: {"twoCalls":24,"combinedCall":12}
+# Subtest: combined clear harvest atomically awards eggs and one daily operation; replay never awards twice
+ok 121 - combined clear harvest atomically awards eggs and one daily operation; replay never awards twice
+  ---
+  duration_ms: 67.654657
+  type: 'test'
+  ...
+# Subtest: warm daily status reads only today snapshots and shares transaction reads without caching authorization across requests
+ok 122 - warm daily status reads only today snapshots and shares transaction reads without caching authorization across requests
+  ---
+  duration_ms: 36.828985
+  type: 'test'
+  ...
+# Subtest: committed game results carry verified progress; capped tasks keep receipts without rewriting the daily document
+ok 123 - committed game results carry verified progress; capped tasks keep receipts without rewriting the daily document
+  ---
+  duration_ms: 13.710736
+  type: 'test'
+  ...
+# Subtest: two-device distinct requests cannot collect the same eggs twice
+ok 124 - two-device distinct requests cannot collect the same eggs twice
+  ---
+  duration_ms: 5.966686
+  type: 'test'
+  ...
+# Subtest: monster challenge blocks collection, preserves its session and does not increment harvest progress
+ok 125 - monster challenge blocks collection, preserves its session and does not increment harvest progress
+  ---
+  duration_ms: 14.048561
+  type: 'test'
+  ...
+# Subtest: empty, full and partial warehouse handling retain existing collection rules
+ok 126 - empty, full and partial warehouse handling retain existing collection rules
+  ---
+  duration_ms: 8.871613
+  type: 'test'
+  ...
+# Subtest: pending victory is resolved separately so victory and harvest each keep their verified event
+ok 127 - pending victory is resolved separately so victory and harvest each keep their verified event
+  ---
+  duration_ms: 7.363296
+  type: 'test'
+  ...
+# Subtest: expired battle keeps its original loss and cannot collect eggs cleared by the monster
+ok 128 - expired battle keeps its original loss and cannot collect eggs cleared by the monster
+  ---
+  duration_ms: 3.437639
+  type: 'test'
+  ...
+# Subtest: failed commit can retry the same receipt without losing eggs or duplicating progress
+ok 129 - failed commit can retry the same receipt without losing eggs or duplicating progress
+  ---
+  duration_ms: 4.433293
+  type: 'test'
+  ...
+# Subtest: credential revocation after Auth check is still detected inside the transaction
+ok 130 - credential revocation after Auth check is still detected inside the transaction
+  ---
+  duration_ms: 1.761573
+  type: 'test'
+  ...
+# Subtest: combined harvest uses fewer reads and matches the old two-call farm result
+ok 131 - combined harvest uses fewer reads and matches the old two-call farm result
+  ---
+  duration_ms: 25.111251
+  type: 'test'
+  ...
+# Subtest: combined visit and theft saves authorization reads while keeping the same final farms
+ok 132 - combined visit and theft saves authorization reads while keeping the same final farms
+  ---
+  duration_ms: 15.0579
+  type: 'test'
+  ...
+# Subtest: revoked sessions and blocked players cannot consume an active player rate limit
+ok 133 - revoked sessions and blocked players cannot consume an active player rate limit
+  ---
+  duration_ms: 5.903122
+  type: 'test'
+  ...
+# Subtest: hornet defaults are 1/30 from level2 for home/visits, pool retains existing weights and old full allocations remain valid
+ok 134 - hornet defaults are 1/30 from level2 for home/visits, pool retains existing weights and old full allocations remain valid
+  ---
+  duration_ms: 179.258766
+  type: 'test'
+  ...
+# Subtest: real farm transactions apply bow-specific hornet damage, grant one honey, price sale at300 and keep victory idempotent
+ok 135 - real farm transactions apply bow-specific hornet damage, grant one honey, price sale at300 and keep victory idempotent
+  ---
+  duration_ms: 44.021972
+  type: 'test'
+  ...
+# Subtest: hornet timeout deducts only actor coins capped at100, never eggs/honey or target coins; no victory event on defeat
+ok 136 - hornet timeout deducts only actor coins capped at100, never eggs/honey or target coins; no victory event on defeat
+  ---
+  duration_ms: 13.516324
+  type: 'test'
+  ...
+# Subtest: nickname/global role cannot authorize management; member removal rotates invitations and preserves the account
+ok 137 - nickname/global role cannot authorize management; member removal rotates invitations and preserves the account
+  ---
+  duration_ms: 51.890279
+  type: 'test'
+  ...
+# Subtest: group manager cannot reset an independent account; managed child update stays private and invalidates old sessions
+ok 138 - group manager cannot reset an independent account; managed child update stays private and invalidates old sessions
+  ---
+  duration_ms: 450.746461
+  type: 'test'
+  ...
+# Subtest: concurrent admin creation is idempotent, does not grant a global admin role or expose PIN in audit/response
+ok 139 - concurrent admin creation is idempotent, does not grant a global admin role or expose PIN in audit/response
+  ---
+  duration_ms: 159.749278
+  type: 'test'
+  ...
+# Subtest: owner transfer is scoped and atomic without taking over the independent account credentials
+ok 140 - owner transfer is scoped and atomic without taking over the independent account credentials
+  ---
+  duration_ms: 17.809366
+  type: 'test'
+  ...
+# Subtest: group invitation stays private and concurrent join does not lose existing membership
+ok 141 - group invitation stays private and concurrent join does not lose existing membership
+  ---
+  duration_ms: 11.726461
+  type: 'test'
+  ...
+# Subtest: dry-run reports collisions and contains no credentials or per-user secret hash
+ok 142 - dry-run reports collisions and contains no credentials or per-user secret hash
+  ---
+  duration_ms: 22.014399
+  type: 'test'
+  ...
+# Subtest: stage requires verified rules and reviewed unchanged snapshot, leaves public profile intact
+ok 143 - stage requires verified rules and reviewed unchanged snapshot, leaves public profile intact
+  ---
+  duration_ms: 2101.697755
+  type: 'test'
+  ...
+# Subtest: scrypt uses random salt, verifies legacy PIN and rejects malformed records
+ok 144 - scrypt uses random salt, verifies legacy PIN and rejects malformed records
+  ---
+  duration_ms: 724.646773
+  type: 'test'
+  ...
+# Subtest: login returns whitelisted profile and namespaced identity claims
+ok 145 - login returns whitelisted profile and namespaced identity claims
+  ---
+  duration_ms: 288.008077
+  type: 'test'
+  ...
+# Subtest: private mode fails closed when migration ready is removed
+ok 146 - private mode fails closed when migration ready is removed
+  ---
+  duration_ms: 158.040356
+  type: 'test'
+  ...
+# Subtest: forged UID, revoked session and removed membership cannot obtain group token
+ok 147 - forged UID, revoked session and removed membership cannot obtain group token
+  ---
+  duration_ms: 128.763816
+  type: 'test'
+  ...
+# Subtest: password change revokes old claims and keeps logical account identity
+ok 148 - password change revokes old claims and keeps logical account identity
+  ---
+  duration_ms: 451.207787
+  type: 'test'
+  ...
+# Subtest: parallel registration reserves a single account without public credentials
+ok 149 - parallel registration reserves a single account without public credentials
+  ---
+  duration_ms: 255.660723
+  type: 'test'
+  ...
+# Subtest: rate limit refuses excess attempts and recovers after window
+ok 150 - rate limit refuses excess attempts and recovers after window
+  ---
+  duration_ms: 102.706208
+  type: 'test'
+  ...
+# Subtest: profile rename and password change commit together and never alter account or role
+ok 151 - profile rename and password change commit together and never alter account or role
+  ---
+  duration_ms: 294.598165
+  type: 'test'
+  ...
+# Subtest: delete account invalidates credentials and does not allow reauthentication
+ok 152 - delete account invalidates credentials and does not allow reauthentication
+  ---
+  duration_ms: 231.753842
+  type: 'test'
+  ...
+# Subtest: private profile endpoints reject HTML display names without changing the profile
+ok 153 - private profile endpoints reject HTML display names without changing the profile
+  ---
+  duration_ms: 235.735868
+  type: 'test'
+  ...
+# Subtest: unreleased katana cannot be bought, while existing owners can equip and sell once at 30000
+ok 154 - unreleased katana cannot be bought, while existing owners can equip and sell once at 30000
+  ---
+  duration_ms: 55.977909
+  type: 'test'
+  ...
+# Subtest: sale lock ignores forged client flags, funds and storage while other weapons remain purchasable
+ok 155 - sale lock ignores forged client flags, funds and storage while other weapons remain purchasable
+  ---
+  duration_ms: 4.94676
+  type: 'test'
+  ...
+# Subtest: legacy in-flight katana battles retain their old health and damage until settlement
+ok 156 - legacy in-flight katana battles retain their old health and damage until settlement
+  ---
+  duration_ms: 61.226518
+  type: 'test'
+  ...
+# Subtest: existing operations reward and chest catalogs recognize the new weapon using its actual item ID
+ok 157 - existing operations reward and chest catalogs recognize the new weapon using its actual item ID
+  ---
+  duration_ms: 49.198277
+  type: 'test'
+  ...
+# Subtest: all new management reads/writes require current server admin claims
+ok 158 - all new management reads/writes require current server admin claims
+  ---
+  duration_ms: 35.797194
+  type: 'test'
+  ...
+# Subtest: player lists paginate/search by stable accountId and never return credentials or entire farm records
+ok 159 - player lists paginate/search by stable accountId and never return credentials or entire farm records
+  ---
+  duration_ms: 10.447656
+  type: 'test'
+  ...
+# Subtest: management uses users document UID for identity and accountId for membership/farm ownership
+ok 160 - management uses users document UID for identity and accountId for membership/farm ownership
+  ---
+  duration_ms: 4.05343
+  type: 'test'
+  ...
+# Subtest: player controls live separately from users and block every player operations API without blocking admin access
+ok 161 - player controls live separately from users and block every player operations API without blocking admin access
+  ---
+  duration_ms: 12.84125
+  type: 'test'
+  ...
+# Subtest: coin adjustment is atomic, idempotent, audited, bounded, and refuses a stale balance
+ok 162 - coin adjustment is atomic, idempotent, audited, bounded, and refuses a stale balance
+  ---
+  duration_ms: 10.783213
+  type: 'test'
+  ...
+# Subtest: failed coin writes roll back both assets and success audit/receipt, and the same request retries safely
+ok 163 - failed coin writes roll back both assets and success audit/receipt, and the same request retries safely
+  ---
+  duration_ms: 10.323526
+  type: 'test'
+  ...
+# Subtest: editable guard settings affect real player quotes/charges while static model configuration remains unchanged
+ok 164 - editable guard settings affect real player quotes/charges while static model configuration remains unchanged
+  ---
+  duration_ms: 48.828476
+  type: 'test'
+  ...
+# Subtest: settings enforce announcements, redemption and new rentals server-side while paid guards can still activate
+ok 165 - settings enforce announcements, redemption and new rentals server-side while paid guards can still activate
+  ---
+  duration_ms: 14.435044
+  type: 'test'
+  ...
+# Subtest: events atomically publish targeted announcements, protect linked edits and stop delivery when cancelled
+ok 166 - events atomically publish targeted announcements, protect linked edits and stop delivery when cancelled
+  ---
+  duration_ms: 7.322881
+  type: 'test'
+  ...
+# Subtest: event scheduling, expiry, idempotency and stale revisions cannot create duplicate or inconsistent announcements
+ok 167 - event scheduling, expiry, idempotency and stale revisions cannot create duplicate or inconsistent announcements
+  ---
+  duration_ms: 22.481853
+  type: 'test'
+  ...
+# Subtest: system notifications target all or selected accounts without appearing as announcements
+ok 168 - system notifications target all or selected accounts without appearing as announcements
+  ---
+  duration_ms: 52.788035
+  type: 'test'
+  ...
+# Subtest: notification draft, schedule, edit, expiry, archive, replay and audits use the trusted backend
+ok 169 - notification draft, schedule, edit, expiry, archive, replay and audits use the trusted backend
+  ---
+  duration_ms: 12.26164
+  type: 'test'
+  ...
+# Subtest: release evidence tolerates only rollout flag changes and detects changed transaction code
+ok 170 - release evidence tolerates only rollout flag changes and detects changed transaction code
+  ---
+  duration_ms: 21.740436
+  type: 'test'
+  ...
+# Subtest: cutover requires owner-reviewed group roles, exact rules and passing matching test evidence
+ok 171 - cutover requires owner-reviewed group roles, exact rules and passing matching test evidence
+  ---
+  duration_ms: 2217.554946
+  type: 'test'
+  ...
+# Subtest: private identity migration preserves existing daily grant identity and prevents claiming again
+ok 172 - private identity migration preserves existing daily grant identity and prevents claiming again
+  ---
+  duration_ms: 107.697647
+  type: 'test'
+  ...
+# Subtest: all 8 weapons × 9 monsters × +0/+3/+6/+9 use exact original restrictions, HP and +0 V4 snapshot
+ok 173 - all 8 weapons × 9 monsters × +0/+3/+6/+9 use exact original restrictions, HP and +0 V4 snapshot
+  ---
+  duration_ms: 2102.502565
+  type: 'test'
+  ...
+# Subtest: immutable private stats snapshot is applied once; operator base changes never secretly rebase acquired bonus
+ok 174 - immutable private stats snapshot is applied once; operator base changes never secretly rebase acquired bonus
+  ---
+  duration_ms: 37.248137
+  type: 'test'
+  ...
+# Subtest: critical OR probability is 36% after a critical at 20/20, both procs multiply only once by 1.5
+ok 175 - critical OR probability is 36% after a critical at 20/20, both procs multiply only once by 1.5
+  ---
+  duration_ms: 269.430984
+  type: 'test'
+  ...
+# Subtest: new global chain cursor resets between different slots and never grants a proc on invalid hits
+ok 176 - new global chain cursor resets between different slots and never grants a proc on invalid hits
+  ---
+  duration_ms: 0.553666
+  type: 'test'
+  ...
+# Subtest: ordered mixed batches preserve exact damage and streak when split into multiple requests
+ok 177 - ordered mixed batches preserve exact damage and streak when split into multiple requests
+  ---
+  duration_ms: 70.002381
+  type: 'test'
+  ...
+# Subtest: server recomputes damage, validates order, rate, capability and rejects forged stats/HP/weapon payloads
+ok 178 - server recomputes damage, validates order, rate, capability and rejects forged stats/HP/weapon payloads
+  ---
+  duration_ms: 57.831994
+  type: 'test'
+  ...
+# Subtest: same accepted attack replays once, zero health resets chain, settlement original loot/chest grants once
+ok 179 - same accepted attack replays once, zero health resets chain, settlement original loot/chest grants once
+  ---
+  duration_ms: 67.342418
+  type: 'test'
+  ...
+# Subtest: new refine/reset admission closes with combat flag but acquired +9 ability and an active snapshot remain intact
+ok 180 - new refine/reset admission closes with combat flag but acquired +9 ability and an active snapshot remain intact
+  ---
+  duration_ms: 37.146206
+  type: 'test'
+  ...
+# Subtest: equipping, refining, selling and reset cannot race an active battle into changed capabilities
+ok 181 - equipping, refining, selling and reset cannot race an active battle into changed capabilities
+  ---
+  duration_ms: 53.164218
+  type: 'test'
+  ...
+# Subtest: legacy client cannot silently downgrade a refined battle; a new target/page starts with no chain
+ok 182 - legacy client cannot silently downgrade a refined battle; a new target/page starts with no chain
+  ---
+  duration_ms: 29.274614
+  type: 'test'
+  ...
+# Subtest: owned-instance resolution fails closed on corrupt ownership/state and never grants bonuses to incompatible targets
+ok 183 - owned-instance resolution fails closed on corrupt ownership/state and never grants bonuses to incompatible targets
+  ---
+  duration_ms: 63.084107
+  type: 'test'
+  ...
+# Subtest: attack batching adds no weapon/state/config reads; capabilities are fetched only on battle entry
+ok 184 - attack batching adds no weapon/state/config reads; capabilities are fetched only on battle entry
+  ---
+  duration_ms: 44.57813
+  type: 'test'
+  ...
+# Subtest: 0%/100% crit, max-one multiplier and integer spread retain exact inclusive endpoints
+ok 185 - 0%/100% crit, max-one multiplier and integer spread retain exact inclusive endpoints
+  ---
+  duration_ms: 5.751977
+  type: 'test'
+  ...
+# Subtest: emergency admission flag refuses reset quotes as well as refinement; stat reads remain available
+ok 186 - emergency admission flag refuses reset quotes as well as refinement; stat reads remain available
+  ---
+  duration_ms: 44.147306
+  type: 'test'
+  ...
+# Subtest: explicit weapon-mode toggles reset streak even without an intervening shot; reset events never add attack counts
+ok 187 - explicit weapon-mode toggles reset streak even without an intervening shot; reset events never add attack counts
+  ---
+  duration_ms: 29.667675
+  type: 'test'
+  ...
+# Subtest: +0 failed-attempt cache never overrides live base stats in a mixed refined snapshot or new preview
+ok 188 - +0 failed-attempt cache never overrides live base stats in a mixed refined snapshot or new preview
+  ---
+  duration_ms: 13.008793
+  type: 'test'
+  ...
+# Subtest: mixed V5 snapshot preserves arbitrary live percentage precision of an unrefined offhand
+ok 189 - mixed V5 snapshot preserves arbitrary live percentage precision of an unrefined offhand
+  ---
+  duration_ms: 17.259376
+  type: 'test'
+  ...
+# Subtest: canonical nine levels match integer BP/costs/pity-off; invalid or decreasing config rejected
+ok 190 - canonical nine levels match integer BP/costs/pity-off; invalid or decreasing config rejected
+  ---
+  duration_ms: 7.367661
+  type: 'test'
+  ...
+# Subtest: bonuses derive from original base, exact positive Math.round semantics, never compound
+ok 191 - bonuses derive from original base, exact positive Math.round semantics, never compound
+  ---
+  duration_ms: 0.434416
+  type: 'test'
+  ...
+# Subtest: one level per success, RNG boundary, fail does not lower bonuses; +9 cannot continue
+ok 192 - one level per success, RNG boundary, fail does not lower bonuses; +9 cannot continue
+  ---
+  duration_ms: 1.467754
+  type: 'test'
+  ...
+# Subtest: pity progress is per-instance/per-target, zero rate disabled rejects, guaranteed attempt resets
+ok 193 - pity progress is per-instance/per-target, zero rate disabled rejects, guaranteed attempt resets
+  ---
+  duration_ms: 24.55136
+  type: 'test'
+  ...
+# Subtest: lower next-version bonus conflicts; qualification reports separate wallet shortages
+ok 194 - lower next-version bonus conflicts; qualification reports separate wallet shortages
+  ---
+  duration_ms: 0.733266
+  type: 'test'
+  ...
+# Subtest: legacy decimal percentages convert to BP with decimal rounding, not binary float drift
+ok 195 - legacy decimal percentages convert to BP with decimal rounding, not binary float drift
+  ---
+  duration_ms: 0.325548
+  type: 'test'
+  ...
+# Subtest: all eight catalog weapons use the same original-base +9 calculation without catalog mutation
+ok 196 - all eight catalog weapons use the same original-base +9 calculation without catalog mutation
+  ---
+  duration_ms: 12.401381
+  type: 'test'
+  ...
+# Subtest: all new operations require token admin + live admin + explicit read permission; revoked and disabled fail closed
+ok 197 - all new operations require token admin + live admin + explicit read permission; revoked and disabled fail closed
+  ---
+  duration_ms: 27.925882
+  type: 'test'
+  ...
+# Subtest: read/edit/publish/risk are distinct; no old direct publish bypass
+ok 198 - read/edit/publish/risk are distinct; no old direct publish bypass
+  ---
+  duration_ms: 23.444115
+  type: 'test'
+  ...
+# Subtest: drafts have zero player effect; server defaults are original Phase3 and formal flags never change
+ok 199 - drafts have zero player effect; server defaults are original Phase3 and formal flags never change
+  ---
+  duration_ms: 10.958115
+  type: 'test'
+  ...
+# Subtest: both numeric boundaries and monotonic bonuses enforced, equal levels allowed, disabled level rejected by core
+ok 200 - both numeric boundaries and monotonic bonuses enforced, equal levels allowed, disabled level rejected by core
+  ---
+  duration_ms: 85.028046
+  type: 'test'
+  ...
+# Subtest: publish atomically writes three immutable versions, pointers, full before/after audit and metadata
+ok 201 - publish atomically writes three immutable versions, pointers, full before/after audit and metadata
+  ---
+  duration_ms: 11.621871
+  type: 'test'
+  ...
+# Subtest: request replay is idempotent and mismatched content refuses, publish confirmation and validation required
+ok 202 - request replay is idempotent and mismatched content refuses, publish confirmation and validation required
+  ---
+  duration_ms: 11.603363
+  type: 'test'
+  ...
+# Subtest: draft CAS and active revision CAS reject old previews; concurrent publishers only one commits
+ok 203 - draft CAS and active revision CAS reject old previews; concurrent publishers only one commits
+  ---
+  duration_ms: 6.765928
+  type: 'test'
+  ...
+# Subtest: restoration creates a new release and preserves historical content; reason mandatory
+ok 204 - restoration creates a new release and preserves historical content; reason mandatory
+  ---
+  duration_ms: 48.838566
+  type: 'test'
+  ...
+# Subtest: historical acquired bonus conflicts block publication without scanning any player; caps respected
+ok 205 - historical acquired bonus conflicts block publication without scanning any player; caps respected
+  ---
+  duration_ms: 23.274826
+  type: 'test'
+  ...
+# Subtest: changing pity requires risk permission and explicit preservation policy; no instance touched
+ok 206 - changing pity requires risk permission and explicit preservation policy; no instance touched
+  ---
+  duration_ms: 46.343936
+  type: 'test'
+  ...
+# Subtest: bounded history check fails closed over safety ceiling rather than ignore older acquired abilities
+ok 207 - bounded history check fails closed over safety ceiling rather than ignore older acquired abilities
+  ---
+  duration_ms: 4.232231
+  type: 'test'
+  ...
+# Subtest: material settings cannot add unavailable activities or original chest drop odds, rollback is new draft
+ok 208 - material settings cannot add unavailable activities or original chest drop odds, rollback is new draft
+  ---
+  duration_ms: 29.574288
+  type: 'test'
+  ...
+# Subtest: publishing through operations invalidates existing player quote without deducting assets
+ok 209 - publishing through operations invalidates existing player quote without deducting assets
+  ---
+  duration_ms: 105.379423
+  type: 'test'
+  ...
+# Subtest: refinement-scoped read-only operator cannot bypass new permissions through legacy asset/settings writers
+ok 210 - refinement-scoped read-only operator cannot bypass new permissions through legacy asset/settings writers
+  ---
+  duration_ms: 8.733475
+  type: 'test'
+  ...
+# Subtest: refund integer math and reset config defaults/validation
+ok 211 - refund integer math and reset config defaults/validation
+  ---
+  duration_ms: 1.50867
+  type: 'test'
+  ...
+# Subtest: details return server base, bonus, final stats, restrictions, ownership and exact equipped instance
+ok 212 - details return server base, bonus, final stats, restrictions, ownership and exact equipped instance
+  ---
+  duration_ms: 87.134179
+  type: 'test'
+  ...
+# Subtest: +9 reset refunds exactly 10500 gold / 8 stones and preserves ID/equipment/history
+ok 213 - +9 reset refunds exactly 10500 gold / 8 stones and preserves ID/equipment/history
+  ---
+  duration_ms: 98.371663
+  type: 'test'
+  ...
+# Subtest: failed attempts excluded; round combined successful cost down, then next epoch may refine normally
+ok 214 - failed attempts excluded; round combined successful cost down, then next epoch may refine normally
+  ---
+  duration_ms: 19.087327
+  type: 'test'
+  ...
+# Subtest: same reset repeated on two devices and after gate closure returns original result, never refunds twice
+ok 215 - same reset repeated on two devices and after gate closure returns original result, never refunds twice
+  ---
+  duration_ms: 42.54931
+  type: 'test'
+  ...
+# Subtest: two different reset quotes permit one refund and one winner
+ok 216 - two different reset quotes permit one refund and one winner
+  ---
+  duration_ms: 21.378228
+  type: 'test'
+  ...
+# Subtest: +0, battle, disabled gate, unlisted scope and non-test runtime reject without asset writes
+ok 217 - +0, battle, disabled gate, unlisted scope and non-test runtime reject without asset writes
+  ---
+  duration_ms: 21.28334
+  type: 'test'
+  ...
+# Subtest: expired and changed config/refund cost quotes force explicit reconfirmation
+ok 218 - expired and changed config/refund cost quotes force explicit reconfirmation
+  ---
+  duration_ms: 22.132406
+  type: 'test'
+  ...
+# Subtest: quote public tampering and forged refund fields rejected; entire refund is atomic on delivery failure
+ok 219 - quote public tampering and forged refund fields rejected; entire refund is atomic on delivery failure
+  ---
+  duration_ms: 8.340863
+  type: 'test'
+  ...
+# Subtest: balance overflow keeps weapon and history untouched
+ok 220 - balance overflow keeps weapon and history untouched
+  ---
+  duration_ms: 15.579175
+  type: 'test'
+  ...
+# Subtest: reset can operate equipped weapon; concurrent refinement vs reset settles only one proposal
+ok 221 - reset can operate equipped weapon; concurrent refinement vs reset settles only one proposal
+  ---
+  duration_ms: 13.612343
+  type: 'test'
+  ...
+# Subtest: original refinement durable intent loses safely to reset in between reserve and settlement
+ok 222 - original refinement durable intent loses safely to reset in between reserve and settlement
+  ---
+  duration_ms: 23.524018
+  type: 'test'
+  ...
+# Subtest: refined sale requires explicit loss acknowledgement and exact state; price unchanged, no automatic reset/refund
+ok 223 - refined sale requires explicit loss acknowledgement and exact state; price unchanged, no automatic reset/refund
+  ---
+  duration_ms: 25.956736
+  type: 'test'
+  ...
+# Subtest: sale versus reset race cannot both consume one stale instance proposal
+ok 224 - sale versus reset race cannot both consume one stale instance proposal
+  ---
+  duration_ms: 52.942085
+  type: 'test'
+  ...
+# Subtest: IDs cannot cross actions, weapons or farms; recovery works after unknown outcome without creating a new refund
+ok 225 - IDs cannot cross actions, weapons or farms; recovery works after unknown outcome without creating a new refund
+  ---
+  duration_ms: 17.494409
+  type: 'test'
+  ...
+# Subtest: refund does not depend on current refinement cost table; immutable reset configuration and revoked trusted gate protected
+ok 226 - refund does not depend on current refinement cost table; immutable reset configuration and revoked trusted gate protected
+  ---
+  duration_ms: 11.031379
+  type: 'test'
+  ...
+# Subtest: actual callable service restricts Phase5 to test allowlist, validates private session/admin and all release flags stay off
+ok 227 - actual callable service restricts Phase5 to test allowlist, validates private session/admin and all release flags stay off
+  ---
+  duration_ms: 56.360798
+  type: 'test'
+  ...
+# Subtest: +1 is guaranteed, exact costs and one sparse individual; no sibling gains
+ok 228 - +1 is guaranteed, exact costs and one sparse individual; no sibling gains
+  ---
+  duration_ms: 80.068337
+  type: 'test'
+  ...
+# Subtest: failure consumes resources but retains level, acquired version/bonus and successful-only costs
+ok 229 - failure consumes resources but retains level, acquired version/bonus and successful-only costs
+  ---
+  duration_ms: 20.15757
+  type: 'test'
+  ...
+# Subtest: up to +9 one level at a time, original-base bonuses; +9 cannot spend again
+ok 230 - up to +9 one level at a time, original-base bonuses; +9 cannot spend again
+  ---
+  duration_ms: 64.386453
+  type: 'test'
+  ...
+# Subtest: insufficient coins or stones never debit, and rejected transaction ID cannot be repurposed
+ok 231 - insufficient coins or stones never debit, and rejected transaction ID cannot be repurposed
+  ---
+  duration_ms: 18.554964
+  type: 'test'
+  ...
+# Subtest: zero chance with no pity blocks preview/execute; first release pity stays disabled
+ok 232 - zero chance with no pity blocks preview/execute; first release pity stays disabled
+  ---
+  duration_ms: 8.065993
+  type: 'test'
+  ...
+# Subtest: same request replay/concurrent delivery makes one draw, one payment, one immutable receipt
+ok 233 - same request replay/concurrent delivery makes one draw, one payment, one immutable receipt
+  ---
+  duration_ms: 8.719962
+  type: 'test'
+  ...
+# Subtest: two device quotes for same weapon are revision-bound; only one succeeds
+ok 234 - two device quotes for same weapon are revision-bound; only one succeeds
+  ---
+  duration_ms: 19.966639
+  type: 'test'
+  ...
+# Subtest: a quote can be accepted by one transaction ID only
+ok 235 - a quote can be accepted by one transaction ID only
+  ---
+  duration_ms: 35.38069
+  type: 'test'
+  ...
+# Subtest: sale between intent and settlement wins without refine debit; sold weapon cannot be refined
+ok 236 - sale between intent and settlement wins without refine debit; sold weapon cannot be refined
+  ---
+  duration_ms: 4.901732
+  type: 'test'
+  ...
+# Subtest: refinement winning race blocks stale sale and later refined discard/sale; no implicit refund
+ok 237 - refinement winning race blocks stale sale and later refined discard/sale; no implicit refund
+  ---
+  duration_ms: 13.270067
+  type: 'test'
+  ...
+# Subtest: lost response: query original receipt and replay after disabled gate do not spend or redraw
+ok 238 - lost response: query original receipt and replay after disabled gate do not spend or redraw
+  ---
+  duration_ms: 9.285747
+  type: 'test'
+  ...
+# Subtest: crash after intent retains secret roll across new invocation, pending query and changed RNG
+ok 239 - crash after intent retains secret roll across new invocation, pending query and changed RNG
+  ---
+  duration_ms: 9.30632
+  type: 'test'
+  ...
+# Subtest: Firestore callback retry at reservation or settlement reuses outcome and debits exactly once
+ok 240 - Firestore callback retry at reservation or settlement reuses outcome and debits exactly once
+  ---
+  duration_ms: 22.889072
+  type: 'test'
+  ...
+# Subtest: failed storage commit leaves intent pending and assets intact; retry applies original draw once
+ok 241 - failed storage commit leaves intent pending and assets intact; retry applies original draw once
+  ---
+  duration_ms: 33.055481
+  type: 'test'
+  ...
+# Subtest: forged wallet/cost/rate/owner/result fields and jump-level request are rejected before payment
+ok 242 - forged wallet/cost/rate/owner/result fields and jump-level request are rejected before payment
+  ---
+  duration_ms: 9.035077
+  type: 'test'
+  ...
+# Subtest: identity, scope, cross-owner instance/quote/result ownership remain server-verified
+ok 243 - identity, scope, cross-owner instance/quote/result ownership remain server-verified
+  ---
+  duration_ms: 28.931982
+  type: 'test'
+  ...
+# Subtest: immutable version publishing, stale policy quote and tampered saved content cannot debit
+ok 244 - immutable version publishing, stale policy quote and tampered saved content cannot debit
+  ---
+  duration_ms: 15.562847
+  type: 'test'
+  ...
+# Subtest: config changes after accepted intent reject old quote; cannot swap new quote into same ID
+ok 245 - config changes after accepted intent reject old quote; cannot swap new quote into same ID
+  ---
+  duration_ms: 23.463358
+  type: 'test'
+  ...
+# Subtest: expired quote and feature gates reject without resource mutation
+ok 246 - expired quote and feature gates reject without resource mutation
+  ---
+  duration_ms: 42.077047
+  type: 'test'
+  ...
+# Subtest: lower next-version abilities are logged as config conflict; acquired stats remain frozen
+ok 247 - lower next-version abilities are logged as config conflict; acquired stats remain frozen
+  ---
+  duration_ms: 19.031315
+  type: 'test'
+  ...
+# Subtest: base snapshot survives operator base reduction; high critical cap is explicit conflict, not nerf
+ok 248 - base snapshot survives operator base reduction; high critical cap is explicit conflict, not nerf
+  ---
+  duration_ms: 11.84705
+  type: 'test'
+  ...
+# Subtest: pity per target/person is isolated, resets only after success, initial defaults never enable it
+ok 249 - pity per target/person is isolated, resets only after success, initial defaults never enable it
+  ---
+  duration_ms: 20.821628
+  type: 'test'
+  ...
+# Subtest: battle/migration conflicts reject before debit, default gates stay false, injected RNG is test-only
+ok 250 - battle/migration conflicts reject before debit, default gates stay false, injected RNG is test-only
+  ---
+  duration_ms: 30.5193
+  type: 'test'
+  ...
+# Subtest: refining free club keeps it bound and outside capacity; legacy builder still ignores private instance bonuses
+ok 251 - refining free club keeps it bound and outside capacity; legacy builder still ignores private instance bonuses
+  ---
+  duration_ms: 11.729322
+  type: 'test'
+  ...
+# Subtest: same generation across farms produces globally distinct allocations; old staged algorithms require safe restart
+ok 252 - same generation across farms produces globally distinct allocations; old staged algorithms require safe restart
+  ---
+  duration_ms: 9.032598
+  type: 'test'
+  ...
+# Subtest: saved quote content cannot change player-approved costs even while active config stays unchanged
+ok 253 - saved quote content cannot change player-approved costs even while active config stays unchanged
+  ---
+  duration_ms: 7.307393
+  type: 'test'
+  ...
+# Subtest: initial unpublished or malformed config fails closed without synthesizing production settings
+ok 254 - initial unpublished or malformed config fails closed without synthesizing production settings
+  ---
+  duration_ms: 7.46419
+  type: 'test'
+  ...
+# Subtest: +9 acquired stats remain queryable while disabled or active settings are invalid
+ok 255 - +9 acquired stats remain queryable while disabled or active settings are invalid
+  ---
+  duration_ms: 41.867601
+  type: 'test'
+  ...
+# Subtest: existing callable service verifies private identity, current admin claims and closed default gate
+ok 256 - existing callable service verifies private identity, current admin claims and closed default gate
+  ---
+  duration_ms: 60.60855
+  type: 'test'
+  ...
+# Subtest: legacy V4 builder remains unchanged; private bonuses must enter through the trusted ability resolver
+ok 257 - legacy V4 builder remains unchanged; private bonuses must enter through the trusted ability resolver
+  ---
+  duration_ms: 21.769235
+  type: 'test'
+  ...
+# Subtest: gate closing after accepted intent does not debit, query records rejection, no reroll
+ok 258 - gate closing after accepted intent does not debit, query records rejection, no reroll
+  ---
+  duration_ms: 6.112797
+  type: 'test'
+  ...
+# Subtest: unrelated normal game transaction between intent and settlement is preserved, not overwritten
+ok 259 - unrelated normal game transaction between intent and settlement is preserved, not overwritten
+  ---
+  duration_ms: 8.580275
+  type: 'test'
+  ...
+# Subtest: Taipei date and shard exact-once receipts; same player day count stable, groups isolated, net sinks correct
+ok 260 - Taipei date and shard exact-once receipts; same player day count stable, groups isolated, net sinks correct
+  ---
+  duration_ms: 10.048647
+  type: 'test'
+  ...
+# Subtest: changed source content is flagged for reconciliation, no aggregate mutation
+ok 261 - changed source content is flagged for reconciliation, no aggregate mutation
+  ---
+  duration_ms: 2.021328
+  type: 'test'
+  ...
+# Subtest: stone production distinct sources; unopened/zero rewards excluded, repeated chest event once
+ok 262 - stone production distinct sources; unopened/zero rewards excluded, repeated chest event once
+  ---
+  duration_ms: 1.651864
+  type: 'test'
+  ...
+# Subtest: transaction filters include instance, outcome, group and version; pagination bound and query-bound cursors
+ok 263 - transaction filters include instance, outcome, group and version; pagination bound and query-bound cursors
+  ---
+  duration_ms: 43.462425
+  type: 'test'
+  ...
+# Subtest: query reads at most 200 candidates and returns continuation even when page has no matching rows
+ok 264 - query reads at most 200 candidates and returns continuation even when page has no matching rows
+  ---
+  duration_ms: 137.882218
+  type: 'test'
+  ...
+# Subtest: bounded retry repair reconciles original receipts without duplicating events, independent of source commits
+ok 265 - bounded retry repair reconciles original receipts without duplicating events, independent of source commits
+  ---
+  duration_ms: 81.254245
+  type: 'test'
+  ...
+# Subtest: out-of-order state revisions ignored, sold weapon remains excluded even on old retry
+ok 266 - out-of-order state revisions ignored, sold weapon remains excluded even on old retry
+  ---
+  duration_ms: 0.840114
+  type: 'test'
+  ...
+# Subtest: bounded daily snapshot yields exact observed median P90 P95 and resumable jobs without inventing full coverage
+ok 267 - bounded daily snapshot yields exact observed median P90 P95 and resumable jobs without inventing full coverage
+  ---
+  duration_ms: 72.668635
+  type: 'test'
+  ...
+# Subtest: economy and battle observations independent and exact once; no invented historical battle time
+ok 268 - economy and battle observations independent and exact once; no invented historical battle time
+  ---
+  duration_ms: 5.703374
+  type: 'test'
+  ...
+# Subtest: dashboard reads bounded daily documents only; no players, receipts, full states on load
+ok 269 - dashboard reads bounded daily documents only; no players, receipts, full states on load
+  ---
+  duration_ms: 1.115916
+  type: 'test'
+  ...
+# Subtest: verified defeat event captures authoritative elapsed time and actual loot; attack receipts ignored
+ok 270 - verified defeat event captures authoritative elapsed time and actual loot; attack receipts ignored
+  ---
+  duration_ms: 0.605046
+  type: 'test'
+  ...
+# Subtest: farm snapshot observer skips attack-only unchanged assets, latest coin observation wins
+ok 271 - farm snapshot observer skips attack-only unchanged assets, latest coin observation wins
+  ---
+  duration_ms: 0.392835
+  type: 'test'
+  ...
+# Subtest: resumable audit compares projected transactions against shard totals and reports tampering without repairing player data
+ok 272 - resumable audit compares projected transactions against shard totals and reports tampering without repairing player data
+  ---
+  duration_ms: 124.706968
+  type: 'test'
+  ...
+# Subtest: stone defaults cover real monster IDs and preserve all base chest settings
+ok 273 - stone defaults cover real monster IDs and preserve all base chest settings
+  ---
+  duration_ms: 12.054861
+  type: 'test'
+  ...
+# Subtest: seven original checkin gold payouts unchanged; only days 3 and 7 add stones once
+ok 274 - seven original checkin gold payouts unchanged; only days 3 and 7 add stones once
+  ---
+  duration_ms: 80.39992
+  type: 'test'
+  ...
+# Subtest: all original mission conditions required, Taipei daily grant atomic across devices/groups and resets next day
+ok 275 - all original mission conditions required, Taipei daily grant atomic across devices/groups and resets next day
+  ---
+  duration_ms: 52.807586
+  type: 'test'
+  ...
+# Subtest: previously claimed checkin never backfills when source enabled later
+ok 276 - previously claimed checkin never backfills when source enabled later
+  ---
+  duration_ms: 4.441226
+  type: 'test'
+  ...
+# Subtest: daily delivery failure rolls back gold, stones and grant; same claim retries safely
+ok 277 - daily delivery failure rolls back gold, stones and grant; same claim retries safely
+  ---
+  duration_ms: 10.107853
+  type: 'test'
+  ...
+# Subtest: disabled global adds no source reads and no stones; malformed auto source does not block original gold
+ok 278 - disabled global adds no source reads and no stones; malformed auto source does not block original gold
+  ---
+  duration_ms: 43.94305
+  type: 'test'
+  ...
+# Subtest: new chest locks material version at drop; changed config cannot change opening, old boxes stay unchanged
+ok 279 - new chest locks material version at drop; changed config cannot change opening, old boxes stay unchanged
+  ---
+  duration_ms: 11.791384
+  type: 'test'
+  ...
+# Subtest: zero, exact threshold, maximum quantity and full chance use independent inclusive secure draws
+ok 280 - zero, exact threshold, maximum quantity and full chance use independent inclusive secure draws
+  ---
+  duration_ms: 67.430315
+  type: 'test'
+  ...
+# Subtest: maintenance preserves locked new chest, but old boxes and disabled hornet extras still open
+ok 281 - maintenance preserves locked new chest, but old boxes and disabled hornet extras still open
+  ---
+  duration_ms: 15.583878
+  type: 'test'
+  ...
+# Subtest: overlapping batch opens and failed original item delivery never pay material twice or partially
+ok 282 - overlapping batch opens and failed original item delivery never pay material twice or partially
+  ---
+  duration_ms: 12.654431
+  type: 'test'
+  ...
+# Subtest: material stacks separately without full inventory blocking original coin rewards; cannot be granted unguarded
+ok 283 - material stacks separately without full inventory blocking original coin rewards; cannot be granted unguarded
+  ---
+  duration_ms: 29.316433
+  type: 'test'
+  ...
+# Subtest: snapshots cannot be corrupted and foreign actors cannot open stone boxes
+ok 284 - snapshots cannot be corrupted and foreign actors cannot open stone boxes
+  ---
+  duration_ms: 11.441169
+  type: 'test'
+  ...
+# Subtest: gift authorization keeps explicit quantities and original claim rules; duplicate rows checked as sum
+ok 285 - gift authorization keeps explicit quantities and original claim rules; duplicate rows checked as sum
+  ---
+  duration_ms: 1.804612
+  type: 'test'
+  ...
+# Subtest: sampler caches retry draws; production cannot inject controllable RNG; config immutable revision and request replay
+ok 286 - sampler caches retry draws; production cannot inject controllable RNG; config immutable revision and request replay
+  ---
+  duration_ms: 5.776733
+  type: 'test'
+  ...
+# Subtest: actual service admin claims, full gift redemption, disabled retry and one atomic gold/material grant
+ok 287 - actual service admin claims, full gift redemption, disabled retry and one atomic gold/material grant
+  ---
+  duration_ms: 29.775259
+  type: 'test'
+  ...
+# Subtest: Firestore callback retry keeps material draw identical and failed original item delivery grants nothing
+ok 288 - Firestore callback retry keeps material draw identical and failed original item delivery grants nothing
+  ---
+  duration_ms: 13.81584
+  type: 'test'
+  ...
+# Subtest: reward grants and Phase 3 refinement debit share the same material balance with no second inventory counter
+ok 289 - reward grants and Phase 3 refinement debit share the same material balance with no second inventory counter
+  ---
+  duration_ms: 58.398518
+  type: 'test'
+  ...
+# Subtest: reports require current server admin claims; absent history is explicit and no secrets escape
+ok 290 - reports require current server admin claims; absent history is explicit and no secrets escape
+  ---
+  duration_ms: 27.578125
+  type: 'test'
+  ...
+# Subtest: capture is idempotent, counts egg quantities, every monster type, positive/negative coins and isolates groups
+ok 291 - capture is idempotent, counts egg quantities, every monster type, positive/negative coins and isolates groups
+  ---
+  duration_ms: 3.994235
+  type: 'test'
+  ...
+# Subtest: server commit time uses half-open bounds; late delivery adjusts first observation without creating historical totals
+ok 292 - server commit time uses half-open bounds; late delivery adjusts first observation without creating historical totals
+  ---
+  duration_ms: 3.730227
+  type: 'test'
+  ...
+# Subtest: new farms, production-only writes, old receipts and failed battles do not manufacture activity
+ok 293 - new farms, production-only writes, old receipts and failed battles do not manufacture activity
+  ---
+  duration_ms: 1.458206
+  type: 'test'
+  ...
+# Subtest: read-only report uses current hens/balance, handles no farm/missing profile and refuses unsafe ranges
+ok 294 - read-only report uses current hens/balance, handles no farm/missing profile and refuses unsafe ranges
+  ---
+  duration_ms: 6.257485
+  type: 'test'
+  ...
+# Subtest: failed capture rolls back event and coverage together, retry remains possible; data anomalies are marked
+ok 295 - failed capture rolls back event and coverage together, retry remains possible; data anomalies are marked
+  ---
+  duration_ms: 6.425766
+  type: 'test'
+  ...
+# Subtest: safety limits fail explicitly rather than silently returning only the first groups
+ok 296 - safety limits fail explicitly rather than silently returning only the first groups
+  ---
+  duration_ms: 40.198754
+  type: 'test'
+  ...
+# Subtest: admin Auth claims gate every API; MFA is optional, including reads and writes
+ok 297 - admin Auth claims gate every API; MFA is optional, including reads and writes
+  ---
+  duration_ms: 46.272853
+  type: 'test'
+  ...
+# Subtest: announcements draft, edit, scheduled effectiveness, targets, expiry and archive
+ok 298 - announcements draft, edit, scheduled effectiveness, targets, expiry and archive
+  ---
+  duration_ms: 25.189516
+  type: 'test'
+  ...
+# Subtest: atomic awards, idempotent replay, cross-group per-user limit and audit redaction
+ok 299 - atomic awards, idempotent replay, cross-group per-user limit and audit redaction
+  ---
+  duration_ms: 20.183692
+  type: 'test'
+  ...
+# Subtest: limited and single gift concurrency cannot overspend a global quota
+ok 300 - limited and single gift concurrency cannot overspend a global quota
+  ---
+  duration_ms: 6.763493
+  type: 'test'
+  ...
+# Subtest: expired, targeted, inactive and malformed rewards never mutate farm
+ok 301 - expired, targeted, inactive and malformed rewards never mutate farm
+  ---
+  duration_ms: 2.71003
+  type: 'test'
+  ...
+# Subtest: award failure and full storage leave quota unused; same request can safely retry
+ok 302 - award failure and full storage leave quota unused; same request can safely retry
+  ---
+  duration_ms: 5.284905
+  type: 'test'
+  ...
+# Subtest: gift create request replay, duplicate codes, disable, input validation and audits
+ok 303 - gift create request replay, duplicate codes, disable, input validation and audits
+  ---
+  duration_ms: 7.234458
+  type: 'test'
+  ...
+# Subtest: invalid codes are throttled before lookup and no client-supplied rewards are used
+ok 304 - invalid codes are throttled before lookup and no client-supplied rewards are used
+  ---
+  duration_ms: 2.228131
+  type: 'test'
+  ...
+# Subtest: reward catalog disables unsupported chicken rewards and uses existing item schema
+ok 305 - reward catalog disables unsupported chicken rewards and uses existing item schema
+  ---
+  duration_ms: 10.701493
+  type: 'test'
+  ...
+# Subtest: anonymous redemption is denied and forged payload identity/rewards cannot change the award
+ok 306 - anonymous redemption is denied and forged payload identity/rewards cannot change the award
+  ---
+  duration_ms: 3.548647
+  type: 'test'
+  ...
+# Subtest: combined announcement feeds skip unchanged queries, expire at schedule boundaries and revalidate membership
+ok 307 - combined announcement feeds skip unchanged queries, expire at schedule boundaries and revalidate membership
+  ---
+  duration_ms: 5.884249
+  type: 'test'
+  ...
+# Subtest: announcement publication invalidates prior feed versions and paused settings clear both lists
+ok 308 - announcement publication invalidates prior feed versions and paused settings clear both lists
+  ---
+  duration_ms: 2.219566
+  type: 'test'
+  ...
+# Subtest: coalesces concurrent document reads and binds write methods to the real transaction
+ok 309 - coalesces concurrent document reads and binds write methods to the real transaction
+  ---
+  duration_ms: 1.002766
+  type: 'test'
+  ...
+# Subtest: query reads are distinct, transaction retries get new snapshots, and cached reads never bypass write ordering
+ok 310 - query reads are distinct, transaction retries get new snapshots, and cached reads never bypass write ordering
+  ---
+  duration_ms: 0.482669
+  type: 'test'
+  ...
+# Subtest: 3 stacked weapons become 3 distinct +0 instances; two migration runs cannot create 6; equipment retained
+ok 311 - 3 stacked weapons become 3 distinct +0 instances; two migration runs cannot create 6; equipment retained
+  ---
+  duration_ms: 41.662171
+  type: 'test'
+  ...
+# Subtest: buy 2 produces distinct IDs, original receipt replays after reload; sell exactly one leaves its siblings
+ok 312 - buy 2 produces distinct IDs, original receipt replays after reload; sell exactly one leaves its siblings
+  ---
+  duration_ms: 32.630819
+  type: 'test'
+  ...
+# Subtest: exact-instance equip, unequip, bound free club, special katana ownership and unchanged unpublished status
+ok 313 - exact-instance equip, unequip, bound free club, special katana ownership and unchanged unpublished status
+  ---
+  duration_ms: 18.657123
+  type: 'test'
+  ...
+# Subtest: same account across groups and another player cannot read, sell or equip an instance
+ok 314 - same account across groups and another player cannot read, sell or equip an instance
+  ---
+  duration_ms: 2.958482
+  type: 'test'
+  ...
+# Subtest: multi-device duplicate sale/equip use expected revision; concurrent purchases both commit without loss
+ok 315 - multi-device duplicate sale/equip use expected revision; concurrent purchases both commit without loss
+  ---
+  duration_ms: 19.64176
+  type: 'test'
+  ...
+# Subtest: staging blocks weapon writers and battle entry, preserves latest coins and other assets; resume and retry original purchase
+ok 316 - staging blocks weapon writers and battle entry, preserves latest coins and other assets; resume and retry original purchase
+  ---
+  duration_ms: 7.710048
+  type: 'test'
+  ...
+# Subtest: stale dry-run cannot overwrite purchases before gate; anomalous data quarantined without modifying farm
+ok 317 - stale dry-run cannot overwrite purchases before gate; anomalous data quarantined without modifying farm
+  ---
+  duration_ms: 3.511621
+  type: 'test'
+  ...
+# Subtest: partial rollback preserves current unrelated assets; after new instance operation requires forward repair
+ok 318 - partial rollback preserves current unrelated assets; after new instance operation requires forward repair
+  ---
+  duration_ms: 7.920959
+  type: 'test'
+  ...
+# Subtest: legacy path and switch off preserve existing operations without new collections; migrated assets never fall back to stacks
+ok 319 - legacy path and switch off preserve existing operations without new collections; migrated assets never fall back to stacks
+  ---
+  duration_ms: 9.552175
+  type: 'test'
+  ...
+# Subtest: sold-out allocation pagination and cursor revision changes do not skip owned weapons
+ok 320 - sold-out allocation pagination and cursor revision changes do not skip owned weapons
+  ---
+  duration_ms: 41.783066
+  type: 'test'
+  ...
+# Subtest: storage failure is atomic; same ID after reconnect or new service gives exactly the original acquisition
+ok 321 - storage failure is atomic; same ID after reconnect or new service gives exactly the original acquisition
+  ---
+  duration_ms: 4.329297
+  type: 'test'
+  ...
+# Subtest: chest and gift allocations share transaction; staged gifts cannot consume quotas
+ok 322 - chest and gift allocations share transaction; staged gifts cannot consume quotas
+  ---
+  duration_ms: 19.854977
+  type: 'test'
+  ...
+# Subtest: max existing batch reward (20 x 7 x 1000 weapons) fits allocation write budget without truncation
+ok 323 - max existing batch reward (20 x 7 x 1000 weapons) fits allocation write budget without truncation
+  ---
+  duration_ms: 88.026586
+  type: 'test'
+  ...
+# Subtest: all +0 weapon/enemy damage and critical sequences remain byte-identical to legacy combat input
+ok 324 - all +0 weapon/enemy damage and critical sequences remain byte-identical to legacy combat input
+  ---
+  duration_ms: 186.281799
+  type: 'test'
+  ...
+# Subtest: legacy missing equipment defaults normalize to bound club without adding capacity
+ok 325 - legacy missing equipment defaults normalize to bound club without adding capacity
+  ---
+  duration_ms: 2.354642
+  type: 'test'
+  ...
+# Subtest: old v1 sell/equip payloads on v2 fail without spending or picking an arbitrary instance
+ok 326 - old v1 sell/equip payloads on v2 fail without spending or picking an arbitrary instance
+  ---
+  duration_ms: 6.05975
+  type: 'test'
+  ...
+# Subtest: staged external gift cannot create old stacks or consume a claim; same request succeeds after resume
+ok 327 - staged external gift cannot create old stacks or consume a claim; same request succeeds after resume
+  ---
+  duration_ms: 9.85911
+  type: 'test'
+  ...
+# Subtest: migration CLI rejects production/non-local destinations before loading any Admin SDK
+ok 328 - migration CLI rejects production/non-local destinations before loading any Admin SDK
+  ---
+  duration_ms: 219.724681
+  type: 'test'
+  ...
+# Subtest: stable calendar account selects the current profile despite renamed or conflicting stored labels
+ok 329 - stable calendar account selects the current profile despite renamed or conflicting stored labels
+  ---
+  duration_ms: 1.279233
+  type: 'test'
+  ...
+# Subtest: legacy document identity and unique historical names resolve only inside supplied group profiles
+ok 330 - legacy document identity and unique historical names resolve only inside supplied group profiles
+  ---
+  duration_ms: 0.263298
+  type: 'test'
+  ...
+# Subtest: homepage agenda uses latest account avatar and safely renders profile names without mutating stored events
+ok 331 - homepage agenda uses latest account avatar and safely renders profile names without mutating stored events
+  ---
+  duration_ms: 11.605256
+  type: 'test'
+  ...
+# Subtest: history reaches beyond 30 days, merges live updates and deduplicates
+ok 332 - history reaches beyond 30 days, merges live updates and deduplicates
+  ---
+  duration_ms: 5.680171
+  type: 'test'
+  ...
+# Subtest: one page at a time, errors keep cursor and allow retry
+ok 333 - one page at a time, errors keep cursor and allow retry
+  ---
+  duration_ms: 1.008534
+  type: 'test'
+  ...
+# Subtest: equal timestamps use deterministic document ID order
+ok 334 - equal timestamps use deterministic document ID order
+  ---
+  duration_ms: 0.265349
+  type: 'test'
+  ...
+# Subtest: legacy migration freezes identities and preserves read/unread across renames
+ok 335 - legacy migration freezes identities and preserves read/unread across renames
+  ---
+  duration_ms: 9.134197
+  type: 'test'
+  ...
+# Subtest: canonical removals never fall back to names; homonyms cannot inherit access or messages
+ok 336 - canonical removals never fall back to names; homonyms cannot inherit access or messages
+  ---
+  duration_ms: 0.644703
+  type: 'test'
+  ...
+# Subtest: unknown legacy names require explicit mappings and departed members can be excluded
+ok 337 - unknown legacy names require explicit mappings and departed members can be excluded
+  ---
+  duration_ms: 3.977612
+  type: 'test'
+  ...
+# Subtest: historical names and account IDs are literal keys, including dots and prototype-like names
+ok 338 - historical names and account IDs are literal keys, including dots and prototype-like names
+  ---
+  duration_ms: 0.341779
+  type: 'test'
+  ...
+# Subtest: assignment IDs take priority, all members are visible, and legacy names require an unambiguous group identity
+ok 339 - assignment IDs take priority, all members are visible, and legacy names require an unambiguous group identity
+  ---
+  duration_ms: 0.886364
+  type: 'test'
+  ...
+# Subtest: homepage widget shows only the current assignee or everyone, including after reassignment/account changes
+ok 340 - homepage widget shows only the current assignee or everyone, including after reassignment/account changes
+  ---
+  duration_ms: 28.962639
+  type: 'test'
+  ...
+# Subtest: assignee profiles resolve account IDs before old names and handle legacy ambiguity safely
+ok 341 - assignee profiles resolve account IDs before old names and handle legacy ambiguity safely
+  ---
+  duration_ms: 0.868193
+  type: 'test'
+  ...
+# Subtest: homepage avatars and labels follow users.accountId through renames and late profile refreshes
+ok 342 - homepage avatars and labels follow users.accountId through renames and late profile refreshes
+  ---
+  duration_ms: 1.387308
+  type: 'test'
+  ...
+# Subtest: homepage group ledger has an exact ascending month-range index, without requiring amount on legacy documents
+ok 343 - homepage group ledger has an exact ascending month-range index, without requiring amount on legacy documents
+  ---
+  duration_ms: 1.472009
+  type: 'test'
+  ...
+# Subtest: existing descending cursor pagination indexes remain available for group and personal ledgers
+ok 344 - existing descending cursor pagination indexes remain available for group and personal ledgers
+  ---
+  duration_ms: 0.492629
+  type: 'test'
+  ...
+# Subtest: activity codes support explicit fields and labelled legacy content with normalized duplicates removed
+ok 345 - activity codes support explicit fields and labelled legacy content with normalized duplicates removed
+  ---
+  duration_ms: 3.263826
+  type: 'test'
+  ...
+# Subtest: invalid and oversized codes never become redeem actions and extraction is bounded
+ok 346 - invalid and oversized codes never become redeem actions and extraction is bounded
+  ---
+  duration_ms: 0.370143
+  type: 'test'
+  ...
+# Subtest: announcement index matches the audience/status/priority query without confusing unrelated indexes
+ok 347 - announcement index matches the audience/status/priority query without confusing unrelated indexes
+  ---
+  duration_ms: 0.944409
+  type: 'test'
+  ...
+# Subtest: existing required index is not recreated and no index is removed
+ok 348 - existing required index is not recreated and no index is removed
+  ---
+  duration_ms: 0.360336
+  type: 'test'
+  ...
+# Subtest: missing feed index creates only the required index in the default database
+ok 349 - missing feed index creates only the required index in the default database
+  ---
+  duration_ms: 0.199119
+  type: 'test'
+  ...
+# Subtest: notification rollout creates its management and audience indexes without deleting others
+ok 350 - notification rollout creates its management and audience indexes without deleting others
+  ---
+  duration_ms: 0.494832
+  type: 'test'
+  ...
+# Subtest: management rollout creates only the three event search/status indexes
+ok 351 - management rollout creates only the three event search/status indexes
+  ---
+  duration_ms: 23.120852
+  type: 'test'
+  ...
+# Subtest: dashboard option includes both effective announcement and gift count indexes
+ok 352 - dashboard option includes both effective announcement and gift count indexes
+  ---
+  duration_ms: 1.874168
+  type: 'test'
+  ...
+# Subtest: building dashboard indexes are reported and not recreated
+ok 353 - building dashboard indexes are reported and not recreated
+  ---
+  duration_ms: 0.267372
+  type: 'test'
+  ...
+# Subtest: flying enemies require owned equipped bows with exact hit counts
+ok 354 - flying enemies require owned equipped bows with exact hit counts
+  ---
+  duration_ms: 1.064949
+  type: 'test'
+  ...
+# Subtest: paladin bow takes exactly three eagle hits or five dragon hits and occupies inventory space
+ok 355 - paladin bow takes exactly three eagle hits or five dragon hits and occupies inventory space
+  ---
+  duration_ms: 0.221187
+  type: 'test'
+  ...
+# Subtest: exclusive exact odds on home and visited coops, eagle never below lv3
+ok 356 - exclusive exact odds on home and visited coops, eagle never below lv3
+  ---
+  duration_ms: 3.356667
+  type: 'test'
+  ...
+# Subtest: drag direction, capped power, gravity, swept collision and misses
+ok 357 - drag direction, capped power, gravity, swept collision and misses
+  ---
+  duration_ms: 1.025675
+  type: 'test'
+  ...
+# Subtest: archery controls leave a full-power pull area above the viewport bottom
+ok 358 - archery controls leave a full-power pull area above the viewport bottom
+  ---
+  duration_ms: 0.473383
+  type: 'test'
+  ...
+# Subtest: public-art manifest matches file contents and excludes code, saves and APIs
+ok 359 - public-art manifest matches file contents and excludes code, saves and APIs
+  ---
+  duration_ms: 161.638196
+  type: 'test'
+  ...
+# Subtest: private-mode and quota failures preserve successful public image responses
+ok 360 - private-mode and quota failures preserve successful public image responses
+  ---
+  duration_ms: 46.701229
+  type: 'test'
+  ...
+# Subtest: HTML, JavaScript, private/API requests and POST never enter the art cache
+ok 361 - HTML, JavaScript, private/API requests and POST never enter the art cache
+  ---
+  duration_ms: 26.082856
+  type: 'test'
+  ...
+# Subtest: catalogues retain item, hen and dog art without full combat atlases
+ok 362 - catalogues retain item, hen and dog art without full combat atlases
+  ---
+  duration_ms: 11.155612
+  type: 'test'
+  ...
+# Subtest: optional worker startup wait is bounded and failures fall back to normal loading
+ok 363 - optional worker startup wait is bounded and failures fall back to normal loading
+  ---
+  duration_ms: 9.423395
+  type: 'test'
+  ...
+# Subtest: fuji catalogue uses a small thumbnail and defers both full-size orientations
+ok 364 - fuji catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 0.745544
+  type: 'test'
+  ...
+# Subtest: arctic catalogue uses a small thumbnail and defers both full-size orientations
+ok 365 - arctic catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 0.231286
+  type: 'test'
+  ...
+# Subtest: hallstatt catalogue uses a small thumbnail and defers both full-size orientations
+ok 366 - hallstatt catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 0.167719
+  type: 'test'
+  ...
+# Subtest: Taiwan phases use UTC+8 regardless of device timezone; midnight remains continuous
+ok 367 - Taiwan phases use UTC+8 regardless of device timezone; midnight remains continuous
+  ---
+  duration_ms: 3.546891
+  type: 'test'
+  ...
+# Subtest: deterministic group weather, bounded weights and 20-second smooth transitions
+ok 368 - deterministic group weather, bounded weights and 20-second smooth transitions
+  ---
+  duration_ms: 39.183874
+  type: 'test'
+  ...
+# Subtest: 拜訪期間遇到其他帳號或跨群組同帳號的戰鬥，留在原地並阻止偷蛋
+ok 369 - 拜訪期間遇到其他帳號或跨群組同帳號的戰鬥，留在原地並阻止偷蛋
+  ---
+  duration_ms: 1.677539
+  type: 'test'
+  ...
+# Subtest: 相同雞舍正常接戰，從自家恢復原戰鬥仍能前往正確雞舍
+ok 370 - 相同雞舍正常接戰，從自家恢復原戰鬥仍能前往正確雞舍
+  ---
+  duration_ms: 7.478407
+  type: 'test'
+  ...
+# Subtest: countdown respects the existing deadline, ceil seconds and urgency boundaries without extending battle time
+ok 371 - countdown respects the existing deadline, ceil seconds and urgency boundaries without extending battle time
+  ---
+  duration_ms: 1.008981
+  type: 'test'
+  ...
+# Subtest: background resume reads elapsed wall time immediately; every original monster duration can use the same display model
+ok 372 - background resume reads elapsed wall time immediately; every original monster duration can use the same display model
+  ---
+  duration_ms: 0.197154
+  type: 'test'
+  ...
+# Subtest: one page registration gates concurrent requests; pagehide closes once and bfcache resumes by reload
+ok 373 - one page registration gates concurrent requests; pagehide closes once and bfcache resumes by reload
+  ---
+  duration_ms: 18.897193
+  type: 'test'
+  ...
+# Subtest: legacy backend may fall back only on explicit unknown-action validation; other registration failures remain blocked
+ok 374 - legacy backend may fall back only on explicit unknown-action validation; other registration failures remain blocked
+  ---
+  duration_ms: 0.963627
+  type: 'test'
+  ...
+# Subtest: closing while registration is pending prevents the delayed gameplay request
+ok 375 - closing while registration is pending prevents the delayed gameplay request
+  ---
+  duration_ms: 1.310445
+  type: 'test'
+  ...
+# Subtest: fresh page clears only pending pure battle commands and retains economic receipt recovery
+ok 376 - fresh page clears only pending pure battle commands and retains economic receipt recovery
+  ---
+  duration_ms: 0.478249
+  type: 'test'
+  ...
+# Subtest: all monster views use committed reward IDs and quantities; failure never becomes a victory
+ok 377 - all monster views use committed reward IDs and quantities; failure never becomes a victory
+  ---
+  duration_ms: 1.938432
+  type: 'test'
+  ...
+# Subtest: inventory confirmation overrides capacity and legacy guesses, including successful victory without loot
+ok 378 - inventory confirmation overrides capacity and legacy guesses, including successful victory without loot
+  ---
+  duration_ms: 0.252378
+  type: 'test'
+  ...
+# Subtest: future multi-item receipt uses real quantities and handles missing art/name without changing inventory
+ok 379 - future multi-item receipt uses real quantities and handles missing art/name without changing inventory
+  ---
+  duration_ms: 0.319902
+  type: 'test'
+  ...
+# Subtest: provided 4x2/512px manifest plays once for 900ms, reveals frame 4 at 370ms and holds frame 7
+ok 380 - provided 4x2/512px manifest plays once for 900ms, reveals frame 4 at 370ms and holds frame 7
+  ---
+  duration_ms: 2.194422
+  type: 'test'
+  ...
+# Subtest: skip only reveals the supplied result once and cancels remaining frame callbacks; stop cancels everything
+ok 381 - skip only reveals the supplied result once and cancels remaining frame callbacks; stop cancels everything
+  ---
+  duration_ms: 0.563982
+  type: 'test'
+  ...
+# Subtest: 64 cobra poses have transparent gutters, stable ground anchors and no empty frames
+ok 382 - 64 cobra poses have transparent gutters, stable ground anchors and no empty frames
+  ---
+  duration_ms: 255.991017
+  type: 'test'
+  ...
+# Subtest: cobra fang is a complete transparent inventory icon
+ok 383 - cobra fang is a complete transparent inventory icon
+  ---
+  duration_ms: 4.614409
+  type: 'test'
+  ...
+# Subtest: combined kill milestones use the challenger level and persist independently of loot
+ok 384 - combined kill milestones use the challenger level and persist independently of loot
+  ---
+  duration_ms: 1.789493
+  type: 'test'
+  ...
+# Subtest: base attack estimates use the new cobra health and fixed weapon power
+ok 385 - base attack estimates use the new cobra health and fixed weapon power
+  ---
+  duration_ms: 0.318212
+  type: 'test'
+  ...
+# Subtest: victory awards one fang even with a full warehouse and repeated settlement is inert
+ok 386 - victory awards one fang even with a full warehouse and repeated settlement is inert
+  ---
+  duration_ms: 0.372585
+  type: 'test'
+  ...
+# Subtest: timeout overrides late wins, deducts only available coins and changes no hens or eggs
+ok 387 - timeout overrides late wins, deducts only available coins and changes no hens or eggs
+  ---
+  duration_ms: 0.376966
+  type: 'test'
+  ...
+# Subtest: corgi runs 30% slower and sits twice during its one-minute outing
+ok 388 - corgi runs 30% slower and sits twice during its one-minute outing
+  ---
+  duration_ms: 3.373904
+  type: 'test'
+  ...
+# Subtest: the full 60 seconds of sleep start at arrival, not the start of the return trip
+ok 389 - the full 60 seconds of sleep start at arrival, not the start of the return trip
+  ---
+  duration_ms: 0.315539
+  type: 'test'
+  ...
+# Subtest: barking pauses the remaining sleep instead of cancelling or resetting it
+ok 390 - barking pauses the remaining sleep instead of cancelling or resetting it
+  ---
+  duration_ms: 0.269579
+  type: 'test'
+  ...
+# Subtest: scene changes share the same lease routine; other leases and games are isolated
+ok 391 - scene changes share the same lease routine; other leases and games are isolated
+  ---
+  duration_ms: 0.39593
+  type: 'test'
+  ...
+# Subtest: read-only preview persists display fields, not credentials, and never grants claim authority
+ok 392 - read-only preview persists display fields, not credentials, and never grants claim authority
+  ---
+  duration_ms: 36.282431
+  type: 'test'
+  ...
+# Subtest: Taiwan midnight, device clock rollback, old/schema-invalid data and private-mode storage safely discard previews
+ok 393 - Taiwan midnight, device clock rollback, old/schema-invalid data and private-mode storage safely discard previews
+  ---
+  duration_ms: 3.280706
+  type: 'test'
+  ...
+# Subtest: verified progress merges monotonically; stale dates, changed rules and different cycles never overwrite current state
+ok 394 - verified progress merges monotonically; stale dates, changed rules and different cycles never overwrite current state
+  ---
+  duration_ms: 2.393371
+  type: 'test'
+  ...
+# Subtest: group scope metadata rejects old previews and cross-group progress even when dates and cycles match
+ok 395 - group scope metadata rejects old previews and cross-group progress even when dates and cycles match
+  ---
+  duration_ms: 6.21381
+  type: 'test'
+  ...
+# Subtest: private-mode cache reads and quota write failures keep successful HTTP images usable
+ok 396 - private-mode cache reads and quota write failures keep successful HTTP images usable
+  ---
+  duration_ms: 58.903138
+  type: 'test'
+  ...
+# Subtest: requests outside daily public PNGs never enter the worker cache
+ok 397 - requests outside daily public PNGs never enter the worker cache
+  ---
+  duration_ms: 7.667797
+  type: 'test'
+  ...
+# Subtest: dragon module does not read uninitialized imported config or sale price during evaluation
+ok 398 - dragon module does not read uninitialized imported config or sale price during evaluation
+  ---
+  duration_ms: 3.710003
+  type: 'test'
+  ...
+# Subtest: 收蛋顯示沿用各雞種名稱，只列有收穫的品種，支援單顆及大量雞蛋
+ok 399 - 收蛋顯示沿用各雞種名稱，只列有收穫的品種，支援單顆及大量雞蛋
+  ---
+  duration_ms: 9.289597
+  type: 'test'
+  ...
+# Subtest: 多雞種與部分收取保留交易原值，重複建立顯示資料沒有副作用
+ok 400 - 多雞種與部分收取保留交易原值，重複建立顯示資料沒有副作用
+  ---
+  duration_ms: 0.778188
+  type: 'test'
+  ...
+# Subtest: 無蛋不建立成功資料，不一致、未知雞種及非法數量會拒絕呈現
+ok 401 - 無蛋不建立成功資料，不一致、未知雞種及非法數量會拒絕呈現
+  ---
+  duration_ms: 0.371722
+  type: 'test'
+  ...
+# Subtest: 進場確認、所有怪物種類與結算期間攔住農場物件；結算完成才開放
+ok 402 - 進場確認、所有怪物種類與結算期間攔住農場物件；結算完成才開放
+  ---
+  duration_ms: 0.787663
+  type: 'test'
+  ...
+# Subtest: 進場確認期間 HUD 隱藏導覽；一般交易不被誤認為怪物
+ok 403 - 進場確認期間 HUD 隱藏導覽；一般交易不被誤認為怪物
+  ---
+  duration_ms: 10.70923
+  type: 'test'
+  ...
+# Subtest: exact mutually exclusive garden odds: caterpillar 1/30 and earthworm 1/50
+ok 404 - exact mutually exclusive garden odds: caterpillar 1/30 and earthworm 1/50
+  ---
+  duration_ms: 0.977673
+  type: 'test'
+  ...
+# Subtest: giant uses own Lv.3 and every 50 actual wolf/tiger wins; eagles and sold loot do not count
+ok 405 - giant uses own Lv.3 and every 50 actual wolf/tiger wins; eagles and sold loot do not count
+  ---
+  duration_ms: 6.502645
+  type: 'test'
+  ...
+# Subtest: base attack estimates match giant HP and weapon power
+ok 406 - base attack estimates match giant HP and weapon power
+  ---
+  duration_ms: 0.270635
+  type: 'test'
+  ...
+# Subtest: giant victory is idempotent and loot occupies inventory even when full
+ok 407 - giant victory is idempotent and loot occupies inventory even when full
+  ---
+  duration_ms: 0.33888
+  type: 'test'
+  ...
+# Subtest: absolute 70s deadline overrides late victory and loss affects only available coins
+ok 408 - absolute 70s deadline overrides late victory and loss affects only available coins
+  ---
+  duration_ms: 0.490669
+  type: 'test'
+  ...
+# Subtest: giant atlas has all animation and reward frames inside the generated image
+ok 409 - giant atlas has all animation and reward frames inside the generated image
+  ---
+  duration_ms: 8.685252
+  type: 'test'
+  ...
+# Subtest: Lv.3+ exact exclusive gorilla 1/30 and dragon 1/20; Lv.2 dragon stays 1/20
+ok 410 - Lv.3+ exact exclusive gorilla 1/30 and dragon 1/20; Lv.2 dragon stays 1/20
+  ---
+  duration_ms: 5.841238
+  type: 'test'
+  ...
+# Subtest: 4000 HP, configurable damage and original encounter timing
+ok 411 - 4000 HP, configurable damage and original encounter timing
+  ---
+  duration_ms: 0.332943
+  type: 'test'
+  ...
+# Subtest: stealing from Lv.3+ farms has exact 1/30 gorilla and 1/30 dragon; lower coops never roll gorilla
+ok 412 - stealing from Lv.3+ farms has exact 1/30 gorilla and 1/30 dragon; lower coops never roll gorilla
+  ---
+  duration_ms: 0.609007
+  type: 'test'
+  ...
+# Subtest: arbitrary days use the cheapest daily/weekly combination
+ok 413 - arbitrary days use the cheapest daily/weekly combination
+  ---
+  duration_ms: 8.940723
+  type: 'test'
+  ...
+# Subtest: renting charges exactly once and waiting dogs never start or expire
+ok 414 - renting charges exactly once and waiting dogs never start or expire
+  ---
+  duration_ms: 18.25534
+  type: 'test'
+  ...
+# Subtest: first activation starts continuous absolute time, not the rental purchase date
+ok 415 - first activation starts continuous absolute time, not the rental purchase date
+  ---
+  duration_ms: 0.464294
+  type: 'test'
+  ...
+# Subtest: different breeds may wait together, and switching preserves the current balance
+ok 416 - different breeds may wait together, and switching preserves the current balance
+  ---
+  duration_ms: 0.873803
+  type: 'test'
+  ...
+# Subtest: only an unexpired activated dog can bite, with a precise 70 percent boundary
+ok 417 - only an unexpired activated dog can bite, with a precise 70 percent boundary
+  ---
+  duration_ms: 0.382035
+  type: 'test'
+  ...
+# Subtest: four-hour blocks survive reload and remain scoped to their group and coop
+ok 418 - four-hour blocks survive reload and remain scoped to their group and coop
+  ---
+  duration_ms: 13.024177
+  type: 'test'
+  ...
+# Subtest: beagle uses its own prices, 33 percent bite boundary and two-hour block
+ok 419 - beagle uses its own prices, 33 percent bite boundary and two-hour block
+  ---
+  duration_ms: 1.963656
+  type: 'test'
+  ...
+# Subtest: pyrenees and beagle can both be rented, but cannot guard at the same time
+ok 420 - pyrenees and beagle can both be rented, but cannot guard at the same time
+  ---
+  duration_ms: 5.32763
+  type: 'test'
+  ...
+# Subtest: collie is displayed at 200/1000 but closed to new rentals; existing leases retain 80 percent interception
+ok 421 - collie is displayed at 200/1000 but closed to new rentals; existing leases retain 80 percent interception
+  ---
+  duration_ms: 5.1537
+  type: 'test'
+  ...
+# Subtest: collie spends exactly 60 percent of each full patrol cycle running
+ok 422 - collie spends exactly 60 percent of each full patrol cycle running
+  ---
+  duration_ms: 0.840736
+  type: 'test'
+  ...
+# Subtest: corgi rents at 100/500, waits in storage, intercepts below 40%, and expires normally
+ok 423 - corgi rents at 100/500, waits in storage, intercepts below 40%, and expires normally
+  ---
+  duration_ms: 0.429135
+  type: 'test'
+  ...
+# Subtest: legacy corgi patrol helper stays compatible; current routine is tested separately
+ok 424 - legacy corgi patrol helper stays compatible; current routine is tested separately
+  ---
+  duration_ms: 0.279809
+  type: 'test'
+  ...
+# Subtest: pause saves exact milliseconds across long storage and repeated resume cycles
+ok 425 - pause saves exact milliseconds across long storage and repeated resume cycles
+  ---
+  duration_ms: 0.400989
+  type: 'test'
+  ...
+# Subtest: legacy waiting and active leases pause safely; zero or corrupt balances cannot restore full days
+ok 426 - legacy waiting and active leases pause safely; zero or corrupt balances cannot restore full days
+  ---
+  duration_ms: 0.467718
+  type: 'test'
+  ...
+# Subtest: event starts immediately on Oct 30 and ends exclusively at Taiwan Nov 1 midnight
+ok 427 - event starts immediately on Oct 30 and ends exclusively at Taiwan Nov 1 midnight
+  ---
+  duration_ms: 3.92753
+  type: 'test'
+  ...
+# Subtest: server correction, monotonic expiry and concurrent refresh do not depend on device timezone or clock changes
+ok 428 - server correction, monotonic expiry and concurrent refresh do not depend on device timezone or clock changes
+  ---
+  duration_ms: 0.898174
+  type: 'test'
+  ...
+# Subtest: offline fallback continues monotonic time; disposed/in-flight requests cannot revive a scene
+ok 429 - offline fallback continues monotonic time; disposed/in-flight requests cannot revive a scene
+  ---
+  duration_ms: 1.055425
+  type: 'test'
+  ...
+# Subtest: offline device sleep that pauses performance time still crosses the cutoff
+ok 430 - offline device sleep that pauses performance time still crosses the cutoff
+  ---
+  duration_ms: 0.417058
+  type: 'test'
+  ...
+# Subtest: seasonal atlas stays out of normal bundles and every frame has transparent sampling margins
+ok 431 - seasonal atlas stays out of normal bundles and every frame has transparent sampling margins
+  ---
+  duration_ms: 71.369399
+  type: 'test'
+  ...
+# Subtest: hornet atlas has56 nonempty padded transparent frames and honey has an intact transparent silhouette
+ok 432 - hornet atlas has56 nonempty padded transparent frames and honey has an intact transparent silhouette
+  ---
+  duration_ms: 123.380356
+  type: 'test'
+  ...
+# Subtest: hornet base bow estimates are 30/15/8, every melee weapon is ineffective and reward uses original inventory
+ok 433 - hornet base bow estimates are 30/15/8, every melee weapon is ineffective and reward uses original inventory
+  ---
+  duration_ms: 1.3975
+  type: 'test'
+  ...
+# Subtest: hornet visual route enters quickly from lower right, circles above coop, feints every five seconds and stays in bounds
+ok 434 - hornet visual route enters quickly from lower right, circles above coop, feints every five seconds and stays in bounds
+  ---
+  duration_ms: 2.523755
+  type: 'test'
+  ...
+# Subtest: outdoor minimum, default all, zero and small flocks, mixed breed settings
+ok 435 - outdoor minimum, default all, zero and small flocks, mixed breed settings
+  ---
+  duration_ms: 9.707572
+  type: 'test'
+  ...
+# Subtest: indoor housing never reduces production
+ok 436 - indoor housing never reduces production
+  ---
+  duration_ms: 1.55142
+  type: 'test'
+  ...
+# Subtest: random treatment reaches indoor sick birds, consumes once and preserves unrelated birds
+ok 437 - random treatment reaches indoor sick birds, consumes once and preserves unrelated birds
+  ---
+  duration_ms: 0.938745
+  type: 'test'
+  ...
+# Subtest: 所有 Boss：戰鬥與結算重試持續隱藏，成功結算或移除後恢復
+ok 438 - 所有 Boss：戰鬥與結算重試持續隱藏，成功結算或移除後恢復
+  ---
+  duration_ms: 7.120642
+  type: 'test'
+  ...
+# Subtest: 野狼與老虎：擊敗或逃跑後解除隱藏，不必等退場動畫完成
+ok 439 - 野狼與老虎：擊敗或逃跑後解除隱藏，不必等退場動畫完成
+  ---
+  duration_ms: 0.328744
+  type: 'test'
+  ...
+# Subtest: 準備怪物時隱藏，普通交易、一般對話及沒有怪物時不隱藏
+ok 440 - 準備怪物時隱藏，普通交易、一般對話及沒有怪物時不隱藏
+  ---
+  duration_ms: 0.226768
+  type: 'test'
+  ...
+# Subtest: 底座定位與使用者提供的 V2 manifest 保持一致
+ok 441 - 底座定位與使用者提供的 V2 manifest 保持一致
+  ---
+  duration_ms: 2.696575
+  type: 'test'
+  ...
+# Subtest: 倒數只拆開既有字串，保留雞種、長時數及例外提示
+ok 442 - 倒數只拆開既有字串，保留雞種、長時數及例外提示
+  ---
+  duration_ms: 0.396594
+  type: 'test'
+  ...
+# Subtest: painted inventory items are distinct complete icons with transparent padding
+ok 443 - painted inventory items are distinct complete icons with transparent padding
+  ---
+  duration_ms: 79.792192
+  type: 'test'
+  ...
+# Subtest: katana is a complete transparent square painted icon with padded blade tip and grip
+ok 444 - katana is a complete transparent square painted icon with padded blade tip and grip
+  ---
+  duration_ms: 117.712996
+  type: 'test'
+  ...
+# Subtest: katana has new ground-enemy base hit estimates, unreleased 500000 list price and 30000 sell
+ok 445 - katana has new ground-enemy base hit estimates, unreleased 500000 list price and 30000 sell
+  ---
+  duration_ms: 1.419578
+  type: 'test'
+  ...
+# Subtest: katana uses existing warehouse/equipment/save/asset paths without requiring a migration
+ok 446 - katana uses existing warehouse/equipment/save/asset paths without requiring a migration
+  ---
+  duration_ms: 0.610548
+  type: 'test'
+  ...
+# Subtest: each breed walks alone to the actual doorway and crouches exactly at its deadline
+ok 447 - each breed walks alone to the actual doorway and crouches exactly at its deadline
+  ---
+  duration_ms: 27.553429
+  type: 'test'
+  ...
+# Subtest: a next egg from an indoor bird never substitutes an outdoor bird of the same breed
+ok 448 - a next egg from an indoor bird never substitutes an outdoor bird of the same breed
+  ---
+  duration_ms: 0.378523
+  type: 'test'
+  ...
+# Subtest: collecting a due egg while its bird is approaching cancels the animation without duplicate eggs
+ok 449 - collecting a due egg while its bird is approaching cancels the animation without duplicate eggs
+  ---
+  duration_ms: 0.610773
+  type: 'test'
+  ...
+# Subtest: collecting older eggs before the deadline leaves the upcoming egg intact
+ok 450 - collecting older eggs before the deadline leaves the upcoming egg intact
+  ---
+  duration_ms: 0.45364
+  type: 'test'
+  ...
+# Subtest: clock changes, illness, housing changes and interrupted sessions release the bird
+ok 451 - clock changes, illness, housing changes and interrupted sessions release the bird
+  ---
+  duration_ms: 0.55594
+  type: 'test'
+  ...
+# Subtest: simultaneous eggs use the same stable bird as the countdown, and overdue entry does not replay
+ok 452 - simultaneous eggs use the same stable bird as the countdown, and overdue entry does not replay
+  ---
+  duration_ms: 0.377822
+  type: 'test'
+  ...
+# Subtest: a delayed or failed production response does not cause a save request every frame
+ok 453 - a delayed or failed production response does not cause a save request every frame
+  ---
+  duration_ms: 4.858118
+  type: 'test'
+  ...
+# Subtest: pending-write loading does not cancel the approach or the crouch at the egg deadline
+ok 454 - pending-write loading does not cancel the approach or the crouch at the egg deadline
+  ---
+  duration_ms: 0.392587
+  type: 'test'
+  ...
+# Subtest: friendly roaming collie does not cancel the timed laying visit, while predators still do
+ok 455 - friendly roaming collie does not cancel the timed laying visit, while predators still do
+  ---
+  duration_ms: 0.767294
+  type: 'test'
+  ...
+# Subtest: Japanese Fuji doorway remains inside painted entrance and map references survive theme/orientation changes
+ok 456 - Japanese Fuji doorway remains inside painted entrance and map references survive theme/orientation changes
+  ---
+  duration_ms: 0.902377
+  type: 'test'
+  ...
+# Subtest: Arctic egg and nesting doorway remain inside the igloo hit area across orientations
+ok 457 - Arctic egg and nesting doorway remain inside the igloo hit area across orientations
+  ---
+  duration_ms: 5.259444
+  type: 'test'
+  ...
+# Subtest: Hallstatt smaller cottage and shifted garden keep exact inverse mapping and reachable doorway
+ok 458 - Hallstatt smaller cottage and shifted garden keep exact inverse mapping and reachable doorway
+  ---
+  duration_ms: 1.5608
+  type: 'test'
+  ...
+# Subtest: concurrent welcome delivery and claims award exactly once, including full warehouses
+ok 459 - concurrent welcome delivery and claims award exactly once, including full warehouses
+  ---
+  duration_ms: 15.55688
+  type: 'test'
+  ...
+# Subtest: deleting unclaimed mail does not resend it; each group has its own welcome
+ok 460 - deleting unclaimed mail does not resend it; each group has its own welcome
+  ---
+  duration_ms: 7.964903
+  type: 'test'
+  ...
+# Subtest: failed transaction does not consume rewards and removed members cannot manage mail
+ok 461 - failed transaction does not consume rewards and removed members cannot manage mail
+  ---
+  duration_ms: 6.684244
+  type: 'test'
+  ...
+# Subtest: visitor records are anonymous and timestamps always use Taiwan time
+ok 462 - visitor records are anonymous and timestamps always use Taiwan time
+  ---
+  duration_ms: 68.14381
+  type: 'test'
+  ...
+# Subtest: read receipts persist, tolerate deleted mail and never change rewards
+ok 463 - read receipts persist, tolerate deleted mail and never change rewards
+  ---
+  duration_ms: 13.913398
+  type: 'test'
+  ...
+# Subtest: batch deletion is scoped, deduplicated, atomic and cannot recreate deleted rewards
+ok 464 - batch deletion is scoped, deduplicated, atomic and cannot recreate deleted rewards
+  ---
+  duration_ms: 3.654999
+  type: 'test'
+  ...
+# Subtest: mole triggers every 30 successful catches at own coop level 2+
+ok 465 - mole triggers every 30 successful catches at own coop level 2+
+  ---
+  duration_ms: 20.949989
+  type: 'test'
+  ...
+# Subtest: legacy 20/40-catch milestones advance to the next 30 boundary; active fights resume
+ok 466 - legacy 20/40-catch milestones advance to the next 30 boundary; active fights resume
+  ---
+  duration_ms: 0.278913
+  type: 'test'
+  ...
+# Subtest: exact melee counts and iron hammer balance; bows never hurt mole
+ok 467 - exact melee counts and iron hammer balance; bows never hurt mole
+  ---
+  duration_ms: 0.358638
+  type: 'test'
+  ...
+# Subtest: deadline, bounded penalties, full warehouse loot and idempotent settlement
+ok 468 - deadline, bounded penalties, full warehouse loot and idempotent settlement
+  ---
+  duration_ms: 1.347009
+  type: 'test'
+  ...
+# Subtest: 12 cells stay inside garden at both orientations
+ok 469 - 12 cells stay inside garden at both orientations
+  ---
+  duration_ms: 0.788549
+  type: 'test'
+  ...
+# Subtest: three moles occupy distinct holes and move without overlapping
+ok 470 - three moles occupy distinct holes and move without overlapping
+  ---
+  duration_ms: 1.016505
+  type: 'test'
+  ...
+# Subtest: wolf and tiger patrol at double walking speed without changing attack cadence
+ok 471 - wolf and tiger patrol at double walking speed without changing attack cadence
+  ---
+  duration_ms: 1.902429
+  type: 'test'
+  ...
+# Subtest: dragon and eagle share identical orbit/dive geometry and hit animation is preserved
+ok 472 - dragon and eagle share identical orbit/dive geometry and hit animation is preserved
+  ---
+  duration_ms: 28.354649
+  type: 'test'
+  ...
+# Subtest: onagadori is sold at 6000/3000 with funds/capacity checks and unchanged egg value
+ok 473 - onagadori is sold at 6000/3000 with funds/capacity checks and unchanged egg value
+  ---
+  duration_ms: 4.80637
+  type: 'test'
+  ...
+# Subtest: onagadori produces every 6 hours, caps at 4 eggs per bird, sickness and full storage follow poultry rules
+ok 474 - onagadori produces every 6 hours, caps at 4 eggs per bird, sickness and full storage follow poultry rules
+  ---
+  duration_ms: 1.420674
+  type: 'test'
+  ...
+# Subtest: feeding, theft, boss loss and sale preserve the new breed and egg rules
+ok 475 - feeding, theft, boss loss and sale preserve the new breed and egg rules
+  ---
+  duration_ms: 1.050995
+  type: 'test'
+  ...
+# Subtest: paladin bow is a complete transparent sprite with safe padding for inventory and aiming
+ok 476 - paladin bow is a complete transparent sprite with safe padding for inventory and aiming
+  ---
+  duration_ms: 25.902778
+  type: 'test'
+  ...
+# Subtest: hen: every animation crop contains one whole chicken and no adjacent parts
+ok 477 - hen: every animation crop contains one whole chicken and no adjacent parts
+  ---
+  duration_ms: 409.344078
+  type: 'test'
+  ...
+# Subtest: silkie: every animation crop contains one whole chicken and no adjacent parts
+ok 478 - silkie: every animation crop contains one whole chicken and no adjacent parts
+  ---
+  duration_ms: 280.648709
+  type: 'test'
+  ...
+# Subtest: bresse: every animation crop contains one whole chicken and no adjacent parts
+ok 479 - bresse: every animation crop contains one whole chicken and no adjacent parts
+  ---
+  duration_ms: 300.837521
+  type: 'test'
+  ...
+# Subtest: onagadori: every animation crop contains one whole chicken and no adjacent parts
+ok 480 - onagadori: every animation crop contains one whole chicken and no adjacent parts
+  ---
+  duration_ms: 614.235111
+  type: 'test'
+  ...
+# Subtest: exact per-bird intervals, 24-hour yields, breed prices and offline cap
+ok 481 - exact per-bird intervals, 24-hour yields, breed prices and offline cap
+  ---
+  duration_ms: 2.984228
+  type: 'test'
+  ...
+# Subtest: legacy migration preserves IDs, available eggs, original aggregate cadence and inventories
+ok 482 - legacy migration preserves IDs, available eggs, original aggregate cadence and inventories
+  ---
+  duration_ms: 1.203512
+  type: 'test'
+  ...
+# Subtest: buy uses shared coop capacity and fresh clocks; sales retain eggs and support empty coop
+ok 483 - buy uses shared coop capacity and fresh clocks; sales retain eggs and support empty coop
+  ---
+  duration_ms: 1.832301
+  type: 'test'
+  ...
+# Subtest: feeding only selected breed, correct 30/60 minute boosts, no consumption for unavailable targets
+ok 484 - feeding only selected breed, correct 30/60 minute boosts, no consumption for unavailable targets
+  ---
+  duration_ms: 1.460481
+  type: 'test'
+  ...
+# Subtest: collect and steal keep egg type, full clocks cannot bank, boss loss clears every breed
+ok 485 - collect and steal keep egg type, full clocks cannot bank, boss loss clears every breed
+  ---
+  duration_ms: 0.990965
+  type: 'test'
+  ...
+# Subtest: sick birds stop producing and death never replaces a sold/dead bird with a free hen
+ok 486 - sick birds stop producing and death never replaces a sold/dead bird with a free hen
+  ---
+  duration_ms: 0.307159
+  type: 'test'
+  ...
+# Subtest: partial collection fills the five free slots and preserves every uncollected breed
+ok 487 - partial collection fills the five free slots and preserves every uncollected breed
+  ---
+  duration_ms: 2.257946
+  type: 'test'
+  ...
+# Subtest: partial collection restarts only freed production clocks and respects overfilled warehouses
+ok 488 - partial collection restarts only freed production clocks and respects overfilled warehouses
+  ---
+  duration_ms: 0.457518
+  type: 'test'
+  ...
+# Subtest: report counters default off until rules review; enabled quantity accumulation never mutates the farm
+ok 489 - report counters default off until rules review; enabled quantity accumulation never mutates the farm
+  ---
+  duration_ms: 0.774654
+  type: 'test'
+  ...
+# Subtest: tiger atlas isolates all animation frames with transparent sampling gutters
+ok 490 - tiger atlas isolates all animation frames with transparent sampling gutters
+  ---
+  duration_ms: 101.290451
+  type: 'test'
+  ...
+# Subtest: wolf atlas isolates all animation frames with transparent sampling gutters
+ok 491 - wolf atlas isolates all animation frames with transparent sampling gutters
+  ---
+  duration_ms: 53.633761
+  type: 'test'
+  ...
+# Subtest: guard-dog atlas isolates all animation frames with transparent sampling gutters
+ok 492 - guard-dog atlas isolates all animation frames with transparent sampling gutters
+  ---
+  duration_ms: 32.624156
+  type: 'test'
+  ...
+# Subtest: guard-beagle atlas isolates all animation frames with transparent sampling gutters
+ok 493 - guard-beagle atlas isolates all animation frames with transparent sampling gutters
+  ---
+  duration_ms: 68.413381
+  type: 'test'
+  ...
+# Subtest: guard-collie atlas isolates all animation frames with transparent sampling gutters
+ok 494 - guard-collie atlas isolates all animation frames with transparent sampling gutters
+  ---
+  duration_ms: 38.361436
+  type: 'test'
+  ...
+# Subtest: guard-corgi atlas isolates all animation frames with transparent sampling gutters
+ok 495 - guard-corgi atlas isolates all animation frames with transparent sampling gutters
+  ---
+  duration_ms: 32.077329
+  type: 'test'
+  ...
+# Subtest: gorilla frames omit previous-row pixels while retaining their ground pivots
+ok 496 - gorilla frames omit previous-row pixels while retaining their ground pivots
+  ---
+  duration_ms: 146.610583
+  type: 'test'
+  ...
+# Subtest: ranking index PATCH preserves all existing indexes, including array indexes, and uses explicit scope
+ok 497 - ranking index PATCH preserves all existing indexes, including array indexes, and uses explicit scope
+  ---
+  duration_ms: 16.131443
+  type: 'test'
+  ...
+# Subtest: dry-run and existing READY or CREATING indexes never request credentials or mutate
+ok 498 - dry-run and existing READY or CREATING indexes never request credentials or mutate
+  ---
+  duration_ms: 4.029266
+  type: 'test'
+  ...
+# Subtest: unknown or missing index configuration stops before obtaining credentials
+ok 499 - unknown or missing index configuration stops before obtaining credentials
+  ---
+  duration_ms: 0.608043
+  type: 'test'
+  ...
+# Subtest: API and credential errors do not disclose tokens or raw response bodies
+ok 500 - API and credential errors do not disclose tokens or raw response bodies
+  ---
+  duration_ms: 1.711289
+  type: 'test'
+  ...
+# Subtest: default index plan checks both current contest fields and READY gate blocks missing/building indexes
+ok 501 - default index plan checks both current contest fields and READY gate blocks missing/building indexes
+  ---
+  duration_ms: 1.627064
+  type: 'test'
+  ...
+# Subtest: rankings separate the same account across groups, deduplicate farms and cap at ten
+ok 502 - rankings separate the same account across groups, deduplicate farms and cap at ten
+  ---
+  duration_ms: 30.177244
+  type: 'test'
+  ...
+# Subtest: ranking reads exclude closed villages, removed members/profiles and mid-read privacy changes
+ok 503 - ranking reads exclude closed villages, removed members/profiles and mid-read privacy changes
+  ---
+  duration_ms: 9.88891
+  type: 'test'
+  ...
+# Subtest: fixed Taipei contest dates include the start and exclude the midnight cutoff
+ok 504 - fixed Taipei contest dates include the start and exclude the midnight cutoff
+  ---
+  duration_ms: 0.509377
+  type: 'test'
+  ...
+# Subtest: new contest resets every previous participant and only accumulates the new period
+ok 505 - new contest resets every previous participant and only accumulates the new period
+  ---
+  duration_ms: 4.790546
+  type: 'test'
+  ...
+# Subtest: optimized ranking uses server rows and never full-scans on authorization/network failures
+ok 506 - optimized ranking uses server rows and never full-scans on authorization/network failures
+  ---
+  duration_ms: 7.428996
+  type: 'test'
+  ...
+# Subtest: monster contest shares dates and ranking rules, counts all nine monster types and starts at zero
+ok 507 - monster contest shares dates and ranking rules, counts all nine monster types and starts at zero
+  ---
+  duration_ms: 0.543218
+  type: 'test'
+  ...
+# Subtest: cache miss verifies the server without changing any existing asset or unrelated field
+ok 508 - cache miss verifies the server without changing any existing asset or unrelated field
+  ---
+  duration_ms: 10.450568
+  type: 'test'
+  ...
+# Subtest: display copies preserve timestamp readers and cannot mutate saved hen state
+ok 509 - display copies preserve timestamp readers and cannot mutate saved hen state
+  ---
+  duration_ms: 3.565059
+  type: 'test'
+  ...
+# Subtest: offline initialization queues no defaults; reconnect preserves the server save
+ok 510 - offline initialization queues no defaults; reconnect preserves the server save
+  ---
+  duration_ms: 2.789874
+  type: 'test'
+  ...
+# Subtest: two first visits create exactly one farm and receipt; a concurrent save always wins
+ok 511 - two first visits create exactly one farm and receipt; a concurrent save always wins
+  ---
+  duration_ms: 6.017291
+  type: 'test'
+  ...
+# Subtest: partial, malformed, cached transaction data and revoked membership never create a farm
+ok 512 - partial, malformed, cached transaction data and revoked membership never create a farm
+  ---
+  duration_ms: 22.027154
+  type: 'test'
+  ...
+# Subtest: delayed verification cannot replace a newer confirmed farm; stale cache and missing events preserve the display
+ok 513 - delayed verification cannot replace a newer confirmed farm; stale cache and missing events preserve the display
+  ---
+  duration_ms: 6.760649
+  type: 'test'
+  ...
+# Subtest: permission/read failure and pending default writes are never presented as a new game
+ok 514 - permission/read failure and pending default writes are never presented as a new game
+  ---
+  duration_ms: 4.890936
+  type: 'test'
+  ...
+# Subtest: a pending create with no metadata-only acknowledgement still becomes ready after commit
+ok 515 - a pending create with no metadata-only acknowledgement still becomes ready after commit
+  ---
+  duration_ms: 6.8029
+  type: 'test'
+  ...
+# Subtest: 20 restarts release both hooks; destroy also cleans once
+ok 516 - 20 restarts release both hooks; destroy also cleans once
+  ---
+  duration_ms: 1.205713
+  type: 'test'
+  ...
+# Subtest: startup alerts redact credentials/query strings and deduplicate the same caught error
+ok 517 - startup alerts redact credentials/query strings and deduplicate the same caught error
+  ---
+  duration_ms: 10.615097
+  type: 'test'
+  ...
+# Subtest: uncaught errors and rejections are captured without suppressing events; alerts stop after startup
+ok 518 - uncaught errors and rejections are captured without suppressing events; alerts stop after startup
+  ---
+  duration_ms: 2.761154
+  type: 'test'
+  ...
+# Subtest: unrelated resource errors do not consume alerts and repeated frame errors cannot flood the page
+ok 519 - unrelated resource errors do not consume alerts and repeated frame errors cannot flood the page
+  ---
+  duration_ms: 0.624028
+  type: 'test'
+  ...
+# Subtest: 已提交但回覆逾時時，確認原請求而不產生另一個交易
+ok 520 - 已提交但回覆逾時時，確認原請求而不產生另一個交易
+  ---
+  duration_ms: 7.221809
+  type: 'test'
+  ...
+# Subtest: 明確拒絕不重送；持續不確定最多確認一次並保留錯誤
+ok 521 - 明確拒絕不重送；持續不確定最多確認一次並保留錯誤
+  ---
+  duration_ms: 0.691226
+  type: 'test'
+  ...
+# Subtest: 離開場景時可停止自動確認，原未知交易不另送
+ok 522 - 離開場景時可停止自動確認，原未知交易不另送
+  ---
+  duration_ms: 1.749485
+  type: 'test'
+  ...
+# Subtest: 同一母雞合併數量，同品種與同名的不同母雞仍分列
+ok 523 - 同一母雞合併數量，同品種與同名的不同母雞仍分列
+  ---
+  duration_ms: 2.069321
+  type: 'test'
+  ...
+# Subtest: 預覽範例總數是三顆；已辨識個體也只顯示雞蛋名稱
+ok 524 - 預覽範例總數是三顆；已辨識個體也只顯示雞蛋名稱
+  ---
+  duration_ms: 0.367343
+  type: 'test'
+  ...
+# Subtest: 來源全部或部分缺失時只顯示已知數量，不能依名稱或品種猜個體
+ok 525 - 來源全部或部分缺失時只顯示已知數量，不能依名稱或品種猜個體
+  ---
+  duration_ms: 0.478055
+  type: 'test'
+  ...
+# Subtest: 失敗及零顆不顯示結果，來源超量／非法數量／同個體不同品種拒絕顯示
+ok 526 - 失敗及零顆不顯示結果，來源超量／非法數量／同個體不同品種拒絕顯示
+  ---
+  duration_ms: 0.408835
+  type: 'test'
+  ...
+# Subtest: 無怪進場結果在列表取得，結果為 null 也代表已確認，不額外重送
+ok 527 - 無怪進場結果在列表取得，結果為 null 也代表已確認，不額外重送
+  ---
+  duration_ms: 1.625248
+  type: 'test'
+  ...
+# Subtest: 里程碑順序一致，已到期的舊事件只補確認一次，保留實際怪物血量期限
+ok 528 - 里程碑順序一致，已到期的舊事件只補確認一次，保留實際怪物血量期限
+  ---
+  duration_ms: 0.488912
+  type: 'test'
+  ...
+# Subtest: 切換選擇後丟棄回覆，不補送請求；其他雞舍未完成事件不得默默換目標
+ok 529 - 切換選擇後丟棄回覆，不補送請求；其他雞舍未完成事件不得默默換目標
+  ---
+  duration_ms: 0.750415
+  type: 'test'
+  ...
+# Subtest: deployment metadata: ten callables serve both regions; seventeen triggers remain single-region
+ok 530 - deployment metadata: ten callables serve both regions; seventeen triggers remain single-region
+  ---
+  duration_ms: 2514.03312
+  type: 'test'
+  ...
+# Subtest: deployment metadata: Emulator keeps original endpoints
+ok 531 - deployment metadata: Emulator keeps original endpoints
+  ---
+  duration_ms: 993.250813
+  type: 'test'
+  ...
+# Subtest: production clients select Taiwan without moving RTDB; admin Emulator retains old endpoints
+ok 532 - production clients select Taiwan without moving RTDB; admin Emulator retains old endpoints
+  ---
+  duration_ms: 1.060582
+  type: 'test'
+  ...
+# Subtest: rename merges historical likes into one canonical account ID
+ok 533 - rename merges historical likes into one canonical account ID
+  ---
+  duration_ms: 47.142237
+  type: 'test'
+  ...
+# Subtest: different accounts with the same display name retain separate canonical likes
+ok 534 - different accounts with the same display name retain separate canonical likes
+  ---
+  duration_ms: 0.95225
+  type: 'test'
+  ...
+# Subtest: homepage like entry uses the same account ID and rejects another group
+ok 535 - homepage like entry uses the same account ID and rejects another group
+  ---
+  duration_ms: 20.503396
+  type: 'test'
+  ...
+# Subtest: Photo Dump feed/carousel and unread-count indexes remain in deployment configuration
+ok 536 - Photo Dump feed/carousel and unread-count indexes remain in deployment configuration
+  ---
+  duration_ms: 0.813828
+  type: 'test'
+  ...
+# Subtest: read errors distinguish missing index, permission and network failures without exposing backend details
+ok 537 - read errors distinguish missing index, permission and network failures without exposing backend details
+  ---
+  duration_ms: 3.618781
+  type: 'test'
+  ...
+# Subtest: homepage exposes a failed photo query, supports retry and clears the warning after a successful empty result
+ok 538 - homepage exposes a failed photo query, supports retry and clears the warning after a successful empty result
+  ---
+  duration_ms: 8.833157
+  type: 'test'
+  ...
+# Subtest: stable author/comment IDs select current names even when old names now belong to someone else
+ok 539 - stable author/comment IDs select current names even when old names now belong to someone else
+  ---
+  duration_ms: 7.314575
+  type: 'test'
+  ...
+# Subtest: homepage Photo Dump rerenders current profile labels/avatars without rewriting stored uploader
+ok 540 - homepage Photo Dump rerenders current profile labels/avatars without rewriting stored uploader
+  ---
+  duration_ms: 71.926373
+  type: 'test'
+  ...
+# Subtest: profile watchers query only member account IDs, update names live and release listeners
+ok 541 - profile watchers query only member account IDs, update names live and release listeners
+  ---
+  duration_ms: 7.401519
+  type: 'test'
+  ...
+# Subtest: like aliases share concurrent work but refresh after the first response
+ok 542 - like aliases share concurrent work but refresh after the first response
+  ---
+  duration_ms: 2.771526
+  type: 'test'
+  ...
+# Subtest: uploads compressed photos to scoped Storage paths and saves stable account identity
+ok 543 - uploads compressed photos to scoped Storage paths and saves stable account identity
+  ---
+  duration_ms: 8.717379
+  type: 'test'
+  ...
+# Subtest: cleans successful uploads on partial upload, URL lookup or post save failure
+ok 544 - cleans successful uploads on partial upload, URL lookup or post save failure
+  ---
+  duration_ms: 11.892587
+  type: 'test'
+  ...
+# Subtest: legacy posts require no Storage auth; rejects foreign-group cleanup and unauthorized upload
+ok 545 - legacy posts require no Storage auth; rejects foreign-group cleanup and unauthorized upload
+  ---
+  duration_ms: 13.070058
+  type: 'test'
+  ...
+# Subtest: photoSession verifies credentials and current membership without accessing RTDB
+ok 546 - photoSession verifies credentials and current membership without accessing RTDB
+  ---
+  duration_ms: 34.346101
+  type: 'test'
+  ...
+# Subtest: reading timestamps survive background gaps, pause/resume and a new page instance
+ok 547 - reading timestamps survive background gaps, pause/resume and a new page instance
+  ---
+  duration_ms: 0.93603
+  type: 'test'
+  ...
+# Subtest: corrupted timer storage and backwards clock never create negative time
+ok 548 - corrupted timer storage and backwards clock never create negative time
+  ---
+  duration_ms: 0.189011
+  type: 'test'
+  ...
+# Subtest: browser rules stay in sync with shared service and SHA-256 identifiers
+ok 549 - browser rules stay in sync with shared service and SHA-256 identifiers
+  ---
+  duration_ms: 47.945318
+  type: 'test'
+  ...
+# Subtest: Web Firestore adapter retries concurrent inserts and prevents duplicate awards
+ok 550 - Web Firestore adapter retries concurrent inserts and prevents duplicate awards
+  ---
+  duration_ms: 151.102625
+  type: 'test'
+  ...
+# Subtest: flower sprites cover the catalog and keep five distinct transparent stages on a shared ground anchor
+ok 551 - flower sprites cover the catalog and keep five distinct transparent stages on a shared ground anchor
+  ---
+  duration_ms: 180.923944
+  type: 'test'
+  ...
+# Subtest: migration preserves exact old balance, reservations, rewards and historical request transitions once
+ok 552 - migration preserves exact old balance, reservations, rewards and historical request transitions once
+  ---
+  duration_ms: 72.243051
+  type: 'test'
+  ...
+# Subtest: exam approval, normalized score, improvement and snapshot rules never pay twice
+ok 553 - exam approval, normalized score, improvement and snapshot rules never pay twice
+  ---
+  duration_ms: 168.113189
+  type: 'test'
+  ...
+# Subtest: reading auto approval, subthreshold history, duplicate keys and concurrent daily cap
+ok 554 - reading auto approval, subthreshold history, duplicate keys and concurrent daily cap
+  ---
+  duration_ms: 13.589727
+  type: 'test'
+  ...
+# Subtest: initial seed, planting, catalog prices, water spending and maturity guard are atomic
+ok 555 - initial seed, planting, catalog prices, water spending and maturity guard are atomic
+  ---
+  duration_ms: 58.070094
+  type: 'test'
+  ...
+# Subtest: reward reservations, rejection, completion, replay and competing spending preserve points
+ok 556 - reward reservations, rejection, completion, replay and competing spending preserve points
+  ---
+  duration_ms: 29.093986
+  type: 'test'
+  ...
+# Subtest: corrections and revocations produce compensating transactions; spent resources cannot go negative
+ok 557 - corrections and revocations produce compensating transactions; spent resources cannot go negative
+  ---
+  duration_ms: 20.743013
+  type: 'test'
+  ...
+# Subtest: missing identity, spoofing, cross-group access and parent impersonation fail closed
+ok 558 - missing identity, spoofing, cross-group access and parent impersonation fail closed
+  ---
+  duration_ms: 5.725825
+  type: 'test'
+  ...
+# Subtest: rejected records never pay, approval-required reading waits, failed transactions can retry same receipt
+ok 559 - rejected records never pay, approval-required reading waits, failed transactions can retry same receipt
+  ---
+  duration_ms: 13.211359
+  type: 'test'
+  ...
+# Subtest: pending/rejected records can be edited and resubmitted without duplicate awards
+ok 560 - pending/rejected records can be edited and resubmitted without duplicate awards
+  ---
+  duration_ms: 26.231703
+  type: 'test'
+  ...
+# Subtest: historical valid exams are used as comparison without re-awarding old resources
+ok 561 - historical valid exams are used as comparison without re-awarding old resources
+  ---
+  duration_ms: 5.519116
+  type: 'test'
+  ...
+# Subtest: records paginate and filter without leaking another child, migration aborts negative legacy balances
+ok 562 - records paginate and filter without leaking another child, migration aborts negative legacy balances
+  ---
+  duration_ms: 14.255382
+  type: 'test'
+  ...
+# Subtest: reading metadata correction preserves earned units after a later increase in daily cap
+ok 563 - reading metadata correction preserves earned units after a later increase in daily cap
+  ---
+  duration_ms: 19.618714
+  type: 'test'
+  ...
+# Subtest: two different simultaneous requests for the same affordable gift hold points only once
+ok 564 - two different simultaneous requests for the same affordable gift hold points only once
+  ---
+  duration_ms: 15.493964
+  type: 'test'
+  ...
+# Subtest: malformed requests and foreign or nested exam-photo paths are rejected
+ok 565 - malformed requests and foreign or nested exam-photo paths are rejected
+  ---
+  duration_ms: 11.711885
+  type: 'test'
+  ...
+# Subtest: land expands atomically without a fixed cap; page reads preserve old plants and bounded garden size
+ok 566 - land expands atomically without a fixed cap; page reads preserve old plants and bounded garden size
+  ---
+  duration_ms: 66.835046
+  type: 'test'
+  ...
+# Subtest: legacy three-slot gardens remain usable without resetting plants or resources
+ok 567 - legacy three-slot gardens remain usable without resetting plants or resources
+  ---
+  duration_ms: 14.870756
+  type: 'test'
+  ...
+# Subtest: new flower seeds charge exact prices and grow through all five stages in legacy gardens
+ok 568 - new flower seeds charge exact prices and grow through all five stages in legacy gardens
+  ---
+  duration_ms: 194.080116
+  type: 'test'
+  ...
+# Subtest: nine-plot pages preserve global positions across the ninth and tenth plots
+ok 569 - nine-plot pages preserve global positions across the ninth and tenth plots
+  ---
+  duration_ms: 15.69789
+  type: 'test'
+  ...
+# Subtest: bulk watering validates ten-drop units and tails, is atomic and cannot overfill or double spend
+ok 570 - bulk watering validates ten-drop units and tails, is atomic and cannot overfill or double spend
+  ---
+  duration_ms: 53.756604
+  type: 'test'
+  ...
+# Subtest: group forest listing uses current account profiles and exposes only read-only forest visuals
+ok 571 - group forest listing uses current account profiles and exposes only read-only forest visuals
+  ---
+  duration_ms: 5.271991
+  type: 'test'
+  ...
+# Subtest: visiting empty, removed, ambiguous or departed forests never migrates or awards resources
+ok 572 - visiting empty, removed, ambiguous or departed forests never migrates or awards resources
+  ---
+  duration_ms: 2.237838
+  type: 'test'
+  ...
+# Subtest: six-feature maximum, stable order, duplicates and unknown features removed
+ok 573 - six-feature maximum, stable order, duplicates and unknown features removed
+  ---
+  duration_ms: 2.346371
+  type: 'test'
+  ...
+# Subtest: permission filtering, explicit empty selection and legacy defaults
+ok 574 - permission filtering, explicit empty selection and legacy defaults
+  ---
+  duration_ms: 0.618303
+  type: 'test'
+  ...
+# Subtest: maintenance SDK resolves installed Admin package exports without connecting
+ok 575 - maintenance SDK resolves installed Admin package exports without connecting
+  ---
+  duration_ms: 6.498695
+  type: 'test'
+  ...
+# Subtest: real review CLIs load the SDK and only read collections without revealing passwords
+ok 576 - real review CLIs load the SDK and only read collections without revealing passwords
+  ---
+  duration_ms: 299.648222
+  type: 'test'
+  ...
+# Subtest: wire format preserves empty containers, nulls, special-key names and timestamps without invalid RTDB keys
+ok 577 - wire format preserves empty containers, nulls, special-key names and timestamps without invalid RTDB keys
+  ---
+  duration_ms: 2.932349
+  type: 'test'
+  ...
+# Subtest: monotonic updates and tombstones cannot resurrect an older farm/message
+ok 578 - monotonic updates and tombstones cannot resurrect an older farm/message
+  ---
+  duration_ms: 23.563977
+  type: 'test'
+  ...
+# Subtest: subscription upgrades a missing farm from verified Firestore fallback to RTDB; cleanup cancels pending work
+ok 579 - subscription upgrades a missing farm from verified Firestore fallback to RTDB; cleanup cancels pending work
+  ---
+  duration_ms: 11.618696
+  type: 'test'
+  ...
+# Subtest: unready/unavailable service falls back, but permission denial never falls back
+ok 580 - unready/unavailable service falls back, but permission denial never falls back
+  ---
+  duration_ms: 4.868507
+  type: 'test'
+  ...
+# Subtest: mirror emits only farm data and derives room participants from current group membership; removals revoke indexes
+ok 581 - mirror emits only farm data and derives room participants from current group membership; removals revoke indexes
+  ---
+  duration_ms: 6.703937
+  type: 'test'
+  ...
+# Subtest: message mirroring resolves legacy room group, handles retraction/deletion and rejects mismatched group
+ok 582 - message mirroring resolves legacy room group, handles retraction/deletion and rejects mismatched group
+  ---
+  duration_ms: 0.601498
+  type: 'test'
+  ...
+# Subtest: canonical room recipients survive rename and cannot be resurrected by legacy names
+ok 583 - canonical room recipients survive rename and cannot be resurrected by legacy names
+  ---
+  duration_ms: 3.588204
+  type: 'test'
+  ...
+# Subtest: legacy mirrors resolve historical names only when the account is unambiguous
+ok 584 - legacy mirrors resolve historical names only when the account is unambiguous
+  ---
+  duration_ms: 0.754018
+  type: 'test'
+  ...
+# Subtest: revoked permissions stop an existing fallback; missing rooms never use a Firestore bypass
+ok 585 - revoked permissions stop an existing fallback; missing rooms never use a Firestore bypass
+  ---
+  duration_ms: 6.835102
+  type: 'test'
+  ...
+# Subtest: client writes durable scope record before request, no attacker costs in payload and success clears it
+ok 586 - client writes durable scope record before request, no attacker costs in payload and success clears it
+  ---
+  duration_ms: 52.338755
+  type: 'test'
+  ...
+# Subtest: offline before server accepts preserves pending; recovery queries then retries only original transaction ID
+ok 587 - offline before server accepts preserves pending; recovery queries then retries only original transaction ID
+  ---
+  duration_ms: 18.984466
+  type: 'test'
+  ...
+# Subtest: lost committed reset result recovery reads receipt without another refund request
+ok 588 - lost committed reset result recovery reads receipt without another refund request
+  ---
+  duration_ms: 13.734678
+  type: 'test'
+  ...
+# Subtest: definite stale quote rejection clears record for explicit new preview, not another automatic charge
+ok 589 - definite stale quote rejection clears record for explicit new preview, not another automatic charge
+  ---
+  duration_ms: 4.06069
+  type: 'test'
+  ...
+# Subtest: cross-group pending records are isolated; storage failure prevents sending any economic request
+ok 590 - cross-group pending records are isolated; storage failure prevents sending any economic request
+  ---
+  duration_ms: 3.235249
+  type: 'test'
+  ...
+# Subtest: pending operation forbids a new reset; tampered pending storage is not silently discarded
+ok 591 - pending operation forbids a new reset; tampered pending storage is not silently discarded
+  ---
+  duration_ms: 2.527592
+  type: 'test'
+  ...
+# Subtest: older backend missing Phase5 capability action keeps legacy instance controls available and refinement hidden
+ok 592 - older backend missing Phase5 capability action keeps legacy instance controls available and refinement hidden
+  ---
+  duration_ms: 7.917496
+  type: 'test'
+  ...
+# Subtest: switching group while a request is in flight never returns the previous farm result to a new operation
+ok 593 - switching group while a request is in flight never returns the previous farm result to a new operation
+  ---
+  duration_ms: 13.205195
+  type: 'test'
+  ...
+# Subtest: account IDs query only selected identities; identical concurrent work shares one request
+ok 594 - account IDs query only selected identities; identical concurrent work shares one request
+  ---
+  duration_ms: 25.620968
+  type: 'test'
+  ...
+# Subtest: legacy fallback queries only unresolved tokens, rejects ambiguous names
+ok 595 - legacy fallback queries only unresolved tokens, rejects ambiguous names
+  ---
+  duration_ms: 16.057867
+  type: 'test'
+  ...
+# Subtest: batch reads overlap, at most four workers, all 55 members preserved
+ok 596 - batch reads overlap, at most four workers, all 55 members preserved
+  ---
+  duration_ms: 21.84849
+  type: 'test'
+  ...
+# Subtest: empty group does not scan users; absent group fails closed; supplied snapshot avoids reread
+ok 597 - empty group does not scan users; absent group fails closed; supplied snapshot avoids reread
+  ---
+  duration_ms: 6.970339
+  type: 'test'
+  ...
+# Subtest: failed concurrent work is removed, allowing retry
+ok 598 - failed concurrent work is removed, allowing retry
+  ---
+  duration_ms: 26.437684
+  type: 'test'
+  ...
+# Subtest: avatar aliases never replace an account ID or guess between duplicate names
+ok 599 - avatar aliases never replace an account ID or guess between duplicate names
+  ---
+  duration_ms: 4.54784
+  type: 'test'
+  ...
+# Subtest: known account IDs never fall back to a different account with that display name
+ok 600 - known account IDs never fall back to a different account with that display name
+  ---
+  duration_ms: 6.519148
+  type: 'test'
+  ...
+# Subtest: all 26 palettes have readable primary, secondary and action text
+ok 601 - all 26 palettes have readable primary, secondary and action text
+  ---
+  duration_ms: 37.432046
+  type: 'test'
+  ...
+# Subtest: preview is not persisted, account changes and server hydration are isolated
+ok 602 - preview is not persisted, account changes and server hydration are isolated
+  ---
+  duration_ms: 7.067806
+  type: 'test'
+  ...
+# Subtest: corrupt or unavailable local storage never prevents rendering
+ok 603 - corrupt or unavailable local storage never prevents rendering
+  ---
+  duration_ms: 3.58621
+  type: 'test'
+  ...
+# Subtest: reference swatches use exact HEX values and Traditional Chinese labels
+ok 604 - reference swatches use exact HEX values and Traditional Chinese labels
+  ---
+  duration_ms: 8.870078
+  type: 'test'
+  ...
+# Subtest: saved themes paint before CSS and stale Firestore cache cannot reset them
+ok 605 - saved themes paint before CSS and stale Firestore cache cannot reset them
+  ---
+  duration_ms: 5.645341
+  type: 'test'
+  ...
+# Subtest: Taipei date boundaries and legacy completion records
+ok 606 - Taipei date boundaries and legacy completion records
+  ---
+  duration_ms: 46.058337
+  type: 'test'
+  ...
+# Subtest: daily intervals, weekly cadence, month-end anchors and leap years
+ok 607 - daily intervals, weekly cadence, month-end anchors and leap years
+  ---
+  duration_ms: 0.421573
+  type: 'test'
+  ...
+# Subtest: catch-up is idempotent, time-aware, inclusive of end date and preserves identities
+ok 608 - catch-up is idempotent, time-aware, inclusive of end date and preserves identities
+  ---
+  duration_ms: 3.287739
+  type: 'test'
+  ...
+# Subtest: stopped/future schedules do not generate early and missing documents have no demo tasks
+ok 609 - stopped/future schedules do not generate early and missing documents have no demo tasks
+  ---
+  duration_ms: 0.27701
+  type: 'test'
+  ...
+# Subtest: group and account IDs isolate same-name and renamed members; unknown owners never guessed
+ok 610 - group and account IDs isolate same-name and renamed members; unknown owners never guessed
+  ---
+  duration_ms: 16.158151
+  type: 'test'
+  ...
+# Subtest: exam accumulation is per account, ordered and refunds count only once
+ok 611 - exam accumulation is per account, ordered and refunds count only once
+  ---
+  duration_ms: 3.518158
+  type: 'test'
+  ...
+# Subtest: settings reject invalid amounts and redemption transitions protect owners and terminal states
+ok 612 - settings reject invalid amounts and redemption transitions protect owners and terminal states
+  ---
+  duration_ms: 0.7447
+  type: 'test'
+  ...
+1..612
+# tests 612
+# suites 0
+# pass 612
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19187.920813

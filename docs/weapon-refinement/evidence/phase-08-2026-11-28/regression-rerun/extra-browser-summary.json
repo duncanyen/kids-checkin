@@ -1,0 +1,16 @@
+[
+  {
+    "id": "critical-feedback",
+    "exitCode": 0,
+    "durationMs": 71271,
+    "flag": "CRITICAL_FEEDBACK_TESTS",
+    "log": "critical-feedback.log"
+  },
+  {
+    "id": "navigation-loading",
+    "exitCode": 0,
+    "durationMs": 14875,
+    "flag": "NAVIGATION_LOAD_TESTS",
+    "log": "navigation-loading.log"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "fullGame": true,
+  "memoryDB": true,
+  "physicalIPhone": false,
+  "externalRequests": [],
+  "errors": [],
+  "configBlocked": true,
+  "privateDocsBlocked": true,
+  "realShopOneDebit": true,
+  "lostResponseRecoveryOneDebit": true,
+  "offlineErrorsRemainUncertain": true,
+  "runId": "iphone-a1b620e8da56"
+}

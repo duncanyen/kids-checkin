@@ -1,0 +1,9 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 2
+}
+PASS Arctic actual shop/warehouse/settings: price100000, low funds rejected, double confirm once, owned disabled, thumbnails only, image failure preserves selection, free switching and reload, 42 garden cells, 320/390/430/768/1024 layouts, target village theme isolated

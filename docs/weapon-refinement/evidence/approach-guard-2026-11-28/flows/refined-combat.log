@@ -1,0 +1,16 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 5,
+  handlerMs: 5
+}
+page.evaluate: TypeError: Cannot read properties of null (reading 'getBow')
+    at eval (eval at evaluate (:311:30), <anonymous>:1:156)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at exports.run (/workspace/kids-checkin/tests/helpers/refinement-combat-browser.cjs:11:378)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:163:49 {
+  log: []
+}

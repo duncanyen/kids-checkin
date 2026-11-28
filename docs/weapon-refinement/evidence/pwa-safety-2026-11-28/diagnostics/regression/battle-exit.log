@@ -1,0 +1,9 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 10,
+  handlerMs: 10
+}
+PASS original public visit/monster/escape click: locked during combat and pending settlement, one valid reward, escape enabled after authoritative completion

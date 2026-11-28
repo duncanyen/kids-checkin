@@ -1,0 +1,23 @@
+{
+  "branch": "release/weapon-refinement-compat-20261128",
+  "baseCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "purpose": "Git review only; no main merge or deployment",
+  "unit": {
+    "tests": 709,
+    "passed": 709,
+    "failed": 0
+  },
+  "realFirestore": {
+    "tests": 57,
+    "suites": 13,
+    "currentSourceHashVerified": true,
+    "scope": "Firestore and candidate Rules; not production or full Auth/Storage/Functions E2E"
+  },
+  "manualValidation": "DEFERRED_BY_USER; not passed",
+  "secretPatternScan": {
+    "findings": 0,
+    "excludedUnrelatedDocument": "docs/NEXUS_PLATFORM_ADMIN_ASSESSMENT.md"
+  },
+  "productionFlagsAllFalse": true,
+  "productionOperations": false
+}

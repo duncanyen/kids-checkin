@@ -1,0 +1,109 @@
+TAP version 13
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 45,
+#   handlerMs: 50
+# }
+# Subtest: old V4 +0 protocol remains exact after individualization; forged V4 damage is ignored
+ok 1 - old V4 +0 protocol remains exact after individualization; forged V4 damage is ignored
+  ---
+  duration_ms: 642.805534
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 48,
+#   handlerMs: 54
+# }
+# Subtest: old protocol cannot downgrade earned V5, old stacked sale/equip cannot choose arbitrary new instance
+ok 2 - old protocol cannot downgrade earned V5, old stacked sale/equip cannot choose arbitrary new instance
+  ---
+  duration_ms: 552.216824
+  type: 'test'
+  ...
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 5,
+#   transactionMs: 53,
+#   handlerMs: 58
+# }
+# Subtest: forged stats/order/version/weapon/speed rejected with no health or asset mutation; snapshot survives operator update
+ok 3 - forged stats/order/version/weapon/speed rejected with no health or asset mutation; snapshot survives operator update
+  ---
+  duration_ms: 773.588339
+  type: 'test'
+  ...
+# Subtest: battle locks equip/refine/reset/sale; cross-device same-order attacks and repeated settlements only count once
+not ok 4 - battle locks equip/refine/reset/sale; cross-device same-order attacks and repeated settlements only count once
+  ---
+  duration_ms: 213.283462
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:8:2'
+  failureType: 'testCodeFailure'
+  error: '加成後機率超過100%，請先調整設定；不會降低既有能力'
+  code: 'failed-precondition'
+  stack: |-
+    raise (/workspace/kids-checkin/game-admin/functions/refinement-service.cjs:6:32)
+    Object.handle (/workspace/kids-checkin/game-admin/functions/refinement-service.cjs:59:23)
+    async Object.farmTransaction (/workspace/kids-checkin/game-admin/functions/service.cjs:317:24)
+    async Object.call [as callProduction] (/workspace/kids-checkin/game-admin/tests/helpers/release-fixture.cjs:5:394)
+    async fixture (/workspace/kids-checkin/game-admin/tests/helpers/compatibility-security-fixture.cjs:2:824)
+    async TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:8:138)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: new page invalidates stale attack/settlement and old receipt; expired attack cannot forge victory
+not ok 5 - new page invalidates stale attack/settlement and old receipt; expired attack cannot forge victory
+  ---
+  duration_ms: 255.245938
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:9:2'
+  failureType: 'testCodeFailure'
+  error: '加成後機率超過100%，請先調整設定；不會降低既有能力'
+  code: 'failed-precondition'
+  stack: |-
+    raise (/workspace/kids-checkin/game-admin/functions/refinement-service.cjs:6:32)
+    Object.handle (/workspace/kids-checkin/game-admin/functions/refinement-service.cjs:59:23)
+    async Object.farmTransaction (/workspace/kids-checkin/game-admin/functions/service.cjs:317:24)
+    async Object.call [as callProduction] (/workspace/kids-checkin/game-admin/tests/helpers/release-fixture.cjs:5:394)
+    async fixture (/workspace/kids-checkin/game-admin/tests/helpers/compatibility-security-fixture.cjs:2:824)
+    async TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:9:125)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: security finding reproduction: fabricated in-budget hits without collision telemetry can earn a reward
+not ok 6 - security finding reproduction: fabricated in-budget hits without collision telemetry can earn a reward
+  ---
+  duration_ms: 211.460468
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:10:2'
+  failureType: 'testCodeFailure'
+  error: '加成後機率超過100%，請先調整設定；不會降低既有能力'
+  code: 'failed-precondition'
+  stack: |-
+    raise (/workspace/kids-checkin/game-admin/functions/refinement-service.cjs:6:32)
+    Object.handle (/workspace/kids-checkin/game-admin/functions/refinement-service.cjs:59:23)
+    async Object.farmTransaction (/workspace/kids-checkin/game-admin/functions/service.cjs:317:24)
+    async Object.call [as callProduction] (/workspace/kids-checkin/game-admin/tests/helpers/release-fixture.cjs:5:394)
+    async fixture (/workspace/kids-checkin/game-admin/tests/helpers/compatibility-security-fixture.cjs:2:824)
+    async TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:10:130)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 3
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2791.806034

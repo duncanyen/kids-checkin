@@ -1,0 +1,9 @@
+[
+  {
+    "id": "verified-input",
+    "exitCode": 0,
+    "durationMs": 110667,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  }
+]

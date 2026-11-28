@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+ok 1 - real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+  ---
+  duration_ms: 4553.398725
+  type: 'test'
+  ...
+# Subtest: real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+ok 2 - real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+  ---
+  duration_ms: 323.328545
+  type: 'test'
+  ...
+# Subtest: real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+ok 3 - real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+  ---
+  duration_ms: 3363.434054
+  type: 'test'
+  ...
+# Subtest: real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+ok 4 - real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+  ---
+  duration_ms: 1390.93533
+  type: 'test'
+  ...
+# Subtest: real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+ok 5 - real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+  ---
+  duration_ms: 6466.20978
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16269.463329

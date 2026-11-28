@@ -1,0 +1,11 @@
+{
+  "version": "1.19.8",
+  "sdk": "490.0.0",
+  "manifest": "https://dl.google.com/dl/cloudsdk/channels/rapid/components-v490.0.0.json",
+  "url": "https://dl.google.com/dl/cloudsdk/channels/rapid/components/google-cloud-sdk-cloud-firestore-emulator-20240816183020.tar.gz",
+  "archiveSha256": "708013ee1eb1fc34fc1b33e8b562e7c276e95749685050f347af0002d96be9ef",
+  "jarSha256": "3aeacaf290bf13ad6e829f962858c141320a85d5d8badcb93847893a95b71510",
+  "mainClass": "com.google.cloud.datastore.emulator.firestore.CloudFirestore",
+  "jar": "/home/agent/.cache/nexus-firestore-emulator/1.19.8/cloud-firestore-emulator.jar",
+  "cached": false
+}

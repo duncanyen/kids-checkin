@@ -1,0 +1,25 @@
+{
+  "source": "synthetic MemoryDB only",
+  "complete": {
+    "valid": true,
+    "releaseReady": true,
+    "actors": 1,
+    "legacyFarms": 0,
+    "v2Farms": 1,
+    "allocations": 2,
+    "explicitWeapons": 5,
+    "implicitClubs": 1,
+    "states": 1,
+    "transactions": 11,
+    "walletDeltasVerified": 11
+  },
+  "withoutWallet": {
+    "valid": true,
+    "releaseReady": false,
+    "gaps": 11
+  },
+  "actualReset": {
+    "coins": 10500,
+    "stones": 8
+  }
+}

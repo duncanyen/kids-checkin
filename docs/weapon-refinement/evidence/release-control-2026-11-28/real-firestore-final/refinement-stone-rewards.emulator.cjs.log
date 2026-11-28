@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: real concurrent daily claim awards original gold and stone once atomically
+ok 1 - real concurrent daily claim awards original gold and stone once atomically
+  ---
+  duration_ms: 4075.09061
+  type: 'test'
+  ...
+# [2026-11-28T00:16:35.702Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3a8a348c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# [2026-11-28T00:16:35.748Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3a8a348d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:16:35.766Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3a8a348e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:16:35.802Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3a8a348f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:16:35.855Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3a8a3490 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:16:35.888Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3a8a3491 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# Subtest: real candidate Rules reject material grants and config/receipt writes from ordinary client
+ok 2 - real candidate Rules reject material grants and config/receipt writes from ordinary client
+  ---
+  duration_ms: 1207.437815
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5843.423858

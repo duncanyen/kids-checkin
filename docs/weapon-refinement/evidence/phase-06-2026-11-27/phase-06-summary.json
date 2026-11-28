@@ -1,0 +1,99 @@
+{
+  "dateTaipei": "2026-11-27",
+  "sourceCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "scope": "Phase6 only; previous Phase2–5 work remains uncommitted",
+  "unit": {
+    "passed": 585,
+    "failed": 0,
+    "newRefinementCombatTests": 17,
+    "log": "unit-final.log"
+  },
+  "browser": {
+    "existingInitialPassed": 27,
+    "existingInitialTotal": 29,
+    "initialFailures": [
+      "countdown_tests",
+      "critical_zero_tests"
+    ],
+    "isolatedReruns": [
+      {
+        "mode": "COUNTDOWN_TESTS",
+        "exitCode": 0
+      },
+      {
+        "mode": "CRITICAL_ZERO_TESTS",
+        "exitCode": 0
+      },
+      {
+        "mode": "REFINEMENT_COMBAT_TESTS",
+        "exitCode": 0
+      },
+      {
+        "mode": "REFINEMENT_UI_TESTS",
+        "exitCode": 0
+      }
+    ],
+    "finalV5Log": "browser-delivery-rerun.log",
+    "initialV5DeliveryFailure": "browser-delivery-final.log",
+    "recovery": "same batch requestId replay then pending hit exactly once",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "physicalDeviceTested": false,
+    "arrowInput": "existing arrow collision callback, not real drag gesture"
+  },
+  "emulator": {
+    "status": "BLOCKED",
+    "reason": "Firestore emulator JAR download HTTP403 Domain forbidden",
+    "assertionsExecuted": false,
+    "log": "emulator.log"
+  },
+  "simulation": {
+    "rows": 288,
+    "compatible": 180,
+    "samplesPerCompatible": 1000,
+    "operationalData": false
+  },
+  "formalReleaseAccepted": false,
+  "blockers": [
+    "real Emulator Rules and transaction concurrency verification not executed",
+    "server verifies hit intents, order, frequency, HP and reward idempotence; it does not prove actual Phaser gesture/collision"
+  ],
+  "formalFlags": {
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementResetEnabled": false,
+    "refinementCombatBonusEnabled": false,
+    "refinementStoneRewardEnabled": false
+  },
+  "unchangedCombatConfigVerified": true,
+  "formalDataAccessed": false,
+  "deployed": false,
+  "committed": false,
+  "pushed": false,
+  "phase7Started": false,
+  "sourceSha256": {
+    "game-admin/functions/weapon-abilities.cjs": "b883350c807eac04fb90662fbea3e385071830e2c6093b3a26b90fe703dceb81",
+    "game-admin/functions/farm-combat.cjs": "1724ebf05db8b2f2eb7194db591b644e8ed8eb97b6830767ef56d02b50dd67e7",
+    "game-admin/functions/farm-transactions.cjs": "555290b15f7a62724ed0974e2b66076e20c3b2628523213c06a06cc6bca22b6c",
+    "game-admin/functions/refinement-core.cjs": "1a291a7e301536088aae0693938bd3ef25d9af256407c22e722701dcaa409226",
+    "game-admin/functions/refinement-service.cjs": "a571a0234a3f7da38d3dbb73007a01f6e05d21be18e06f26cdb5bb7adf4cb535",
+    "game-admin/functions/refinement-player-service.cjs": "3bb429aab391f58d9cababa9773b22d49741bafcacecf490091da077eccbcfd4",
+    "game-admin/functions/service.cjs": "b7426c17bb281ebd5e648cc15f3f63fad81be9ea29c90c9f519dcd58b21a3947",
+    "js/farm/combat-damage.js": "c302931c6fa7fb8e8438e68fdaaf4651efa06d4282e8e0eb2469bfa86ec74039",
+    "js/farm/backend-client.js": "cbf1455a8a1360befb9fe88c03e2e8aba41fbe928798422f9fbc4730efca3681",
+    "js/farm/battle-page-client.js": "fc8e074710fdb46620132d3b4b470d3be0632744c7cf0c83199361e5687b93bc",
+    "js/farm/archery.js": "69c935a8c2564c5b8aca95d71fcb8a8e6960120e72d7c2d5bfc1d0bd747526a8",
+    "js/farm/weapon-refinement-ui.js": "c76b9c2c2f12631004625564b14ba87fd9c07f0019213c25add39dae28621212",
+    "game-admin/tests/refinement-combat.test.cjs": "848aa6c43c7abc2e5df5ace1c481f76c665187f0882914f42c4ef8e94d76160f",
+    "game-admin/tests/refinement-combat.emulator.cjs": "443d826a08bf3130591cc1bab1507f3ee1b47bfe94c2c918144b3fdcd26106f6",
+    "tests/helpers/refinement-combat-browser.cjs": "4fb0c6250f91cce307dc547b08fed708cb6eaea6d72c9338d6b147e37b2852d2",
+    "tests/farm-private-backend-browser.cjs": "032809972f53a305c86c46dfc7c5750e53d97308c2317acdc30c1f7b4c3983df",
+    "tests/weapon-refinement/combat-balance-simulation.cjs": "58d1d33e79310561299f461b4228a048f90e0170364e79890b6ce28b05a9601e",
+    "tests/weapon-refinement/combat-ability-cost-probe.cjs": "fc927697ef2a4c07b21f910b3b798f5d283aeb09af214f7592060f01f321721f",
+    "docs/weapon-refinement/phase-06-report.md": "727a0f55a9b1ca6e82883ff814618e7ceb7e79dd63b36e685169839312637169",
+    "docs/weapon-refinement/combat-balance-report.md": "47c52d15a7a41022b44e14cc345f105eb5f0859484ffa1ad400346957987f6c8",
+    "docs/weapon-refinement/DEVELOPMENT_RULES.md": "394a2622d7922b047120680c6c3a5ee6115212703de8f8a5ab33b827eeb1ea02"
+  }
+}

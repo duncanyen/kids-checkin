@@ -1,0 +1,47 @@
+{
+  "dateTaipei": "2026-11-28",
+  "unit": {
+    "tests": 705,
+    "pass": 705,
+    "fail": 0,
+    "newCases": 17
+  },
+  "realFirestore": {
+    "suites": 13,
+    "tests": 57,
+    "pass": 57,
+    "candidateRules": true,
+    "sourceUnchanged": true,
+    "fullAuthStorageFunctionsEmulator": false
+  },
+  "browser": {
+    "workflows": 11,
+    "finalPass": 11,
+    "existingRegressions": 7,
+    "newSafetyHarness": 1,
+    "realGameShopRecovery": 1,
+    "verifiedInputAllNineMonsters": 1,
+    "pinnedLegacyWorkerModules": 1,
+    "physicalIPhone": false,
+    "network": "local Chromium with controlled offline/lost replies; no physical Wi-Fi/mobile measurements"
+  },
+  "initialProblemsRetained": [
+    "initial single-journal blocker stopped legitimate concurrent feeds; fixed active-ID tracking",
+    "generic completion left specialized weapon pending pointer; fixed matching pointer cleanup and updated recovery regression expectation",
+    "one initial refined combat batch/switch timing assertion failed; later final pass; timing history preserved",
+    "test harness syntax / page binding / navigation wait fixed"
+  ],
+  "formalFlags": {
+    "refinementReleaseControlEnabled": false,
+    "refinementResetEnabled": false,
+    "refinementStoneRewardEnabled": false,
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementCombatBonusEnabled": false
+  },
+  "releaseDecision": "NO_GO",
+  "productionDataAccessed": false,
+  "deployed": false,
+  "committed": false,
+  "pushed": false
+}

@@ -1,0 +1,31 @@
+{
+  "environment": "MemoryDB / direct refinement service, fake actor validation, no throttle, no Auth RPC, no automatic retries, no report/mirror triggers",
+  "quotePhases": [
+    {
+      "reads": 9,
+      "writes": 1
+    }
+  ],
+  "executePhases": [
+    {
+      "reads": 10,
+      "writes": 2
+    },
+    {
+      "reads": 11,
+      "writes": 5
+    }
+  ],
+  "replayPhases": [
+    {
+      "reads": 2,
+      "writes": 0
+    }
+  ],
+  "queryPhases": [
+    {
+      "reads": 2,
+      "writes": 0
+    }
+  ]
+}

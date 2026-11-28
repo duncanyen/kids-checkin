@@ -1,0 +1,244 @@
+TAP version 13
+# Subtest: three default tiers map all eight canonical monster IDs; drop thresholds and inclusive integer coins
+ok 1 - three default tiers map all eight canonical monster IDs; drop thresholds and inclusive integer coins
+  ---
+  duration_ms: 1.806882
+  type: 'test'
+  ...
+# Subtest: settings reject invalid rates, amounts, empty payouts and unsupported products; all existing bird breeds can be delivered
+ok 2 - settings reject invalid rates, amounts, empty payouts and unsupported products; all existing bird breeds can be delivered
+  ---
+  duration_ms: 12.380608
+  type: 'test'
+  ...
+# Subtest: admin saves each monster independently, preserves earlier settings, audits before/after and rejects players/stale revisions
+ok 3 - admin saves each monster independently, preserves earlier settings, audits before/after and rejects players/stale revisions
+  ---
+  duration_ms: 13.228003
+  type: 'test'
+  ...
+# Subtest: battle grants original loot plus one unopened chest atomically, without coins; all retries return the original box
+ok 4 - battle grants original loot plus one unopened chest atomically, without coins; all retries return the original box
+  ---
+  duration_ms: 12.476611
+  type: 'test'
+  ...
+# Subtest: 0% and missed rolls retain original loot; every monster gets the configured locked tier
+ok 5 - 0% and missed rolls retain original loot; every monster gets the configured locked tier
+  ---
+  duration_ms: 41.908433
+  type: 'test'
+  ...
+# Subtest: old box uses its locked snapshot after configuration changes, opens once across devices, and replay does not restore an old balance
+ok 6 - old box uses its locked snapshot after configuration changes, opens once across devices, and replay does not restore an old balance
+  ---
+  duration_ms: 5.158464
+  type: 'test'
+  ...
+# Subtest: items-only and coin-plus-multiple-item boxes deliver all contents with existing inventory fields
+ok 7 - items-only and coin-plus-multiple-item boxes deliver all contents with existing inventory fields
+  ---
+  duration_ms: 5.627753
+  type: 'test'
+  ...
+# Subtest: failed item delivery rolls back coins, chest consumption and receipt; same request can retry after making room
+ok 8 - failed item delivery rolls back coins, chest consumption and receipt; same request can retry after making room
+  ---
+  duration_ms: 7.672067
+  type: 'test'
+  ...
+# Subtest: chicken rewards reuse shop breed/capacity delivery without charging coins and remain retryable on a full coop
+ok 9 - chicken rewards reuse shop breed/capacity delivery without charging coins and remain retryable on a full coop
+  ---
+  duration_ms: 4.530115
+  type: 'test'
+  ...
+# Subtest: storage failure is atomic for both battle drop and opening; another player cannot open or list the box
+ok 10 - storage failure is atomic for both battle drop and opening; another player cannot open or list the box
+  ---
+  duration_ms: 7.374971
+  type: 'test'
+  ...
+# Subtest: a pending battle cannot open an unopened box, while an already completed box remains readable
+ok 11 - a pending battle cannot open an unopened box, while an already completed box remains readable
+  ---
+  duration_ms: 8.420282
+  type: 'test'
+  ...
+# Subtest: batch opening preserves each snapshot, aggregates rewards and retries overlapping device batches without paying twice
+ok 12 - batch opening preserves each snapshot, aggregates rewards and retries overlapping device batches without paying twice
+  ---
+  duration_ms: 6.375104
+  type: 'test'
+  ...
+# Subtest: a batch is all-or-nothing on capacity, invalid or foreign boxes and storage failure; same receipt can retry
+ok 13 - a batch is all-or-nothing on capacity, invalid or foreign boxes and storage failure; same receipt can retry
+  ---
+  duration_ms: 5.407411
+  type: 'test'
+  ...
+# Subtest: batch validates unique 1–20 IDs, independent rolls and pending battle; 20-box limit is supported
+ok 14 - batch validates unique 1–20 IDs, independent rolls and pending battle; 20-box limit is supported
+  ---
+  duration_ms: 34.606439
+  type: 'test'
+  ...
+# Subtest: stone defaults cover real monster IDs and preserve all base chest settings
+ok 15 - stone defaults cover real monster IDs and preserve all base chest settings
+  ---
+  duration_ms: 4.20708
+  type: 'test'
+  ...
+# Subtest: seven original checkin gold payouts unchanged; only days 3 and 7 add stones once
+ok 16 - seven original checkin gold payouts unchanged; only days 3 and 7 add stones once
+  ---
+  duration_ms: 34.851398
+  type: 'test'
+  ...
+# Subtest: all original mission conditions required, Taipei daily grant atomic across devices/groups and resets next day
+ok 17 - all original mission conditions required, Taipei daily grant atomic across devices/groups and resets next day
+  ---
+  duration_ms: 35.985945
+  type: 'test'
+  ...
+# Subtest: previously claimed checkin never backfills when source enabled later
+ok 18 - previously claimed checkin never backfills when source enabled later
+  ---
+  duration_ms: 4.425287
+  type: 'test'
+  ...
+# Subtest: daily delivery failure rolls back gold, stones and grant; same claim retries safely
+ok 19 - daily delivery failure rolls back gold, stones and grant; same claim retries safely
+  ---
+  duration_ms: 5.532494
+  type: 'test'
+  ...
+# Subtest: disabled global adds no source reads and no stones; malformed auto source does not block original gold
+ok 20 - disabled global adds no source reads and no stones; malformed auto source does not block original gold
+  ---
+  duration_ms: 21.180623
+  type: 'test'
+  ...
+# Subtest: new chest locks material version at drop; changed config cannot change opening, old boxes stay unchanged
+ok 21 - new chest locks material version at drop; changed config cannot change opening, old boxes stay unchanged
+  ---
+  duration_ms: 6.909614
+  type: 'test'
+  ...
+# Subtest: zero, exact threshold, maximum quantity and full chance use independent inclusive secure draws
+ok 22 - zero, exact threshold, maximum quantity and full chance use independent inclusive secure draws
+  ---
+  duration_ms: 34.644113
+  type: 'test'
+  ...
+# Subtest: maintenance preserves locked new chest, but old boxes and disabled hornet extras still open
+ok 23 - maintenance preserves locked new chest, but old boxes and disabled hornet extras still open
+  ---
+  duration_ms: 47.437731
+  type: 'test'
+  ...
+# Subtest: overlapping batch opens and failed original item delivery never pay material twice or partially
+ok 24 - overlapping batch opens and failed original item delivery never pay material twice or partially
+  ---
+  duration_ms: 69.975185
+  type: 'test'
+  ...
+# Subtest: material stacks separately without full inventory blocking original coin rewards; cannot be granted unguarded
+ok 25 - material stacks separately without full inventory blocking original coin rewards; cannot be granted unguarded
+  ---
+  duration_ms: 30.490987
+  type: 'test'
+  ...
+# Subtest: snapshots cannot be corrupted and foreign actors cannot open stone boxes
+ok 26 - snapshots cannot be corrupted and foreign actors cannot open stone boxes
+  ---
+  duration_ms: 18.305016
+  type: 'test'
+  ...
+# Subtest: gift authorization keeps explicit quantities and original claim rules; duplicate rows checked as sum
+ok 27 - gift authorization keeps explicit quantities and original claim rules; duplicate rows checked as sum
+  ---
+  duration_ms: 16.870418
+  type: 'test'
+  ...
+# Subtest: sampler caches retry draws; production cannot inject controllable RNG; config immutable revision and request replay
+ok 28 - sampler caches retry draws; production cannot inject controllable RNG; config immutable revision and request replay
+  ---
+  duration_ms: 11.242468
+  type: 'test'
+  ...
+# Subtest: actual service admin claims, full gift redemption, disabled retry and one atomic gold/material grant
+ok 29 - actual service admin claims, full gift redemption, disabled retry and one atomic gold/material grant
+  ---
+  duration_ms: 62.851733
+  type: 'test'
+  ...
+# Subtest: Firestore callback retry keeps material draw identical and failed original item delivery grants nothing
+ok 30 - Firestore callback retry keeps material draw identical and failed original item delivery grants nothing
+  ---
+  duration_ms: 24.588217
+  type: 'test'
+  ...
+# Subtest: reward grants and Phase 3 refinement debit share the same material balance with no second inventory counter
+ok 31 - reward grants and Phase 3 refinement debit share the same material balance with no second inventory counter
+  ---
+  duration_ms: 69.000083
+  type: 'test'
+  ...
+# Subtest: public-art manifest matches file contents and excludes code, saves and APIs
+ok 32 - public-art manifest matches file contents and excludes code, saves and APIs
+  ---
+  duration_ms: 509.626953
+  type: 'test'
+  ...
+# Subtest: private-mode and quota failures preserve successful public image responses
+ok 33 - private-mode and quota failures preserve successful public image responses
+  ---
+  duration_ms: 57.359949
+  type: 'test'
+  ...
+# Subtest: HTML, JavaScript, private/API requests and POST never enter the art cache
+ok 34 - HTML, JavaScript, private/API requests and POST never enter the art cache
+  ---
+  duration_ms: 2.838183
+  type: 'test'
+  ...
+# Subtest: catalogues retain item, hen and dog art without full combat atlases
+ok 35 - catalogues retain item, hen and dog art without full combat atlases
+  ---
+  duration_ms: 10.318604
+  type: 'test'
+  ...
+# Subtest: optional worker startup wait is bounded and failures fall back to normal loading
+ok 36 - optional worker startup wait is bounded and failures fall back to normal loading
+  ---
+  duration_ms: 12.133464
+  type: 'test'
+  ...
+# Subtest: fuji catalogue uses a small thumbnail and defers both full-size orientations
+ok 37 - fuji catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 1.047539
+  type: 'test'
+  ...
+# Subtest: arctic catalogue uses a small thumbnail and defers both full-size orientations
+ok 38 - arctic catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 0.421568
+  type: 'test'
+  ...
+# Subtest: hallstatt catalogue uses a small thumbnail and defers both full-size orientations
+ok 39 - hallstatt catalogue uses a small thumbnail and defers both full-size orientations
+  ---
+  duration_ms: 1.177397
+  type: 'test'
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 832.606714

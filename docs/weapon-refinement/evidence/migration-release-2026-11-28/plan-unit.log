@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: reviewed production-adapter path uses no testEnvironment, is read-only on review and resumes all scopes without starvation
+ok 1 - reviewed production-adapter path uses no testEnvironment, is read-only on review and resumes all scopes without starvation
+  ---
+  duration_ms: 32.481044
+  type: 'test'
+  ...
+# Subtest: stale preflight fingerprints never overwrite newer weapons; unrelated wallet and rewards survive staging and rollback
+ok 2 - stale preflight fingerprints never overwrite newer weapons; unrelated wallet and rewards survive staging and rollback
+  ---
+  duration_ms: 7.772829
+  type: 'test'
+  ...
+# Subtest: membership revocation and mismatched generation stop before any mutation; unknown scope rejected
+ok 3 - membership revocation and mismatched generation stop before any mutation; unknown scope rejected
+  ---
+  duration_ms: 5.627804
+  type: 'test'
+  ...
+# Subtest: negative/corrupt source is isolated and exact source/code/expiry/duplicate farm constraints fail closed
+ok 4 - negative/corrupt source is isolated and exact source/code/expiry/duplicate farm constraints fail closed
+  ---
+  duration_ms: 3.624193
+  type: 'test'
+  ...
+# Subtest: explicit production approval is bound to project/hash/action/backup/expiry; emulator mixups fail before SDK load
+ok 5 - explicit production approval is bound to project/hash/action/backup/expiry; emulator mixups fail before SDK load
+  ---
+  duration_ms: 0.773625
+  type: 'test'
+  ...
+# Subtest: CLI refuses unknown/default production/dryrun apply before SDK or outputs; immutable output and reviewed hash required
+ok 6 - CLI refuses unknown/default production/dryrun apply before SDK or outputs; immutable output and reviewed hash required
+  ---
+  duration_ms: 122.696485
+  type: 'test'
+  ...
+# Subtest: final activation inspects missing earlier allocations instead of trusting journal completed counter
+ok 7 - final activation inspects missing earlier allocations instead of trusting journal completed counter
+  ---
+  duration_ms: 6.752065
+  type: 'test'
+  ...
+# Subtest: row tampering and authorization expiry mid-run cannot widen a reviewed plan
+ok 8 - row tampering and authorization expiry mid-run cannot widen a reviewed plan
+  ---
+  duration_ms: 5.572899
+  type: 'test'
+  ...
+# Subtest: expired plan can be renewed offline keeping original source/generation; new hash requires fresh approval
+ok 9 - expired plan can be renewed offline keeping original source/generation; new hash requires fresh approval
+  ---
+  duration_ms: 79.821576
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 350.915926

@@ -1,0 +1,11 @@
+{
+  "game-admin/tests/helpers/compatibility-security-fixture.cjs": "2b54a36e9ca00428de4046cece5e0b61bae72e079210020e7a5520887e0721f3",
+  "game-admin/tests/compatibility-security.cases.cjs": "38ab7b905cc4a7a961306b78b89262ccd861072552ebd0fad622174ace4b171c",
+  "game-admin/tests/compatibility-security.test.cjs": "67d1661a31780172b57a861b33e225037c964984b2d578aa02cb0c063481824e",
+  "game-admin/tests/compatibility-security.emulator.cjs": "dd3983ff1f17857e64121b933535fb958f7f11405002c06a6d70e9b97f5eb139",
+  "tests/weapon-refinement/legacy-pwa-acceptance.cjs": "a12d9adb32130a27a751ca39972908c46a50cc0b79bf942b32e57664f8751bde",
+  "scripts/run-refinement-firestore-tests.cjs": "fd1341c38ebb10038b8852c6e61e7fc0d18b0bf16f65f22c3ff32772eb22fd96",
+  "scripts/lib/firestore-emulator-proof.cjs": "a47064c6a1e85b15330255e70d3be8edac47cef5dc4a3d31a30bc2d2c130b368",
+  "scripts/weapon-release-review.cjs": "bef1cd2436c6fd35538fa817ecaea3fe16793c756015b76e524fa29e690919b7",
+  "docs/weapon-refinement/compatibility-security-report.md": "5543ba7d041afcd06313f335bdc052c441b6d323cb95258ada80a4e577dfbd5c"
+}

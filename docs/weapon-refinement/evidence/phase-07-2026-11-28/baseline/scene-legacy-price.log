@@ -1,0 +1,1 @@
+PASS old scene backend: new frontend shows update notice, never falls back to legacy purchase, retries never debit the old price

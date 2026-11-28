@@ -1,0 +1,102 @@
+{
+  "passed": true,
+  "realBrowser": true,
+  "actualSafetyModules": true,
+  "actualService": true,
+  "memoryDB": true,
+  "physicalIPhone": false,
+  "fullGame": false,
+  "cases": [
+    "same-scope second tab cannot begin/steal active page",
+    "explicit handoff pauses old page and recovers original committed purchase",
+    "uncommitted result remains unknown, explicit retry preserves ID",
+    "legacy session pointer imported and queried without new debit",
+    "protocol rejection opens blocking update dialog",
+    "offline update preserves identity and unresolved journal",
+    "module graph update preserves public art and pending original IDs"
+  ],
+  "calls": [
+    {
+      "action": "beginBattlePage",
+      "id": "0fdcc435-c612-431a-b207-d33a40dd1b34"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "abe9d119-f215-4df3-ba1d-20d9a820f6a3"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "da379e78-594e-4f63-b4ff-2da74432b542"
+    },
+    {
+      "action": "abandonBattlePage",
+      "id": "c7700c09-201f-4bae-83cd-660e8148cf02"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "c559a86e-88ca-4195-9160-05022a15e341"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "dd3307b3-e6ed-480c-8b65-8aedbd546880"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "42b62e97-2a3d-41c3-a288-0f55fd79a0ba"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "17f93afa-0f7e-4d81-92e3-e07f1c4459d5"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "9b290a9e-f09f-41d1-b11e-7374ecee9df1"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "17f93afa-0f7e-4d81-92e3-e07f1c4459d5"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "1465c4cb-14cc-47db-9bb1-671230e740dc"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "989adfda-43f8-4ea5-9f79-78af83e79a2e"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "7ec5bdc7-557c-496a-9dce-5269352940e9"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "a577cfd9-f816-4fd3-ad33-28c917888db8"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "e2cd6c4b-d560-4446-9d9c-6539259a4703"
+    },
+    {
+      "action": "homeEncounter",
+      "id": "6ccf650d-3ac6-4190-a5d4-96372e023950"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "773ec6e1-4715-4a97-8edf-40430556100a"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "47d6b5b6-aeb1-4077-ae7c-bc84332bad02"
+    },
+    {
+      "action": "abandonBattlePage",
+      "id": "94bd08ac-44a3-4882-924c-1b169df6b291"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "e9dd594e-ee2d-425b-97da-0e013e1a0c2c"
+    }
+  ],
+  "deployed": false,
+  "productionData": false
+}

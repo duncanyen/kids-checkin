@@ -1,0 +1,96 @@
+{
+  "phase": 7,
+  "dateTaipei": "2026-11-28",
+  "sourceCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "uncommittedPriorPhases": "Phase2–6/art remain present; no commit, push or deployment this phase",
+  "units": {
+    "passed": 612,
+    "failed": 0,
+    "newTests": 27,
+    "finalLog": "phase7-units-complete.log"
+  },
+  "phase1Regression": {
+    "browserPassed": 29,
+    "browserTotal": 29,
+    "preparePassed": 2,
+    "runnerUnitCount": 607,
+    "finalUnitCount": 612,
+    "summary": "baseline/summary.json"
+  },
+  "operationsBrowser": {
+    "passed": true,
+    "log": "phase7-browser-complete.log",
+    "desktop": "1440x1000",
+    "mobile": "390x844",
+    "backend": "actual service + MemoryDB, runtime SDK isolated",
+    "physicalDeviceTested": false
+  },
+  "emulator": {
+    "status": "BLOCKED",
+    "assertionsExecuted": false,
+    "reason": "Firestore emulator JAR download HTTP403 Domain forbidden",
+    "log": "phase7-emulator.log"
+  },
+  "formalReleaseAccepted": false,
+  "sourceData": "synthetic fixtures only; no operational player statistics obtained",
+  "gaps": [
+    "Phase6 server does not prove physical gestures/collisions",
+    "real Rules, Firestore concurrency and index READY unverified",
+    "complete full-population weapon inventory denominator and active-player snapshots unavailable",
+    "gold trends are net balance changes, not gross currency ledger",
+    "immediate publication only; no future scheduling",
+    "history conflict checks cap at100 versions, exact snapshot10000 samples, audit5000 unique owners"
+  ],
+  "flags": {
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementResetEnabled": false,
+    "refinementCombatBonusEnabled": false,
+    "refinementStoneRewardEnabled": false
+  },
+  "formalDataAccessed": false,
+  "formalClaimsChanged": false,
+  "deployed": false,
+  "rulesChanged": false,
+  "deploymentIndexesChanged": false,
+  "proposedIndexesOnly": true,
+  "phase8Started": false,
+  "protectedFilesUnchanged": [
+    "rules/firestore.private-farm.candidate.rules",
+    "game-admin/rules/firestore.indexes.json",
+    "firebase.json",
+    "game-admin/firebase.json",
+    "js/farm/combat-rules.js",
+    "game-admin/functions/combat-balance.cjs",
+    "game-admin/functions/encounters.cjs"
+  ],
+  "sourceSha256": {
+    "game-admin/functions/refinement-operations.cjs": "87afb6c7c519ea661170b55a7b93b97c4809171207479ba9d3baeedc1873e20c",
+    "game-admin/functions/refinement-statistics.cjs": "6ae57494ccafd58fca0b32839e42789696dc9a90ef7ba293053a32395fb2b9bd",
+    "game-admin/functions/refinement-snapshots.cjs": "f4dff14f465538f0b105a5189f5d4ad40c7c55770e69bcba10282bedf4e2e2f4",
+    "game-admin/functions/service.cjs": "6bdfe1298286af9bb7252e3c2f82d886e055fbf28ea43372d89e4eeb92b84d9d",
+    "game-admin/functions/index.cjs": "b483a544156d8bc3be2d5e49cb470597063c9b3adcafae30e8f51a846a3d173e",
+    "game-admin/functions/refinement-core.cjs": "b046b238e63e6c9c5d33d7e3069ab394cba37d7b5f4f438866ae880360196185",
+    "game-admin/functions/refinement-service.cjs": "ab4018e0aa4630398bad1bc98c8a2f114120d17fca4f0509259c1dfa12e64909",
+    "game-admin/functions/refinement-player-service.cjs": "1d60293d918564dfd3cd170dc9fe63fb48f46a62c1f53531fde62640f051c44a",
+    "game-admin/functions/farm-transactions.cjs": "c29f8f698ca5113569498d252e29fcd86de6a533bdd6bb2f5742bc7393810491",
+    "game-admin/site/refinement.js": "3a804a381e2fd2ba043790cb2799ec440d14628e9eb3d3bca2b11947746f8344",
+    "game-admin/site/app.js": "f5f7192d0c1fc2f73c8857f00786445de821a44d89bb0a1baa7a8e14672ed0f9",
+    "game-admin/site/management.js": "16b17b769d00904e9d4997939338fe731891fa363636802c17e9be212260243c",
+    "game-admin/site/index.html": "652dd72ef53d23a258feecce545b3048e946e7ed8f77a95de694a7b33ab79e8a",
+    "game-admin/site/styles.css": "3cbb118fb31304e9e95f0e8c9b731b54652b0d9c1e8d3178ecb50f78955146c3",
+    "game-admin/tests/refinement-operations.test.cjs": "8ed5d1dd86ae8e08006eee26f7ea31ff960a75e0498ff5c0364d59a843c9b0db",
+    "game-admin/tests/refinement-statistics.test.cjs": "610e3f63a207898464bebee55e02c534d07c5e5f973fb13368f079d62ac28ae6",
+    "game-admin/tests/refinement-operations.browser.cjs": "2d3f0d37d90b292f7ba958997e6a5126d6d3547317193028d3c6e954f5354b3c",
+    "game-admin/tests/refinement-operations.emulator.cjs": "12239d211267349ae0d7f490396072dc1c23f812e9c468164dae4ac50fc24303",
+    "game-admin/tests/refinement-core.test.cjs": "f5be8a262788cfc5963a2b4cc29cf16011c322c8fe80c9913086e037d08a3dda",
+    "game-admin/tests/refinement-service.test.cjs": "64215a0b5d119cdc4267e18e76205e0c385393d70c26820e153694dc8cb611bc",
+    "game-admin/tests/refinement-player.test.cjs": "1181e6ca3f1ec6920430c70c2ee38dac70dc63231441640ca22042de8d83c04b",
+    "game-admin/tests/refinement-stone-rewards.test.cjs": "ea7b9a6558e3dcd58b1f8cdd8c82862dbda3eb8c0a97618396af5c9ad382a0e4",
+    "tests/functions-region.test.cjs": "3dce2561ad6b5a6364b72cfe6df3b06f37a0d5fe2f289265444ab6bd220ce7f0",
+    "tests/weapon-refinement/operations-cost-probe.cjs": "38ae114c759915f73908de1c596fcb62c15650653e001c837cc4f154fe1997eb",
+    "docs/weapon-refinement/DEVELOPMENT_RULES.md": "a3ed9e5ad4e7aff97ea15566578788b733b0079e05a51742354cda5ee6e40f55",
+    "docs/weapon-refinement/phase-07-report.md": "22ee8affa11d30be65231cadc558e604719544889edc29e468d3f5e4eed07f27",
+    "docs/weapon-refinement/phase-07-indexes.proposed.json": "e22433a2df51c16e552b34ca83f57f9b8ccbea93e881e60924f14dc2d45489cf"
+  }
+}

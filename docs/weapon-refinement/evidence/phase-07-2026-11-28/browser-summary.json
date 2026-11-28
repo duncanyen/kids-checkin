@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "viewportDesktop": "1440×1000",
+  "viewportMobile": "390×844",
+  "apiCalls": 15,
+  "source": "actual independent admin navigation + actual service, MemoryDB not Firestore",
+  "formalData": false
+}

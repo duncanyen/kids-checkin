@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: stone defaults cover real monster IDs and preserve all base chest settings
+ok 1 - stone defaults cover real monster IDs and preserve all base chest settings
+  ---
+  duration_ms: 4.006879
+  type: 'test'
+  ...
+# Subtest: seven original checkin gold payouts unchanged; only days 3 and 7 add stones once
+ok 2 - seven original checkin gold payouts unchanged; only days 3 and 7 add stones once
+  ---
+  duration_ms: 29.671474
+  type: 'test'
+  ...
+# Subtest: all original mission conditions required, Taipei daily grant atomic across devices/groups and resets next day
+ok 3 - all original mission conditions required, Taipei daily grant atomic across devices/groups and resets next day
+  ---
+  duration_ms: 18.765767
+  type: 'test'
+  ...
+# Subtest: previously claimed checkin never backfills when source enabled later
+ok 4 - previously claimed checkin never backfills when source enabled later
+  ---
+  duration_ms: 2.796647
+  type: 'test'
+  ...
+# Subtest: daily delivery failure rolls back gold, stones and grant; same claim retries safely
+ok 5 - daily delivery failure rolls back gold, stones and grant; same claim retries safely
+  ---
+  duration_ms: 4.400893
+  type: 'test'
+  ...
+# Subtest: disabled global adds no source reads and no stones; malformed auto source does not block original gold
+ok 6 - disabled global adds no source reads and no stones; malformed auto source does not block original gold
+  ---
+  duration_ms: 20.4589
+  type: 'test'
+  ...
+# Subtest: new chest locks material version at drop; changed config cannot change opening, old boxes stay unchanged
+ok 7 - new chest locks material version at drop; changed config cannot change opening, old boxes stay unchanged
+  ---
+  duration_ms: 5.921703
+  type: 'test'
+  ...
+# Subtest: zero, exact threshold, maximum quantity and full chance use independent inclusive secure draws
+ok 8 - zero, exact threshold, maximum quantity and full chance use independent inclusive secure draws
+  ---
+  duration_ms: 23.098612
+  type: 'test'
+  ...
+# Subtest: maintenance preserves locked new chest, but old boxes and disabled hornet extras still open
+ok 9 - maintenance preserves locked new chest, but old boxes and disabled hornet extras still open
+  ---
+  duration_ms: 8.128217
+  type: 'test'
+  ...
+# Subtest: overlapping batch opens and failed original item delivery never pay material twice or partially
+ok 10 - overlapping batch opens and failed original item delivery never pay material twice or partially
+  ---
+  duration_ms: 7.503032
+  type: 'test'
+  ...
+# Subtest: material stacks separately without full inventory blocking original coin rewards; cannot be granted unguarded
+ok 11 - material stacks separately without full inventory blocking original coin rewards; cannot be granted unguarded
+  ---
+  duration_ms: 5.944732
+  type: 'test'
+  ...
+# Subtest: snapshots cannot be corrupted and foreign actors cannot open stone boxes
+ok 12 - snapshots cannot be corrupted and foreign actors cannot open stone boxes
+  ---
+  duration_ms: 3.231509
+  type: 'test'
+  ...
+# Subtest: gift authorization keeps explicit quantities and original claim rules; duplicate rows checked as sum
+ok 13 - gift authorization keeps explicit quantities and original claim rules; duplicate rows checked as sum
+  ---
+  duration_ms: 1.901353
+  type: 'test'
+  ...
+# Subtest: sampler caches retry draws; production cannot inject controllable RNG; config immutable revision and request replay
+ok 14 - sampler caches retry draws; production cannot inject controllable RNG; config immutable revision and request replay
+  ---
+  duration_ms: 1.886231
+  type: 'test'
+  ...
+# Subtest: actual service admin claims, full gift redemption, disabled retry and one atomic gold/material grant
+ok 15 - actual service admin claims, full gift redemption, disabled retry and one atomic gold/material grant
+  ---
+  duration_ms: 15.120741
+  type: 'test'
+  ...
+# Subtest: Firestore callback retry keeps material draw identical and failed original item delivery grants nothing
+ok 16 - Firestore callback retry keeps material draw identical and failed original item delivery grants nothing
+  ---
+  duration_ms: 5.35712
+  type: 'test'
+  ...
+# Subtest: reward grants and Phase 3 refinement debit share the same material balance with no second inventory counter
+ok 17 - reward grants and Phase 3 refinement debit share the same material balance with no second inventory counter
+  ---
+  duration_ms: 12.523232
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 248.09929

@@ -1,0 +1,1 @@
+cloud-firestore-emulator 1.19.8

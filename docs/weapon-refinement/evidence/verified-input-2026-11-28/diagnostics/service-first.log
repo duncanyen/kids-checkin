@@ -1,0 +1,107 @@
+TAP version 13
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 7,
+#   handlerMs: 7
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 4,
+#   handlerMs: 4
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 1,
+#   handlerMs: 1
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# Subtest: default off cannot negotiate, explicit scoped fixture admits; sticky private minimum prevents protocol downgrade
+ok 1 - default off cannot negotiate, explicit scoped fixture admits; sticky private minimum prevents protocol downgrade
+  ---
+  duration_ms: 71.050102
+  type: 'test'
+  ...
+# Subtest: all nine monsters and +0/+1 use true server models; valid taps/arrows award original damage, misses never damage
+not ok 2 - all nine monsters and +0/+1 use true server models; valid taps/arrows award original damage, misses never damage
+  ---
+  duration_ms: 27.851788
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/verified-input.cases.cjs:5:2'
+  failureType: 'testCodeFailure'
+  error: 'INPUT_TAP_POINT'
+  code: 'invalid-argument'
+  stack: |-
+    fail (file:///workspace/kids-checkin/js/farm/verified-combat.js:11:31)
+    Module.evaluateInputs (file:///workspace/kids-checkin/js/farm/verified-combat.js:45:199)
+    TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/verified-input.cases.cjs:5:608)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: aggregate fake hits, client velocity/hit/HP fields, wrong seq, early/stale input and excessive rate never mutate state
+ok 3 - aggregate fake hits, client velocity/hit/HP fields, wrong seq, early/stale input and excessive rate never mutate state
+  ---
+  duration_ms: 29.646452
+  type: 'test'
+  ...
+# Subtest: cross-device duplicate batches/replay and settlement are atomic, late response uses original ID, active battle conflicts persist
+not ok 4 - cross-device duplicate batches/replay and settlement are atomic, late response uses original ID, active battle conflicts persist
+  ---
+  duration_ms: 19.795336
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/verified-input.cases.cjs:7:2'
+  failureType: 'testCodeFailure'
+  error: 'INPUT_AFTER_VICTORY'
+  code: 'invalid-argument'
+  stack: |-
+    Object.fail (/workspace/kids-checkin/game-admin/functions/domain.cjs:3:35)
+    Object.combatCommand (/workspace/kids-checkin/game-admin/functions/farm-combat.cjs:87:139)
+    async /workspace/kids-checkin/game-admin/functions/farm-transactions.cjs:138:20
+    async execute (/workspace/kids-checkin/game-admin/tests/memory-db.cjs:37:26)
+  ...
+# Subtest: server advances stored arrow physics on settlement, rejects forged origin and no hit event can grant rewards
+ok 5 - server advances stored arrow physics on settlement, rejects forged origin and no hit event can grant rewards
+  ---
+  duration_ms: 19.251076
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 274.904508

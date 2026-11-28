@@ -1,0 +1,19 @@
+PAGEERROR Cannot read properties of undefined (reading 'realWidth')
+PAGEERROR Cannot read properties of undefined (reading 'cutWidth')
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   "Cannot read properties of undefined (reading 'realWidth')",
++   "Cannot read properties of undefined (reading 'cutWidth')"
++ ]
+- []
+
+    at /workspace/kids-checkin/tests/iphone-lab/smoke.cjs:2:1094 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}

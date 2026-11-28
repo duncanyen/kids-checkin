@@ -1,0 +1,118 @@
+TAP version 13
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 9,
+#   handlerMs: 9
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 1,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 3,
+#   handlerMs: 3
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 2,
+#   handlerMs: 2
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 1,
+#   handlerMs: 1
+# }
+# farm-theft-timing {
+#   action: 'visitEncounter',
+#   combined: false,
+#   identityMs: 0,
+#   rateLimitMs: 0,
+#   transactionMs: 1,
+#   handlerMs: 1
+# }
+# Subtest: old V4 +0 protocol remains exact after individualization; forged V4 damage is ignored
+ok 1 - old V4 +0 protocol remains exact after individualization; forged V4 damage is ignored
+  ---
+  duration_ms: 63.019909
+  type: 'test'
+  ...
+# Subtest: old protocol cannot downgrade earned V5, old stacked sale/equip cannot choose arbitrary new instance
+ok 2 - old protocol cannot downgrade earned V5, old stacked sale/equip cannot choose arbitrary new instance
+  ---
+  duration_ms: 32.040392
+  type: 'test'
+  ...
+# Subtest: forged stats/order/version/weapon/speed rejected with no health or asset mutation; snapshot survives operator update
+ok 3 - forged stats/order/version/weapon/speed rejected with no health or asset mutation; snapshot survives operator update
+  ---
+  duration_ms: 29.227595
+  type: 'test'
+  ...
+# Subtest: battle locks equip/refine/reset/sale; cross-device same-order attacks and repeated settlements only count once
+not ok 4 - battle locks equip/refine/reset/sale; cross-device same-order attacks and repeated settlements only count once
+  ---
+  duration_ms: 41.77438
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:8:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok((await f.farm()).chestCount<=1)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/compatibility-security.cases.cjs:8:1296)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: new page invalidates stale attack/settlement and old receipt; expired attack cannot forge victory
+ok 5 - new page invalidates stale attack/settlement and old receipt; expired attack cannot forge victory
+  ---
+  duration_ms: 14.636014
+  type: 'test'
+  ...
+# Subtest: security finding reproduction: fabricated in-budget hits without collision telemetry can earn a reward
+ok 6 - security finding reproduction: fabricated in-budget hits without collision telemetry can earn a reward
+  ---
+  duration_ms: 11.424457
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 5
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 280.183898

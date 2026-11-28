@@ -1,0 +1,226 @@
+TAP version 13
+# Subtest: 3 stacked weapons become 3 distinct +0 instances; two migration runs cannot create 6; equipment retained
+ok 1 - 3 stacked weapons become 3 distinct +0 instances; two migration runs cannot create 6; equipment retained
+  ---
+  duration_ms: 28.168981
+  type: 'test'
+  ...
+# Subtest: buy 2 produces distinct IDs, original receipt replays after reload; sell exactly one leaves its siblings
+ok 2 - buy 2 produces distinct IDs, original receipt replays after reload; sell exactly one leaves its siblings
+  ---
+  duration_ms: 9.297335
+  type: 'test'
+  ...
+# Subtest: exact-instance equip, unequip, bound free club, special katana ownership and unchanged unpublished status
+ok 3 - exact-instance equip, unequip, bound free club, special katana ownership and unchanged unpublished status
+  ---
+  duration_ms: 13.355379
+  type: 'test'
+  ...
+# Subtest: same account across groups and another player cannot read, sell or equip an instance
+ok 4 - same account across groups and another player cannot read, sell or equip an instance
+  ---
+  duration_ms: 6.262371
+  type: 'test'
+  ...
+# Subtest: multi-device duplicate sale/equip use expected revision; concurrent purchases both commit without loss
+ok 5 - multi-device duplicate sale/equip use expected revision; concurrent purchases both commit without loss
+  ---
+  duration_ms: 9.306489
+  type: 'test'
+  ...
+# Subtest: staging blocks weapon writers and battle entry, preserves latest coins and other assets; resume and retry original purchase
+ok 6 - staging blocks weapon writers and battle entry, preserves latest coins and other assets; resume and retry original purchase
+  ---
+  duration_ms: 4.599716
+  type: 'test'
+  ...
+# Subtest: stale dry-run cannot overwrite purchases before gate; anomalous data quarantined without modifying farm
+ok 7 - stale dry-run cannot overwrite purchases before gate; anomalous data quarantined without modifying farm
+  ---
+  duration_ms: 2.805084
+  type: 'test'
+  ...
+# Subtest: partial rollback preserves current unrelated assets; after new instance operation requires forward repair
+ok 8 - partial rollback preserves current unrelated assets; after new instance operation requires forward repair
+  ---
+  duration_ms: 6.066476
+  type: 'test'
+  ...
+# Subtest: legacy path and switch off preserve existing operations without new collections; migrated assets never fall back to stacks
+ok 9 - legacy path and switch off preserve existing operations without new collections; migrated assets never fall back to stacks
+  ---
+  duration_ms: 5.115738
+  type: 'test'
+  ...
+# Subtest: sold-out allocation pagination and cursor revision changes do not skip owned weapons
+ok 10 - sold-out allocation pagination and cursor revision changes do not skip owned weapons
+  ---
+  duration_ms: 18.406751
+  type: 'test'
+  ...
+# Subtest: storage failure is atomic; same ID after reconnect or new service gives exactly the original acquisition
+ok 11 - storage failure is atomic; same ID after reconnect or new service gives exactly the original acquisition
+  ---
+  duration_ms: 3.769448
+  type: 'test'
+  ...
+# Subtest: chest and gift allocations share transaction; staged gifts cannot consume quotas
+ok 12 - chest and gift allocations share transaction; staged gifts cannot consume quotas
+  ---
+  duration_ms: 17.914134
+  type: 'test'
+  ...
+# Subtest: max existing batch reward (20 x 7 x 1000 weapons) fits allocation write budget without truncation
+ok 13 - max existing batch reward (20 x 7 x 1000 weapons) fits allocation write budget without truncation
+  ---
+  duration_ms: 30.924522
+  type: 'test'
+  ...
+# Subtest: all +0 weapon/enemy damage and critical sequences remain byte-identical to legacy combat input
+ok 14 - all +0 weapon/enemy damage and critical sequences remain byte-identical to legacy combat input
+  ---
+  duration_ms: 65.555178
+  type: 'test'
+  ...
+# Subtest: legacy missing equipment defaults normalize to bound club without adding capacity
+ok 15 - legacy missing equipment defaults normalize to bound club without adding capacity
+  ---
+  duration_ms: 1.569185
+  type: 'test'
+  ...
+# Subtest: old v1 sell/equip payloads on v2 fail without spending or picking an arbitrary instance
+ok 16 - old v1 sell/equip payloads on v2 fail without spending or picking an arbitrary instance
+  ---
+  duration_ms: 2.265057
+  type: 'test'
+  ...
+# Subtest: staged external gift cannot create old stacks or consume a claim; same request succeeds after resume
+ok 17 - staged external gift cannot create old stacks or consume a claim; same request succeeds after resume
+  ---
+  duration_ms: 4.39483
+  type: 'test'
+  ...
+# Subtest: migration CLI rejects production/non-local destinations before loading any Admin SDK
+ok 18 - migration CLI rejects production/non-local destinations before loading any Admin SDK
+  ---
+  duration_ms: 116.045932
+  type: 'test'
+  ...
+# Subtest: actual integrated +0..+9, failed attempt, reset and repeated reset reconcile same-commit wallets and historical costs
+ok 19 - actual integrated +0..+9, failed attempt, reset and repeated reset reconcile same-commit wallets and historical costs
+  ---
+  duration_ms: 96.969417
+  type: 'test'
+  ...
+# Subtest: offline audit catches lost allocations, missing equipped item, and invalid ownership without mutation
+ok 20 - offline audit catches lost allocations, missing equipped item, and invalid ownership without mutation
+  ---
+  duration_ms: 61.30328
+  type: 'test'
+  ...
+# Subtest: negative wallets, levels outside0..9 and +0 nonzero bonuses block release
+ok 21 - negative wallets, levels outside0..9 and +0 nonzero bonuses block release
+  ---
+  duration_ms: 63.078221
+  type: 'test'
+  ...
+# Subtest: actual wrong debit, duplicate refund observation and forged historical successful costs detected
+ok 22 - actual wrong debit, duplicate refund observation and forged historical successful costs detected
+  ---
+  duration_ms: 38.851926
+  type: 'test'
+  ...
+# Subtest: duplicate transaction under a new path and duplicate allocation namespace cannot pass uniqueness audit
+ok 23 - duplicate transaction under a new path and duplicate allocation namespace cannot pass uniqueness audit
+  ---
+  duration_ms: 28.494463
+  type: 'test'
+  ...
+# Subtest: incomplete export or absent same-commit wallet evidence is INCOMPLETE not a pass
+ok 24 - incomplete export or absent same-commit wallet evidence is INCOMPLETE not a pass
+  ---
+  duration_ms: 24.19982
+  type: 'test'
+  ...
+# Subtest: legacy farms remain valid without fabricating new instances; migrated scopes may not be omitted
+ok 25 - legacy farms remain valid without fabricating new instances; migrated scopes may not be omitted
+  ---
+  duration_ms: 23.642467
+  type: 'test'
+  ...
+# Subtest: offline CLI never contacts Firebase, refuses overwrite/network/project flags and returns incomplete exit3
+ok 26 - offline CLI never contacts Firebase, refuses overwrite/network/project flags and returns incomplete exit3
+  ---
+  duration_ms: 262.315014
+  type: 'test'
+  ...
+# Subtest: completed intent without receipt and pending intent prevent false full reconciliation
+ok 27 - completed intent without receipt and pending intent prevent false full reconciliation
+  ---
+  duration_ms: 37.291153
+  type: 'test'
+  ...
+# Subtest: single-scope read-only exporter retrieves atomic wallet journals; missing historical journals remain unverified
+ok 28 - single-scope read-only exporter retrieves atomic wallet journals; missing historical journals remain unverified
+  ---
+  duration_ms: 36.18181
+  type: 'test'
+  ...
+# Subtest: even a self-consistent rewritten quote must match historical published costs and probabilities
+ok 29 - even a self-consistent rewritten quote must match historical published costs and probabilities
+  ---
+  duration_ms: 24.377656
+  type: 'test'
+  ...
+# Subtest: two owners reusing an allocation namespace cannot claim globally unique weapon instances
+ok 30 - two owners reusing an allocation namespace cannot claim globally unique weapon instances
+  ---
+  duration_ms: 25.312408
+  type: 'test'
+  ...
+# Subtest: reviewed production-adapter path uses no testEnvironment, is read-only on review and resumes all scopes without starvation
+ok 31 - reviewed production-adapter path uses no testEnvironment, is read-only on review and resumes all scopes without starvation
+  ---
+  duration_ms: 35.074338
+  type: 'test'
+  ...
+# Subtest: stale preflight fingerprints never overwrite newer weapons; unrelated wallet and rewards survive staging and rollback
+ok 32 - stale preflight fingerprints never overwrite newer weapons; unrelated wallet and rewards survive staging and rollback
+  ---
+  duration_ms: 9.382782
+  type: 'test'
+  ...
+# Subtest: membership revocation and mismatched generation stop before any mutation; unknown scope rejected
+ok 33 - membership revocation and mismatched generation stop before any mutation; unknown scope rejected
+  ---
+  duration_ms: 7.02798
+  type: 'test'
+  ...
+# Subtest: negative/corrupt source is isolated and exact source/code/expiry/duplicate farm constraints fail closed
+ok 34 - negative/corrupt source is isolated and exact source/code/expiry/duplicate farm constraints fail closed
+  ---
+  duration_ms: 3.987528
+  type: 'test'
+  ...
+# Subtest: explicit production approval is bound to project/hash/action/backup/expiry; emulator mixups fail before SDK load
+ok 35 - explicit production approval is bound to project/hash/action/backup/expiry; emulator mixups fail before SDK load
+  ---
+  duration_ms: 0.790038
+  type: 'test'
+  ...
+# Subtest: CLI refuses unknown/default production/dryrun apply before SDK or outputs; immutable output and reviewed hash required
+ok 36 - CLI refuses unknown/default production/dryrun apply before SDK or outputs; immutable output and reviewed hash required
+  ---
+  duration_ms: 205.985151
+  type: 'test'
+  ...
+1..36
+# tests 36
+# suites 0
+# pass 36
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 811.308193

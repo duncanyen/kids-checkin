@@ -1,0 +1,13 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+true !== false
+
+    at exports.run (/workspace/kids-checkin/tests/helpers/farm-navigation-loading.cjs:23:75)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:166:43 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

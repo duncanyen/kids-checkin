@@ -1,0 +1,6 @@
+page.waitForFunction: Timeout 15000ms exceeded.
+    at exports.run (/workspace/kids-checkin/tests/helpers/stone-rewards-browser.cjs:6:61)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:157:44 {
+  log: [],
+  name: 'TimeoutError'
+}

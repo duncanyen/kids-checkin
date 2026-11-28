@@ -1,0 +1,126 @@
+{
+  "reviewOnly": true,
+  "productionInspected": false,
+  "changes": [
+    {
+      "file": "firestore.indexes.json",
+      "source": "repository only; production READY not inspected",
+      "addCompositeIndexes": [
+        {
+          "collectionGroup": "ops_refinement_records",
+          "queryScope": "COLLECTION",
+          "fields": [
+            {
+              "fieldPath": "filterTokens",
+              "arrayConfig": "CONTAINS"
+            },
+            {
+              "fieldPath": "createdAt",
+              "order": "DESCENDING"
+            }
+          ]
+        },
+        {
+          "collectionGroup": "ops_refinement_farm_snapshots",
+          "queryScope": "COLLECTION",
+          "fields": [
+            {
+              "fieldPath": "date",
+              "order": "ASCENDING"
+            },
+            {
+              "fieldPath": "occurredAt",
+              "order": "ASCENDING"
+            }
+          ]
+        }
+      ],
+      "fieldChanges": [
+        {
+          "collectionGroup": "boxes",
+          "fieldPath": "openedAt",
+          "currentIndexes": [],
+          "addIndexes": [
+            {
+              "order": "ASCENDING",
+              "queryScope": "COLLECTION"
+            },
+            {
+              "order": "DESCENDING",
+              "queryScope": "COLLECTION"
+            },
+            {
+              "arrayConfig": "CONTAINS",
+              "queryScope": "COLLECTION"
+            },
+            {
+              "order": "ASCENDING",
+              "queryScope": "COLLECTION_GROUP"
+            }
+          ],
+          "strategy": "Merge existing indexes; never replace unknown production field overrides"
+        }
+      ]
+    },
+    {
+      "file": "game-admin/rules/firestore.indexes.json",
+      "source": "repository only; production READY not inspected",
+      "addCompositeIndexes": [
+        {
+          "collectionGroup": "ops_refinement_records",
+          "queryScope": "COLLECTION",
+          "fields": [
+            {
+              "fieldPath": "filterTokens",
+              "arrayConfig": "CONTAINS"
+            },
+            {
+              "fieldPath": "createdAt",
+              "order": "DESCENDING"
+            }
+          ]
+        },
+        {
+          "collectionGroup": "ops_refinement_farm_snapshots",
+          "queryScope": "COLLECTION",
+          "fields": [
+            {
+              "fieldPath": "date",
+              "order": "ASCENDING"
+            },
+            {
+              "fieldPath": "occurredAt",
+              "order": "ASCENDING"
+            }
+          ]
+        }
+      ],
+      "fieldChanges": [
+        {
+          "collectionGroup": "boxes",
+          "fieldPath": "openedAt",
+          "currentIndexes": [],
+          "addIndexes": [
+            {
+              "order": "ASCENDING",
+              "queryScope": "COLLECTION"
+            },
+            {
+              "order": "DESCENDING",
+              "queryScope": "COLLECTION"
+            },
+            {
+              "arrayConfig": "CONTAINS",
+              "queryScope": "COLLECTION"
+            },
+            {
+              "order": "ASCENDING",
+              "queryScope": "COLLECTION_GROUP"
+            }
+          ],
+          "strategy": "Merge existing indexes; never replace unknown production field overrides"
+        }
+      ]
+    }
+  ]
+}

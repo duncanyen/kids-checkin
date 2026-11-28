@@ -1,0 +1,43 @@
+{
+  "environment": "MemoryDB direct service, fixture identity; no retries/RPC/billing. New config already published before metering.",
+  "rows": [
+    {
+      "enabled": false,
+      "firstStatus": {
+        "reads": 11,
+        "writes": 4
+      },
+      "checkinClaim": {
+        "reads": 4,
+        "writes": 4
+      },
+      "drop": {
+        "reads": 6,
+        "writes": 6
+      },
+      "open": {
+        "reads": 4,
+        "writes": 3
+      }
+    },
+    {
+      "enabled": true,
+      "firstStatus": {
+        "reads": 13,
+        "writes": 4
+      },
+      "checkinClaim": {
+        "reads": 6,
+        "writes": 4
+      },
+      "drop": {
+        "reads": 8,
+        "writes": 6
+      },
+      "open": {
+        "reads": 4,
+        "writes": 3
+      }
+    }
+  ]
+}

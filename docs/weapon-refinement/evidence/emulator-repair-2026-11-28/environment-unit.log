@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: corrupt emulator cache is rejected without overwrite or an unchecked download
+ok 1 - corrupt emulator cache is rejected without overwrite or an unchecked download
+  ---
+  duration_ms: 2.381542
+  type: 'test'
+  ...
+# Subtest: TAP parser requires actual counts; an empty log cannot manufacture executed assertions
+ok 2 - TAP parser requires actual counts; an empty log cannot manufacture executed assertions
+  ---
+  duration_ms: 1.453624
+  type: 'test'
+  ...
+# Subtest: test runner rejects production project environment and arbitrary suite/target arguments before starting Java
+ok 3 - test runner rejects production project environment and arbitrary suite/target arguments before starting Java
+  ---
+  duration_ms: 129.130728
+  type: 'test'
+  ...
+# Subtest: installer CLI cannot be used to deploy or change a Firebase project
+ok 4 - installer CLI cannot be used to deploy or change a Firebase project
+  ---
+  duration_ms: 28.338163
+  type: 'test'
+  ...
+# Subtest: local review proof rejects stale source hashes, skipped tests, wrong project or wrong engine
+ok 5 - local review proof rejects stale source hashes, skipped tests, wrong project or wrong engine
+  ---
+  duration_ms: 20.762298
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 258.237842

@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(await reject('buyWeapon',{item:'mace',quantity:1}))
+
+    at /workspace/kids-checkin/tests/weapon-refinement/legacy-pwa-acceptance.cjs:25:303 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: null,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

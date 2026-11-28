@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: actual integrated +0..+9, failed attempt, reset and repeated reset reconcile same-commit wallets and historical costs
+ok 1 - actual integrated +0..+9, failed attempt, reset and repeated reset reconcile same-commit wallets and historical costs
+  ---
+  duration_ms: 163.851784
+  type: 'test'
+  ...
+# Subtest: offline audit catches lost allocations, missing equipped item, and invalid ownership without mutation
+ok 2 - offline audit catches lost allocations, missing equipped item, and invalid ownership without mutation
+  ---
+  duration_ms: 170.56519
+  type: 'test'
+  ...
+# Subtest: negative wallets, levels outside0..9 and +0 nonzero bonuses block release
+ok 3 - negative wallets, levels outside0..9 and +0 nonzero bonuses block release
+  ---
+  duration_ms: 220.047672
+  type: 'test'
+  ...
+# Subtest: actual wrong debit, duplicate refund observation and forged historical successful costs detected
+ok 4 - actual wrong debit, duplicate refund observation and forged historical successful costs detected
+  ---
+  duration_ms: 101.71027
+  type: 'test'
+  ...
+# Subtest: duplicate transaction under a new path and duplicate allocation namespace cannot pass uniqueness audit
+ok 5 - duplicate transaction under a new path and duplicate allocation namespace cannot pass uniqueness audit
+  ---
+  duration_ms: 212.017779
+  type: 'test'
+  ...
+# Subtest: incomplete export or absent same-commit wallet evidence is INCOMPLETE not a pass
+ok 6 - incomplete export or absent same-commit wallet evidence is INCOMPLETE not a pass
+  ---
+  duration_ms: 93.962554
+  type: 'test'
+  ...
+# Subtest: legacy farms remain valid without fabricating new instances; migrated scopes may not be omitted
+ok 7 - legacy farms remain valid without fabricating new instances; migrated scopes may not be omitted
+  ---
+  duration_ms: 145.777675
+  type: 'test'
+  ...
+# Subtest: offline CLI never contacts Firebase, refuses overwrite/network/project flags and returns incomplete exit3
+ok 8 - offline CLI never contacts Firebase, refuses overwrite/network/project flags and returns incomplete exit3
+  ---
+  duration_ms: 956.490199
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2389.927993

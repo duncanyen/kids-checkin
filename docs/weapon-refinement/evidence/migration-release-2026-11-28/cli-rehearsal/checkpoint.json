@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "planHash": "32d73d1c754b0e507cf02364d30b8b4b2ba83258d4d3d4838093a0a89c4c021f",
+  "last": {
+    "scope": "761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+    "status": "active",
+    "completed": 3,
+    "totalAllocations": 3,
+    "validatedCounts": {
+      "mace": 1001,
+      "battleaxe": 0,
+      "ironhammer": 3,
+      "katana": 0,
+      "shortbow": 0,
+      "huntingbow": 0,
+      "paladinbow": 0
+    },
+    "verification": {
+      "valid": true,
+      "status": "active",
+      "counts": {
+        "mace": 1001,
+        "battleaxe": 0,
+        "ironhammer": 3,
+        "katana": 0,
+        "shortbow": 0,
+        "huntingbow": 0,
+        "paladinbow": 0
+      },
+      "documents": 3,
+      "revision": 0,
+      "migrationCompleted": 3
+    }
+  },
+  "updatedAt": 1795827503540
+}

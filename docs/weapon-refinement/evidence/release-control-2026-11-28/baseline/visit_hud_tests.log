@@ -1,0 +1,25 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 7,
+  handlerMs: 7
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 1
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+PASS visit HUD from public-village entry: right-of-back centered owner, safe text, half-transparent card/full-opacity type, bottom-right touch target at 320/390/430/768/1024, modal lock, three enter/leave cycles, owner restored and zero economic actions; 11 layout samples

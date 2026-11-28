@@ -1,0 +1,24 @@
+{
+  "runId": "2cdabb8f-2a48-438c-a9cb-7d19a6fd2129",
+  "planHash": "32d73d1c754b0e507cf02364d30b8b4b2ba83258d4d3d4838093a0a89c4c021f",
+  "operation": "migrate",
+  "batches": 1,
+  "complete": false,
+  "results": [
+    {
+      "scope": "761d81466b4d8f288e9ccd99726ca45c56402280de1c3832ea58eb72435caeda",
+      "status": "staging",
+      "completed": 1,
+      "totalAllocations": 3,
+      "validatedCounts": {
+        "mace": 1000,
+        "battleaxe": 0,
+        "ironhammer": 0,
+        "katana": 0,
+        "shortbow": 0,
+        "huntingbow": 0,
+        "paladinbow": 0
+      }
+    }
+  ]
+}

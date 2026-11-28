@@ -1,0 +1,23 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 27,
+  handlerMs: 27
+}
+verified-game-kind-complete gorilla
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 1,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 4
+}
+page.waitForFunction: Timeout 15000ms exceeded.
+    at exports.run (/workspace/kids-checkin/tests/helpers/verified-input-browser.cjs:16:822)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:164:46 {
+  log: [],
+  name: 'TimeoutError'
+}

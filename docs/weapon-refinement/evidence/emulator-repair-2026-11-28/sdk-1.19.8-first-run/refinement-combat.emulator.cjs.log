@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: real concurrent V5 ordered batch and settlement preserve one damage sequence, loot and chest at most once
+ok 1 - real concurrent V5 ordered batch and settlement preserve one damage sequence, loot and chest at most once
+  ---
+  duration_ms: 7074.1205
+  type: 'test'
+  ...
+# [2026-11-27T23:54:08.557Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x13a5a564 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:08.571Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x13a5a565 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:54:08.584Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x13a5a566 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# Subtest: valid player cannot forge server battle snapshot or private ability state
+ok 2 - valid player cannot forge server battle snapshot or private ability state
+  ---
+  duration_ms: 392.302589
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7603.478359

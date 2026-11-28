@@ -1,0 +1,49 @@
+Usage: cloud-firestore-emulator [options] <ignored>
+  Options:
+    --database-mode
+      Cloud Firestore database mode supports `firestore-native` and 
+      `datastore-mode` 
+      Default: CLOUD_FIRESTORE
+      Possible Values: [CLOUD_DATASTORE, CLOUD_FIRESTORE_IN_DATASTORE_MODE, CLOUD_FIRESTORE]
+    --export-name
+      Export name for emulator export (e.g., 
+      ../exportName.overall_export_metadata). 
+    --export-on-exit
+      Directory path for emulator export.
+    --functions_emulator
+      The HTTP host and port of the Functions Emulator. (e.g. localhost:9002)
+    --help
+      Print usage and exit
+    --host
+      The address to bind to on the local machine
+      Default: localhost
+    --import-data
+      File path to data being imported into the emulator.
+    --licenses
+      Print open-source dependencies and licenses, then exit
+      Default: false
+    --port
+      The port number to listen to on the local machine
+      Default: 8080
+    --project_id
+      Project ID to be used for single project mode
+    --rules
+      Cloud Firestore rules file
+    --seed_from_export
+      Local filesystem path to a Cloud Firestore export (e.g., 
+      '/home/foo/firestore_export/2019-10-22T19:41:32_89121.overall_export_metadata') 
+    --single_project_mode
+      Whether to operate in single project mode. If set, warnings will be 
+      logged for project ID not matching the provided project_id flag.
+      Default: false
+    --single_project_mode_error
+      Turns project ID mismatches from warnings to errors.
+      Default: false
+    --version
+      Print version and exit
+      Default: false
+    --webchannel_port
+      The port number to bind for WebChannel traffic
+    --websocket_port
+      The port number for the emulator ui
+

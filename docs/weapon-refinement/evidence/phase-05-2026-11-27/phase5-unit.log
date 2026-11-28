@@ -1,0 +1,33 @@
+✔ refund integer math and reset config defaults/validation (1.476416ms)
+✔ details return server base, bonus, final stats, restrictions, ownership and exact equipped instance (42.088451ms)
+✔ +9 reset refunds exactly 10500 gold / 8 stones and preserves ID/equipment/history (25.659294ms)
+✔ failed attempts excluded; round combined successful cost down, then next epoch may refine normally (9.292062ms)
+✔ same reset repeated on two devices and after gate closure returns original result, never refunds twice (6.525169ms)
+✔ two different reset quotes permit one refund and one winner (9.817693ms)
+✔ +0, battle, disabled gate, unlisted scope and non-test runtime reject without asset writes (5.096461ms)
+✔ expired and changed config/refund cost quotes force explicit reconfirmation (5.613479ms)
+✔ quote public tampering and forged refund fields rejected; entire refund is atomic on delivery failure (7.01704ms)
+✔ balance overflow keeps weapon and history untouched (5.403486ms)
+✔ reset can operate equipped weapon; concurrent refinement vs reset settles only one proposal (6.858842ms)
+✔ original refinement durable intent loses safely to reset in between reserve and settlement (5.356253ms)
+✔ refined sale requires explicit loss acknowledgement and exact state; price unchanged, no automatic reset/refund (8.588088ms)
+✔ sale versus reset race cannot both consume one stale instance proposal (5.460336ms)
+✔ IDs cannot cross actions, weapons or farms; recovery works after unknown outcome without creating a new refund (17.691904ms)
+✔ refund does not depend on current refinement cost table; immutable reset configuration and revoked trusted gate protected (4.282642ms)
+✔ actual callable service restricts Phase5 to test allowlist, validates private session/admin and all release flags stay off (23.189875ms)
+✔ client writes durable scope record before request, no attacker costs in payload and success clears it (11.032007ms)
+✔ offline before server accepts preserves pending; recovery queries then retries only original transaction ID (5.350992ms)
+✔ lost committed reset result recovery reads receipt without another refund request (3.248785ms)
+✔ definite stale quote rejection clears record for explicit new preview, not another automatic charge (1.279618ms)
+✔ cross-group pending records are isolated; storage failure prevents sending any economic request (1.484848ms)
+✔ pending operation forbids a new reset; tampered pending storage is not silently discarded (1.842663ms)
+✔ older backend missing Phase5 capability action keeps legacy instance controls available and refinement hidden (1.587845ms)
+✔ switching group while a request is in flight never returns the previous farm result to a new operation (13.817401ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 319.260762

@@ -1,0 +1,10 @@
+[
+  {
+    "mode": "CRITICAL_FEEDBACK_TESTS",
+    "exitCode": 0
+  },
+  {
+    "mode": "COUNTDOWN_TESTS",
+    "exitCode": 0
+  }
+]

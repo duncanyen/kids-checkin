@@ -1,0 +1,670 @@
+{
+  "phase": 3,
+  "baseCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "createdAt": "2026-11-27T14:14:40.166753+00:00",
+  "phase02Prerequisite": {
+    "unitTestsRerun": 18,
+    "emulatorStatus": "BLOCKED",
+    "blocker": "HTTP403 Domain forbidden while downloading Firestore emulator",
+    "newlyFoundIssue": "Same-generation allocation IDs omitted owner scope; fixed for new IDs, old IDs remain readable, old staged algorithm must roll back safely before restart."
+  },
+  "acceptance": "BLOCKED pending real Emulator/Rules/Firestore contention and resolution of unstable visual assertions",
+  "productionFlags": {
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementCombatBonusEnabled": false
+  },
+  "deployed": false,
+  "productionDataAccessed": false,
+  "enteredPhase4": false,
+  "sourceSha256": {
+    "css/farm-chest.css": "e157b33a03987fe472bf36353bf74395f79d1152e8d98ab7d303058bf6cb4d01",
+    "game-admin/functions/farm-transactions.cjs": "b5005a6e5574103a521517939725f54feb897333ed3d126f4c6341472cc3d6f2",
+    "game-admin/functions/migrations/weapon-instances.cjs": "851587546df3edac2a79ac64fdf7f14fcd55543da9e545504fa750f2b5ffc52d",
+    "game-admin/functions/refinement-config.cjs": "03e5dbfcfb632747a17e630303860adda0e7799134b0fec4f27e44c71092a688",
+    "game-admin/functions/refinement-core.cjs": "03319fe5ed9b03af0e1585082258796d3cb7a876a5160f638feb67af47166565",
+    "game-admin/functions/refinement-service.cjs": "5dbd29c07cfab62ede7d5085703f9a1ea2fef9ead0a3b8cadc428627ecd6740e",
+    "game-admin/functions/service.cjs": "1397e167bffef97268fbcc971b28336917d3a8f47c65565cccb5ba13bd338955",
+    "game-admin/functions/weapon-instance-config.cjs": "07d65e4cd10f7710d691b4eb4e73305ad4deb2e5f047f3def15dc24ea91df550",
+    "game-admin/functions/weapon-repository.cjs": "31458178e1f8e676362c2eb626e16619ba3d83f8c44a5bd1171b8ad4dc0ca0c6",
+    "game-admin/tests/helpers/refinement-fixture.cjs": "396bd15a1b3b886c7926ba904bb81ea33a46be36aff90f1599ac0fa4c2ce5d05",
+    "game-admin/tests/refinement-core.test.cjs": "ec730820d4c1824e686af827d51af3212c591641513c11967a8ffb79e5c2a00a",
+    "game-admin/tests/refinement-service.test.cjs": "de7536745e32947f979b2c87fa7e5914883cfa9efc148c5309f0e220007163ac",
+    "game-admin/tests/refinement.emulator.cjs": "f78df59d1d6e455332256b46a11fc1b79e95519ef2684020e55935897843f8d6",
+    "game-admin/tests/weapon-instances.emulator.cjs": "d354f1322717237d7ffc4811f9f3645fa750727766dd4d829500afe8d632317c",
+    "game-admin/tests/weapon-instances.test.cjs": "abba940ea47360aec9be59452754622f13d171196f85d7488cf6c01677ca7829",
+    "js/farm/ShopScene.js": "610f959070967fed95558b2ea9b65155d122d6a48df2eb218986eff40e553983",
+    "js/farm/WarehouseScene.js": "2b7f9c8d9473c33c549b74991c4e604b3c9bac3b59ff027c572286fd6ad93e1c",
+    "js/farm/weapon-instance-client.js": "2d1b25637b5eed9d88159321d7840a37b33f612a356bce9d12aa4ace9655e3fb",
+    "js/farm/weapon-instance-ui.js": "f60068adb1ce3b7d486ce72ee88eda822723ac60f9b29a45073c50c83813edfc",
+    "scripts/weapon-instance-migration.cjs": "5869f8de91666a8f923e08e1bcd3b4f2e6ee7d4fd6d8db1e4e2e62197cedd08b",
+    "tests/farm-private-backend-browser.cjs": "95dc615001e31438b2197e6d50f3b1c23f7864be09a155ef8ff73aafdf857e96",
+    "tests/helpers/weapon-instances-browser.cjs": "38c4e1fbb9caf9a98b9dd268dd3dc67604fcce23de0c83244a220204a5f9b25a",
+    "tests/weapon-refinement/refinement-cost-probe.cjs": "7baeea53860a26a50e1a15b356b38e297a739128504e567ab1003119f4d5abc6"
+  },
+  "tests": {
+    "finalFullUnit": {
+      "passed": 526,
+      "failed": 0,
+      "newPhase03TestsIncluded": 39,
+      "logSha256": "206babf08d10081eeb915322d06f7791d385ebcd5b63b7996fa73df50239d935"
+    },
+    "initialBrowserMatrix": {
+      "passed": 27,
+      "failed": 2,
+      "originalResultsRetained": {
+        "sourceCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+        "node": "v22.23.4",
+        "startedAt": "2026-11-27T13:55:54.059Z",
+        "results": [
+          {
+            "id": "prepare-game-admin",
+            "args": [
+              "scripts/prepare-game-admin.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 33,
+            "log": "prepare-game-admin.log",
+            "status": "passed",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "id": "prepare-growth-forest",
+            "args": [
+              "scripts/prepare-growth-forest.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 27,
+            "log": "prepare-growth-forest.log",
+            "status": "passed",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "id": "units",
+            "args": [
+              "--test",
+              "tests/calendar-identity.test.mjs",
+              "tests/chat-history.test.mjs",
+              "tests/chat-identity.test.mjs",
+              "tests/dashboard-todo.test.cjs",
+              "tests/expense-index.test.cjs",
+              "tests/farm-activity-code.test.mjs",
+              "tests/farm-announcement-index.test.cjs",
+              "tests/farm-archery.test.mjs",
+              "tests/farm-art-cache.test.cjs",
+              "tests/farm-atmosphere.test.mjs",
+              "tests/farm-backend-routing.test.mjs",
+              "tests/farm-battle-countdown.test.mjs",
+              "tests/farm-battle-page-client.test.mjs",
+              "tests/farm-battle-reward.test.mjs",
+              "tests/farm-chest-animation.test.mjs",
+              "tests/farm-cobra-art.test.cjs",
+              "tests/farm-cobra.test.mjs",
+              "tests/farm-corgi-routine.test.mjs",
+              "tests/farm-daily-preview.test.cjs",
+              "tests/farm-daily-worker.test.cjs",
+              "tests/farm-dragon-startup.test.cjs",
+              "tests/farm-egg-result.test.mjs",
+              "tests/farm-entry-encounter.test.mjs",
+              "tests/farm-garden.test.mjs",
+              "tests/farm-giant.test.mjs",
+              "tests/farm-gorilla.test.mjs",
+              "tests/farm-guard-dog.test.mjs",
+              "tests/farm-halloween.test.mjs",
+              "tests/farm-hornet-art.test.cjs",
+              "tests/farm-hornet.test.mjs",
+              "tests/farm-housing.test.mjs",
+              "tests/farm-hud-encounter.test.mjs",
+              "tests/farm-hud-layout.test.mjs",
+              "tests/farm-item-art.test.cjs",
+              "tests/farm-katana-art.test.cjs",
+              "tests/farm-katana.test.mjs",
+              "tests/farm-laying-visit.test.mjs",
+              "tests/farm-mail.test.mjs",
+              "tests/farm-mole.test.mjs",
+              "tests/farm-monster-movement.test.mjs",
+              "tests/farm-onagadori.test.mjs",
+              "tests/farm-paladin-art.test.cjs",
+              "tests/farm-poultry-atlas.test.cjs",
+              "tests/farm-poultry.test.mjs",
+              "tests/farm-predator-atlas.test.cjs",
+              "tests/farm-ranking-index.test.cjs",
+              "tests/farm-ranking.test.mjs",
+              "tests/farm-save.test.mjs",
+              "tests/farm-scene-cleanup.test.mjs",
+              "tests/farm-startup-diagnostics.test.cjs",
+              "tests/farm-steal-request.test.mjs",
+              "tests/farm-steal-result.test.mjs",
+              "tests/farm-visit-entry.test.mjs",
+              "tests/functions-region.test.cjs",
+              "tests/gallery-core.test.mjs",
+              "tests/gallery-index.test.cjs",
+              "tests/gallery-profiles.test.mjs",
+              "tests/gallery-storage.test.mjs",
+              "tests/growth-forest-clock.test.mjs",
+              "tests/growth-forest-direct.test.cjs",
+              "tests/growth-forest-flower-art.test.cjs",
+              "tests/growth-forest-service.test.cjs",
+              "tests/navigation.test.mjs",
+              "tests/private-maintenance-cli.test.cjs",
+              "tests/realtime-core.test.mjs",
+              "tests/scoped-profiles.test.mjs",
+              "tests/theme.test.cjs",
+              "tests/todo-core.test.mjs",
+              "tests/wishwall-core.test.mjs",
+              "game-admin/tests/activity-code.test.cjs",
+              "game-admin/tests/admin-app-check.test.cjs",
+              "game-admin/tests/battle-page.test.cjs",
+              "game-admin/tests/callable-http.test.cjs",
+              "game-admin/tests/chests.test.cjs",
+              "game-admin/tests/combat-critical.test.cjs",
+              "game-admin/tests/combat-v2.test.cjs",
+              "game-admin/tests/daily-challenges.test.cjs",
+              "game-admin/tests/daily-group-scope.test.cjs",
+              "game-admin/tests/dashboard.test.cjs",
+              "game-admin/tests/deployment-check.test.cjs",
+              "game-admin/tests/encounters.test.cjs",
+              "game-admin/tests/entry-encounters.test.cjs",
+              "game-admin/tests/farm-backend-integration.test.cjs",
+              "game-admin/tests/farm-ranking-query.test.cjs",
+              "game-admin/tests/farm-transactions.test.cjs",
+              "game-admin/tests/feed-version.test.cjs",
+              "game-admin/tests/guard-dog-service.test.cjs",
+              "game-admin/tests/harvest-combined.test.cjs",
+              "game-admin/tests/hornet.test.cjs",
+              "game-admin/tests/identity-admin.test.cjs",
+              "game-admin/tests/identity-groups.test.cjs",
+              "game-admin/tests/identity-migration.test.cjs",
+              "game-admin/tests/identity.test.cjs",
+              "game-admin/tests/katana.test.cjs",
+              "game-admin/tests/management.test.cjs",
+              "game-admin/tests/notifications.test.cjs",
+              "game-admin/tests/private-code-hash.test.cjs",
+              "game-admin/tests/private-cutover.test.cjs",
+              "game-admin/tests/private-daily-compatibility.test.cjs",
+              "game-admin/tests/refinement-core.test.cjs",
+              "game-admin/tests/refinement-service.test.cjs",
+              "game-admin/tests/reporting.test.cjs",
+              "game-admin/tests/service.test.cjs",
+              "game-admin/tests/transaction-reads.test.cjs",
+              "game-admin/tests/weapon-instances.test.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 6133,
+            "log": "units.log",
+            "status": "passed",
+            "sha256": "ec764f03da728ed962d6273de0909cae1242e2fa8ce4840521e1741bc424705e"
+          },
+          {
+            "id": "private-auth-browser",
+            "args": [
+              "tests/private-auth-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 1903,
+            "log": "private-auth-browser.log",
+            "status": "passed",
+            "sha256": "8e7fce47d12478b0c03d1dee89066ecf93cc83081456a023f04f4a51870bdeff"
+          },
+          {
+            "id": "account-login",
+            "args": [
+              "tests/account-login.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 3662,
+            "log": "account-login.log",
+            "status": "passed",
+            "sha256": "cc35bd2d3037887716ded7e99832b8633d04b9a8aae0dab3a10cea449a566634"
+          },
+          {
+            "id": "settings-profile-browser",
+            "args": [
+              "tests/settings-profile-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 1821,
+            "log": "settings-profile-browser.log",
+            "status": "passed",
+            "sha256": "d1a8794d99e296243f0e1bb907c963018d22b5ce29056487e02357b0630198f8"
+          },
+          {
+            "id": "private-admin-browser",
+            "args": [
+              "tests/private-admin-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 1656,
+            "log": "private-admin-browser.log",
+            "status": "passed",
+            "sha256": "fc11f9613248dd936a2a2bfcf3b19bca9e4be7865e0084d1c3f736267b09f0e3"
+          },
+          {
+            "id": "farm-save-browser",
+            "args": [
+              "tests/farm-save-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 11492,
+            "log": "farm-save-browser.log",
+            "status": "passed",
+            "sha256": "ee73432511aba3263f13620c8aba612bb98c715519f49d25334d2771bf2ea8c9"
+          },
+          {
+            "id": "farm-public-art-cache-browser",
+            "args": [
+              "tests/farm-public-art-cache-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 1497,
+            "log": "farm-public-art-cache-browser.log",
+            "status": "passed",
+            "sha256": "c55e40cd9e0f5f644edf000d8c73a2ffd8f8324c2e7ed872c264c682a7fa761c"
+          },
+          {
+            "id": "farm-daily-assets-browser",
+            "args": [
+              "tests/farm-daily-assets-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 2247,
+            "log": "farm-daily-assets-browser.log",
+            "status": "passed",
+            "sha256": "dae8862a5f68e38aa44919064b0ca6b27f5ff5da6361d36c33072b21ab1cc91f"
+          },
+          {
+            "id": "ops-management",
+            "args": [
+              "game-admin/tests/management.browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 7762,
+            "log": "ops-management.log",
+            "status": "passed",
+            "sha256": "34a404a80933fb020b9a31220392f3397022ff361aaf410b37f243d785511d62"
+          },
+          {
+            "id": "farm-private-backend-browser",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 29652,
+            "log": "farm-private-backend-browser.log",
+            "status": "passed",
+            "sha256": "b26581cfa110a5be8728437d0ef08c0314bd540b381ca8eacb4ec416a6de1447"
+          },
+          {
+            "id": "chest_batch_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 19535,
+            "log": "chest_batch_tests.log",
+            "status": "passed",
+            "sha256": "d4bc4a3427a7799ebc5d0fed0350e38ebd9b9b4998a2bada6ea6608a2569e662"
+          },
+          {
+            "id": "shop_stock_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 16438,
+            "log": "shop_stock_tests.log",
+            "status": "passed",
+            "sha256": "2c6288a0caad19f23d57071d77864b385314a03b63aae8f8eedea679537386b6"
+          },
+          {
+            "id": "combat_feedback_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 1,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 34982,
+            "log": "combat_feedback_tests.log",
+            "status": "failed",
+            "sha256": "d59453fd4154bead3d1b196c0f3362bde7c1192146f4b1cbd9ca21fab8e717b9"
+          },
+          {
+            "id": "countdown_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 102929,
+            "log": "countdown_tests.log",
+            "status": "passed",
+            "sha256": "1e613cc575382ffd8f260aa534d90c2544df850c6d7cedd1c1e9d386ea11503e"
+          },
+          {
+            "id": "critical_feedback_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 1,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 47457,
+            "log": "critical_feedback_tests.log",
+            "status": "failed",
+            "sha256": "92595c4b02e29e933aa603862e226b7ecb5f52147d36a3f5d7ae28a66646493b"
+          },
+          {
+            "id": "hallstatt_scene_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 47469,
+            "log": "hallstatt_scene_tests.log",
+            "status": "passed",
+            "sha256": "38b0cf776d03b231c03b92f2aa60f19b4787e1e61efa04b0d68e5c988e29a414"
+          },
+          {
+            "id": "critical_zero_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 87561,
+            "log": "critical_zero_tests.log",
+            "status": "passed",
+            "sha256": "073c8a858f6bf181c0745caee2a07456f8d891a83aeeab9fed15bad19ffc6093"
+          },
+          {
+            "id": "visit_hud_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 31915,
+            "log": "visit_hud_tests.log",
+            "status": "passed",
+            "sha256": "f7f1f62f338b4c19f341d25e9337dadb7dbbfd0df61b5342d3d526e807a4977f"
+          },
+          {
+            "id": "farm_scene_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 57117,
+            "log": "farm_scene_tests.log",
+            "status": "passed",
+            "sha256": "883d844188e8dd8248e0250f0378db6e618ea239d638215ee18e3e15043b3d8c"
+          },
+          {
+            "id": "arctic_scene_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 43336,
+            "log": "arctic_scene_tests.log",
+            "status": "passed",
+            "sha256": "8d308c4bcb0da9875d903687e9623332757a6c1a1e146c33963a0ca92b604718"
+          },
+          {
+            "id": "navigation_load_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 27121,
+            "log": "navigation_load_tests.log",
+            "status": "passed",
+            "sha256": "76f050928ff8785e762c9931b95a3b12c2ce3ecffe5b779d86478a832bc8b395"
+          },
+          {
+            "id": "guard_rental_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 25833,
+            "log": "guard_rental_tests.log",
+            "status": "passed",
+            "sha256": "645047edf5d01a1369e62733c4d99fc99ff557e603c7597a318e602885b090c6"
+          },
+          {
+            "id": "weekly_ranking_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 12285,
+            "log": "weekly_ranking_tests.log",
+            "status": "passed",
+            "sha256": "7f36c44d938ba01017c40ea9bdc4230b9fc563826524ed7d1910c3866b29d45a"
+          },
+          {
+            "id": "daily_group_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 31079,
+            "log": "daily_group_tests.log",
+            "status": "passed",
+            "sha256": "763c048d5aec9a58634a27277bb23ced035d727b3748fffc042a980fa9e2db77"
+          },
+          {
+            "id": "hornet_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 42349,
+            "log": "hornet_tests.log",
+            "status": "passed",
+            "sha256": "c8db3b16de9585a6c705e01dc777feee32243d45048918bca14b428c7c897e09"
+          },
+          {
+            "id": "katana_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 37994,
+            "log": "katana_tests.log",
+            "status": "passed",
+            "sha256": "40a68c056c34de53b1dc0593b7d167d779180b7ab74fc904c428cbfbb8f7cbc8"
+          },
+          {
+            "id": "encounter_config_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 20403,
+            "log": "encounter_config_tests.log",
+            "status": "passed",
+            "sha256": "a6b8e6afb327d69657ba51c5262ea901aa1963606ddf0daa2895ad3ee887d871"
+          },
+          {
+            "id": "chest_flow_tests",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 74932,
+            "log": "chest_flow_tests.log",
+            "status": "passed",
+            "sha256": "4c3cad04ab817de7b5e92e38706181bdf19763e5ebeac2afe91c1f25103556ba"
+          },
+          {
+            "id": "chest-art-failure",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 72081,
+            "log": "chest-art-failure.log",
+            "status": "passed",
+            "sha256": "1a8375da534c9175bb15701a012227cd6d6ba41d5e9ddb10d46e0bc34393bdd6"
+          },
+          {
+            "id": "scene-legacy-price",
+            "args": [
+              "tests/farm-private-backend-browser.cjs"
+            ],
+            "exitCode": 0,
+            "signal": null,
+            "timedOut": false,
+            "durationMs": 7759,
+            "log": "scene-legacy-price.log",
+            "status": "passed",
+            "sha256": "5cfc5af45c2008468f6aa378f6f142c87ba5b35900449802d76314a433b41a46"
+          }
+        ],
+        "finishedAt": "2026-11-27T14:03:33.674Z"
+      }
+    },
+    "sequentialRechecks": [
+      {
+        "id": "combat-feedback-recheck",
+        "env": {
+          "COMBAT_FEEDBACK_TESTS": "1"
+        },
+        "exitCode": 0,
+        "durationMs": 57588,
+        "logSha256": "d3462be04121fcd96b61d327d23119de998d68a68632c292b9d497622016bf48"
+      },
+      {
+        "id": "critical-feedback-recheck",
+        "env": {
+          "CRITICAL_FEEDBACK_TESTS": "1"
+        },
+        "exitCode": 0,
+        "durationMs": 53251,
+        "logSha256": "80769abf89f7e4d3c79c9e014395f1fd7e2e1bbf1ce4cbc2ba72fe1365975c9f"
+      },
+      {
+        "id": "phase02-weapons-browser",
+        "env": {
+          "WEAPON_INSTANCE_TESTS": "1"
+        },
+        "exitCode": 0,
+        "durationMs": 12561,
+        "logSha256": "2f6f5eee4511031ec92a73ba8cac24687983b6e1bd93f850e857acda5f9f9709"
+      }
+    ],
+    "emulator": {
+      "status": "BLOCKED",
+      "assertionsExecuted": 0,
+      "logSha256": "d0c9f19a75cb38fd06f633c850d91beb6408f82b8922af02f550376d552e3186",
+      "testFiles": [
+        "game-admin/tests/refinement.emulator.cjs",
+        "game-admin/tests/weapon-instances.emulator.cjs",
+        "game-admin/tests/private-farm-rules.emulator.cjs"
+      ]
+    },
+    "finalRefinementOnly": {
+      "passed": 39,
+      "failed": 0,
+      "includedInFull526": true,
+      "logSha256": "481fd8b4c61d42e0b1a95f7bf7a4e1057a12b7a50aa204c1e1c8b3c3b5a36588"
+    }
+  },
+  "costProbe": {
+    "environment": "MemoryDB / direct refinement service, fake actor validation, no throttle, no Auth RPC, no automatic retries, no report/mirror triggers",
+    "quotePhases": [
+      {
+        "reads": 9,
+        "writes": 1
+      }
+    ],
+    "executePhases": [
+      {
+        "reads": 10,
+        "writes": 2
+      },
+      {
+        "reads": 11,
+        "writes": 5
+      }
+    ],
+    "replayPhases": [
+      {
+        "reads": 2,
+        "writes": 0
+      }
+    ],
+    "queryPhases": [
+      {
+        "reads": 2,
+        "writes": 0
+      }
+    ]
+  },
+  "costProbeSha256": "b179915ac9ef6aff66093d1164ab167223180b55c5607ca58dccf3c6a91f7da5",
+  "limitations": [
+    "No real mobile devices or production network measurements.",
+    "MemoryDB serialization/retry simulation is not real Firestore concurrency.",
+    "No new refinement UI, battle bonuses, stone grants, stone warehouse capacity policy, unrefinement or refunds.",
+    "No change to existing combat pure models, prices, monster lifetimes, candidate or formal security rules/indexes.",
+    "Working tree includes previous Phase 2 changes; no commit or push performed in this phase."
+  ]
+}

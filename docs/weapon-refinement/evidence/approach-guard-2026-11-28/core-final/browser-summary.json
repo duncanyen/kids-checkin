@@ -1,0 +1,9 @@
+[
+  {
+    "id": "core-game",
+    "exitCode": 1,
+    "durationMs": 35223,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  }
+]

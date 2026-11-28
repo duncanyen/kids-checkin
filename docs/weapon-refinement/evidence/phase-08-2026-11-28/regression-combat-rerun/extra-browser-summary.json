@@ -1,0 +1,9 @@
+[
+  {
+    "id": "combat-feedback",
+    "exitCode": 0,
+    "durationMs": 54350,
+    "flag": "COMBAT_FEEDBACK_TESTS",
+    "log": "combat-feedback.log"
+  }
+]

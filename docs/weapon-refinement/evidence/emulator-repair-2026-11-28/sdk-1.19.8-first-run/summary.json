@@ -1,0 +1,49 @@
+{
+  "project": "demo-nexus-private-farm",
+  "host": "127.0.0.1:8092",
+  "realFirestore": true,
+  "results": [
+    {
+      "file": "game-admin/tests/private-farm-rules.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2397
+    },
+    {
+      "file": "game-admin/tests/weapon-instances.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 13598
+    },
+    {
+      "file": "game-admin/tests/refinement.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 8664
+    },
+    {
+      "file": "game-admin/tests/refinement-stone-rewards.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 4156
+    },
+    {
+      "file": "game-admin/tests/refinement-reset.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 8185
+    },
+    {
+      "file": "game-admin/tests/refinement-combat.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 7639
+    },
+    {
+      "file": "game-admin/tests/refinement-operations.emulator.cjs",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 4691
+    }
+  ]
+}

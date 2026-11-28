@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: real Firestore migration twice gives 3 unique instances and keeps exact equipped weapon
+ok 1 - real Firestore migration twice gives 3 unique instances and keeps exact equipped weapon
+  ---
+  duration_ms: 768.518525
+  type: 'test'
+  ...
+# Subtest: real contention: parallel buys, response-loss replay and distinct-ID duplicate sale are atomic
+ok 2 - real contention: parallel buys, response-loss replay and distinct-ID duplicate sale are atomic
+  ---
+  duration_ms: 9829.94743
+  type: 'test'
+  ...
+# Subtest: real staging/resume blocks sale, keeps unrelated concurrent wallet update, validates all batches
+ok 3 - real staging/resume blocks sale, keeps unrelated concurrent wallet update, validates all batches
+  ---
+  duration_ms: 3445.472191
+  type: 'test'
+  ...
+# Subtest: real cross-owner ID access fails and transaction state remains unchanged
+ok 4 - real cross-owner ID access fails and transaction state remains unchanged
+  ---
+  duration_ms: 276.299812
+  type: 'test'
+  ...
+# [2026-11-28T00:13:54.051Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f3699 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.119Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f369b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.151Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f369c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.201Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f369d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.275Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f369e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.342Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f36a0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.373Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f36a1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T00:13:54.423Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x3f0f36a2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# Subtest: candidate Rules deny client access to owners, allocations, migration and quarantine documents
+ok 5 - candidate Rules deny client access to owners, allocations, migration and quarantine documents
+  ---
+  duration_ms: 905.843124
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15527.872522

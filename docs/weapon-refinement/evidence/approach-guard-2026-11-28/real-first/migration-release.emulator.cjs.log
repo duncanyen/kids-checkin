@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+ok 1 - real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+  ---
+  duration_ms: 4150.950838
+  type: 'test'
+  ...
+# Subtest: real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+ok 2 - real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+  ---
+  duration_ms: 325.885269
+  type: 'test'
+  ...
+# Subtest: real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+ok 3 - real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+  ---
+  duration_ms: 2880.647569
+  type: 'test'
+  ...
+# Subtest: real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+ok 4 - real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+  ---
+  duration_ms: 2221.811453
+  type: 'test'
+  ...
+# Subtest: real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+ok 5 - real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+  ---
+  duration_ms: 6417.537522
+  type: 'test'
+  ...
+# Subtest: real atomic abort leaves no debit/state/receipt if journal create conflicts; original pending ID resumes exactly once
+ok 6 - real atomic abort leaves no debit/state/receipt if journal create conflicts; original pending ID resumes exactly once
+  ---
+  duration_ms: 433.411966
+  type: 'test'
+  ...
+# [2026-11-28T05:00:47.914Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x70131ce0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T05:00:47.940Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x70131ce1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T05:00:47.965Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x70131ce2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T05:00:48.019Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x70131ce4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T05:00:48.039Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x70131ce5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-28T05:00:48.048Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x70131ce6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# Subtest: candidate Rules deny client and claimed admin access to private wallet, migration journal and allocations
+ok 7 - candidate Rules deny client and claimed admin access to private wallet, migration journal and allocations
+  ---
+  duration_ms: 630.931457
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17266.829069

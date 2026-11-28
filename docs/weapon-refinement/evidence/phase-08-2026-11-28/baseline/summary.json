@@ -1,0 +1,503 @@
+{
+  "sourceCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "node": "v22.23.4",
+  "startedAt": "2026-11-27T23:14:34.918Z",
+  "results": [
+    {
+      "id": "prepare-game-admin",
+      "args": [
+        "scripts/prepare-game-admin.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 43,
+      "log": "/tmp/nexus-phase8/baseline/prepare-game-admin.log",
+      "status": "passed"
+    },
+    {
+      "id": "prepare-growth-forest",
+      "args": [
+        "scripts/prepare-growth-forest.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 25,
+      "log": "/tmp/nexus-phase8/baseline/prepare-growth-forest.log",
+      "status": "passed"
+    },
+    {
+      "id": "units",
+      "args": [
+        "--test",
+        "tests/calendar-identity.test.mjs",
+        "tests/chat-history.test.mjs",
+        "tests/chat-identity.test.mjs",
+        "tests/dashboard-todo.test.cjs",
+        "tests/expense-index.test.cjs",
+        "tests/farm-activity-code.test.mjs",
+        "tests/farm-announcement-index.test.cjs",
+        "tests/farm-archery.test.mjs",
+        "tests/farm-art-cache.test.cjs",
+        "tests/farm-atmosphere.test.mjs",
+        "tests/farm-backend-routing.test.mjs",
+        "tests/farm-battle-countdown.test.mjs",
+        "tests/farm-battle-page-client.test.mjs",
+        "tests/farm-battle-reward.test.mjs",
+        "tests/farm-chest-animation.test.mjs",
+        "tests/farm-cobra-art.test.cjs",
+        "tests/farm-cobra.test.mjs",
+        "tests/farm-corgi-routine.test.mjs",
+        "tests/farm-daily-preview.test.cjs",
+        "tests/farm-daily-worker.test.cjs",
+        "tests/farm-dragon-startup.test.cjs",
+        "tests/farm-egg-result.test.mjs",
+        "tests/farm-entry-encounter.test.mjs",
+        "tests/farm-garden.test.mjs",
+        "tests/farm-giant.test.mjs",
+        "tests/farm-gorilla.test.mjs",
+        "tests/farm-guard-dog.test.mjs",
+        "tests/farm-halloween.test.mjs",
+        "tests/farm-hornet-art.test.cjs",
+        "tests/farm-hornet.test.mjs",
+        "tests/farm-housing.test.mjs",
+        "tests/farm-hud-encounter.test.mjs",
+        "tests/farm-hud-layout.test.mjs",
+        "tests/farm-item-art.test.cjs",
+        "tests/farm-katana-art.test.cjs",
+        "tests/farm-katana.test.mjs",
+        "tests/farm-laying-visit.test.mjs",
+        "tests/farm-mail.test.mjs",
+        "tests/farm-mole.test.mjs",
+        "tests/farm-monster-movement.test.mjs",
+        "tests/farm-onagadori.test.mjs",
+        "tests/farm-paladin-art.test.cjs",
+        "tests/farm-poultry-atlas.test.cjs",
+        "tests/farm-poultry.test.mjs",
+        "tests/farm-predator-atlas.test.cjs",
+        "tests/farm-ranking-index.test.cjs",
+        "tests/farm-ranking.test.mjs",
+        "tests/farm-save.test.mjs",
+        "tests/farm-scene-cleanup.test.mjs",
+        "tests/farm-startup-diagnostics.test.cjs",
+        "tests/farm-steal-request.test.mjs",
+        "tests/farm-steal-result.test.mjs",
+        "tests/farm-visit-entry.test.mjs",
+        "tests/functions-region.test.cjs",
+        "tests/gallery-core.test.mjs",
+        "tests/gallery-index.test.cjs",
+        "tests/gallery-profiles.test.mjs",
+        "tests/gallery-storage.test.mjs",
+        "tests/growth-forest-clock.test.mjs",
+        "tests/growth-forest-direct.test.cjs",
+        "tests/growth-forest-flower-art.test.cjs",
+        "tests/growth-forest-service.test.cjs",
+        "tests/navigation.test.mjs",
+        "tests/private-maintenance-cli.test.cjs",
+        "tests/realtime-core.test.mjs",
+        "tests/refinement-client.test.cjs",
+        "tests/scoped-profiles.test.mjs",
+        "tests/theme.test.cjs",
+        "tests/todo-core.test.mjs",
+        "tests/wishwall-core.test.mjs",
+        "game-admin/tests/activity-code.test.cjs",
+        "game-admin/tests/admin-app-check.test.cjs",
+        "game-admin/tests/battle-page.test.cjs",
+        "game-admin/tests/callable-http.test.cjs",
+        "game-admin/tests/chests.test.cjs",
+        "game-admin/tests/combat-critical.test.cjs",
+        "game-admin/tests/combat-v2.test.cjs",
+        "game-admin/tests/daily-challenges.test.cjs",
+        "game-admin/tests/daily-group-scope.test.cjs",
+        "game-admin/tests/dashboard.test.cjs",
+        "game-admin/tests/deployment-check.test.cjs",
+        "game-admin/tests/encounters.test.cjs",
+        "game-admin/tests/entry-encounters.test.cjs",
+        "game-admin/tests/farm-backend-integration.test.cjs",
+        "game-admin/tests/farm-ranking-query.test.cjs",
+        "game-admin/tests/farm-transactions.test.cjs",
+        "game-admin/tests/feed-version.test.cjs",
+        "game-admin/tests/guard-dog-service.test.cjs",
+        "game-admin/tests/harvest-combined.test.cjs",
+        "game-admin/tests/hornet.test.cjs",
+        "game-admin/tests/identity-admin.test.cjs",
+        "game-admin/tests/identity-groups.test.cjs",
+        "game-admin/tests/identity-migration.test.cjs",
+        "game-admin/tests/identity.test.cjs",
+        "game-admin/tests/katana.test.cjs",
+        "game-admin/tests/management.test.cjs",
+        "game-admin/tests/notifications.test.cjs",
+        "game-admin/tests/private-code-hash.test.cjs",
+        "game-admin/tests/private-cutover.test.cjs",
+        "game-admin/tests/private-daily-compatibility.test.cjs",
+        "game-admin/tests/refinement-combat.test.cjs",
+        "game-admin/tests/refinement-core.test.cjs",
+        "game-admin/tests/refinement-operations.test.cjs",
+        "game-admin/tests/refinement-player.test.cjs",
+        "game-admin/tests/refinement-service.test.cjs",
+        "game-admin/tests/refinement-statistics.test.cjs",
+        "game-admin/tests/refinement-stone-rewards.test.cjs",
+        "game-admin/tests/reporting.test.cjs",
+        "game-admin/tests/service.test.cjs",
+        "game-admin/tests/transaction-reads.test.cjs",
+        "game-admin/tests/weapon-instances.test.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 7439,
+      "log": "/tmp/nexus-phase8/baseline/units.log",
+      "status": "passed"
+    },
+    {
+      "id": "private-auth-browser",
+      "args": [
+        "tests/private-auth-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 2226,
+      "log": "/tmp/nexus-phase8/baseline/private-auth-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "settings-profile-browser",
+      "args": [
+        "tests/settings-profile-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 1902,
+      "log": "/tmp/nexus-phase8/baseline/settings-profile-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "account-login",
+      "args": [
+        "tests/account-login.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 4175,
+      "log": "/tmp/nexus-phase8/baseline/account-login.log",
+      "status": "passed"
+    },
+    {
+      "id": "private-admin-browser",
+      "args": [
+        "tests/private-admin-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 1690,
+      "log": "/tmp/nexus-phase8/baseline/private-admin-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "farm-save-browser",
+      "args": [
+        "tests/farm-save-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 14902,
+      "log": "/tmp/nexus-phase8/baseline/farm-save-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "farm-public-art-cache-browser",
+      "args": [
+        "tests/farm-public-art-cache-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 1432,
+      "log": "/tmp/nexus-phase8/baseline/farm-public-art-cache-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "farm-daily-assets-browser",
+      "args": [
+        "tests/farm-daily-assets-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 2065,
+      "log": "/tmp/nexus-phase8/baseline/farm-daily-assets-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "ops-management",
+      "args": [
+        "game-admin/tests/management.browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 8009,
+      "log": "/tmp/nexus-phase8/baseline/ops-management.log",
+      "status": "passed"
+    },
+    {
+      "id": "farm-private-backend-browser",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 34147,
+      "log": "/tmp/nexus-phase8/baseline/farm-private-backend-browser.log",
+      "status": "passed"
+    },
+    {
+      "id": "chest_batch_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 22543,
+      "log": "/tmp/nexus-phase8/baseline/chest_batch_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "shop_stock_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 16753,
+      "log": "/tmp/nexus-phase8/baseline/shop_stock_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "combat_feedback_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 33745,
+      "log": "/tmp/nexus-phase8/baseline/combat_feedback_tests.log",
+      "status": "failed"
+    },
+    {
+      "id": "countdown_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 85393,
+      "log": "/tmp/nexus-phase8/baseline/countdown_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "critical_feedback_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 44479,
+      "log": "/tmp/nexus-phase8/baseline/critical_feedback_tests.log",
+      "status": "failed"
+    },
+    {
+      "id": "critical_zero_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 80637,
+      "log": "/tmp/nexus-phase8/baseline/critical_zero_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "hallstatt_scene_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 41651,
+      "log": "/tmp/nexus-phase8/baseline/hallstatt_scene_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "visit_hud_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 32992,
+      "log": "/tmp/nexus-phase8/baseline/visit_hud_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "farm_scene_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 52469,
+      "log": "/tmp/nexus-phase8/baseline/farm_scene_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "navigation_load_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 8218,
+      "log": "/tmp/nexus-phase8/baseline/navigation_load_tests.log",
+      "status": "failed"
+    },
+    {
+      "id": "arctic_scene_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 46818,
+      "log": "/tmp/nexus-phase8/baseline/arctic_scene_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "guard_rental_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 33533,
+      "log": "/tmp/nexus-phase8/baseline/guard_rental_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "daily_group_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 36788,
+      "log": "/tmp/nexus-phase8/baseline/daily_group_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "weekly_ranking_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 24177,
+      "log": "/tmp/nexus-phase8/baseline/weekly_ranking_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "hornet_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 47267,
+      "log": "/tmp/nexus-phase8/baseline/hornet_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "katana_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 52302,
+      "log": "/tmp/nexus-phase8/baseline/katana_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "encounter_config_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 28494,
+      "log": "/tmp/nexus-phase8/baseline/encounter_config_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "chest_flow_tests",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 78230,
+      "log": "/tmp/nexus-phase8/baseline/chest_flow_tests.log",
+      "status": "passed"
+    },
+    {
+      "id": "scene-legacy-price",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 17503,
+      "log": "/tmp/nexus-phase8/baseline/scene-legacy-price.log",
+      "status": "passed"
+    },
+    {
+      "id": "chest-art-failure",
+      "args": [
+        "tests/farm-private-backend-browser.cjs"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "durationMs": 78024,
+      "log": "/tmp/nexus-phase8/baseline/chest-art-failure.log",
+      "status": "passed"
+    }
+  ],
+  "finishedAt": "2026-11-27T23:22:29.640Z"
+}

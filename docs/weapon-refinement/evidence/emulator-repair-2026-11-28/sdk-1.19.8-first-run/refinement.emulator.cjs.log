@@ -1,0 +1,54 @@
+TAP version 13
+# Subtest: real Firestore repeated/concurrent request commits one sparse state, one debit and one receipt
+ok 1 - real Firestore repeated/concurrent request commits one sparse state, one debit and one receipt
+  ---
+  duration_ms: 3712.424796
+  type: 'test'
+  ...
+# Subtest: real contention from two device quotes permits one refinement only
+ok 2 - real contention from two device quotes permits one refinement only
+  ---
+  duration_ms: 3803.023873
+  type: 'test'
+  ...
+# Subtest: real sale between durable intent and settlement cannot lose extra coins/stones
+ok 3 - real sale between durable intent and settlement cannot lose extra coins/stones
+  ---
+  duration_ms: 201.543789
+  type: 'test'
+  ...
+# Subtest: real durable intent recovers a lost process with original RNG and result query
+ok 4 - real durable intent recovers a lost process with original RNG and result query
+  ---
+  duration_ms: 302.686785
+  type: 'test'
+  ...
+# [2026-11-27T23:53:48.486Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee148 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:53:48.504Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee149 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:53:48.518Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee14a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:53:48.533Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee14b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:53:48.547Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee14c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:53:48.559Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee14d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L71, false for 'update' @ L71
+# [2026-11-27T23:53:48.578Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x844ee14e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L47:22 for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71, false for 'update' @ L47, false for 'update' @ L57, false for 'update' @ L71
+# Subtest: valid Nexus member cannot write refinement state, settings, receipts or wallet using client SDK
+ok 5 - valid Nexus member cannot write refinement state, settings, receipts or wallet using client SDK
+  ---
+  duration_ms: 462.489187
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8621.725541

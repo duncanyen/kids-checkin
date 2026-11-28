@@ -1,0 +1,90 @@
+TAP version 13
+# Subtest: committed lost response is queried after a different page begins, with no second debit or receipt write
+ok 1 - committed lost response is queried after a different page begins, with no second debit or receipt write
+  ---
+  duration_ms: 42.60579
+  type: 'test'
+  ...
+# Subtest: unknown receipt remains unknown without executing action; combat and forged group queries are rejected
+ok 2 - unknown receipt remains unknown without executing action; combat and forged group queries are rejected
+  ---
+  duration_ms: 6.604641
+  type: 'test'
+  ...
+# Subtest: refinement/reset receipts remain queryable after admission is paused and are never reexecuted
+not ok 3 - refinement/reset receipts remain queryable after admission is paused and are never reexecuted
+  ---
+  duration_ms: 28.973385
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/farm-recovery.cases.cjs:5:2'
+  failureType: 'testCodeFailure'
+  error: '原交易內容不符，請保留紀錄'
+  code: 'already-exists'
+  stack: |-
+    Object.fail (/workspace/kids-checkin/game-admin/functions/domain.cjs:3:35)
+    /workspace/kids-checkin/game-admin/functions/farm-recovery.cjs:9:207
+    async execute (/workspace/kids-checkin/game-admin/tests/memory-db.cjs:38:26)
+  ...
+# Subtest: rejected refinement intent reports rejected; forged owner row cannot expose stored results
+ok 4 - rejected refinement intent reports rejected; forged owner row cannot expose stored results
+  ---
+  duration_ms: 5.855237
+  type: 'test'
+  ...
+# Subtest: journal persists exact economic request across reload; same payload cannot mint a new ID
+ok 5 - journal persists exact economic request across reload; same payload cannot mint a new ID
+  ---
+  duration_ms: 1.741503
+  type: 'test'
+  ...
+# Subtest: journal imports only scoped legacy economic commands; pure combat is never recovered
+ok 6 - journal imports only scoped legacy economic commands; pure combat is never recovered
+  ---
+  duration_ms: 0.387452
+  type: 'test'
+  ...
+# Subtest: account/group scope, corrupted or unavailable durable storage never become an implicit successful recovery
+ok 7 - account/group scope, corrupted or unavailable durable storage never become an implicit successful recovery
+  ---
+  duration_ms: 0.409825
+  type: 'test'
+  ...
+# Subtest: two tabs cannot own the same farm; different farm scopes remain independent
+ok 8 - two tabs cannot own the same farm; different farm scopes remain independent
+  ---
+  duration_ms: 4.957661
+  type: 'test'
+  ...
+# Subtest: explicit handoff waits for current request and pauses old tab before releasing its lock
+ok 9 - explicit handoff waits for current request and pauses old tab before releasing its lock
+  ---
+  duration_ms: 1.943494
+  type: 'test'
+  ...
+# Subtest: missing Web Locks fails closed instead of treating a localStorage lease as atomic ownership
+ok 10 - missing Web Locks fails closed instead of treating a localStorage lease as atomic ownership
+  ---
+  duration_ms: 0.199074
+  type: 'test'
+  ...
+# Subtest: safe updater revalidates same-origin code graph, handles cycles, excludes SDK/assets/API and never clears storage
+ok 11 - safe updater revalidates same-origin code graph, handles cycles, excludes SDK/assets/API and never clears storage
+  ---
+  duration_ms: 0.868938
+  type: 'test'
+  ...
+# Subtest: updater failure or too-large graph aborts update; protocol classifier does not mislabel a gameplay precondition
+ok 12 - updater failure or too-large graph aborts update; protocol classifier does not mislabel a gameplay precondition
+  ---
+  duration_ms: 0.496309
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 11
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 170.173006

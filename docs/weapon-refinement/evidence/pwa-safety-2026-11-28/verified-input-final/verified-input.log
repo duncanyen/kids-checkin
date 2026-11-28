@@ -1,0 +1,121 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 19,
+  handlerMs: 19
+}
+verified-game-kind-complete gorilla
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+verified-bow-points hornet {
+  bow: { x: 194.99999964237207, y: 654.6200063538552 },
+  pull: { x: 184.420934815921, y: 753.5658064705717 }
+}
+verified-arrow-launched hornet {
+  arrow: {
+    id: 1,
+    at: 1795399233140,
+    origin: { x: 195, y: 641.44 },
+    velocity: { x: 106.17026048957027, y: -949.5481650027054 }
+  },
+  pull: { x: 183.6547262133652, y: 747.5521385280678 }
+}
+verified-game-kind-complete hornet
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 4,
+  handlerMs: 4
+}
+verified-game-kind-complete mole
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+verified-game-kind-complete wolf
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+verified-game-kind-complete tiger
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 6,
+  handlerMs: 6
+}
+verified-bow-points dragon {
+  bow: { x: 194.99999964237207, y: 654.6200063538552 },
+  pull: { x: 194.71577609982643, y: 753.28442808008 }
+}
+verified-arrow-launched dragon {
+  arrow: {
+    id: 1,
+    at: 1795399269040,
+    origin: { x: 195, y: 641.44 },
+    velocity: { x: 9.651838724717324, y: -949.5481650027054 }
+  },
+  pull: { x: 194.69519102494525, y: 747.2503807706345 }
+}
+verified-game-kind-complete dragon
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 6,
+  handlerMs: 6
+}
+verified-bow-points eagle {
+  bow: { x: 194.99999964237207, y: 654.6200063538552 },
+  pull: { x: 194.71577609982643, y: 752.248356435191 }
+}
+verified-arrow-launched eagle {
+  arrow: {
+    id: 1,
+    at: 1795399286940,
+    origin: { x: 195, y: 641.44 },
+    velocity: { x: 9.651838724717322, y: -939.8963228262196 }
+  },
+  pull: { x: 194.69519102494525, y: 746.1392696595234 }
+}
+verified-game-kind-complete eagle
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 7,
+  handlerMs: 7
+}
+verified-game-kind-complete cobra
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 9,
+  handlerMs: 9
+}
+verified-game-kind-complete giant
+PASS verified input normal village entry all nine monsters, immediate prediction, shared rendering, phone/tablet widths, original batch transport and page abandonment

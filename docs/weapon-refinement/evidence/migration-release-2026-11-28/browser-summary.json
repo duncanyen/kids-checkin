@@ -1,0 +1,23 @@
+[
+  {
+    "id": "core-game",
+    "exitCode": 0,
+    "durationMs": 25686,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "player-release",
+    "exitCode": 0,
+    "durationMs": 7303,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "admin-release",
+    "exitCode": 0,
+    "durationMs": 2328,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  }
+]

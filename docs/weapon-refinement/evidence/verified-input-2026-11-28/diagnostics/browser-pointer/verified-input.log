@@ -1,0 +1,68 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 8,
+  handlerMs: 9
+}
+verified-game-kind-complete gorilla
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 6,
+  handlerMs: 6
+}
+verified-arrow-launched hornet {
+  arrow: {
+    id: 1,
+    at: 1795399233020,
+    origin: { x: 195, y: 641.44 },
+    velocity: { x: 106.17026048957027, y: -949.5481650027054 }
+  },
+  pull: { x: 183.6547262133652, y: 747.5521385280678 }
+}
+verified-game-kind-complete hornet
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+verified-game-kind-complete mole
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+verified-game-kind-complete wolf
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+verified-game-kind-complete tiger
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+page.waitForFunction: Timeout 15000ms exceeded.
+    at exports.run (/workspace/kids-checkin/tests/helpers/verified-input-browser.cjs:16:671)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:164:46 {
+  log: [],
+  name: 'TimeoutError'
+}

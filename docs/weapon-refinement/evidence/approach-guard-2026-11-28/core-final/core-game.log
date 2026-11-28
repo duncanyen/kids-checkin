@@ -1,0 +1,41 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 2
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: true,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 3
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 4,
+  handlerMs: 4
+}
+core-battle-afterhits {
+  health: 4000,
+  max: 4000,
+  weapon: '雙手斧',
+  selected: undefined,
+  phase: 'flight',
+  result: null,
+  arrived: false,
+  now: 1795842362385,
+  approach: 1795842372042,
+  deadline: 1795842402042
+}
+page.waitForFunction: Timeout 15000ms exceeded.
+    at /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:1073:14 {
+  log: [],
+  name: 'TimeoutError'
+}

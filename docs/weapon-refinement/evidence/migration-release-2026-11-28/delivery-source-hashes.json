@@ -1,0 +1,19 @@
+{
+  "scripts/weapon-migration-release.cjs": "9044c60c6e2fba0578ec01c049eb2f54f60ac37139e46f863c3d18cce83510aa",
+  "scripts/lib/weapon-migration-plan.cjs": "b2724e04ac488abdd4ec8b34578e47081c98b02edf0717878100deea7209c6b8",
+  "scripts/lib/weapon-migration-job.cjs": "800145e8a53111bf8406340627f64fd7ac816a8b2e998ae6f533a19a7cc08ec8",
+  "scripts/export-weapon-audit.cjs": "7888a7f8a13d3ed03c4a58150089bbbc09c565a844948ac558a33d8a2dd11647",
+  "scripts/lib/weapon-data-audit.cjs": "7038489188123b0ecae5b70b2482e0169a60a1b48c8856007b3679c66a769872",
+  "game-admin/functions/migrations/weapon-instances.cjs": "79f606302edcf6a058c112f2c96d139633c41c9586da46aa2c8e7bb5fdecdee2",
+  "game-admin/functions/refinement-wallet.cjs": "1037da2c90eb79791eaf0dbecc48ddec5b92a5943bfba6dc4a9a3756c165e158",
+  "game-admin/functions/refinement-service.cjs": "147fa50075e271f14b2e7a11672fe25ffbd0498016065063f3337b9a6ba42f22",
+  "game-admin/functions/refinement-player-service.cjs": "3848a8ff4e9e859bdb39977ec9d3a7ba71b212275a56bf8022d465e037ee891a",
+  "tests/weapon-migration-release.test.cjs": "d03c5d37ae3e1ea1d05a69b520d3fa99a42ffb8584cbf40f035024aa9417f225",
+  "tests/weapon-data-audit.test.cjs": "729b5f94e00512114ed32ab3118c38e65769318e52c2b1ce6eb9977308bf1cef",
+  "game-admin/tests/migration-release.emulator.cjs": "9ba1cd0a2cc574f75e6f93ef5e7fd1279c19bfd1939941bdc592268dafbc1e5b",
+  "scripts/run-refinement-firestore-tests.cjs": "d471d95557ff9b3f571a5d65a122c8e51413a715ba521e1bcf6350f2c1be7de7",
+  "scripts/lib/firestore-emulator-proof.cjs": "a70dadc204881e445cf744b9b54a8bcd00a48757428dddfc17f30e4e1ae19760",
+  "scripts/weapon-release-review.cjs": "80bc518e6bedeb44e5b7623823bea5161999d6ecbd53f031340e6223426d4b6a",
+  "docs/weapon-refinement/migration-and-reconciliation-report.md": "35b6dfe0fbf07fd27132122cca955b6f8d0ac13788ab5287f02766f6a4d38c67",
+  "docs/weapon-refinement/migration-runbook.md": "1cc565f095a7c8a25d5e96fd41b61fbaa2f9f756d036a032305f15eacfb7152e"
+}

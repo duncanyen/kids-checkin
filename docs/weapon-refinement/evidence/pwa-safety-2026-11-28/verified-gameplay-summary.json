@@ -1,0 +1,115 @@
+{
+  "passed": true,
+  "actualPublicVillageNavigation": true,
+  "backend": "actual service + MemoryDB; Firestore tested separately",
+  "results": [
+    {
+      "kind": "gorilla",
+      "inputProtocol": 1,
+      "firstHealth": 4000,
+      "serverHealth": 0,
+      "immediatePrediction": true,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "hornet",
+      "inputProtocol": 1,
+      "firstHealth": 2400,
+      "serverHealth": 2065,
+      "immediatePrediction": false,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "mole",
+      "inputProtocol": 1,
+      "firstHealth": 4000,
+      "serverHealth": 3785,
+      "immediatePrediction": true,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "wolf",
+      "inputProtocol": 1,
+      "firstHealth": 300,
+      "serverHealth": 87,
+      "immediatePrediction": true,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "tiger",
+      "inputProtocol": 1,
+      "firstHealth": 400,
+      "serverHealth": 200,
+      "immediatePrediction": true,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "dragon",
+      "inputProtocol": 1,
+      "firstHealth": 1600,
+      "serverHealth": 1272,
+      "immediatePrediction": false,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "eagle",
+      "inputProtocol": 1,
+      "firstHealth": 800,
+      "serverHealth": 466,
+      "immediatePrediction": false,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "cobra",
+      "inputProtocol": 1,
+      "firstHealth": 6400,
+      "serverHealth": 6194,
+      "immediatePrediction": true,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    },
+    {
+      "kind": "giant",
+      "inputProtocol": 1,
+      "firstHealth": 12000,
+      "serverHealth": 11788,
+      "immediatePrediction": true,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ]
+    }
+  ]
+}

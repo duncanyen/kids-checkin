@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+not ok 1 - real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+  ---
+  duration_ms: 4850.127086
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/migration-release.emulator.cjs:9:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'mace')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    /workspace/kids-checkin/game-admin/functions/weapon-repository.cjs:13:76
+    Array.map (<anonymous>)
+    counts (/workspace/kids-checkin/game-admin/functions/weapon-repository.cjs:13:50)
+    /workspace/kids-checkin/game-admin/functions/weapon-repository.cjs:64:120
+    Array.map (<anonymous>)
+    Object.list (/workspace/kids-checkin/game-admin/functions/weapon-repository.cjs:64:75)
+    /workspace/kids-checkin/game-admin/tests/migration-release.emulator.cjs:9:727
+    Transaction.runTransactionOnce (/workspace/kids-checkin/functions/node_modules/@google-cloud/firestore/build/src/transaction.js:436:29)
+    /workspace/kids-checkin/functions/node_modules/@google-cloud/firestore/build/src/transaction.js:412:39
+    async TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/migration-release.emulator.cjs:9:695)
+  ...
+# Subtest: real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+ok 2 - real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+  ---
+  duration_ms: 318.987442
+  type: 'test'
+  ...
+# Subtest: real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+ok 3 - real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+  ---
+  duration_ms: 3808.394148
+  type: 'test'
+  ...
+# Subtest: real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+ok 4 - real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+  ---
+  duration_ms: 1405.79238
+  type: 'test'
+  ...
+# Subtest: real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+ok 5 - real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+  ---
+  duration_ms: 6530.896624
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17112.232917

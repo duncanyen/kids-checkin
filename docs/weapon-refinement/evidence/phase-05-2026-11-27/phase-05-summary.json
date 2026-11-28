@@ -1,0 +1,158 @@
+{
+  "phase": 5,
+  "createdAt": "2026-11-27T15:28:27.192630+00:00",
+  "baseCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "implementation": "COMPLETE_IN_WORKSPACE",
+  "acceptance": "NOT_RELEASED: real Emulator/Rules/Firestore contention BLOCKED (HTTP403), initial timing failures retained even though single reruns passed",
+  "phase04Prerequisite": "Phase4 local implementation and isolated tests complete; real Emulator and initial flaky browser limitations not erased. User expressly authorized Phase5 isolated development.",
+  "productionFlags": {
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementResetEnabled": false,
+    "refinementCombatBonusEnabled": false,
+    "refinementStoneRewardEnabled": false
+  },
+  "deployed": false,
+  "productionDataAccessed": false,
+  "enteredPhase6": false,
+  "committedOrPushed": false,
+  "rulesOrIndexesOrDeploymentConfigChanged": false,
+  "isolatedTestAllowlist": [
+    {
+      "uid": "alice",
+      "groupId": "A",
+      "accountId": "alice"
+    }
+  ],
+  "tests": {
+    "finalUnits": {
+      "passed": 568,
+      "failed": 0,
+      "phase05Included": 25,
+      "backendIncluded": 17,
+      "clientIncluded": 8
+    },
+    "initialBrowserMatrix": {
+      "passed": 27,
+      "failed": 2,
+      "total": 29,
+      "failures": [
+        {
+          "id": "critical_zero_tests",
+          "args": [
+            "tests/farm-private-backend-browser.cjs"
+          ],
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "durationMs": 63227,
+          "log": "/tmp/nexus-phase5/baseline/critical_zero_tests.log",
+          "status": "failed"
+        },
+        {
+          "id": "navigation_load_tests",
+          "args": [
+            "tests/farm-private-backend-browser.cjs"
+          ],
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "durationMs": 8739,
+          "log": "/tmp/nexus-phase5/baseline/navigation_load_tests.log",
+          "status": "failed"
+        }
+      ]
+    },
+    "singleReruns": [
+      {
+        "mode": "CRITICAL_ZERO_TESTS",
+        "exitCode": 0
+      },
+      {
+        "mode": "NAVIGATION_LOAD_TESTS",
+        "exitCode": 0
+      },
+      {
+        "mode": "REFINEMENT_UI_TESTS",
+        "exitCode": 0
+      }
+    ],
+    "phase05Browser": "PASS final warehouse entry, success/failure/reduced-motion double clicks, visual animation failure, reset cancel/confirm, reload original-ID recovery, stale quote/insufficient/+9, green/blue/gold tiers, sale warning/cancel/original price",
+    "phase02Browser": "PASS existing warehouse/shop equip/buy/sell/timeout recovery",
+    "realEmulator": {
+      "status": "BLOCKED",
+      "assertionsExecuted": false,
+      "reason": "HTTP403 Domain forbidden while downloading Firestore Emulator JAR",
+      "testFile": "game-admin/tests/refinement-reset.emulator.cjs"
+    }
+  },
+  "viewportTests": [
+    [
+      320,
+      568
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      402,
+      874
+    ],
+    [
+      440,
+      956
+    ],
+    [
+      768,
+      1024
+    ]
+  ],
+  "physicalDeviceOrSafariTested": false,
+  "warehousePerformanceProbe": {
+    "environment": "local headless Chromium + real Phaser + MemoryDB/isolated SDK; no actual Firebase network or physical iPhone",
+    "sampleCount": 1,
+    "firstWarehouseToFourCardsMs": 2485,
+    "renderedCards": 4,
+    "serverPageLimit": 20,
+    "listRpcCount": 1,
+    "capabilitiesRpcCount": 1,
+    "perCardDetailRpcCount": 0
+  },
+  "refundExample": {
+    "level": 9,
+    "actualSuccessfulCost": {
+      "coins": 35000,
+      "stones": 16
+    },
+    "refund": {
+      "coins": 10500,
+      "stones": 8
+    }
+  },
+  "sourceSha256": {
+    "game-admin/functions/refinement-access.cjs": "81bd02ee48c251f4914778e98b29e27c7d2e39a3e6fdf140bedb9d3fcf179d8c",
+    "game-admin/functions/refinement-reset-config.cjs": "d766ae899559734ccd4f4b397760f3395ff1803fc2a1bd3ccf323721dd0f1eaa",
+    "game-admin/functions/refinement-player-service.cjs": "266418f91c0936ec76fcce6e2effc1292766c5d5509481234e47fba1797b9e2c",
+    "game-admin/functions/refinement-service.cjs": "43c893988789d9caeba4e9b59664f9aeb7ceac84b6a4aa7e6b83eef7ecad7fe5",
+    "game-admin/functions/weapon-instance-config.cjs": "d2df1f5f01e2d862e7645088a30762c3303c91a3a9e3759dd9f1eec37cf3c610",
+    "game-admin/functions/service.cjs": "858ec0fa1f41ec94dc613a8f25308d4f7eed4bc28ef31e8f06afa9cb14971d98",
+    "game-admin/functions/farm-transactions.cjs": "55bf8549971cbbbe90229ecb5084909928b3c25d03521f426e9d4a3e4234d815",
+    "game-admin/functions/weapon-repository.cjs": "05f7c85b4f90e46da0499016b89121d76c18f457c2c0b5715f139d388ccda326",
+    "js/farm/refinement-client.js": "e19d1a0f62203badfe99de6205005e0b415fe416515567d55402f3ce5e6d256d",
+    "js/farm/weapon-refinement-ui.js": "0a4849cc6d2303e66b7520a521d5dee5d5274c3e3c0c6ea52fd4e2df325499b2",
+    "js/farm/weapon-instance-ui.js": "82dc32e78482f7e1896d65952cd4b18cf0ed2094f77c0f4b9b68854c27f1a7ab",
+    "js/farm/backend-client.js": "9771ae9b9cee6b8af46df95f6f8fb87d77bd87c1fc63616caaf421ccaacbb0d3",
+    "css/farm-chest.css": "824797c8c9f45905a9def9ad680e10c1a87b46b42b356c4fcfc0d870650bb91b",
+    "game-admin/tests/refinement-player.test.cjs": "ac3ae1272150eaa00942cb4906678852c4efad6fb120284e778e815bfe20d3d7",
+    "tests/refinement-client.test.cjs": "09d1e413b32fe49d420ffab018c433b77e5c32c4a9b392e3b398e7e0b61e70bf",
+    "game-admin/tests/refinement-reset.emulator.cjs": "5b827df2292bfcd966ec5291f4691a003527e136290050fa7bf30a55866b7b87",
+    "game-admin/tests/helpers/refinement-fixture.cjs": "992e99e70888927edab41043b09ae4196e175a0359a60f1bc5d2f0a0044f0a28",
+    "game-admin/tests/refinement-service.test.cjs": "ec3f9588311b82dd459aaf7965c9089326f1baa01328dda62eca2401c8e35b4f",
+    "tests/farm-private-backend-browser.cjs": "13f9773c303bb3b097bab9b9053050ecffad3b7cd77d143dcfe733206e7d553b",
+    "tests/helpers/refinement-ui-browser.cjs": "ef36839f3fca16c7b75c4b8c227566d0020a6a9e9292e1332a4fd569c67f08fe",
+    "tests/weapon-refinement/reset-cost-probe.cjs": "1162d415c8c7a9062375a48e2820becd83eddfbc9ce53d41207d6860d7bfacbb",
+    "docs/weapon-refinement/DEVELOPMENT_RULES.md": "7c26df29349f542e166a3cfd2aed1b49f8f255731dabf244f61ae6f04c0fda6b",
+    "docs/weapon-refinement/phase-05-report.md": "96e9f3d6ee6e06c39d026bde34ebee4e5748e0bf1599f892842de05a20df4ed7"
+  }
+}

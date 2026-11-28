@@ -1,0 +1,1 @@
+PASS private login, sanitized session, scoped group token, profile/password update, session restoration and Firebase logout (isolated backend)

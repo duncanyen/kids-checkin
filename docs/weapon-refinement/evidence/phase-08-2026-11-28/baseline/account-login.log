@@ -1,0 +1,1 @@
+PASS: case-insensitive legacy/new account login, original ID/group preserved, password case unchanged, PIN/nickname/remembered login, global duplicate and concurrent registration protection, invalid IDs, collision handling, offline failure/retry

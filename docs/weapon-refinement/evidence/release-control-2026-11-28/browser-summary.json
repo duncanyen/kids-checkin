@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "actualAdminNavigation": true,
+  "backend": "actual createService production admission branch with MemoryDB and synthetic Auth",
+  "testEnvironmentUsedForAdmission": false,
+  "masterEnabledOnlyByConstructorFixture": true,
+  "physicalMobile": false,
+  "viewport": "390x844",
+  "formalData": false
+}

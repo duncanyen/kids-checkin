@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+ok 1 - real adapter per-scope pause/resume, two workers, three identical weapons, exact equipment and read-only audit
+  ---
+  duration_ms: 3942.393709
+  type: 'test'
+  ...
+# Subtest: real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+ok 2 - real source race aborts stale plan, staging blocks weapon sale, unrelated newer assets and rollback survive
+  ---
+  duration_ms: 228.7366
+  type: 'test'
+  ...
+# Subtest: real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+not ok 3 - real new purchase/sale after migration prevents rollback and verifies forward state without lost assets
+  ---
+  duration_ms: 3327.759639
+  type: 'test'
+  location: '/workspace/kids-checkin/game-admin/tests/migration-release.emulator.cjs:11:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'instanceId')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/workspace/kids-checkin/game-admin/tests/migration-release.emulator.cjs:11:695)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+ok 4 - real CLI reviewed plan hash, batch checkpoint restart, read-only export bundle and non-overwrite protection
+  ---
+  duration_ms: 1347.195007
+  type: 'test'
+  ...
+# Subtest: real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+ok 5 - real same-commit wallet evidence: refinements, replay and reset reconcile; missing/changed ledger blocks audit
+  ---
+  duration_ms: 10095.87843
+  type: 'test'
+  ...
+# Subtest: real atomic abort leaves no debit/state/receipt if journal create conflicts; original pending ID resumes exactly once
+ok 6 - real atomic abort leaves no debit/state/receipt if journal create conflicts; original pending ID resumes exactly once
+  ---
+  duration_ms: 250.950198
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 5
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19327.50584

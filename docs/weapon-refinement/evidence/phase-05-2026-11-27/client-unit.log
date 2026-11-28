@@ -1,0 +1,14 @@
+✔ client writes durable scope record before request, no attacker costs in payload and success clears it (10.022027ms)
+✔ offline before server accepts preserves pending; recovery queries then retries only original transaction ID (6.122015ms)
+✔ lost committed reset result recovery reads receipt without another refund request (8.745207ms)
+✔ definite stale quote rejection clears record for explicit new preview, not another automatic charge (0.944668ms)
+✔ cross-group pending records are isolated; storage failure prevents sending any economic request (1.422269ms)
+✔ pending operation forbids a new reset; tampered pending storage is not silently discarded (1.014527ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 159.03568

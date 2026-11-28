@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: all new operations require token admin + live admin + explicit read permission; revoked and disabled fail closed
+ok 1 - all new operations require token admin + live admin + explicit read permission; revoked and disabled fail closed
+  ---
+  duration_ms: 29.791791
+  type: 'test'
+  ...
+# Subtest: read/edit/publish/risk are distinct; no old direct publish bypass
+ok 2 - read/edit/publish/risk are distinct; no old direct publish bypass
+  ---
+  duration_ms: 42.217821
+  type: 'test'
+  ...
+# Subtest: drafts have zero player effect; server defaults are original Phase3 and formal flags never change
+ok 3 - drafts have zero player effect; server defaults are original Phase3 and formal flags never change
+  ---
+  duration_ms: 8.583381
+  type: 'test'
+  ...
+# Subtest: both numeric boundaries and monotonic bonuses enforced, equal levels allowed, disabled level rejected by core
+ok 4 - both numeric boundaries and monotonic bonuses enforced, equal levels allowed, disabled level rejected by core
+  ---
+  duration_ms: 19.620859
+  type: 'test'
+  ...
+# Subtest: publish atomically writes three immutable versions, pointers, full before/after audit and metadata
+ok 5 - publish atomically writes three immutable versions, pointers, full before/after audit and metadata
+  ---
+  duration_ms: 4.428815
+  type: 'test'
+  ...
+# Subtest: request replay is idempotent and mismatched content refuses, publish confirmation and validation required
+ok 6 - request replay is idempotent and mismatched content refuses, publish confirmation and validation required
+  ---
+  duration_ms: 4.977628
+  type: 'test'
+  ...
+# Subtest: draft CAS and active revision CAS reject old previews; concurrent publishers only one commits
+ok 7 - draft CAS and active revision CAS reject old previews; concurrent publishers only one commits
+  ---
+  duration_ms: 31.57501
+  type: 'test'
+  ...
+# Subtest: restoration creates a new release and preserves historical content; reason mandatory
+ok 8 - restoration creates a new release and preserves historical content; reason mandatory
+  ---
+  duration_ms: 23.777432
+  type: 'test'
+  ...
+# Subtest: historical acquired bonus conflicts block publication without scanning any player; caps respected
+ok 9 - historical acquired bonus conflicts block publication without scanning any player; caps respected
+  ---
+  duration_ms: 12.103916
+  type: 'test'
+  ...
+# Subtest: changing pity requires risk permission and explicit preservation policy; no instance touched
+ok 10 - changing pity requires risk permission and explicit preservation policy; no instance touched
+  ---
+  duration_ms: 25.090899
+  type: 'test'
+  ...
+# Subtest: bounded history check fails closed over safety ceiling rather than ignore older acquired abilities
+ok 11 - bounded history check fails closed over safety ceiling rather than ignore older acquired abilities
+  ---
+  duration_ms: 35.035947
+  type: 'test'
+  ...
+# Subtest: material settings cannot add unavailable activities or original chest drop odds, rollback is new draft
+ok 12 - material settings cannot add unavailable activities or original chest drop odds, rollback is new draft
+  ---
+  duration_ms: 10.455826
+  type: 'test'
+  ...
+# Subtest: publishing through operations invalidates existing player quote without deducting assets
+ok 13 - publishing through operations invalidates existing player quote without deducting assets
+  ---
+  duration_ms: 36.504538
+  type: 'test'
+  ...
+# Subtest: refinement-scoped read-only operator cannot bypass new permissions through legacy asset/settings writers
+ok 14 - refinement-scoped read-only operator cannot bypass new permissions through legacy asset/settings writers
+  ---
+  duration_ms: 1.244127
+  type: 'test'
+  ...
+# Subtest: Taipei date and shard exact-once receipts; same player day count stable, groups isolated, net sinks correct
+ok 15 - Taipei date and shard exact-once receipts; same player day count stable, groups isolated, net sinks correct
+  ---
+  duration_ms: 10.028108
+  type: 'test'
+  ...
+# Subtest: changed source content is flagged for reconciliation, no aggregate mutation
+ok 16 - changed source content is flagged for reconciliation, no aggregate mutation
+  ---
+  duration_ms: 7.016087
+  type: 'test'
+  ...
+# Subtest: stone production distinct sources; unopened/zero rewards excluded, repeated chest event once
+ok 17 - stone production distinct sources; unopened/zero rewards excluded, repeated chest event once
+  ---
+  duration_ms: 1.562311
+  type: 'test'
+  ...
+# Subtest: transaction filters include instance, outcome, group and version; pagination bound and query-bound cursors
+ok 18 - transaction filters include instance, outcome, group and version; pagination bound and query-bound cursors
+  ---
+  duration_ms: 40.480398
+  type: 'test'
+  ...
+# Subtest: query reads at most 200 candidates and returns continuation even when page has no matching rows
+ok 19 - query reads at most 200 candidates and returns continuation even when page has no matching rows
+  ---
+  duration_ms: 93.272097
+  type: 'test'
+  ...
+# Subtest: bounded retry repair reconciles original receipts without duplicating events, independent of source commits
+ok 20 - bounded retry repair reconciles original receipts without duplicating events, independent of source commits
+  ---
+  duration_ms: 82.35268
+  type: 'test'
+  ...
+# Subtest: out-of-order state revisions ignored, sold weapon remains excluded even on old retry
+ok 21 - out-of-order state revisions ignored, sold weapon remains excluded even on old retry
+  ---
+  duration_ms: 0.72439
+  type: 'test'
+  ...
+# Subtest: bounded daily snapshot yields exact observed median P90 P95 and resumable jobs without inventing full coverage
+ok 22 - bounded daily snapshot yields exact observed median P90 P95 and resumable jobs without inventing full coverage
+  ---
+  duration_ms: 64.411155
+  type: 'test'
+  ...
+# Subtest: economy and battle observations independent and exact once; no invented historical battle time
+ok 23 - economy and battle observations independent and exact once; no invented historical battle time
+  ---
+  duration_ms: 5.882995
+  type: 'test'
+  ...
+# Subtest: dashboard reads bounded daily documents only; no players, receipts, full states on load
+ok 24 - dashboard reads bounded daily documents only; no players, receipts, full states on load
+  ---
+  duration_ms: 1.359612
+  type: 'test'
+  ...
+# Subtest: verified defeat event captures authoritative elapsed time and actual loot; attack receipts ignored
+ok 25 - verified defeat event captures authoritative elapsed time and actual loot; attack receipts ignored
+  ---
+  duration_ms: 0.796894
+  type: 'test'
+  ...
+# Subtest: farm snapshot observer skips attack-only unchanged assets, latest coin observation wins
+ok 26 - farm snapshot observer skips attack-only unchanged assets, latest coin observation wins
+  ---
+  duration_ms: 4.510125
+  type: 'test'
+  ...
+# Subtest: resumable audit compares projected transactions against shard totals and reports tampering without repairing player data
+ok 27 - resumable audit compares projected transactions against shard totals and reports tampering without repairing player data
+  ---
+  duration_ms: 134.829637
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 575.343514

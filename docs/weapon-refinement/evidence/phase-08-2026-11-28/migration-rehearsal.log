@@ -1,0 +1,60 @@
+{
+  "environment": "MemoryDB synthetic scopes only",
+  "passed": true,
+  "initialWeapons": 2001,
+  "allocations": 3,
+  "batchSize": 1,
+  "interruptionResumePassed": true,
+  "newerCoinsAndHarvestCountersPreserved": true,
+  "duplicateMigrationDidNotMintWeapons": true,
+  "oldAllocationsPreservedAfterNewGeneration": true,
+  "postTradeRollbackCorrectlyBlocked": true,
+  "formalCompatibilityBlocker": "V2 farm + weaponInstanceEnabled=false rejects buy/sell/equip. Production migration must not precede per-scope compatible writer availability.",
+  "measurements": [
+    {
+      "label": "review 2001 stacked weapons (3 allocations)",
+      "reads": 1,
+      "writes": 0
+    },
+    {
+      "label": "stage",
+      "reads": 3,
+      "writes": 3
+    },
+    {
+      "label": "resume batch1 interrupted after first commit",
+      "reads": 4,
+      "writes": 2
+    },
+    {
+      "label": "resume after interruption batch2",
+      "reads": 4,
+      "writes": 2
+    },
+    {
+      "label": "resume final batch3",
+      "reads": 4,
+      "writes": 4
+    },
+    {
+      "label": "verify current quantities and equipment",
+      "reads": 7,
+      "writes": 0
+    },
+    {
+      "label": "replay completed resume",
+      "reads": 3,
+      "writes": 0
+    },
+    {
+      "label": "rollback pristine revision0 preserves newer nonweapon assets",
+      "reads": 3,
+      "writes": 3
+    }
+  ],
+  "notMeasured": [
+    "real Firestore contention",
+    "real billing",
+    "production duration"
+  ]
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "pwa-safety",
+    "exitCode": 0,
+    "durationMs": 12066,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  }
+]

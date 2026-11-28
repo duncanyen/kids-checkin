@@ -1,0 +1,32 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ops_refinement_records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "filterTokens", "arrayConfig": "CONTAINS"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "ops_refinement_farm_snapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "date", "order": "ASCENDING"},
+        {"fieldPath": "occurredAt", "order": "ASCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "boxes",
+      "fieldPath": "openedAt",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION"},
+        {"arrayConfig": "CONTAINS", "queryScope": "COLLECTION"},
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    }
+  ]
+}

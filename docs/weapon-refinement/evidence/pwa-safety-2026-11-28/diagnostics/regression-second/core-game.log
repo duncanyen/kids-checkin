@@ -1,0 +1,37 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 4,
+  handlerMs: 4
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: true,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+core-battle-afterhits {
+  health: 0,
+  max: 4000,
+  weapon: '雙手斧',
+  selected: undefined,
+  phase: 'resolved',
+  result: 'win',
+  arrived: true,
+  now: 1795847163757,
+  approach: 1795847163427,
+  deadline: 1795847193427
+}
+PASS real Phaser private-mode harvest, shop, visit cleaning, theft, real boss hits/settlement and daily progress; no client Firestore transaction writes; /tmp/nexus-private-farm-mobile.png

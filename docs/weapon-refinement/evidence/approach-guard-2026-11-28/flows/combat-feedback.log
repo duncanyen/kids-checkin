@@ -1,0 +1,14 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 4,
+  handlerMs: 4
+}
+page.waitForFunction: Timeout 15000ms exceeded.
+    at exports.run (/workspace/kids-checkin/tests/helpers/combat-feedback-browser.cjs:72:15)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:169:66 {
+  log: [],
+  name: 'TimeoutError'
+}

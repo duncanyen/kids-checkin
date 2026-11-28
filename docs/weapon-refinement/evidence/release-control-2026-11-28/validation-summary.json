@@ -1,0 +1,49 @@
+{
+  "scope": "isolated demo only; no deployment or production writes",
+  "unit": {
+    "tests": 651,
+    "pass": 651,
+    "fail": 0,
+    "log": "unit-final.log"
+  },
+  "newAdmissionUnit": {
+    "tests": 17,
+    "pass": 17
+  },
+  "realFirestore": {
+    "files": 8,
+    "tests": 30,
+    "pass": 30,
+    "currentSourceVerified": true,
+    "scope": "Firestore Transactions and candidate Rules; not deployed Rules or whole Firebase Emulator suite"
+  },
+  "baselineBrowsers": {
+    "total": 29,
+    "firstPass": 26,
+    "firstFail": 3,
+    "independentRerunPass": 3,
+    "unstable": [
+      "countdown_tests",
+      "combat_feedback_tests",
+      "critical_feedback_tests"
+    ],
+    "notes": "initial failures retained; no assertion loosening or product combat changes to make reruns pass"
+  },
+  "newBrowsers": {
+    "adminPassed": true,
+    "playerWarehousePassed": true,
+    "viewport": "390x844",
+    "physicalPhone": false,
+    "backend": "createService production admission path with MemoryDB and synthetic Auth; real DB separately tested"
+  },
+  "production": {
+    "deployed": false,
+    "dataChanged": false,
+    "namedAccounts": [],
+    "whitelistDefault": [],
+    "masterDefault": false,
+    "gitCommitCreated": false,
+    "pushed": false
+  },
+  "releaseDecision": "NO_GO: other migration/reconciliation/old-client/security acceptance remains"
+}

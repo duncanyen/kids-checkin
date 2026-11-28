@@ -1,0 +1,62 @@
+{
+  "source": "MemoryDB document/empty-query interface probe, not billed Firestore telemetry",
+  "includes": "admin throttle and Auth getUser network lookup count; excludes transaction retries, index entries, actual Functions duration and trigger delivery",
+  "results": [
+    {
+      "label": "admin overview (3 unconfigured pointers + existing throttle)",
+      "documentReads": 4,
+      "minimumEmptyQueryReads": 0,
+      "queries": 0,
+      "writes": 1,
+      "authLookups": 1
+    },
+    {
+      "label": "save initial draft, no player reads",
+      "documentReads": 6,
+      "minimumEmptyQueryReads": 0,
+      "queries": 0,
+      "writes": 4,
+      "authLookups": 1
+    },
+    {
+      "label": "validate draft (no historical versions)",
+      "documentReads": 6,
+      "minimumEmptyQueryReads": 1,
+      "queries": 1,
+      "writes": 3,
+      "authLookups": 1
+    },
+    {
+      "label": "publish 3 configurations atomically",
+      "documentReads": 9,
+      "minimumEmptyQueryReads": 1,
+      "queries": 1,
+      "writes": 11,
+      "authLookups": 1
+    },
+    {
+      "label": "first daily refinement projection",
+      "documentReads": 3,
+      "minimumEmptyQueryReads": 0,
+      "queries": 0,
+      "writes": 3,
+      "authLookups": 0
+    },
+    {
+      "label": "statistics dashboard one observed day",
+      "documentReads": 3,
+      "minimumEmptyQueryReads": 0,
+      "queries": 1,
+      "writes": 1,
+      "authLookups": 1
+    },
+    {
+      "label": "transaction page one record",
+      "documentReads": 2,
+      "minimumEmptyQueryReads": 0,
+      "queries": 1,
+      "writes": 1,
+      "authLookups": 1
+    }
+  ]
+}

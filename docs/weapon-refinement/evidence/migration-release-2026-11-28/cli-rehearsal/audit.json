@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "valid": true,
+  "releaseReady": true,
+  "scope": "independently consistent per-farm snapshots; not a whole-database point in time",
+  "summary": {
+    "scopes": 1,
+    "transactions": 0,
+    "walletDeltasVerified": 0
+  },
+  "errors": [],
+  "gaps": [],
+  "results": [
+    {
+      "schemaVersion": 1,
+      "valid": true,
+      "releaseReady": true,
+      "scope": "provided local snapshot only",
+      "summary": {
+        "actors": 1,
+        "legacyFarms": 0,
+        "v2Farms": 1,
+        "allocations": 3,
+        "explicitWeapons": 1004,
+        "implicitClubs": 1,
+        "states": 0,
+        "transactions": 0,
+        "walletDeltasVerified": 0
+      },
+      "errors": [],
+      "gaps": [],
+      "notes": [
+        "離線報告依輸入來源與attestation；不是正式Firestore時間點快照或獨立簽章證明。",
+        "僅核對已列入scope；不代表全服覆蓋。",
+        "walletJournal需來自同一已提交交易的可信任前後證據；自行填寫不能成為正式驗收。"
+      ]
+    }
+  ]
+}

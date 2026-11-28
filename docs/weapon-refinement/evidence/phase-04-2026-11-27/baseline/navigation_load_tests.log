@@ -1,0 +1,49 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 8,
+  handlerMs: 8
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 1
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 5,
+  handlerMs: 5
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 1
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 1
+}
+PASS navigation loading benchmark {"label":"after","viewport":"390x844","environment":"local Chromium / isolated SDK / real Phaser / SW blocked for request instrumentation","warmRoutes":[{"route":"ShopScene","ms":1052,"textureRequests":0,"masks":0},{"route":"WarehouseScene","ms":1145,"textureRequests":0,"masks":0},{"route":"ShopScene","ms":1319,"textureRequests":0,"masks":0},{"route":"WarehouseScene","ms":943,"textureRequests":0,"masks":0},{"route":"ShopScene","ms":1114,"textureRequests":0,"masks":0},{"route":"WarehouseScene","ms":1259,"textureRequests":0,"masks":0}],"visits":[{"ms":462,"textureRequests":0,"masks":0},{"ms":319,"textureRequests":0,"masks":0},{"ms":357,"textureRequests":0,"masks":0},{"ms":440,"textureRequests":0,"masks":0},{"ms":449,"textureRequests":0,"masks":0}],"sourceRetainedWhileLoading":true,"overlayAt80ms":false,"firstWarehouseMs":3789,"firstWarehouseTextureRequests":42,"loadedCombatSprites":[]}

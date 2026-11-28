@@ -1,0 +1,39 @@
+{
+  "environment": "MemoryDB, direct player service, fake identity/readiness; no Auth RPC, throttle, automatic retries or mirror/report triggers",
+  "capabilities": [
+    {
+      "reads": 1,
+      "writes": 0
+    }
+  ],
+  "details": [
+    {
+      "reads": 6,
+      "writes": 0
+    }
+  ],
+  "preview": [
+    {
+      "reads": 9,
+      "writes": 1
+    }
+  ],
+  "reset": [
+    {
+      "reads": 11,
+      "writes": 6
+    }
+  ],
+  "replay": [
+    {
+      "reads": 2,
+      "writes": 0
+    }
+  ],
+  "query": [
+    {
+      "reads": 1,
+      "writes": 0
+    }
+  ]
+}

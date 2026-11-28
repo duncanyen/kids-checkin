@@ -1,0 +1,7 @@
+CONSOLE Failed to load resource: the server responded with a status of 400 (Bad Request)
+CONSOLE Failed to load resource: the server responded with a status of 400 (Bad Request)
+CONSOLE farm-transaction-failure {"action":"buyWeapon","stage":"request","code":"ops/timeout","message":"隔離測試：已提交但回應遺失"}
+CONSOLE Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+CONSOLE Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+CONSOLE Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+PASS standalone synthetic full-game lab, no external requests, config/secret isolation and shop debit

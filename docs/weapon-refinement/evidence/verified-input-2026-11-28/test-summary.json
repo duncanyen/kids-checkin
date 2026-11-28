@@ -1,0 +1,48 @@
+{
+  "dateTaipei": "2026-11-28",
+  "unit": {
+    "tests": 688,
+    "passed": 688,
+    "failed": 0
+  },
+  "browser": {
+    "workflows": 9,
+    "finalPassed": 9,
+    "physicalMobile": false,
+    "newInput": {
+      "monsters": 9,
+      "viewportWidths": [
+        320,
+        390,
+        768
+      ],
+      "realPhaser": true,
+      "actualPublicVillageEntry": true,
+      "realBowDrag": true,
+      "memoryDB": true
+    },
+    "legacyPwa": "real worker/module harness, pinned Git version; not historical full game or physical iPhone"
+  },
+  "initialRegressionFailures": [
+    {
+      "test": "battle-exit",
+      "cause": "20 fixed hits cannot guarantee 4000HP kill at base200 +/-10",
+      "fix": "test only: stop on victory with cap25; gameplay unchanged",
+      "rerunPassed": true
+    }
+  ],
+  "sourceChangeDiagnostics": "Intermediate Emulator runs remain invalid if sourceChangedDuringRun; only frozen-source proof is admissible. A temporary ranged-mole diagnostic was removed because original weapon restriction forbids it; runtime returned to frozen source.",
+  "productionDataAccessed": false,
+  "deployed": false,
+  "committed": false,
+  "productionGatesRemainFalse": true,
+  "releaseDecision": "NO_GO",
+  "realFirestore": {
+    "tests": 53,
+    "passed": 53,
+    "suites": 12,
+    "candidateRules": true,
+    "sourceUnchanged": true,
+    "fullFirebaseEmulatorSuite": false
+  }
+}

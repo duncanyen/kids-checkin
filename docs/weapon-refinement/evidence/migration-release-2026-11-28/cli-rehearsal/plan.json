@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "weapon-migration-release",
+  "project": "demo-nexus-private-farm",
+  "database": "(default)",
+  "runId": "2cdabb8f-2a48-438c-a9cb-7d19a6fd2129",
+  "sourceHash": "858185e8bd6f3b5048ed35594603c74619cbdaa9fdab9d72a376d335cdb71533",
+  "createdAt": 1795827502412,
+  "expiresAt": 1795913902412,
+  "scopes": [
+    {
+      "actor": {
+        "uid": "migrate-327a7dc9f5bb",
+        "groupId": "cohort-327a7dc9f5bb",
+        "accountId": "player"
+      },
+      "generation": "migrate-44c0cbfe687d432f13b2446bc6869a3e12b8bf289e16fe62fb2bf5ba0360b13f",
+      "fingerprint": "48af34d745b1f7af93ffaa171b6c54681a84a59d405e3d143348c8f06b7c4bbd",
+      "counts": {
+        "mace": 1001,
+        "battleaxe": 0,
+        "ironhammer": 3,
+        "katana": 0,
+        "shortbow": 0,
+        "huntingbow": 0,
+        "paladinbow": 0
+      },
+      "allocationCount": 3
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "unit": {
+    "tests": 661,
+    "pass": 661,
+    "fail": 0
+  },
+  "realFirestore": {
+    "project": "demo-nexus-private-farm",
+    "host": "127.0.0.1:8092",
+    "suites": 9,
+    "tests": 37,
+    "pass": 37,
+    "memoryDB": false,
+    "candidateRules": true,
+    "deployedRulesChecked": false
+  },
+  "migrationReleaseRealCases": 7,
+  "browser": [
+    {
+      "id": "core-game",
+      "exitCode": 0,
+      "durationMs": 25686,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "player-release",
+      "exitCode": 0,
+      "durationMs": 7303,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    },
+    {
+      "id": "admin-release",
+      "exitCode": 0,
+      "durationMs": 2328,
+      "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+      "physicalMobile": false
+    }
+  ],
+  "production": {
+    "connected": false,
+    "dataRead": false,
+    "dataWritten": false,
+    "deployed": false,
+    "approvalFilesCreated": false,
+    "flagsDefault": false,
+    "gitCommitOrPush": false
+  },
+  "limits": [
+    "production IAM/backup restore and production scope not verified",
+    "old missing wallet evidence is not backfilled",
+    "not a whole-game gold ledger or global point-in-time snapshot",
+    "no physical mobile/network measurement"
+  ],
+  "initialFailuresRetained": [
+    "fixture passed null farm to list",
+    "fixture assumed target weapon always appears on first bounded page"
+  ],
+  "releaseDecision": "NO_GO; prepared tool implementation is not production execution approval"
+}

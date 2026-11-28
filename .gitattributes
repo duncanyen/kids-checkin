@@ -1,0 +1,6 @@
+# Preserve raw validation logs; keep bulk machine output out of code diffs.
+docs/weapon-refinement/evidence/**/*.log -diff -whitespace linguist-generated=true
+docs/weapon-refinement/evidence/**/*.json linguist-generated=true
+docs/weapon-refinement/evidence/**/*.txt -whitespace linguist-generated=true
+# Keep Windows-compatible CSV line endings without flagging CR as trailing space.
+docs/weapon-refinement/iphone/*.csv whitespace=cr-at-eol

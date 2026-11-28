@@ -1,0 +1,8 @@
+page.evaluate: Error: 請先確認原交易編號
+    at Module.farmCommand (http://127.0.0.1:33515/snapshot/current/js/farm/backend-client.js:41:73)
+    at eval (eval at evaluate (:311:30), <anonymous>:1:9)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at /workspace/kids-checkin/tests/weapon-refinement/legacy-pwa-acceptance.cjs:26:34 {
+  log: []
+}

@@ -1,0 +1,14 @@
+{
+  "id": "COMBAT-HIT-ATTESTATION",
+  "severity": "HIGH",
+  "releaseBlocker": true,
+  "acceptedWithoutAnyPointerOrCollisionTelemetry": true,
+  "acceptedBeforeApproachEnd": true,
+  "clientVisibleDamageSeed": true,
+  "serverValidated": "seeded damage/order/cumulative rate/ownership/receipt",
+  "notValidated": "collision, weapon gesture, 250ms bow cadence, actual per-hit event time",
+  "observedElapsedMs": 2000,
+  "hits": 25,
+  "reward": "gorillaFangs +1",
+  "formalData": false
+}

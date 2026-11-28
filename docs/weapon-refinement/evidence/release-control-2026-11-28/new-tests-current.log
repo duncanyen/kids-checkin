@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: production admission works with testEnvironment=false and all legacy flags off; +1 server abilities are real
+ok 1 - production admission works with testEnvironment=false and all legacy flags off; +1 server abilities are real
+  ---
+  duration_ms: 137.617822
+  type: 'test'
+  ...
+# Subtest: same farm across devices sees same version and entitlement; forged client release fields rejected
+ok 2 - same farm across devices sees same version and entitlement; forged client release fields rejected
+  ---
+  duration_ms: 29.806119
+  type: 'test'
+  ...
+# Subtest: same account in another group is not admitted and client owner spoof cannot expand scope
+ok 3 - same account in another group is not admitted and client owner spoof cannot expand scope
+  ---
+  duration_ms: 15.229214
+  type: 'test'
+  ...
+# Subtest: server master gate off overrides a stored whitelist; no client or saved config turns it on
+ok 4 - server master gate off overrides a stored whitelist; no client or saved config turns it on
+  ---
+  duration_ms: 52.807813
+  type: 'test'
+  ...
+# Subtest: backend rejects split paid-refinement/combat and reset configurations or duplicate scopes
+ok 5 - backend rejects split paid-refinement/combat and reset configurations or duplicate scopes
+  ---
+  duration_ms: 16.77162
+  type: 'test'
+  ...
+# Subtest: whitelist validates profile/account/group membership using backend data
+ok 6 - whitelist validates profile/account/group membership using backend data
+  ---
+  duration_ms: 16.061609
+  type: 'test'
+  ...
+# Subtest: release controls require current read/publish/risk permissions, including emergency pause
+ok 7 - release controls require current read/publish/risk permissions, including emergency pause
+  ---
+  duration_ms: 8.538861
+  type: 'test'
+  ...
+# Subtest: publish CAS, preview confirmation and immutable version journal are safe under retry
+ok 8 - publish CAS, preview confirmation and immutable version journal are safe under retry
+  ---
+  duration_ms: 12.422689
+  type: 'test'
+  ...
+# Subtest: pausing rejects new refine/reset and invalidates old quotes; completed original request still returns once
+ok 9 - pausing rejects new refine/reset and invalidates old quotes; completed original request still returns once
+  ---
+  duration_ms: 37.172467
+  type: 'test'
+  ...
+# Subtest: pause and whitelist removal preserve V2 purchase/equip/sale with original prices and earned stats
+ok 10 - pause and whitelist removal preserve V2 purchase/equip/sale with original prices and earned stats
+  ---
+  duration_ms: 34.282175
+  type: 'test'
+  ...
+# Subtest: old chest snapshot grants once while new source admission is closed or whitelist removed
+ok 11 - old chest snapshot grants once while new source admission is closed or whitelist removed
+  ---
+  duration_ms: 29.32157
+  type: 'test'
+  ...
+# Subtest: malformed release setting fails admission closed without blocking owned V2 operations
+ok 12 - malformed release setting fails admission closed without blocking owned V2 operations
+  ---
+  duration_ms: 14.377874
+  type: 'test'
+  ...
+# Subtest: opening release requires active cost/refund/material settings, never charges against unpublished setup
+ok 13 - opening release requires active cost/refund/material settings, never charges against unpublished setup
+  ---
+  duration_ms: 32.061648
+  type: 'test'
+  ...
+# Subtest: pause between intent reservation and commit rejects without debit, original rejection can be queried
+ok 14 - pause between intent reservation and commit rejects without debit, original rejection can be queried
+  ---
+  duration_ms: 19.471134
+  type: 'test'
+  ...
+# Subtest: real stored +1 equipped bonus survives all admission switches; reset preview/receipt replay is coherent
+ok 15 - real stored +1 equipped bonus survives all admission switches; reset preview/receipt replay is coherent
+  ---
+  duration_ms: 17.30684
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 795.370093

@@ -1,0 +1,24 @@
+REVIEW ONLY — NOT A DEPLOYMENT APPROVAL
+本輪只略過Windows/iPhone操作，沒有核准正式環境操作。
+先定版commit、核對正式環境與必要備份／索引、確認相容性與部署範圍，再分步授權。
+不要把本檔接到shell自動執行，不要用 --force 或 firebase deploy 全量部署。
+
+候選相容callable（未執行）：
+cd "$HOME/kids-checkin"
+node scripts/prepare-game-admin.cjs
+firebase deploy --config game-admin/firebase.json --project homebasedb \
+  --only 'functions:nexus-ops:gameOpsFarmTransaction,functions:nexus-ops:gameOpsAdmin,functions:nexus-ops:gameOpsDailyChallenges,functions:nexus-ops:gameOpsRedeem'
+
+須核對兩區asia-east1／asia-southeast1成功，並保持新增精煉／材料／解除／發布控制關閉。
+原有NEXUS_PRIVATE_IDENTITY_ENABLED及NEXUS_FARM_BACKEND_ENABLED不可為了關閉新功能而誤設false，避免影響現有登入／遊戲。
+getFarmTransactionResult屬原gameOpsFarmTransaction action，不新增獨立callable。
+
+索引只交付indexes-review.json離線差異，現在不提供會覆蓋未知正式索引的指令。
+正式讀回並合併、建立候選新增索引後，等待READY；不要把本機候選檔當正式現況。
+
+獨立營運中心候選（須先核對target binding，不在本輪執行）：
+firebase deploy --config game-admin/firebase.json --project homebasedb --only hosting:nexus-game-admin
+
+8支統計觀測器須另核准成本與範圍，未包含在上列4支callable指令。
+玩家GitHub Pages先前從main/root發布，推main可能直接上線；先使用發布分支審查。
+本輪不發布Rules、不執行遷移、不初始化正式版本pointer或白名單，不刪舊區Function。

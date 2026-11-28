@@ -1,0 +1,9 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 12,
+  handlerMs: 12
+}
+PASS configurable server entry: mole threshold 2 below legacy 30, 0% disables, actual public village entry uses 100% wolf, no client milestone claims, battle blocks warehouse

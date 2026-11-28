@@ -1,0 +1,37 @@
+[
+  {
+    "id": "weapon-instances",
+    "exitCode": 0,
+    "durationMs": 28791,
+    "flag": "WEAPON_INSTANCE_TESTS",
+    "log": "weapon-instances.log"
+  },
+  {
+    "id": "stone-rewards",
+    "exitCode": 0,
+    "durationMs": 17462,
+    "flag": "STONE_REWARD_TESTS",
+    "log": "stone-rewards.log"
+  },
+  {
+    "id": "refinement-ui",
+    "exitCode": 0,
+    "durationMs": 60480,
+    "flag": "REFINEMENT_UI_TESTS",
+    "log": "refinement-ui.log"
+  },
+  {
+    "id": "refinement-combat",
+    "exitCode": 0,
+    "durationMs": 38763,
+    "flag": "REFINEMENT_COMBAT_TESTS",
+    "log": "refinement-combat.log"
+  },
+  {
+    "id": "refinement-operations",
+    "exitCode": 0,
+    "durationMs": 7896,
+    "flag": null,
+    "log": "refinement-operations.log"
+  }
+]

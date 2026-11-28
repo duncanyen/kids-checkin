@@ -1,0 +1,9 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 3,
+  handlerMs: 3
+}
+PASS released Fuji price100000: insufficient funds rejected, double confirm one debit, owned warehouse/settings preserved, lazy full art, free switching, refresh persistence, 320/390/430/768/1024 layouts

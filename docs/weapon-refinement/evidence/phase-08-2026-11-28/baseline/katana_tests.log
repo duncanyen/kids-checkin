@@ -1,0 +1,9 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+PASS unreleased katana: visible disabled shop, no client buy request, forged direct buy rejected, existing-owner equip/refresh/unequip, cold boss art, sell30000, one-hit wolf unchanged

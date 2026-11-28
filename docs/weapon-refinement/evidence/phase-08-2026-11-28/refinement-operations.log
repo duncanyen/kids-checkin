@@ -1,0 +1,10 @@
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:8032/game-admin/site/index.html
+Call log:
+[2m  - navigating to "http://127.0.0.1:8032/game-admin/site/index.html", waiting until "load"[22m
+
+    at /workspace/kids-checkin/game-admin/tests/refinement-operations.browser.cjs:8:13 {
+  log: [
+    '  - navigating to "http://127.0.0.1:8032/game-admin/site/index.html", waiting until "load"'
+  ],
+  name: 'Error'
+}

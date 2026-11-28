@@ -1,0 +1,51 @@
+[
+  {
+    "id": "save-reload",
+    "exitCode": 0,
+    "durationMs": 22732,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "core-game",
+    "exitCode": 0,
+    "durationMs": 44428,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "weapon-instances",
+    "exitCode": 0,
+    "durationMs": 22492,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "refined-combat",
+    "exitCode": 0,
+    "durationMs": 27379,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "battle-exit",
+    "exitCode": 0,
+    "durationMs": 13404,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "public-art-cache",
+    "exitCode": 0,
+    "durationMs": 1632,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  },
+  {
+    "id": "combat-feedback",
+    "exitCode": 0,
+    "durationMs": 53819,
+    "backend": "MemoryDB, actual production admission/service branch for whitelist cases; real Firestore separately verified",
+    "physicalMobile": false
+  }
+]

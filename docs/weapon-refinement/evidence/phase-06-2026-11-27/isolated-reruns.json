@@ -1,0 +1,18 @@
+[
+  {
+    "mode": "COUNTDOWN_TESTS",
+    "exitCode": 0
+  },
+  {
+    "mode": "CRITICAL_ZERO_TESTS",
+    "exitCode": 0
+  },
+  {
+    "mode": "REFINEMENT_COMBAT_TESTS",
+    "exitCode": 0
+  },
+  {
+    "mode": "REFINEMENT_UI_TESTS",
+    "exitCode": 0
+  }
+]

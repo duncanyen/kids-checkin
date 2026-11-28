@@ -1,0 +1,1 @@
+PASS: 37 initial PNG requests, 0 repeat-entry PNG requests with HTTP cache disabled; game-only scope, uncached APIs, art version refresh and unrelated caches preserved.

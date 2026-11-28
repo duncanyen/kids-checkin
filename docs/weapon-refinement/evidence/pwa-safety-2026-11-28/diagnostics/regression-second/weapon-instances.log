@@ -1,0 +1,11 @@
+locator.waitFor: Timeout 15000ms exceeded.
+Call log:
+[2m  - waiting for locator('[data-result-kind=weapons]').getByText('操作完成', { exact: true }) to be visible[22m
+
+    at exports.run (/workspace/kids-checkin/tests/helpers/weapon-instances-browser.cjs:23:115)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:168:47 {
+  log: [
+    "  - waiting for locator('[data-result-kind=weapons]').getByText('操作完成', { exact: true }) to be visible"
+  ],
+  name: 'TimeoutError'
+}

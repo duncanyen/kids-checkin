@@ -2,6 +2,8 @@
 
 日期：2026-11-27。盤點／測試來源 commit：`0233ffd632d82ac0cede326d508718ea3cdbe734`。
 
+> 後續補件（2026-11-27）：使用者已要求在工作目錄新建 [DEVELOPMENT_RULES.md](DEVELOPMENT_RULES.md)，現已依既有明確需求建立 v1.0。下文「未找到／尚未回覆」保留為原盤點時的歷史狀態；不表示目前仍缺檔。新建規範未改變既有測試結果，也未授權啟動 Phase 2；Emulator 等驗證缺口仍保留。
+
 ## 1. 本階段交付
 
 - [01-current-system-analysis](01-current-system-analysis.md)：14 個模組、實際函式／路徑、資料、相依關係、舊前端寫入與 PWA。

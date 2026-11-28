@@ -1,0 +1,1 @@
+PASS: saved name updates profile header immediately, trimmed names and caches agree, failed writes and duplicate names preserve the previous header.

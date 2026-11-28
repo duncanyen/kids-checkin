@@ -1,0 +1,25 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 1,
+  handlerMs: 1
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: true,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 9,
+  handlerMs: 9
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 8,
+  handlerMs: 8
+}
+PASS real Phaser private-mode harvest, shop, visit cleaning, theft, real boss hits/settlement and daily progress; no client Firestore transaction writes; /tmp/nexus-private-farm-mobile.png

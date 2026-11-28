@@ -1,0 +1,24 @@
+{
+  runId: 'iphone-789d31c3a3c6',
+  choices: [
+    { id: 'alice-a', name: '驗收小咕 A', groupId: 'LAB_A' },
+    { id: 'bob-a', name: '驗收小咕 B', groupId: 'LAB_A' },
+    { id: 'alice-b', name: '驗收小咕 A／另一群組', groupId: 'LAB_B' }
+  ],
+  state: {
+    runId: 'iphone-789d31c3a3c6',
+    kind: 'synthetic-MemoryDB',
+    production: false,
+    account: {
+      id: 'alice-a',
+      uid: 'lab-alice',
+      groupId: 'LAB_A',
+      accountId: 'alice',
+      name: '驗收小咕 A'
+    },
+    coins: 2965000,
+    stones: 184,
+    sourceCommit: '8dbae59e619cc5382853dfeb0e6397eccddd209a',
+    records: []
+  }
+}

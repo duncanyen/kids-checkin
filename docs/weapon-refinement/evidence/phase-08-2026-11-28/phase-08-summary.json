@@ -1,0 +1,270 @@
+{
+  "phase": 8,
+  "dateTaipei": "2026-11-28",
+  "stage": "Step A only",
+  "decision": "NO_GO",
+  "git": {
+    "branch": "main",
+    "head": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+    "dirty": true,
+    "phase1Commit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+    "phase2Through8SeparateCommits": null,
+    "note": "No commits, pushes or main merge this phase; never invent hashes."
+  },
+  "units": {
+    "passed": 629,
+    "failed": 0,
+    "phase8Added": 17,
+    "log": "unit-release-review.log"
+  },
+  "legacyBrowser": {
+    "initialPassed": 26,
+    "total": 29,
+    "initialFailures": [
+      "combat_feedback_tests",
+      "critical_feedback_tests",
+      "navigation_load_tests"
+    ],
+    "isolatedReruns": [
+      {
+        "id": "critical-feedback",
+        "exitCode": 0,
+        "durationMs": 71271,
+        "flag": "CRITICAL_FEEDBACK_TESTS",
+        "log": "critical-feedback.log"
+      },
+      {
+        "id": "navigation-loading",
+        "exitCode": 0,
+        "durationMs": 14875,
+        "flag": "NAVIGATION_LOAD_TESTS",
+        "log": "navigation-loading.log"
+      },
+      {
+        "id": "combat-feedback",
+        "exitCode": 0,
+        "durationMs": 54350,
+        "flag": "COMBAT_FEEDBACK_TESTS",
+        "log": "combat-feedback.log"
+      }
+    ],
+    "flakinessResolved": false
+  },
+  "phase2Through7Browser": {
+    "passed": 5,
+    "total": 5,
+    "results": [
+      {
+        "id": "weapon-instances",
+        "exitCode": 0,
+        "durationMs": 28791,
+        "flag": "WEAPON_INSTANCE_TESTS",
+        "log": "weapon-instances.log"
+      },
+      {
+        "id": "stone-rewards",
+        "exitCode": 0,
+        "durationMs": 17462,
+        "flag": "STONE_REWARD_TESTS",
+        "log": "stone-rewards.log"
+      },
+      {
+        "id": "refinement-ui",
+        "exitCode": 0,
+        "durationMs": 60480,
+        "flag": "REFINEMENT_UI_TESTS",
+        "log": "refinement-ui.log"
+      },
+      {
+        "id": "refinement-combat",
+        "exitCode": 0,
+        "durationMs": 38763,
+        "flag": "REFINEMENT_COMBAT_TESTS",
+        "log": "refinement-combat.log"
+      },
+      {
+        "id": "refinement-operations",
+        "exitCode": 0,
+        "durationMs": 7896,
+        "flag": null,
+        "log": "refinement-operations.log"
+      }
+    ],
+    "firstAttempt": "All five ERR_CONNECTION_REFUSED because reused local HTTP server was absent after environment restart. Original logs preserved; rerun owns a local server."
+  },
+  "emulator": {
+    "status": "BLOCKED",
+    "assertionsExecuted": false,
+    "testFiles": 6,
+    "reason": "Official Firestore JAR download HTTP403 Domain forbidden",
+    "log": "emulator.log"
+  },
+  "assetAudit": {
+    "source": "synthetic MemoryDB only",
+    "complete": {
+      "valid": true,
+      "releaseReady": true,
+      "actors": 1,
+      "legacyFarms": 0,
+      "v2Farms": 1,
+      "allocations": 2,
+      "explicitWeapons": 5,
+      "implicitClubs": 1,
+      "states": 1,
+      "transactions": 11,
+      "walletDeltasVerified": 11
+    },
+    "withoutWallet": {
+      "valid": true,
+      "releaseReady": false,
+      "gaps": 11
+    },
+    "actualReset": {
+      "coins": 10500,
+      "stones": 8
+    }
+  },
+  "migrationRehearsal": {
+    "environment": "MemoryDB synthetic scopes only",
+    "passed": true,
+    "initialWeapons": 2001,
+    "allocations": 3,
+    "batchSize": 1,
+    "interruptionResumePassed": true,
+    "newerCoinsAndHarvestCountersPreserved": true,
+    "duplicateMigrationDidNotMintWeapons": true,
+    "oldAllocationsPreservedAfterNewGeneration": true,
+    "postTradeRollbackCorrectlyBlocked": true,
+    "formalCompatibilityBlocker": "V2 farm + weaponInstanceEnabled=false rejects buy/sell/equip. Production migration must not precede per-scope compatible writer availability.",
+    "measurements": [
+      {
+        "label": "review 2001 stacked weapons (3 allocations)",
+        "reads": 1,
+        "writes": 0
+      },
+      {
+        "label": "stage",
+        "reads": 3,
+        "writes": 3
+      },
+      {
+        "label": "resume batch1 interrupted after first commit",
+        "reads": 4,
+        "writes": 2
+      },
+      {
+        "label": "resume after interruption batch2",
+        "reads": 4,
+        "writes": 2
+      },
+      {
+        "label": "resume final batch3",
+        "reads": 4,
+        "writes": 4
+      },
+      {
+        "label": "verify current quantities and equipment",
+        "reads": 7,
+        "writes": 0
+      },
+      {
+        "label": "replay completed resume",
+        "reads": 3,
+        "writes": 0
+      },
+      {
+        "label": "rollback pristine revision0 preserves newer nonweapon assets",
+        "reads": 3,
+        "writes": 3
+      }
+    ],
+    "notMeasured": [
+      "real Firestore contention",
+      "real billing",
+      "production duration"
+    ]
+  },
+  "runtimeChangedSincePhase7": false,
+  "runtimeFilesCompared": [
+    "game-admin/functions/refinement-operations.cjs",
+    "game-admin/functions/refinement-statistics.cjs",
+    "game-admin/functions/refinement-snapshots.cjs",
+    "game-admin/functions/service.cjs",
+    "game-admin/functions/index.cjs",
+    "game-admin/functions/refinement-core.cjs",
+    "game-admin/functions/refinement-service.cjs",
+    "game-admin/functions/refinement-player-service.cjs",
+    "game-admin/functions/farm-transactions.cjs",
+    "game-admin/site/refinement.js",
+    "game-admin/site/app.js",
+    "game-admin/site/management.js",
+    "game-admin/site/index.html",
+    "game-admin/site/styles.css"
+  ],
+  "formalFlags": {
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementResetEnabled": false,
+    "refinementCombatBonusEnabled": false,
+    "refinementStoneRewardEnabled": false
+  },
+  "protectedFilesUnchanged": [
+    "rules/firestore.private-farm.candidate.rules",
+    "rules/storage.private-farm.candidate.rules",
+    "game-admin/rules/firestore.indexes.json",
+    "firestore.indexes.json",
+    "database.rules.json",
+    "storage.rules",
+    "firebase.json",
+    "game-admin/firebase.json",
+    "game-admin/functions/combat-balance.cjs",
+    "js/farm/combat-rules.js",
+    "game-admin/functions/encounters.cjs"
+  ],
+  "formalOperations": {
+    "backup": false,
+    "readPlayerData": false,
+    "migrationDryRun": false,
+    "migrationApply": false,
+    "rulesOrIndexPublish": false,
+    "deployment": false,
+    "authClaims": false,
+    "flagsEnable": false,
+    "mainMerge": false,
+    "stepBThroughF": false
+  },
+  "formalAcceptancePassed": false,
+  "knownBlockers": [
+    "Real Emulator, Rules, indexes READY and production identity unverified",
+    "Combat server does not prove physical hit/gesture authenticity",
+    "No reviewed production migration adapter or stable runtime rollout gate",
+    "V2 weapon writes stop when instance flag false; migration cannot precede compatible writer admission",
+    "No trusted historical pre/post wallet evidence or full-population reconciliation",
+    "Global stone gate also pauses old locked chest fulfillment; new source admission and historical fulfillment need separation",
+    "Dirty uncommitted source, old-client/PWA compatibility and physical mobile/network acceptance incomplete",
+    "Full population/economic denominators and reliable latency/cost baselines unavailable"
+  ],
+  "reports": [
+    "phase-08-report.md",
+    "final-test-report.md",
+    "release-plan.md",
+    "migration-runbook.md",
+    "rollback-runbook.md",
+    "operations-guide.md"
+  ],
+  "newToolsAndTests": [
+    "scripts/lib/weapon-data-audit.cjs",
+    "scripts/weapon-data-audit.cjs",
+    "scripts/export-weapon-audit.cjs",
+    "scripts/lib/weapon-release-policy.cjs",
+    "scripts/weapon-release-review.cjs",
+    "tests/weapon-refinement/phase8-fixture.cjs",
+    "tests/weapon-refinement/migration-rehearsal.cjs",
+    "tests/weapon-data-audit.test.cjs",
+    "tests/weapon-release-review.test.cjs",
+    "tests/weapon-migration-rehearsal.test.cjs"
+  ],
+  "physicalDevicesTested": false,
+  "productionNetworkTested": false,
+  "sourceManifest": "source-manifest.json"
+}

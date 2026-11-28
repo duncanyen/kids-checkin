@@ -1,0 +1,119 @@
+{
+  "phase": 4,
+  "createdAt": "2026-11-27T14:49:44.969558+00:00",
+  "baseCommit": "8dbae59e619cc5382853dfeb0e6397eccddd209a",
+  "workingTreeHasPreviousPhase02And03Changes": true,
+  "implementation": "COMPLETE_IN_WORKSPACE",
+  "acceptance": "NOT_RELEASED: real Emulator download HTTP403; initial browser matrix has timing failures even though individual reruns passed",
+  "phase03Prerequisite": "Not fully accepted; prior Emulator and browser limitations preserved. User explicitly authorized Phase4 isolated development and continuation.",
+  "productionFlags": {
+    "weaponInstanceEnabled": false,
+    "weaponRefinementEnabled": false,
+    "refinementCombatBonusEnabled": false,
+    "refinementStoneRewardEnabled": false
+  },
+  "deployed": false,
+  "productionDataAccessed": false,
+  "enteredPhase5": false,
+  "rulesOrIndexesOrDeploymentConfigChanged": false,
+  "committedOrPushed": false,
+  "tests": {
+    "finalUnits": {
+      "passed": 543,
+      "failed": 0,
+      "newPhase04Included": 17,
+      "log": "unit-final.log"
+    },
+    "frontendTargeted": {
+      "passed": 22,
+      "failed": 0,
+      "includedIn543": true
+    },
+    "initialBrowserMatrix": {
+      "passed": 27,
+      "failed": 2,
+      "total": 29,
+      "failures": [
+        {
+          "id": "countdown_tests",
+          "args": [
+            "tests/farm-private-backend-browser.cjs"
+          ],
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "durationMs": 133459,
+          "log": "/tmp/nexus-phase4/baseline/countdown_tests.log",
+          "status": "failed"
+        },
+        {
+          "id": "critical_feedback_tests",
+          "args": [
+            "tests/farm-private-backend-browser.cjs"
+          ],
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "durationMs": 53825,
+          "log": "/tmp/nexus-phase4/baseline/critical_feedback_tests.log",
+          "status": "failed"
+        }
+      ]
+    },
+    "singleReruns": [
+      {
+        "mode": "CRITICAL_FEEDBACK_TESTS",
+        "exitCode": 0
+      },
+      {
+        "mode": "COUNTDOWN_TESTS",
+        "exitCode": 0
+      }
+    ],
+    "newMaterialUI": "PASS: actual game daily/warehouse entrances, real Phaser, isolated SDK/backend, 320x568 and 390x844",
+    "phase02WeaponUI": "PASS: actual warehouse/shop equip/buy/sell/timeout recovery",
+    "realEmulator": {
+      "status": "BLOCKED",
+      "assertionsExecuted": false,
+      "reason": "HTTP403 Domain forbidden downloading cloud-firestore-emulator-v1.19.8.jar",
+      "testsAdded": "game-admin/tests/refinement-stone-rewards.emulator.cjs"
+    }
+  },
+  "temporaryArtRequiresReplacement": true,
+  "inventoryCapacityPolicy": "separate stack, no normal inventory slots; confirm before formal release",
+  "screenshots": [
+    "material-daily-320.png",
+    "material-daily-390.png",
+    "material-warehouse-320.png",
+    "material-warehouse-390.png"
+  ],
+  "sourceSha256": {
+    "game-admin/functions/refinement-stone-rewards.cjs": "1d34ca769f98f1e649e22f4dba6435af0e15b4f4bedda5f982644be3e52e7af9",
+    "game-admin/functions/weapon-instance-config.cjs": "e75a8cc414d2cd7c65c4fd49a0b8bcc0f3fe504b2f0908acbd7a7b8a6e92723a",
+    "game-admin/functions/domain.cjs": "650e72f6ea0676a82107ed0ed768accb149041a03ec11652d502e1c324d5e5cc",
+    "game-admin/functions/service.cjs": "bfc100ab4e8615f6997c668a5a5d37134496017ef565bc0483cb50afb362fed7",
+    "game-admin/functions/daily-challenges.cjs": "a0cd14275d70f690b28d6eb30ebc73d0ddbeb20cb6e97337f017b1eec59e75ba",
+    "game-admin/functions/chests.cjs": "54f153d5dbd908e16e16dd775aff4fc52ef09862bc2176aca19741e6e8121eef",
+    "game-admin/functions/farm-transactions.cjs": "b00f86e0c0ee2696e6a244eb089faf0f32ce41a5e4ff6c8f920bd9d358c1379e",
+    "js/farm/refinement-material.js": "086197692ee039cd903f8a367b5a0c641dc480de15c314ab1ad96ef3c0018352",
+    "js/farm/inventory-core.js": "a22c872b60a9f56c2e228800f1d14ad5ed3cb3b0722c1aac949718ad944c29cc",
+    "js/farm/save-core.js": "64f794ccf8af11bbc19af16ae12633887b6342bfc628d0ba57ab41df7d949fea",
+    "js/farm/WarehouseScene.js": "3f1ea14c510fe4e238ee2a94edaf968e06711ecaf13917745394f57646b1feef",
+    "js/farm/daily-ui.js": "00aa4cd40d281de432b569931b36f55cebca0754fab59ae736bd85610386eae5",
+    "js/farm/chest-ui.js": "f00ff7ac43259370b7c3f13d5959f36dc491c8430e268ece334dad92a7b31194",
+    "js/farm/asset-manifest.js": "3bb52dd51739af63f49a1b56b95df2c688b57f921603066a744ca4f39ebf29e7",
+    "js/farm/art-cache-revision.js": "d7056119df777c3c258fe26e1c6e4262b639168ce842555a1a9c06f10519fcd2",
+    "css/farm-daily.css": "92dc5f9d57183e7b86cb0fb27d661e229c674b1f0d36f9d19fdf5fa8e32374f1",
+    "assets/farm/cache-manifest.json": "b47516608467f68d05f92de0e62779bd3aaa54775560322dd81969838d148ec6",
+    "assets/farm/refinement/test/refinement_stone.svg": "cf47c6b53584cb57092609f8183df02e14408bd5854c30d9620456846339eae2",
+    "scripts/prepare-game-admin.cjs": "569cac122e5dad516ffb88bc782ee1ef730b7db0ccad1ab412e7ea54c5b5079c",
+    "game-admin/tests/helpers/stone-reward-fixture.cjs": "e8830a85218424d3102a935fcf158d7b9c32839475724efe9324cde42a37e024",
+    "game-admin/tests/refinement-stone-rewards.test.cjs": "1d0a31899c48a2e1159efbd2d860a13679acb7a520125ce21ff2ea74c1f298f5",
+    "game-admin/tests/refinement-stone-rewards.emulator.cjs": "b7264e16425bfe2fceb98db760d4b9a9c328e0e6018e2b44fb7b01bc73543b56",
+    "tests/farm-private-backend-browser.cjs": "300876755cadd2a5dfd64213acc7f12f2abd04c8571ec5b6323bc4672f98b329",
+    "tests/helpers/stone-rewards-browser.cjs": "d92c99bf11854a5882c0cbbe7cab231e855c1919df6f74c83c17f5bc9dbbbc70",
+    "tests/weapon-refinement/stone-reward-cost-probe.cjs": "2fa5aaec2e9ae217d3a6986718dd4ab865330c3f7f69b4e4e8bd2cbfefa4cf86",
+    "docs/weapon-refinement/DEVELOPMENT_RULES.md": "931627fc6feb5ae0605739048d46de369397a7aa1c49c222713a9a094a7bf7f2",
+    "docs/weapon-refinement/phase-04-report.md": "6e24e2c6989c21e53cde9475974a23d88ecdbe5c63bdb5831e52fd3f3d4ad47b"
+  }
+}

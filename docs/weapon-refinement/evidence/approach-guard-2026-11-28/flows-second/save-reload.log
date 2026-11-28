@@ -1,0 +1,1 @@
+PASS: slow cache miss, no offline default writes, assets retained during outage/reconnect, partial-save refusal, one-time new farm creation and deleted-save protection.

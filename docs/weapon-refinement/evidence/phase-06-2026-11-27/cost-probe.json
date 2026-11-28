@@ -1,0 +1,30 @@
+{
+  "environment": "MemoryDB interface count; ability resolver only, excludes existing battle/session/farm/Auth/throttle/retries/triggers",
+  "legacyV1AdditionalReads": 0,
+  "rows": [
+    {
+      "level": 0,
+      "equippedSlots": 2,
+      "additionalAbilityReads": 3,
+      "paths": [
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845",
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845/allocations/656a8f493303ef8c3c38a68cc78d9c99f91d7161eb14b06a4b22e794c89b76dd",
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845/allocations/443c262d0a04c3dce01d54ceb34ede287f1a7e861906e53c24159caaaf6ee744"
+      ]
+    },
+    {
+      "level": 9,
+      "equippedSlots": 2,
+      "additionalAbilityReads": 5,
+      "paths": [
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845",
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845/allocations/656a8f493303ef8c3c38a68cc78d9c99f91d7161eb14b06a4b22e794c89b76dd",
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845/states/656a8f493303ef8c3c38a68cc78d9c99f91d7161eb14b06a4b22e794c89b76dd_0",
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845/allocations/443c262d0a04c3dce01d54ceb34ede287f1a7e861906e53c24159caaaf6ee744",
+        "ops_weapon_owners/33c6fa3e1192fe2f87257d0d96d813ea2872c6792b88c323b6e3c4354c528845/states/443c262d0a04c3dce01d54ceb34ede287f1a7e861906e53c24159caaaf6ee744_0"
+      ]
+    }
+  ],
+  "attackAndFrameAbilityReads": 0,
+  "attackReadClaimEvidence": "refinement-combat.test.cjs explicitly checks accepted batches do not read owner/state/combat config"
+}

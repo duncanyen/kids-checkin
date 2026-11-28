@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "realPhaser": true,
+  "actualGameEntry": true,
+  "actualShopPurchase": true,
+  "replyLostAfterCommit": true,
+  "queryOnlyRecovery": true,
+  "sameTransactionId": "516c16a1-9e36-4986-bba2-ab28f401dd42",
+  "oneDebit": true,
+  "protocolErrorInjectedForUI": true,
+  "memoryDB": true,
+  "physicalIPhone": false,
+  "errors": []
+}

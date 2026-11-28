@@ -1,0 +1,25 @@
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 4,
+  handlerMs: 4
+}
+farm-theft-timing {
+  action: 'visitEncounter',
+  combined: false,
+  identityMs: 0,
+  rateLimitMs: 0,
+  transactionMs: 2,
+  handlerMs: 2
+}
+page.evaluate: TypeError: Cannot read properties of undefined (reading 'getWorldTransformMatrix')
+    at eval (eval at evaluate (:311:30), <anonymous>:1:230)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at click (/workspace/kids-checkin/tests/helpers/refinement-combat-browser.cjs:6:139)
+    at async exports.run (/workspace/kids-checkin/tests/helpers/refinement-combat-browser.cjs:10:353)
+    at async /workspace/kids-checkin/tests/farm-private-backend-browser.cjs:161:49 {
+  log: []
+}
