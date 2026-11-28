@@ -1,0 +1,3 @@
+// Shared item identity only; award authority lives in the trusted backend.
+export const REFINEMENT_STONE=Object.freeze({id:'refinement_stone',inventoryKey:'refinementStones',name:'精煉石',category:'weapon_refinement_material',stackable:true,capacity:'separate-stack',equippable:false,sellable:false,tradable:false,giftableByPlayers:false,purchasable:false,expires:false,texture:'refinement_stone',image:'refinement/v1/refinement_stone.png',temporaryArt:false});
+export function refinementStoneBalance(farm){const value=farm?.[REFINEMENT_STONE.inventoryKey]??0;if(!Number.isSafeInteger(value)||value<0)throw Error('精煉石數量無效');return value;}

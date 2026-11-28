@@ -39,7 +39,7 @@ function nextDay(state,today,policy,uid,type){
     const day=continues?state.day%7+1:1;
     return{day,cycleId:day===1?D.hash(`${uid}:${type}:${today}`).slice(0,24):state.cycleId};
 }
-function createDailyChallenges({db,now,player,playerSession,throttle,verifiedProducers=VERIFIED_PRODUCERS,trustedReady=async()=>false}){
+function createDailyChallenges({db,now,player,playerSession,throttle,verifiedProducers=VERIFIED_PRODUCERS,trustedReady=async()=>false,stoneRewards=null}){
     const configRef=db.doc('ops_daily_configs/current');
     const refFor=(collection,identity,type,date)=>Scope.scopedRef(db,collection,identity,type,date);
     async function prepare(t,identity,types,stamp){
@@ -87,7 +87,7 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         return{type:row.type,dateKey:d.dateKey,day:d.day,cycleId:d.cycleId,rewards:d.rewards,enabled:c.enabled,
             claimed:!!d.grantId,claimedAt:d.claimedAt,grantId:d.grantId,tasks,blocked,
             canClaim:c.enabled&&!d.grantId&&(row.type==='checkin'||(!blocked&&completed)),policyVersion:d.policyVersion,
-            missedDayPolicy:d.missedDayPolicy};
+            missedDayPolicy:d.missedDayPolicy,...(row.stoneReward?{refinementStoneReward:row.stoneReward}:{})};
     }
     function initialize(t,rows){for(const row of rows){if(row.isNewState)t.create(row.stateRef,row.stateSeed);if(row.isNew)t.create(row.dayRef,row.data);}}
     async function handle(request){
@@ -95,11 +95,13 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
         await throttle('daily:'+Scope.scopeKey(identity),60,60000);
         const action=request.data?.action;
         if(!['status','claim'].includes(action))D.fail('invalid-argument','未知的每日挑戰操作');
+        const stoneDraw=stoneRewards?.sampler();
         return db.runTransaction(async transaction=>{
             const t=reuseTransactionReads(transaction);
             const current=await player(request,t),stamp=now();
             if(action==='status'){
                 const prepared=await prepare(t,current,TYPES,stamp);
+                if(stoneRewards)for(const row of prepared.rows){if(row.data.grantId){if(row.data.refinementStoneReward)row.stoneReward={...row.data.refinementStoneReward,claimed:true};}else row.stoneReward=await stoneRewards.dailyPreview(t,{type:row.type,day:row.data.day,actor:current},stamp);}
                 initialize(t,prepared.rows);
                 return{...Scope.scopeOf(current),serverNow:stamp,nextResetAt:(Math.floor((stamp+8*3600000)/DAY_MS)+1)*DAY_MS-8*3600000,dateKey:prepared.today,timeZone:'Asia/Taipei',challenges:Object.fromEntries(prepared.rows.map(row=>[row.type,view(row,prepared.config,prepared.producers)]))};
             }
@@ -114,10 +116,12 @@ function createDailyChallenges({db,now,player,playerSession,throttle,verifiedPro
             if(!status.canClaim)D.fail('failed-precondition',status.blocked?'任務尚未接上可信任事件，暫不可領取':!status.enabled?'此挑戰目前已停用':'尚未完成今日任務');
             const ownerRef=db.doc(`groups/${current.groupId}/users/${current.accountId}`),owner=await t.get(ownerRef);
             const amount=d.rewards[d.day-1];
-            const farm=await D.award(owner.data()?.farm,[{kind:'coins',amount}],stamp);
-            const response={...Scope.scopeOf(current),transactionId:grantRef.id,type,dateKey:prepared.today,cycleId:d.cycleId,day:d.day,amount,groupId:current.groupId,createdAt:stamp};
+            const material=stoneRewards?await stoneRewards.daily(t,{type,day:d.day,grantId:grantRef.id,actor:current},stamp,stoneDraw):null;
+            const rewards=[{kind:'coins',amount},...(material?.quantity>0?[{kind:'item',itemKey:'refinement_stone',amount:material.quantity}]:[])];
+            const farm=await D.award(owner.data()?.farm,rewards,stamp,{allowRefinementStones:!!material});
+            const response={...Scope.scopeOf(current),transactionId:grantRef.id,type,dateKey:prepared.today,cycleId:d.cycleId,day:d.day,amount,groupId:current.groupId,createdAt:stamp,...(material?{refinementStoneReward:material}:{})};
             t.update(ownerRef,{farm});
-            t.set(row.dayRef,{...d,claimedAt:stamp,grantId:grantRef.id,claimedGroupId:current.groupId});
+            t.set(row.dayRef,{...d,...(material?{refinementStoneReward:material}:{}),claimedAt:stamp,grantId:grantRef.id,claimedGroupId:current.groupId});
             t.set(row.stateRef,{uid:current.uid,...Scope.scopeOf(current),day:d.day,cycleId:d.cycleId,lastClaimDate:prepared.today,updatedAt:stamp});
             t.create(grantRef,{uid:current.uid,...Scope.scopeOf(current),type,dateKey:prepared.today,cycleId:d.cycleId,createdAt:stamp,result:'success',requestId:request.data.requestId,response});
             return response;

@@ -1,3 +1,4 @@
+import {createRefinementUI} from './refinement.js?v=20261128-phase7';
 import {createFarmReportUI} from './report.js?v=20261114-report';
 // 管理工作區沿用已驗證的 API 及共用表格／表單樣式。
 /**
@@ -7,7 +8,8 @@ import {createFarmReportUI} from './report.js?v=20261114-report';
  * @description 操作識別碼按管理員與內容雜湊保存至 sessionStorage，確認成功才移除。
  */
 export function createManagementUI({root,api,node,button,table,formatTime,wallTime,utc,status,getAdminUid}){
-    const views=['players','balance','combat','events','settings','reports'];
+    const views=['refinement','players','balance','combat','events','settings','reports'];
+    const refinement=createRefinementUI({root,api,node,button,table,formatTime,status,getAdminUid});
     const report=createFarmReportUI({root,api,node,button,table,formatTime,status});
     const names={draft:'草稿',scheduled:'排程',active:'進行中',ended:'已結束',cancelled:'已取消'};
     const dialog=node('dialog');dialog.id='managementEditor';document.body.append(dialog);
@@ -234,5 +236,5 @@ export function createManagementUI({root,api,node,button,table,formatTime,wallTi
             data=result;next=result.nextCursor||null;root.replaceChildren();({players,balance,combat,events,settings})[selected]();status('');
         }catch(e){if(token===version){root.replaceChildren(node('p',e.message||'管理資料讀取失敗','empty'),button('重試',()=>load()));status(e.message||'讀取失敗',true);}}
     }
-    return{has:key=>views.includes(key),isBusy:()=>busy||report.isBusy(),open:async key=>{report.deactivate();view=key;if(key==='reports'){version++;return report.open();}search='';filter='';pages=[null];page=0;return load();},deactivate:()=>{report.deactivate();view=null;version++;if(dialog.open&&!busy)dialog.close();}};
+    return{has:key=>views.includes(key),isBusy:()=>busy||report.isBusy()||refinement.isBusy(),open:async key=>{report.deactivate();refinement.deactivate();view=key;if(key==='refinement'){version++;return refinement.open();}if(key==='reports'){version++;return report.open();}search='';filter='';pages=[null];page=0;return load();},deactivate:()=>{refinement.deactivate();report.deactivate();view=null;version++;if(dialog.open&&!busy)dialog.close();}};
 }

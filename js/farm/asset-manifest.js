@@ -1,5 +1,6 @@
 // Public file descriptions; safe to inspect without Phaser or Firebase.
 export const ASSET_MANIFEST = {
+    refinement_stone:{type:'image',image:'refinement/v1/refinement_stone.png'},
     hornet:{type:'atlas',image:'hornet-sheet.png',json:'hornet-sheet.json'},
     honey:{type:'image',image:'honey.png'},
     chest_inventory:{type:'image',image:'chest/v1/chest_inventory_icon.png'},
@@ -32,7 +33,7 @@ export const ASSET_MANIFEST = {
 // Both map orientations remain ready for immediate mobile/tablet resizing.
 export const CORE_ASSETS = ['hen','farm_map','farm_panorama','ui_parchment','signboard','egg','coin','worm','earthworm'];
 // Seasonal art is demand-loaded only while its explicitly dated event is active.
-export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026' && !/^scene_.+_(portrait|landscape)$/.test(key));
+export const ALL_ASSETS = Object.keys(ASSET_MANIFEST).filter(key => key !== 'halloween_2026' && key !== 'refinement_stone' && !/^scene_.+_(portrait|landscape)$/.test(key));
 // Catalogues need item/hen/dog art, not every full combat animation.
 const combatOnly=new Set(['wolf','tiger','dragon','gorilla','eagle','cobra','mole','giant','hornet','arrow']);
 export const CATALOG_ASSETS=ALL_ASSETS.filter(key=>!combatOnly.has(key));

@@ -1,0 +1,3 @@
+const test=require('node:test'),path=require('node:path'),{createRequire}=require('node:module');
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8092'||process.env.GOOGLE_CLOUD_PROJECT!=='demo-nexus-private-farm')throw Error('Only owned demo Emulator');
+const sdk=createRequire(path.resolve(__dirname,'../../functions/package.json')),{initializeApp,deleteApp}=sdk('firebase-admin/app'),{getFirestore}=sdk('firebase-admin/firestore'),app=initializeApp({projectId:'demo-nexus-private-farm'},'compat-security'),db=getFirestore(app);test.after(()=>deleteApp(app));require('./compatibility-security.cases.cjs').register(test,db);

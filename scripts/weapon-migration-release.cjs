@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+/** Production-capable scoped CLI. Default localhost demo; never deploys or discovers accounts. */
+const fs=require('node:fs'),path=require('node:path'),P=require('./lib/weapon-migration-plan.cjs');
+function options(args){const v={},allowed=['--project','--mode','--operation','--scopes','--run-id','--plan','--plan-hash','--approval','--output','--checkpoint','--batch-size','--max-batches'];let apply=false;
+ for(let i=0;i<args.length;i++){const k=args[i];if(k==='--apply'){if(apply)throw Error('重複--apply');apply=true;continue;}if(!allowed.includes(k)||v[k]!==undefined||!args[i+1]||args[i+1].startsWith('--'))throw Error('未知、重複或缺值參數');v[k]=args[++i];}
+ const op=v['--operation']||'review';if(!['plan','review','migrate','verify','rollback','export','renew'].includes(op))throw Error('未知operation');if(['migrate','rollback'].includes(op)!==apply)throw Error('只有migrate/rollback需且允許--apply；其他操作唯讀');if(!v['--project']||!v['--output'])throw Error('需明確--project及新--output檔');
+ if(op!=='plan'&&(!v['--plan']||!v['--plan-hash']))throw Error('需原計畫及確認的--plan-hash');if(op==='plan'&&(!v['--scopes']||!v['--run-id']))throw Error('plan需scope JSON及run-id');if(op==='export'&&v['--max-batches'])throw Error('export按scope分檔，不能截斷來源');
+ return{v,op,mode:v['--mode']||'emulator',apply};
+}
+const read=p=>{if(!p||/^\w+:\/\//.test(p)||fs.statSync(p).size>32*1024*1024)throw Error('只接受32MiB內本機JSON');return JSON.parse(fs.readFileSync(p,'utf8'));};
+async function main(args=process.argv.slice(2)){
+ const {v,op,mode}=options(args),project=v['--project'],file=path.resolve(v['--output']);if(fs.existsSync(file))throw Error('output已存在，不覆寫舊證據');const checkpoint=v['--checkpoint']&&path.resolve(v['--checkpoint']);if(checkpoint&&([file,v['--plan'],v['--scopes'],v['--approval']].filter(Boolean).map(p=>path.resolve(p)).includes(checkpoint)))throw Error('checkpoint不可覆寫輸入或輸出');
+ const plan=op==='plan'?null:read(v['--plan']),actors=op==='plan'?read(v['--scopes']):null,planHash=plan?P.hash(plan):P.hash({project,runId:v['--run-id'],actors});if(plan){if(op!=='renew')P.validate(plan,{project});if(v['--plan-hash']!==planHash)throw Error('計畫hash不符，停止');}
+ if(op==='renew'){const next=P.renew(plan,{project});fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n',{mode:0o600,flag:'wx'});console.log(JSON.stringify({localOnly:true,requiresNewReviewAndApproval:true,planHash:P.hash(next),output:file}));return next;}
+ const guard=()=>P.connection({project,mode,env:process.env,approval:v['--approval']?read(v['--approval']):null,planHash,operation:op});guard();
+ const batchSize=Number(v['--batch-size']||20),maxBatches=Number(v['--max-batches']||1);if(!Number.isInteger(batchSize)||batchSize<1||batchSize>100||!Number.isInteger(maxBatches)||maxBatches<1||maxBatches>10000)throw Error('批次參數超界');
+ // SDK and ADC can only be loaded AFTER explicit project/scope/approval checks.
+ const sdk=require('./firebase-admin-sdk.cjs'),{initializeApp,deleteApp}=sdk('firebase-admin/app'),{getFirestore}=sdk('firebase-admin/firestore'),app=initializeApp({projectId:project});
+ try{const db=getFirestore(app);let result;if(op==='plan')result=await require('./lib/weapon-migration-job.cjs').buildPlan({db,project,actors,runId:v['--run-id']});else{const job=require('./lib/weapon-migration-job.cjs').createJob({db,plan,project,beforeOperation:guard});if(op==='review')result=await job.review();else if(op==='export'){const reviews=await job.review();if(reviews.results.some(r=>!r.valid))throw Error('scope驗證不通過，停止匯出');const exports=[];for(const row of plan.scopes){guard();const snap=await job.exportScope(row);snap.source.project=project;snap.source.kind=mode==='emulator'?'localhost-demo-readonly-transaction':'approved-readonly-transaction';exports.push(snap);}result={schemaVersion:1,planHash,exports};}else result=await job.run({operation:op,batchSize,maxBatches,onProgress:async progress=>{if(checkpoint){const old=fs.existsSync(checkpoint)?read(checkpoint):null;if(old&&old.planHash!==planHash)throw Error('checkpoint屬於其他計畫');const next={schemaVersion:1,planHash,last:progress,updatedAt:Date.now()},tmp=checkpoint+'.tmp-'+process.pid;fs.writeFileSync(tmp,JSON.stringify(next,null,2),{mode:0o600,flag:'wx'});fs.renameSync(tmp,checkpoint);}}});}
+  fs.writeFileSync(file,JSON.stringify(result,null,2)+'\n',{mode:0o600,flag:'wx'});console.log(JSON.stringify({operation:op,project,mode,planHash,output:file,complete:result.complete??null,deployed:false}));if(result.complete===false||result.results?.some(r=>r.valid===false||r.status==='quarantined'))process.exitCode=2;return result;
+ }finally{await deleteApp(app);}
+}
+if(require.main===module)main().catch(e=>{console.error(e.code||'migration-stopped',e.message);process.exitCode=1;});module.exports={main,options};

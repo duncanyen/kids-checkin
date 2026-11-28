@@ -1,3 +1,5 @@
+// Refinement materials use a separate stack; they never occupy ordinary item slots.
+export { REFINEMENT_STONE, refinementStoneBalance } from './refinement-material.js';
 export const INVENTORY_KEYS = ['ancientStones', 'onagadoriEggs', 'silkieEggs', 'bresseEggs', 'inventoryEggs', 'worms', 'earthworms', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'katana', 'shortbow', 'huntingbow', 'paladinbow', 'eagleFeathers', 'honey', 'sweetPotatoes', 'ironhammer', 'cobraFangs'];
 
 // 動態計算倉庫目前使用容量

@@ -75,6 +75,7 @@ export class MoleEncounter extends BossEncounter {
         this.refresh();
     }
     moveInGarden() {
+        if(this.battle?.inputProtocol===1)return;
         if(this.destroyed || this.result)return;
         if((FARM_BACKEND_ENABLED?farmNow():Date.now())>=this.deadline){this.resolve('loss');return;}
         for (const sprite of this.moles) {
@@ -95,7 +96,7 @@ export class MoleEncounter extends BossEncounter {
     hit(pointer, sprite = this.sprite) {
         if (this.destroyed || this.result || !this.moles.includes(sprite)) return;
         if (this.expired()) { this.resolve('loss');return; }
-        const damage=battleHit(this.scene,this.battle,'melee',this.weapon);if(!damage)return;
+        const damage=battleHit(this.scene,this.battle,'melee',this.weapon,pointer);if(!damage)return;
         this.health=Math.max(0,this.health-damage);this.healthHUD.damage(damage,sprite);this.healthHUD.setHealth(this.health);
         sprite.play('mole_hit');
         this.scene.tweens.killTweensOf(this.weaponSprite);

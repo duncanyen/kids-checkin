@@ -40,3 +40,27 @@
 .farm-chest-check{width:24px;height:24px;margin:0;flex:none;accent-color:#659b0a;cursor:pointer}
 .farm-chest-box:has(.farm-chest-check:checked){background:#e5efc1;border-radius:10px}
 @media(max-width:360px){.farm-chest-box{gap:5px}.farm-chest-box img{width:40px;height:40px}.farm-chest-box .farm-chest-button{min-width:52px;padding-inline:8px}.farm-chest-selection .farm-chest-button{font-size:13px}}
+
+/* Phase 2 individual weapons only; existing chest cards are unchanged. */
+[data-result-kind="weapons"] .farm-weapon-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px;align-items:center;padding:10px;margin-bottom:10px;border:1px solid #b88949;border-radius:12px;background:#fff0cf;color:#593b27}
+[data-result-kind="weapons"] .farm-weapon-card span{font-weight:700;overflow-wrap:anywhere}
+[data-result-kind="weapons"] .farm-weapon-card small{grid-column:1/-1;overflow-wrap:anywhere}
+[data-result-kind="weapons"] h2{margin:0;text-align:center;color:#593b27;font-size:22px}
+[data-result-kind="weapons"] p{margin:4px 0;color:#593b27;overflow-wrap:anywhere}
+
+/* Phase 5 scoped styles: existing material/chest/legacy categories keep their layout. */
+[data-result-kind="weapons"] .farm-weapon-card[data-refine-tier="green"]{border:2px solid #447f3b}
+[data-result-kind="weapons"] .farm-weapon-card[data-refine-tier="blue"]{border:2px solid #3472a9}
+[data-result-kind="weapons"] .farm-weapon-card[data-refine-tier="gold"]{border:2px solid #b58a18;box-shadow:0 0 8px #eac85d88}
+[data-result-kind="weapons"] .farm-weapon-card button{min-height:44px}
+[data-result-kind="weapons"] .farm-refinement-heading{display:flex;gap:10px;align-items:center;justify-content:center}
+[data-result-kind="weapons"] .farm-refinement-heading img{width:64px;height:64px;object-fit:contain}
+[data-result-kind="weapons"] .farm-refinement-details{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0;color:#593b27}
+[data-result-kind="weapons"] .farm-refinement-details dd{margin:0;font-weight:700}
+[data-result-kind="weapons"] .farm-refinement-stats{width:100%;table-layout:fixed;border-collapse:collapse;color:#593b27;font-size:13px}
+[data-result-kind="weapons"] .farm-refinement-stats th,[data-result-kind="weapons"] .farm-refinement-stats td{padding:7px 2px;border-bottom:1px solid #bf9a60;text-align:center;overflow-wrap:anywhere}
+[data-result-kind="weapons"] .farm-refinement-material{display:flex;align-items:center;gap:6px}
+[data-result-kind="weapons"] .farm-refinement-material img{width:28px;height:28px;object-fit:contain}
+[data-result-kind="weapons"] .farm-chest-footer{max-height:35%;overflow:auto;overscroll-behavior:contain}
+[data-result-kind="weapons"] .farm-chest-footer button{flex:1;min-width:100px}
+[data-result-kind="weapons"] h3{font-size:20px;color:#593b27}

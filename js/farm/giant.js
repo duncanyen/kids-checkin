@@ -39,6 +39,7 @@ export class GiantEncounter extends BossEncounter {
         super.refresh();
     }
     patrol() {
+        if(this.battle?.inputProtocol===1)return;
         if(this.destroyed||this.result)return;
         if(this.expired()){this.resolve('loss');return;}
         if(this.phase!=='patrol')return;

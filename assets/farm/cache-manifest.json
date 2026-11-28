@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "8ad02b6f5d3e04924b03",
+  "revision": "a887d3f3cce55ee4da96",
   "files": {
     "assets/farm/arrow.png": "bd46dad3607d1a7a60a6",
     "assets/farm/background.webp": "d8f6a8b344ad59cbb207",
@@ -170,6 +170,7 @@
     "assets/farm/reference-ui/v2/eggs_panel_dynamic_base.png": "e80e0e4e6c4d72420d97",
     "assets/farm/reference-ui/v2/mail_unread_badge.png": "938b1809c9e5a7279e74",
     "assets/farm/reference-ui/v2/manifest.json": "07c12008a40b225995db",
+    "assets/farm/refinement/v1/refinement_stone.png": "bccfe01d1cf19507fb39",
     "assets/farm/scenes/arctic-aurora-v1-landscape.webp": "b040834324b8e3304691",
     "assets/farm/scenes/arctic-aurora-v1-portrait.webp": "48651816b2288eec49e1",
     "assets/farm/scenes/arctic-aurora-v1-thumb.webp": "78169b83e53dce2a59ea",

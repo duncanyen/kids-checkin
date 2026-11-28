@@ -38,7 +38,7 @@ test('saved settings snapshot only new fights, cannot forge crits, no balance re
  await api.handle(req('beginBattlePage',{combatProtocol:4}));const b=(await api.handle(req('homeEncounter'))).result.challenge;
  assert.equal(b.maxHealth,1500);assert.equal(b.baseDamage.melee,100);assert.equal(b.criticalRate.melee,100);assert.equal(b.balanceRevision,2);assert.equal(balanceReads,1);
  await save(f,'weapons','club',{attack:1,criticalRate:0},2);await save(f,'monsters','gorilla',{hp:9000},3);
- now+=5000;const attack=req('battleAttack',{battleId:b.id,combatVersion:2,damageVersion:4,mode:'melee',firstHit:0,count:1,damage:999999,critical:false});
+ now=b.approachEndsAt+5000;const attack=req('battleAttack',{battleId:b.id,combatVersion:2,damageVersion:4,mode:'melee',firstHit:0,count:1,damage:999999,critical:false});
  balanceReads=0;const first=await api.handle(attack),replay=await api.handle(attack);assert.equal(first.result.health,1500-M.hitDamage(b,'melee',0));assert.equal(replay.result.health,first.result.health);assert.equal(balanceReads,0);
  await assert.rejects(api.handle(req('battleAttack',{battleId:b.id,combatVersion:2,mode:'melee',firstHit:1,count:1})),/戰鬥已更新/);
  let n=1,sum=M.hitDamage(b,'melee',0);while(sum<1500)sum+=M.hitDamage(b,'melee',n++);

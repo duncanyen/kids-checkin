@@ -5,14 +5,15 @@ const Chests=require('./chests.cjs');
 const {reuseTransactionReads}=require('./transaction-reads.cjs');
 const {assertBattlePage,changeBattlePage}=require('./battle-page.cjs');
 const pendingBattleOf=session=>session&&!session.result?{...session}:null;
-function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null}){
+function createFarmTransactions({db,player,verifiedInputEnabled=()=>false,now=Date.now,random=Math.random,enabled=()=>false,prepareProgress=null,weaponInstanceEnabled=()=>false,stoneRewards=null,allowRefinedSales=()=>true}){
+ const weapons=require('./weapon-repository.cjs').createWeaponRepository({db,enabled:weaponInstanceEnabled,allowRefinedSales});
  let models;
  const load=()=>models||=Promise.all([import('./game/poultry.js'),import('./game/inventory-core.js'),import('./game/combat-rules.js'),import('./game/poultry-housing.js'),import('./game/gorilla-rules.js'),import('./game/giant-rules.js'),import('./game/cobra-rules.js'),import('./game/mole-rules.js'),import('./game/combat-progress.js'),import('./game/garden-core.js'),import('./game/guard-dog-core.js'),import('./game/ranking-core.js'),import('./game/save-core.js'),import('./game/farm-scenes-core.js'),import('./game/combat-damage.js')]);
  const positive=value=>D.integer(value,1,1000);
  const requireFarm=farm=>{if(!farm||typeof farm!=='object'||!Number.isSafeInteger(farm.coins)||farm.coins<0)D.fail('failed-precondition','農場存檔未確認');return farm;};
  async function handle(request,{admit}={}){
   let admission;
-  const p=request.data||{},action=D.enumValue(p.action,['openChest','openChests','listChests','buyScene','buySceneAtPrice','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
+  const p=request.data||{},action=D.enumValue(p.action,['listWeapons','getWeapon','openChest','openChests','listChests','buyScene','buySceneAtPrice','setScene','beginBattlePage','abandonBattlePage','collectEggs','settlePoultry','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','ensureFarm','settleTarget','searchGarden','stealEgg','homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','ensureWelcome','claimWelcome','readMail','deleteMail']);
   if(action==='buySceneAtPrice')D.integer(p.expectedPrice,0,Number.MAX_SAFE_INTEGER);
   if(action==='homeEncounter'&&p.collectWhenClear!==undefined&&typeof p.collectWhenClear!=='boolean')D.fail('invalid-argument','收蛋模式格式不正確');
   if(action==='visitEncounter'&&p.stealWhenClear!==undefined&&typeof p.stealWhenClear!=='boolean')D.fail('invalid-argument','偷蛋模式格式不正確');
@@ -24,6 +25,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
   // 交易重試沿用相同雞隻 ID／疾病亂數，避免 Firestore 重試重新抽獎。
   const ids=qty&&qty<=20?Array.from({length:qty},()=>crypto.randomUUID()):[];
   const rolls=Array.from({length:20},()=>random()),damageSeed=crypto.randomBytes(16).toString('hex');
+  const stoneDraw=stoneRewards?.sampler();
   return db.runTransaction(async transaction=>{
    const t=reuseTransactionReads(transaction);
    if(!await enabled(t))D.fail('failed-precondition','共用交易正在維護');
@@ -35,7 +37,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    const receiptRef=db.doc('ops_farm_transactions/'+D.hash(actor.uid+':'+requestId));
    const fingerprint=D.hash((['beginBattlePage','abandonBattlePage'].includes(action)?p.battlePageId+':':'')+JSON.stringify(Object.fromEntries(Object.keys(p).filter(key=>!['requestId','battlePageId'].includes(key)).sort().map(key=>[key,p[key]]))));
    const receipt=await t.get(receiptRef);
-   if(receipt.exists&&action!=='listChests'){
+   if(receipt.exists&&!['listChests','listWeapons','getWeapon'].includes(action)){
     if(receipt.data().fingerprint!==fingerprint)D.fail('already-exists','交易編號已用於其他操作');
     const response={...receipt.data().response,serverNow:stamp,replayed:true};
     if(['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle'].includes(action)&&!response.result?.harvest&&!response.result?.steal){const current=(await t.get(db.doc('ops_farm_active/'+D.hash(actor.uid+':'+actor.groupId)))).data();assertBattlePage(current,p.battlePageId);if(response.result?.challenge&&current?.id!==response.result.challenge.id)D.fail('failed-precondition','舊戰鬥已作廢，請重新進入村落');}
@@ -48,10 +50,15 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
    const [owner,sessionSnapshot]=await Promise.all([t.get(farmRef),action==='ensureFarm'?Promise.resolve(null):t.get(sessionRef)]);
    if(['beginBattlePage','abandonBattlePage'].includes(action)){
     const current=sessionSnapshot.data()||null;
+    if(owner.data()?.farm?.weaponMigrationState==='staging')D.fail('failed-precondition','武器移轉中，請稍後進場');
     if(action==='abandonBattlePage')assertBattlePage(current,p.battlePageId);
     const next=changeBattlePage({farm:owner.data()?.farm,session:current,pageId:p.battlePageId,stamp,close:action==='abandonBattlePage'});
     next.session.combatProtocol=[2,4].includes(p.combatProtocol)?p.combatProtocol:0;
     next.session.damageProtocol=p.damageProtocol===4||p.combatProtocol===4?4:0;
+    next.session.refinementDamageProtocol=p.refinementDamageProtocol===5?5:0;
+    const inputAdmission=action==='beginBattlePage'&&await verifiedInputEnabled(t,actor),W=require('./weapon-repository.cjs'),header=action==='beginBattlePage'&&owner.data()?.farm?.weaponSchemaVersion===2?(await t.get(db.doc(W.ownerPath(actor)))).data():null;
+    if(action==='abandonBattlePage'&&current?.inputProtocol===1){next.session.inputProtocol=1;next.session.inputClientProtocol=current.inputClientProtocol||0;}
+    if(inputAdmission||header?.combatInputProtocol===1){W.assertOwner(actor,header);if(header.status!=='active')D.fail('failed-precondition','請先完成武器個體化');next.session.inputProtocol=1;next.session.inputClientProtocol=p.inputProtocol===1?1:0;if(header.combatInputProtocol!==1)t.update(db.doc(W.ownerPath(actor)),{combatInputProtocol:1});}
     if(Object.keys(next.patch).length)t.update(farmRef,next.patch);
     t.set(sessionRef,next.session);
     const response={result:{protocolVersion:1,battlePageId:p.battlePageId,abandoned:next.abandoned},serverNow:stamp};
@@ -63,6 +70,8 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const fresh=save.initialFarm(stamp),response={result:fresh,serverNow:stamp};t.create(farmRef,{farm:fresh});t.create(creation,{groupId:actor.groupId,accountId:actor.accountId,createdAt:stamp});t.create(receiptRef,{fingerprint,response,createdAt:stamp});return response;
    }
    const farm=requireFarm(owner.data()?.farm),session=sessionSnapshot.data()||null;
+   if(['listWeapons','getWeapon'].includes(action)){const result=action==='listWeapons'?await weapons.list(t,actor,farm,{cursor:p.cursor,weaponId:p.weaponId||null,pageSize:p.pageSize??20}):await weapons.get(t,actor,farm,p.instanceId);return{serverNow:stamp,result};}
+   if(farm.weaponMigrationState==='staging'&&['homeEncounter','visitEncounter','claimEncounter','battleAttack','battleSettle','equipWeapon','buyWeapon','sellItem','discardItem','openChest','openChests'].includes(action))D.fail('failed-precondition','武器移轉中，請稍後以原交易重試');
    if(action==='listChests')return{serverNow:stamp,result:await Chests.list({db,t,actor,status:p.status,cursor:p.cursor})};
    if(!['openChest','openChests'].includes(action))assertBattlePage(session,p.battlePageId);
    if(!save.isFarmSave(farm))D.fail('failed-precondition','存檔資料不完整，停止交易');
@@ -119,14 +128,17 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     return result;
    };
    if(action==='openChest'){
-    const opened=await Chests.open({db,t,actor,farm,id:p.chestId,stamp,roll:rolls[19],blocked:!!session&&!session.result});patch=opened.patch;result=opened.result;mailWrites.push(opened.commit);
+    const opened=await Chests.open({db,t,actor,farm,id:p.chestId,stamp,roll:rolls[19],stoneRewards,stoneDraw,blocked:!!session&&!session.result});patch=opened.patch;result=opened.result;mailWrites.push(opened.commit);
    }else if(action==='openChests'){
-    const opened=await Chests.openMany({db,t,actor,farm,ids:p.chestIds,stamp,rolls,blocked:!!session&&!session.result});patch=opened.patch;result=opened.result;mailWrites.push(opened.commit);
+    const opened=await Chests.openMany({db,t,actor,farm,ids:p.chestIds,stamp,rolls,stoneRewards,stoneDraw,blocked:!!session&&!session.result});patch=opened.patch;result=opened.result;mailWrites.push(opened.commit);
    }else if(combatActions.includes(action)){
+    if(session?.inputProtocol===1&&session.inputClientProtocol!==1)D.fail('failed-precondition','請更新遊戲後再開始戰鬥；原經濟交易仍可確認');
+    if(await verifiedInputEnabled(t,actor)&&session?.inputProtocol!==1)D.fail('failed-precondition','請重新進入遊戲以啟用新版戰鬥輸入');
     // 切換雞舍時仍可能需要先結算舊戰鬥；任何損失都必須使用原戰鬥目標，不能套到新雞舍。
     const target=session&&!session.result?await readTarget(session.targetGroupId,session.targetAccountId,true):action==='homeEncounter'&&p.collectWhenClear===true?await readTarget(actor.groupId,actor.accountId):await readTarget(p.targetGroupId||actor.groupId,p.targetAccountId||actor.accountId);
-    const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id,damageSeed,combatSettings:()=>require('./combat-balance.cjs').config(db,t),encounterSettings:()=>require('./encounters.cjs').config(db,t)});
-    patch=response.patch;result=response.result;event=response.event;nextSession=response.session;if(nextSession&&session?.combatProtocol!==undefined)nextSession={...nextSession,combatProtocol:session.combatProtocol,damageProtocol:session.damageProtocol??0};
+    if(farm.weaponSchemaVersion===2&&(!session||session.result)){const h=await weapons.owner(t,actor,farm);if(h.combatInputProtocol===1&&session?.inputProtocol!==1)D.fail('failed-precondition','請重新進入新版遊戲以開始戰鬥');const melee=await weapons.get(t,actor,farm,h.equippedMeleeInstanceId,h),bow=h.equippedBowInstanceId?await weapons.get(t,actor,farm,h.equippedBowInstanceId,h):null;if(melee.weaponId!==h.equippedWeapon||(bow?.weaponId||null)!==h.equippedBow)D.fail('failed-precondition','裝備個體與種類不一致');}
+    const response=await require('./farm-combat.cjs').combatCommand({action,p,actor,farm,target,stamp,session,random:()=>rolls[combatRollIndex++%rolls.length],models,id:receiptRef.id,damageSeed,combatSettings:()=>require('./combat-balance.cjs').config(db,t),weaponAbilities:balance=>require('./weapon-abilities.cjs').equippedAbilities({db,t,actor,farm,balance}),encounterSettings:()=>require('./encounters.cjs').config(db,t)});
+    patch=response.patch;result=response.result;event=response.event;nextSession=response.session;if(nextSession&&session?.combatProtocol!==undefined)nextSession={...nextSession,combatProtocol:session.combatProtocol,damageProtocol:session.damageProtocol??0,refinementDamageProtocol:session.refinementDamageProtocol??0,...(session.inputProtocol===1?{inputProtocol:1,inputClientProtocol:session.inputClientProtocol||0}:{})};
     // Only a newly verified victory contributes, in the same atomic settlement.
     // readTarget already loaded the actor village; do not add another read.
     if(event?.type==='DEFEAT_MONSTER')Object.assign(patch,ranking.monsterRankingPatch(farm,{now:stamp,publicVillage:target.actorGroup?.farmVillageVisibility==='public',monster:event.monster}));
@@ -199,7 +211,7 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     const otherPrices={honey:300,ancientStones:600,sweetPotatoes:300,cobraFangs:600,eagleFeathers:300,worms:1,earthworms:3,wolfFangs:20,tigerPelts:50,dragonScales:200,gorillaFangs:300};
     const price=weapon?.sellPrice??egg?.eggPrice??(Object.hasOwn(otherPrices,item)?otherPrices[item]:null);
     if(!price)D.fail('invalid-argument','此商品尚未接上後端出售');
-    if(weapon&&(farm.equippedWeapon===item||farm.equippedBow===item))D.fail('failed-precondition','請先卸下武器');
+    if(weapon&&farm.weaponSchemaVersion!==2&&(farm.equippedWeapon===item||farm.equippedBow===item))D.fail('failed-precondition','請先卸下武器');
     if((farm[item]||0)<qty)D.fail('failed-precondition','物品不足');patch={'farm.coins':farm.coins+price*qty,['farm.'+item]:farm[item]-qty};
    }else if(action==='upgradeCoop'){
     const level=D.integer(p.level,2,3);if((farm.coopLevel||1)>=level)D.fail('failed-precondition','已有更高級雞舍');spend(level===2?3000:10000);patch['farm.coopLevel']=level;
@@ -213,25 +225,29 @@ function createFarmTransactions({db,player,now=Date.now,random=Math.random,enabl
     patch=housing.housingPatch(farm,{...housing.outdoorCounts(farm),[breed]:count});
    }else if(action==='equipWeapon'){
     const item=D.enumValue(p.item,Object.keys(combat.WEAPONS_CONFIG));
-    if(!(farm[item]>0))D.fail('failed-precondition','倉庫已沒有這把武器');
+    if(!(farm[item]>0)&&!(farm.weaponSchemaVersion===2&&item==='club'))D.fail('failed-precondition','倉庫已沒有這把武器');
     const slot=combat.WEAPONS_CONFIG[item].ranged?'equippedBow':'equippedWeapon',equipped=farm[slot]===item;
-    if(typeof p.currentlyEquipped!=='boolean'||p.currentlyEquipped!==equipped)D.fail('failed-precondition','裝備狀態已變更');
+    if(typeof p.currentlyEquipped!=='boolean'||farm.weaponSchemaVersion!==2&&p.currentlyEquipped!==equipped)D.fail('failed-precondition','裝備狀態已變更');
     patch['farm.'+slot]=equipped?(slot==='equippedBow'?null:'club'):item;
    }else if(action==='discardItem'){
     const item=D.enumValue(p.item,inventory.INVENTORY_KEYS);
     if(!(farm[item]>0))D.fail('failed-precondition','物品不足');patch['farm.'+item]=farm[item]-1;
     if(farm[item]===1){if(farm.equippedWeapon===item)patch['farm.equippedWeapon']='club';if(farm.equippedBow===item)patch['farm.equippedBow']=null;}
    }
-   const chestWrite=await Chests.drop({db,t,actor,farm,patch,session:nextSession,event,stamp,roll:rolls[18]});if(chestWrite)mailWrites.push(chestWrite);
+   const chestWrite=await Chests.drop({db,t,actor,farm,patch,session:nextSession,event,stamp,roll:rolls[18],stoneRewards});if(chestWrite)mailWrites.push(chestWrite);
    const response={transactionId:receiptRef.id,action,serverNow:stamp,result};
    if(['openChest','openChests'].includes(action))response.result={...result,farm:apply(farm,patch)};
    const progressWrite=event&&prepareProgress?await prepareProgress(t,actor,{...event,id:receiptRef.id,producer:'farm-transactions-v1',occurredAt:stamp},stamp):null;
    if(progressWrite?.dailyProgress)response.dailyProgress=progressWrite.dailyProgress;
-   if(Object.keys(patch).length){const next=apply(farm,patch);if(!Number.isSafeInteger(next.coins)||next.coins<0||inventory.INVENTORY_KEYS.some(key=>key in next&&(!Number.isSafeInteger(next[key])||next[key]<0)))D.fail('failed-precondition','存檔數值不正確，未變更資源');t.update(farmRef,{farm:next});}if(targetRef)t.update(targetRef,{farm:apply(targetFarm,targetPatch)});
+   const next=apply(farm,patch);
+   const weaponWrite=await weapons.prepareChange({t,actor,before:farm,next,source:receiptRef.id,stamp,action,p});
+   if(Object.keys(patch).length){if(!Number.isSafeInteger(next.coins)||next.coins<0||inventory.INVENTORY_KEYS.some(key=>key in next&&(!Number.isSafeInteger(next[key])||next[key]<0)))D.fail('failed-precondition','存檔數值不正確，未變更資源');t.update(farmRef,{farm:next});}if(targetRef)t.update(targetRef,{farm:apply(targetFarm,targetPatch)});
+   if(['openChest','openChests'].includes(action))response.result={...result,farm:next};
+   weaponWrite();
    if(nextSession!==session)t.set(sessionRef,nextSession);for(const write of mailWrites)write();progressWrite?.();
    t.create(receiptRef,{uid:actor.uid,accountId:actor.accountId,groupId:actor.groupId,fingerprint,createdAt:stamp,response});
    // 此流水與經濟變更原子提交，但在所有經濟欄位完成 Rules 保護前不啟用每日任務 consumer。
-   if(event)t.create(db.doc('ops_verified_farm_events/'+receiptRef.id),{...event,uid:actor.uid,accountId:actor.accountId,groupId:actor.groupId,success:true,producer:'farm-transactions-v1',occurredAt:stamp});
+   if(event)t.create(db.doc('ops_verified_farm_events/'+receiptRef.id),{...event,...(event.type==='DEFEAT_MONSTER'?{analytics:{battleDurationMs:Math.max(0,stamp-nextSession.startedAt),battleRewardCoins:0,rewards:result?.rewards||[]}}:{}),uid:actor.uid,accountId:actor.accountId,groupId:actor.groupId,success:true,producer:'farm-transactions-v1',occurredAt:stamp});
    return response;
   });
  }

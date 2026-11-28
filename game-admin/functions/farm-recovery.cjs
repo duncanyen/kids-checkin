@@ -1,0 +1,14 @@
+/** Read-only receipt recovery, independent of page ownership and feature admission. */
+const D=require('./domain.cjs'),W=require('./weapon-repository.cjs'),R=require('./refinement-service.cjs');
+const WRITES=new Set(['openChest','openChests','buyScene','buySceneAtPrice','setScene','collectEggs','cleanOwn','helpClean','tradePoultry','buyWeapon','buyMedicine','sellItem','upgradeCoop','expandWarehouse','feedPoultry','treatHen','setHousing','equipWeapon','discardItem','searchGarden','stealEgg','claimWelcome','readMail','deleteMail','refineWeapon','resetRefinement']);
+function createFarmRecovery({db,player,now=Date.now}){return{async handle(request,{admit}={}){
+ const p=request.data||{};if(Object.keys(p).some(k=>!['action','transactionId','originalAction','originalPayload','requestId','groupId','battlePageId'].includes(k)))D.fail('invalid-argument','交易查詢欄位無效');D.requestId(p.requestId);D.requestId(p.transactionId);const a=p.originalAction,v=p.originalPayload;
+ if(!v||typeof v!=='object'||Array.isArray(v)||JSON.stringify(v).length>32768||!WRITES.has(a)&&!(a==='homeEncounter'&&v.collectWhenClear===true)&&!(a==='visitEncounter'&&v.stealWhenClear===true))D.fail('invalid-argument','只能確認原經濟交易，不能恢復舊戰鬥');
+ let admission;return db.runTransaction(async t=>{const actor=await player(request,t);if(admit)await(admission ||= admit(actor));const refined=['refineWeapon','resetRefinement'].includes(a),path=refined?R.receiptPath(actor,p.transactionId):'ops_farm_transactions/'+D.hash(actor.uid+':'+p.transactionId),row=(await t.get(db.doc(path))).data();
+ const fields=refined?{ownerId:W.scope(actor),...(a==='resetRefinement'?{action:a}:{}),instanceId:v.instanceId,expectedLevel:v.expectedLevel,quoteId:v.quoteId,configVersion:v.configVersion}:Object.fromEntries(Object.keys({...v,action:a,groupId:actor.groupId}).filter(k=>!['requestId','battlePageId'].includes(k)).sort().map(k=>[k,({...v,action:a,groupId:actor.groupId})[k]])),fingerprint=refined?D.fingerprint(fields):D.hash(JSON.stringify(fields));
+ if(row){if(refined?row.ownerId!==W.scope(actor):row.uid!==actor.uid||row.accountId!==actor.accountId||row.groupId!==actor.groupId)D.fail('permission-denied','無法查詢此農場交易');if(row.fingerprint!==fingerprint)D.fail('already-exists','原交易內容不符，請保留紀錄');return{serverNow:now(),result:{status:'completed',transactionId:p.transactionId,originalAction:a,result:refined?row.response:row.response.result}};}
+ if(refined){const intent=(await t.get(db.doc(R.intentPath(actor,p.transactionId)))).data();if(intent){if(intent.ownerId!==W.scope(actor)||intent.fingerprint!==fingerprint)D.fail('permission-denied','原交易內容或歸屬不符');return{serverNow:now(),result:{status:intent.status==='rejected'?'rejected':'pending',transactionId:p.transactionId,...(intent.status==='rejected'?{message:'原交易已拒絕，未發出新的精煉請求'}:{})}};}}
+ return{serverNow:now(),result:{status:'unknown',transactionId:p.transactionId}};
+ });
+}};}
+module.exports={createFarmRecovery};

@@ -1,3 +1,4 @@
+import { REFINEMENT_STONE } from './refinement-material.js';
 import { createFarmDialog } from './farm-dialog.js';
 import { farmCommand } from './backend-client.js';
 import { readGameContext } from '../game-context.js';
@@ -15,7 +16,7 @@ export function prepareChestArt(){
 const el=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const image=(src,cls,alt='')=>{const n=el('img',cls);n.src=src;n.alt=alt;n.draggable=false;return n;};
 const button=(text,fn,cls='')=>{const n=el('button','farm-chest-button '+cls,text);n.type='button';n.onclick=fn;return n;};
-function icon(scene,item){try{if(scene.textures.exists(item.icon)){const texture=scene.textures.get(item.icon);return scene.textures.getBase64(item.icon,texture.has('0')?'0':undefined);}}catch{}return null;}
+function icon(scene,item){if(item.itemId==='refinement_stone')return 'assets/farm/'+REFINEMENT_STONE.image;try{if(scene.textures.exists(item.icon)){const texture=scene.textures.get(item.icon);return scene.textures.getBase64(item.icon,texture.has('0')?'0':undefined);}}catch{}return null;}
 export function openChestInventory(scene){
     if(scene.eggResultDialog)return scene.eggResultDialog;
     const context=readGameContext(),dialog=createFarmDialog(scene,{kind:'chest',panelClass:'farm-chest-panel',label:'我的寶箱',valid:()=>{const now=readGameContext();return now.groupId===context.groupId&&now.accountId===context.accountId;}});

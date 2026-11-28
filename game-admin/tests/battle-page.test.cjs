@@ -32,7 +32,7 @@ test('close request is idempotent; stale close/attack cannot cancel a new page; 
  await f.service.handle(close);assert.equal(f.db.data.get(f.key).id,fresh.id);
  await assert.rejects(f.api('abandonBattlePage','first-page-123'),{code:'failed-precondition'});
  await assert.rejects(f.api('battleAttack','first-page-123',{battleId:fresh.id,mode:'melee',count:20}),{code:'failed-precondition'});
- f.clock(1000);await f.api('battleAttack','second-page-123',{battleId:fresh.id,mode:'melee',count:22});const won=(await f.api('battleSettle','second-page-123',{battleId:fresh.id})).result;
+ f.clock(fresh.approachEndsAt-fresh.startedAt+1000);await f.api('battleAttack','second-page-123',{battleId:fresh.id,mode:'melee',count:22});const won=(await f.api('battleSettle','second-page-123',{battleId:fresh.id})).result;
  assert.equal(won.outcome,'win');assert.equal(f.farm().gorillaFangs,1);
  await f.api('beginBattlePage','third-page-123');assert.equal(f.farm().gorillaFangs,1);assert.equal((await f.db.collection('ops_verified_farm_events').get()).size,1);
  assert.notEqual(battle.id,fresh.id);

@@ -1,3 +1,4 @@
+import {bindVerifiedView,verifiedTap} from './verified-combat-view.js';
 import {BattleCountdown} from './battle-countdown.js';
 import {FARM_BACKEND_ENABLED,recordBattleHit,farmNow} from './backend-client.js';
 import {makeCombatSnapshot,hitResult,maximumHealth} from './combat-damage.js';
@@ -10,7 +11,8 @@ export function battleContext(scene,kind,id){
  const stats=makeCombatSnapshot(scene.myFarmData||scene.farmData,kind,id);
  return {...stats,id,kind,health:stats.maxHealth,attacks:{melee:0,ranged:0}};
 }
-export function battleHit(scene,battle,mode,weapon){
+export function battleHit(scene,battle,mode,weapon,pointer){
+ if(battle?.inputProtocol===1){if(mode==='melee')verifiedTap(scene,battle,pointer);return 0;}
  if(FARM_BACKEND_ENABLED)return recordBattleHit(battle.id,mode,battle,weapon,battle.kind,hit=>battle.lastHit=hit);
  battle.localAttacks||={melee:0,ranged:0};battle.lastHit=hitResult(battle,mode,battle.localAttacks[mode]++,weapon,battle.kind);return battle.lastHit.damage;
 }
@@ -40,7 +42,7 @@ export class BattleHealthHUD{
   this.layout();scene.events.on('postupdate',this.layout);scene.events.on('farm-viewport-resize',this.layout);
   this.sync=event=>{if(this.alive&&event.detail?.battleId===battle.id){onSync?.(event.detail.health);this.setHealth(event.detail.health);}};
   window.addEventListener('nexus-farm-battle-health',this.sync);
-  this.setHealth(this.health,true);onSceneExit(scene,()=>this.destroy());
+  this.setHealth(this.health,true);this.verifiedCleanup=bindVerifiedView(scene,{battle,kind,hud:this});onSceneExit(scene,()=>this.destroy());
  }
  setHealth(value,immediate=false){
   if(!this.alive||this.hasHealth&&value===this.health&&!immediate)return;this.hasHealth=true;this.health=Math.max(0,Math.min(this.max,value));const width=this.width*this.health/this.max;
@@ -79,5 +81,5 @@ export class BattleHealthHUD{
  }
  stop(){this.finished=true;this.countdown.stop();}
  hide(){this.countdown.destroy();if(this.alive)this.root.setVisible(false);}
- destroy(){if(!this.alive)return;this.alive=false;this.countdown.destroy();window.removeEventListener('nexus-farm-battle-health',this.sync);this.scene.events.off('postupdate',this.layout);this.scene.events.off('farm-viewport-resize',this.layout);this.scene.tweens.killTweensOf(this.trail);for(const text of this.pool){this.scene.tweens.killTweensOf(text);text.burst?.destroy();text.destroy();}this.root.destroy();}
+ destroy(){this.verifiedCleanup?.();if(!this.alive)return;this.alive=false;this.countdown.destroy();window.removeEventListener('nexus-farm-battle-health',this.sync);this.scene.events.off('postupdate',this.layout);this.scene.events.off('farm-viewport-resize',this.layout);this.scene.tweens.killTweensOf(this.trail);for(const text of this.pool){this.scene.tweens.killTweensOf(text);text.burst?.destroy();text.destroy();}this.root.destroy();}
 }

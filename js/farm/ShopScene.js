@@ -1,3 +1,5 @@
+import { usesWeaponInstances } from './weapon-instance-client.js';
+import { openWeaponInstances } from './weapon-instance-ui.js';
 import { FARM_SCENES } from './farm-scenes-core.js';
 import { openScenePurchase } from './farm-scene-ui.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
@@ -309,6 +311,7 @@ export default class ShopScene extends Phaser.Scene {
 
         if (['coop4', 'coop5'].includes(itemKey)) { this.showMsg('此雞舍即將推出', '#FFD54F'); return; }
 
+        if(type==='sell'&&WEAPONS_CONFIG[itemKey]&&usesWeaponInstances(this.farmData)){openWeaponInstances(this,{mode:'sell',weaponId:itemKey});return;}
         if (type === 'sell' && WEAPONS_CONFIG[itemKey] && (this.farmData.equippedWeapon === itemKey || this.farmData.equippedBow === itemKey)) {
             this.showMsg('請到倉庫卸下武器，再至商店賣出', '#FFD54F');
             return;

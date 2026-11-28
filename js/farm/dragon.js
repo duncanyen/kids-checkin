@@ -2,7 +2,7 @@ import {aerialDestination,animateAerialPatrol} from './aerial-patrol.js';
 import {BattleHealthHUD,battleContext,battleHit} from './combat-feedback.js';
 import {maximumHealth} from './combat-damage.js';
 import { warmBattleReward, showBattleReward } from './battle-reward-feedback.js';
-import {FARM_BACKEND_ENABLED,settleBackendBattle,farmNow} from './backend-client.js';
+import {FARM_BACKEND_ENABLED,settleBackendBattle,farmNow,canAttackBackendBattle} from './backend-client.js';
 import { ArcheryControls } from './archery.js';
 import { clearPoultryEggs } from './poultry.js';
 import { equippedWeapon } from './combat-rules.js';
@@ -166,7 +166,8 @@ export class BossEncounter {
         if (this.destroyed || this.result) return;
         if (this.spec.flying || this.archery?.selected) return; // A pointer tap never counts as an arrow.
         if (this.expired()) { this.resolve('loss'); return; }
-        const damage=battleHit(this.scene,this.battle,'melee',this.weapon);if(!damage)return;
+        if(FARM_BACKEND_ENABLED&&!canAttackBackendBattle(this.battle)){this.approachHint();return;}
+        const damage=battleHit(this.scene,this.battle,'melee',this.weapon,pointer);if(!damage)return;
         this.health = Math.max(0, this.health - damage);this.healthHUD.damage(damage,this.sprite);this.healthHUD.setHealth(this.health);
         this.sprite.play(`${this.spec.key}_hit`);
         this.scene.tweens.killTweensOf(this.weaponSprite);
@@ -179,12 +180,15 @@ export class BossEncounter {
     arrowHit(weapon) {
         if (!(this.spec.flying || this.spec.archery) || !weapon?.ranged || this.destroyed || this.result) return;
         if (this.expired()) { this.resolve('loss'); return; }
+        if(FARM_BACKEND_ENABLED&&!canAttackBackendBattle(this.battle))return;
         const damage=battleHit(this.scene,this.battle,'ranged',weapon);
         if (!damage) return;
         this.health = Math.max(0,this.health-damage);this.healthHUD.damage(damage,this.sprite);this.healthHUD.setHealth(this.health);
         this.sprite.play(`${this.spec.key}_hit`);
         if (!this.health) this.resolve('win'); else this.refresh();
     }
+
+    approachHint(){const now=farmNow();if(this.lastApproachHintAt!==undefined&&now-this.lastApproachHintAt<1500)return;this.lastApproachHintAt=now;this.scene.showFloatingText?.('怪物進場中，抵達後可攻擊','#FFF2CC',14);}
 
     expired() { return this.deadline ? (FARM_BACKEND_ENABLED?farmNow():Date.now()) >= this.deadline : this.deadlineTimer.getRemaining() <= 0; }
 

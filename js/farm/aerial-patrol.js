@@ -6,7 +6,7 @@ export function aerialPatrolPoint(seconds,centerX,coopTop){
  return {x:centerX+Math.cos(seconds*1.2)*75,y:coopTop+70+Math.sin(seconds*1.8)*12+(dive?Math.sin((phase-4)*Math.PI)*135:0),flipX:-Math.sin(seconds*1.2)>0,dive};
 }
 export function animateAerialPatrol(encounter){
- if(encounter.destroyed||encounter.result||encounter.phase!=='circle')return;
+ if(encounter.battle?.inputProtocol===1||encounter.destroyed||encounter.result||encounter.phase!=='circle')return;
  const t=(encounter.config.durationMs-encounter.deadlineTimer.getRemaining()-encounter.config.flightMs)/1000;
  const coop=encounter.scene.coop,p=aerialPatrolPoint(t,coop.x,coop.getBounds().top),key=encounter.spec.key;
  encounter.sprite.setFlipX(key==='dragon'?!p.flipX:p.flipX).setPosition(p.x,p.y);

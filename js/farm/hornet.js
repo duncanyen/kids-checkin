@@ -37,6 +37,7 @@ export class HornetEncounter extends BossEncounter{
  startFire(){if(this.destroyed||this.result)return;this.phase='circle';this.refresh();}
  refresh(){if(this.deadline&&(FARM_BACKEND_ENABLED?farmNow():Date.now())>=this.deadline&&!this.result){this.resolve('loss');return;}super.refresh();this.animateHornet();}
  animateHornet(){
+        if(this.battle?.inputProtocol===1)return;
   if(this.destroyed||this.result||this.startedAt===undefined)return;
   if((FARM_BACKEND_ENABLED?farmNow():Date.now())>=this.deadline){this.resolve('loss');return;}
   const b=this.scene.coop.getBounds(),hens=Array.isArray(this.scene.hensGroup)?this.scene.hensGroup:[],hen=hens.find(h=>h.active);

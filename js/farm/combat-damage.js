@@ -22,13 +22,14 @@ function criticalAt(battle,mode,index){
  return hits[index];
 }
 /** Each server-created battle has a reproducible per-mode hit sequence. No client damage is trusted. */
-export function hitResult(battle,mode,index,weapon,kind){
+export function hitResult(battle,mode,index,weapon,kind,chainState){
  if(battle?.combatVersion===COMBAT_VERSION){
   const base=battle.baseDamage?.[mode]||0;if(!base)return {damage:0,critical:false};
   // V2 sessions without the new snapshot retain their exact old sequence.
   const low=Math.max(1,base-DAMAGE_SPREAD),span=battle.damageVersion>=3?base+DAMAGE_SPREAD-low+1:DAMAGE_SPREAD*2+1;
   const normal=low+hash(`${battle.damageSeed}|${mode}|${index}`)%span;
   const rate=battle.damageVersion>=3?(battle.criticalRate?.[mode]||0):0;
+  if(battle.damageVersion===5)return refinedHitResult(battle,mode,index,chainState??battle.chainState);
   if(battle.damageVersion===4){const outcome=criticalAt(battle,mode,index);return {damage:Math.round(normal*(outcome.critical?1.5:1)),normalDamage:normal,multiplier:outcome.critical?1.5:1,...outcome};}
   const critical=rate>=100||rate>0&&hash(`${battle.damageSeed}|critical|${mode}|${index}`)%1000000<rate*10000;
   const multiplier=critical?2000+hash(`${battle.damageSeed}|multiplier|${mode}|${index}`)%1001:1000;
@@ -40,3 +41,32 @@ export function hitDamage(...args){return hitResult(...args).damage;}
 
 export function maximumHealth(battle,kind){return battle?.maxHealth||(battle?.combatVersion===COMBAT_VERSION?ENEMY_HEALTH[kind]:LEGACY_ENEMY_HEALTH[kind]);}
 export function batchDamage(battle,mode,start,count){let total=0;for(let i=start;i<start+count;i++)total+=hitDamage(battle,mode,i);return total;}
+
+/** V5 explicit chronological chain cursor: changing attack slot resets the streak. */
+export function refinedHitResult(battle,mode,index,state){
+ const base=battle.baseDamage?.[mode]||0;
+ if(!base)return{damage:0,critical:false,normalDamage:0,multiplier:1,chainProc:false,streak:0};
+ const low=Math.max(1,base-DAMAGE_SPREAD),span=base+DAMAGE_SPREAD-low+1,normal=low+hash(`${battle.damageSeed}|${mode}|${index}`)%span;
+ const previous=state?.mode===mode&&!!state.critical,baseProc=succeeds(battle.damageSeed,'critical',mode,index,battle.criticalRate?.[mode]||0),extraProc=previous&&succeeds(battle.damageSeed,'chain',mode,index,battle.chainCriticalRate?.[mode]||0),critical=baseProc||extraProc;
+ return{damage:Math.round(normal*(critical?1.5:1)),normalDamage:normal,multiplier:critical?1.5:1,critical,chainProc:extraProc&&!baseProc,streak:critical?(previous?state.streak+1:1):0};
+}
+export function chronologicalDamage(battle,runs,attacks=battle.attacks||{melee:0,ranged:0},state=battle.chainState){
+ const counts={melee:attacks.melee||0,ranged:attacks.ranged||0};let damage=0,chainState=state||{mode:null,critical:false,streak:0};
+ outer:for(const run of runs){
+  if(run.type==='switch'){chainState={mode:run.mode,critical:false,streak:0};continue;}
+  for(let n=0;n<run.count;n++){
+  if(damage>=(battle.health??Infinity)){chainState={mode:null,critical:false,streak:0};break outer;}
+  const hit=refinedHitResult(battle,run.mode,counts[run.mode],chainState);
+  if(!hit.damage)throw Error('Invalid chronological attack');
+  counts[run.mode]++;damage+=hit.damage;chainState={mode:run.mode,critical:hit.critical,streak:hit.streak};
+ }}
+ if(damage>=(battle.health??Infinity))chainState={mode:null,critical:false,streak:0};
+ return{damage,attacks:counts,chainState,actionCount:counts.melee+counts.ranged};
+}
+
+/** Shared client/server boundary. Legacy sessions without arrival metadata remain compatible. */
+export function battleAttackAvailable(battle,now){
+ if(!Number.isFinite(now))return false;
+ if(battle?.approachEndsAt!==undefined&&(!Number.isFinite(battle.approachEndsAt)||now<battle.approachEndsAt))return false;
+ return battle?.deadline===undefined||Number.isFinite(battle.deadline)&&now<battle.deadline;
+}

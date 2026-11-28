@@ -558,7 +558,7 @@ export default class VisitScene extends Phaser.Scene {
         this.tiger.on('pointerdown', (pointer) => {
             if (this.isTigerDefeated || !this.tiger.active || this.tiger.getData('resolved')) return;
             if(FARM_BACKEND_ENABLED&&farmNow()>=battle.deadline){this.tigerEscapes();return;}
-            const dealt=battleHit(this,battle,'melee',weapon);if(!dealt)return;
+            const dealt=battleHit(this,battle,'melee',weapon,pointer);if(!dealt)return;
             this.tigerHitCount += dealt;this.tigerHUD.damage(dealt,this.tiger);this.tigerHUD.setHealth(Math.max(0,health-this.tigerHitCount));
             hitPredator(this.tiger);
             this.club.setPosition(pointer.x + 15, pointer.y - 15).setVisible(true).setAngle(-45);
@@ -648,7 +648,7 @@ export default class VisitScene extends Phaser.Scene {
         this.wolf.on('pointerdown', (pointer) => {
             if (this.isWolfDefeated || !this.wolf.active || this.wolf.getData('resolved')) return;
             if(FARM_BACKEND_ENABLED&&farmNow()>=battle.deadline){this.wolfEscapes();return;}
-            const dealt=battleHit(this,battle,'melee',weapon);if(!dealt)return;
+            const dealt=battleHit(this,battle,'melee',weapon,pointer);if(!dealt)return;
             this.wolfHitCount += dealt;this.wolfHUD.damage(dealt,this.wolf);this.wolfHUD.setHealth(Math.max(0,health-this.wolfHitCount));
             hitPredator(this.wolf);
             

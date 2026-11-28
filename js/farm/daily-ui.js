@@ -61,6 +61,10 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
         taskDay.hidden=selected!=='mission';taskDay.textContent=challenge?`第 ${challenge.day} 天任務`:'';
         rewardLabel.textContent=selected==='checkin'?'今日簽到獎勵':'完成今日任務獎勵';
         rewardAmount.textContent=challenge?`${number(challenge.rewards[challenge.day-1])} 金幣`:'—';
+        const stone=challenge?.refinementStoneReward;
+        if(stone?.claimed&&stone.quantity>0)rewardAmount.append(el('span','farm-daily-material-reward',`＋ ${number(stone.quantity)} 精煉石`));
+        else if(!challenge?.claimed&&stone?.rule?.enabled&&stone.rule.chanceBp>0){const r=stone.rule;rewardAmount.append(el('span','farm-daily-material-reward',`＋ ${r.min===r.max?number(r.min):`${number(r.min)}～${number(r.max)}`} 精煉石${r.chanceBp<10000?`（${r.chanceBp/100}%）`:''}`));}
+        reward.classList.toggle('farm-daily-reward-panel--material',!!rewardAmount.querySelector('.farm-daily-material-reward'));
         claim.disabled=busy||loading||!confirmed||!challenge?.canClaim;
         claim.textContent=busy?'正在確認領獎結果…':(loading||!confirmed)?(state?'確認今日狀態…':'載入中…'):challenge?.claimed?'今日已領取':selected==='checkin'?'立即簽到':'領取獎勵';
         retry.hidden=loading||(confirmed&&!!challenge);retry.disabled=busy;
@@ -159,8 +163,8 @@ export function mountFarmDaily(game,context,{client=createGameOperationsClient(c
             if(result.scopeVersion!==2||result.groupId!==context.groupId||result.accountId!==context.accountId)throw new Error('領獎結果與目前群組不符，請重新載入確認。');
             sessionStorage.removeItem(key);
             // 正式餘額沿用 BootScene 的存檔監聽器；不在客戶端自行相加金幣。
-            state.challenges[type]={...challenge,claimed:true,canClaim:false,grantId:result.transactionId};
-            status.textContent=`${result.replayed?'已確認先前領取':'領取成功'}：${number(result.amount)} 金幣。`;
+            state.challenges[type]={...challenge,claimed:true,canClaim:false,grantId:result.transactionId,...(result.refinementStoneReward?{refinementStoneReward:{...result.refinementStoneReward,claimed:true}}:{refinementStoneReward:null})};
+            status.textContent=`${result.replayed?'已確認先前領取':'領取成功'}：${number(result.amount)} 金幣${result.refinementStoneReward?.quantity>0?`、${number(result.refinementStoneReward.quantity)} 精煉石`:''}。`;
             freshAt=performance.now();savePreview();
             game.events.emit('dailyChallengeClaimed',result);
         }catch(error){confirmed=false;removeDailyPreview(context);status.textContent=error.message||'領取結果未確認，請重新載入或重試，同一天不會重複發獎。';}

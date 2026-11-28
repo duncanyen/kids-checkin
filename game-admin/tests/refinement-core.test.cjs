@@ -1,0 +1,26 @@
+const test=require('node:test'),assert=require('node:assert/strict'),C=require('../functions/refinement-core.cjs');
+const base={attack:200,criticalRateBp:500,chainCriticalRateBp:500,combatRevision:0},item={instanceId:'test-id',weaponId:'ironhammer',ownerId:'owner',createdAt:1,updatedAt:1};
+test('canonical nine levels match integer BP/costs/pity-off; invalid or decreasing config rejected',()=>{
+ const c=C.validateConfig(C.defaults());assert.deepEqual(c.levels.map(l=>l.bonus.attack),[300,600,1000,1400,1900,2500,3200,4000,5000]);assert.deepEqual(c.levels.map(l=>l.bonus.criticalRate),[100,200,300,400,500,700,900,1200,1500]);assert.deepEqual(c.levels.map(l=>l.successRateBp),[10000,9000,8000,7000,6000,5000,4000,2000,1000]);assert.deepEqual(c.levels.map(l=>l.coins),[1000,2000,3000,4000,5000,5000,5000,5000,5000]);assert.deepEqual(c.levels.map(l=>l.stones),[1,1,1,1,2,2,2,3,3]);assert.ok(c.levels.every(l=>!l.pity.enabled));
+ for(const mutate of [v=>v.levels.pop(),v=>v.levels[1].bonus.attack=299,v=>v.levels[2].successRateBp=1.1,v=>v.levels[8].bonus.attack=5001,v=>v.levels[0].pity={enabled:true,guaranteeAttempt:0}]){const copy=C.defaults();mutate(copy);assert.throws(()=>C.validateConfig(copy),{code:'invalid-argument'});}
+});
+test('bonuses derive from original base, exact positive Math.round semantics, never compound',()=>{
+ const c=C.defaults();assert.equal(C.calculateStats({ ...base,attack:20},c.levels[0].bonus).attack,21);assert.equal(C.calculateStats(base,c.levels[8].bonus).attack,300);assert.equal(C.calculateStats(base,c.levels[8].bonus).criticalRateBp,2000);assert.throws(()=>C.calculateStats({...base,criticalRateBp:10000},c.levels[0].bonus),e=>e.reason==='RATE_CAP_CONFLICT');
+});
+test('one level per success, RNG boundary, fail does not lower bonuses; +9 cannot continue',()=>{
+ const config=C.defaults();let state=C.initialState(item,'generation',base);const first=C.preview(state,config,base);assert.equal(C.attempt(state,first,{rollBp:9999,version:config.version,base,stamp:2}).success,true);state=C.attempt(state,first,{rollBp:9999,version:config.version,base,stamp:2}).state;
+ const next=C.preview(state,config,base),success=C.attempt(state,next,{rollBp:8999,version:config.version,base,stamp:3}),failed=C.attempt(state,next,{rollBp:9000,version:config.version,base,stamp:3});assert.equal(success.success,true);assert.equal(failed.success,false);assert.deepEqual(failed.state.refineBonus,state.refineBonus);assert.equal(failed.state.failedRefineCost.coins,2000);assert.equal(failed.state.successfulRefineCost.coins,1000);
+ while(state.refineLevel<9)state=C.attempt(state,C.preview(state,config,base),{rollBp:0,version:config.version,base,stamp:4}).state;assert.equal(state.refineLevel,9);assert.deepEqual(state.successfulRefineCost,{coins:35000,stones:16});assert.throws(()=>C.preview(state,config,base),e=>e.reason==='MAX_LEVEL');
+});
+test('pity progress is per-instance/per-target, zero rate disabled rejects, guaranteed attempt resets',()=>{
+ const config=C.defaults(),state=C.initialState(item,'generation',base);config.levels[0].successRateBp=0;assert.throws(()=>C.preview(state,config,base),e=>e.reason==='ZERO_SUCCESS_RATE');config.levels[0].pity={enabled:true,guaranteeAttempt:2};const failed=C.attempt(state,C.preview(state,config,base),{rollBp:9999,version:config.version,base,stamp:2}).state;assert.equal(C.preview(failed,config,base).pity.due,true);assert.equal(C.preview(state,config,base).pity.due,false);const success=C.attempt(failed,C.preview(failed,config,base),{rollBp:9999,version:config.version,base,stamp:3}).state;assert.equal(success.refineFailCount,0);assert.equal(success.failuresByTarget['1'],0);assert.equal(C.preview(success,config,base).pity.failures,0);
+});
+test('lower next-version bonus conflicts; qualification reports separate wallet shortages',()=>{
+ const config=C.defaults();let state=C.initialState(item,'generation',base);for(let i=0;i<3;i++)state=C.attempt(state,C.preview(state,config,base),{rollBp:0,version:config.version,base,stamp:2}).state;const lower=C.defaults('lower');lower.levels[3].bonus.attack=900;assert.throws(()=>C.preview(state,lower,base),e=>e.reason==='CONFIG_CONFLICT');assert.deepEqual(C.eligibility(C.preview(state,config,base),{coins:0,stones:0}),{eligible:false,reasons:['INSUFFICIENT_COINS','INSUFFICIENT_STONES']});
+});
+test('legacy decimal percentages convert to BP with decimal rounding, not binary float drift',()=>{
+ assert.equal(C.baseSnapshot({attack:20,criticalRate:1.005,chainCriticalRate:.005}).criticalRateBp,101);assert.equal(C.baseSnapshot({attack:20,criticalRate:1e-7,chainCriticalRate:.005}).criticalRateBp,0);assert.equal(C.baseSnapshot({attack:20,criticalRate:100,chainCriticalRate:.005}).chainCriticalRateBp,1);
+});
+test('all eight catalog weapons use the same original-base +9 calculation without catalog mutation',async()=>{
+ const catalog=await import('../../js/farm/combat-rules.js'),before=JSON.stringify(catalog.WEAPONS_CONFIG),config=C.defaults();for(const [weaponId,attack]of Object.entries(catalog.WEAPON_ATTACK)){const base=C.baseSnapshot({attack,criticalRate:5,chainCriticalRate:5});assert.equal(C.calculateStats(base,config.levels[8].bonus).attack,Math.round(attack*1.5));assert.equal(C.calculateStats(base,config.levels[8].bonus).criticalRateBp,2000);}assert.equal(JSON.stringify(catalog.WEAPONS_CONFIG),before);
+});

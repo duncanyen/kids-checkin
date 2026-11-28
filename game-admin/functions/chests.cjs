@@ -52,7 +52,7 @@ async function config(db,t){
 const unit=value=>{if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>=1)D.fail('internal','寶箱亂數來源無效');return value;};
 const drops=(rate,roll)=>rate===100||rate!==0&&unit(roll)*100<rate;
 const coinAmount=(coins,roll)=>coins.enabled?coins.min+Math.floor(unit(roll)*(coins.max-coins.min+1)):0;
-async function drop({db,t,actor,farm,patch,session,event,stamp,roll}){
+async function drop({db,t,actor,farm,patch,session,event,stamp,roll,stoneRewards=null}){
  if(event?.type!=='DEFEAT_MONSTER'||session?.result?.outcome!=='win')return null;
  const settings=await config(db,t),kind=D.enumValue(event.monster,Object.keys(MONSTERS)),snapshot=settings.monsters[kind];
  // Materialize defaults only if absent. This read/create shares the battle transaction,
@@ -62,19 +62,22 @@ async function drop({db,t,actor,farm,patch,session,event,stamp,roll}){
  const id=D.hash('chest:'+actor.uid+':'+actor.groupId+':'+event.battleId),ref=db.doc(ownerPath(actor)+'/'+id),previous=await t.get(ref);
  if(previous.exists)D.fail('failed-precondition','寶箱來源戰鬥已結算，請重新讀取原紀錄');
  const chest={id,uid:actor.uid,accountId:actor.accountId,groupId:actor.groupId,monster:kind,battleId:event.battleId,droppedAt:stamp,status:'unopened',configRevision:settings.revision,snapshot:structuredClone(snapshot)};
+ const stoneSnapshot=stoneRewards?await stoneRewards.captureChest(t,kind,stamp,actor):null;if(stoneSnapshot)chest.refinementStoneReward=stoneSnapshot;
  const count=farm.chestCount??0;D.integer(count,0,Number.MAX_SAFE_INTEGER-1);patch['farm.chestCount']=count+1;
  // Same settlement object is persisted in the active session and original battle history.
  const result=session.result;result.chest={id,monster:kind,configRevision:settings.revision};
  result.rewards=[...(result.rewards||[]),{itemId:'unopenedChest',itemName:'寶箱',quantity:1,chestId:id}];result.inventoryUpdated=true;
  return()=>{initialize?.();t.create(ref,chest);};
 }
-async function open({db,t,actor,farm,id,stamp,roll,blocked=false}){
+async function open({db,t,actor,farm,id,stamp,roll,blocked=false,stoneRewards=null,stoneDraw=null}){
  D.id(id);const ref=db.doc(ownerPath(actor)+'/'+id),snap=await t.get(ref),chest=snap.data();
  if(!chest)D.fail('not-found','找不到這個寶箱');
  if(chest.uid!==actor.uid||chest.accountId!==actor.accountId||chest.groupId!==actor.groupId)D.fail('permission-denied','這個寶箱不屬於目前玩家');
  if(chest.status==='opened'){if(!chest.result)D.fail('failed-precondition','寶箱結果紀錄異常');return{patch:{},result:{...chest.result,replayed:true},commit:()=>{}};}
  if(blocked)D.fail('failed-precondition','請先完成怪物戰鬥結算');
  if(chest.status!=='unopened')D.fail('failed-precondition','寶箱狀態無法開啟');
+ if(chest.refinementStoneReward&&!stoneRewards)D.fail('failed-precondition','此寶箱需要新版材料結算服務，寶箱保留');
+ const material=chest.refinementStoneReward?await stoneRewards.openChest(t,chest,stoneDraw):null;
  const snapshot=await validate(chest.snapshot),coins=coinAmount(snapshot.coins,roll),[P,,I]=await load(),products=await catalog();
  let next=structuredClone(farm);
  if(!Number.isSafeInteger(next.coins+coins))D.fail('failed-precondition','金幣超出安全上限，寶箱尚未消耗');next.coins+=coins;
@@ -93,19 +96,20 @@ async function open({db,t,actor,farm,id,stamp,roll,blocked=false}){
   awarded.push({itemId:item.id,name:item.name,quantity:row.quantity,kind:item.kind,icon:item.icon});
  }
  if(snapshot.items.some(row=>products.find(p=>p.id===row.itemId).kind==='stock')&&I.getUsedSpace(next)>(next.warehouseLimit||10))D.fail('resource-exhausted','倉庫容量不足，請先整理或擴充；寶箱尚未消耗');
+ if(material?.quantity>0){next=await D.award(next,[{kind:'item',itemKey:'refinement_stone',amount:material.quantity}],stamp,{allowRefinementStones:true});awarded.push({itemId:'refinement_stone',name:'精煉石',quantity:material.quantity,kind:'material',icon:'refinement_stone'});}
  const count=farm.chestCount??0;D.integer(count,1,Number.MAX_SAFE_INTEGER);next.chestCount=count-1;
  const patch=Object.fromEntries(Object.entries(next).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(farm[key])).map(([key,value])=>['farm.'+key,value]));
- const result={chestId:id,monster:chest.monster,coins,items:awarded,openedAt:stamp,configRevision:chest.configRevision};
+ const result={chestId:id,monster:chest.monster,coins,items:awarded,openedAt:stamp,configRevision:chest.configRevision,...(material?{refinementStoneReward:material}:{})};
  return{patch,result,commit:()=>t.update(ref,{...chest,status:'opened',openedAt:stamp,result})};
 }
 // Prepare every box against the cumulative farm, then commit all awards atomically.
 // Each box keeps its original snapshot/result, including when batches overlap.
-async function openMany({db,t,actor,farm,ids,stamp,rolls,blocked=false}){
+async function openMany({db,t,actor,farm,ids,stamp,rolls,blocked=false,stoneRewards=null,stoneDraw=null}){
  if(!Array.isArray(ids)||!ids.length||ids.length>20||new Set(ids).size!==ids.length)D.fail('invalid-argument','每次請選擇 1–20 個不同寶箱');
  for(const id of ids)D.id(id);
  let next=structuredClone(farm);const commits=[],items=new Map();let coins=0,replayed=true;
  for(let index=0;index<ids.length;index++){
-  const opened=await open({db,t,actor,farm:next,id:ids[index],stamp,roll:rolls[index],blocked});
+  const opened=await open({db,t,actor,farm:next,id:ids[index],stamp,roll:rolls[index],blocked,stoneRewards,stoneDraw});
   for(const [key,value]of Object.entries(opened.patch))next[key.slice(5)]=value;
   commits.push(opened.commit);coins+=opened.result.coins;replayed&&=!!opened.result.replayed;
   for(const item of opened.result.items){const existing=items.get(item.itemId);items.set(item.itemId,{...item,quantity:(existing?.quantity||0)+item.quantity});}

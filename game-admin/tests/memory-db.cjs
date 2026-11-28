@@ -2,12 +2,13 @@
 const crypto=require('node:crypto'),{AsyncLocalStorage}=require('node:async_hooks');
 const fieldValue=(data,key)=>key.split('.').reduce((v,k)=>v?.[k],data);
 const copy=value=>value===undefined?undefined:structuredClone(value);
+function applyUpdate(previous,patch){const value=copy(previous);for(const [field,next]of Object.entries(patch)){const keys=field.split('.');let at=value;for(const key of keys.slice(0,-1))at=at[key]&&typeof at[key]==='object'?at[key]:(at[key]={});at[keys.at(-1)]=copy(next);}return value;}
 class Ref{
     constructor(db,path){this.db=db;this.path=path;this.id=path.split('/').at(-1);}
     async get(){return this.db.snapshot(this.path);}
     collection(name){return new Query(this.db,this.path+'/'+name);}
     async set(value,options={}){this.db.data.set(this.path,options.merge?{...this.db.data.get(this.path),...copy(value)}:copy(value));}
-    async update(value){if(!this.db.data.has(this.path))throw Error('not found');this.db.data.set(this.path,{...this.db.data.get(this.path),...copy(value)});}
+    async update(value){if(!this.db.data.has(this.path))throw Error('not found');this.db.data.set(this.path,applyUpdate(this.db.data.get(this.path),value));}
 }
 class Query{
     constructor(db,path,filters=[],sorts=[],size=Infinity,cursor=null){Object.assign(this,{db,path,filters,sorts,size,cursor});}
@@ -37,7 +38,7 @@ class MemoryDB{
             const result=await this.context.run(this,()=>callback({get:ref=>{if(writes.length)throw Error('Read after write');return ref.get();},set:(ref,data)=>writes.push(['set',ref,data]),create:(ref,data)=>writes.push(['create',ref,data]),update:(ref,data)=>writes.push(['update',ref,data]),delete:ref=>writes.push(['delete',ref])}));
             if(this.failAward&&writes.some(([,ref])=>ref.path.startsWith('groups/'))){this.failAward=false;throw Error('simulated storage failure');}
             const next=new Map(this.data);
-            for(const [type,ref,value]of writes){if(type==='delete'){next.delete(ref.path);continue;}if(type==='create'&&next.has(ref.path))throw Error('already exists');if(type==='update'&&!next.has(ref.path))throw Error('not found');next.set(ref.path,type==='update'?{...next.get(ref.path),...copy(value)}:copy(value));}
+            for(const [type,ref,value]of writes){if(type==='delete'){next.delete(ref.path);continue;}if(type==='create'&&next.has(ref.path))throw Error('already exists');if(type==='update'&&!next.has(ref.path))throw Error('not found');next.set(ref.path,type==='update'?applyUpdate(next.get(ref.path),value):copy(value));}
             this.data=next;return result;
         };
         // An independent rate-limit transaction may run while the economic

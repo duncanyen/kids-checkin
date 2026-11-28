@@ -1,8 +1,8 @@
-import {createManagementUI} from './management.js?v=20261126-chain-critical';
+import {createManagementUI} from './management.js?v=20261128-phase7';
 import * as runtime from './runtime.js?v=20261116-taiwan';
 const $=id=>document.getElementById(id);
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
-const labels={reports:'營運報表',dashboard:'營運總覽',announcements:'使用者公告',notifications:'系統通知',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄',players:'玩家管理',balance:'遊戲數值',combat:'戰鬥設定',events:'活動管理',settings:'系統設定'};
+const labels={refinement:'武器精煉管理',reports:'營運報表',dashboard:'營運總覽',announcements:'使用者公告',notifications:'系統通知',gifts:'禮包管理',redemptions:'兌換紀錄',audit:'操作紀錄',players:'玩家管理',balance:'遊戲數值',combat:'戰鬥設定',events:'活動管理',settings:'系統設定'};
 const statusNames={draft:'草稿',scheduled:'排程發布',published:'已發布',archived:'已下架',active:'已啟用',inactive:'已停用',success:'成功',failed:'失敗'};
 const types={announcements:{general:'一般公告',maintenance:'維護公告',event:'活動公告',update:'更新公告'},gifts:{universal:'通用禮包',limited:'限量禮包',single:'單次兌換',targeted:'指定玩家'}};
 types.notifications=types.announcements;
@@ -77,7 +77,7 @@ async function selectView(value){
     $('pageTitle').textContent=labels[view];$('breadcrumb').textContent=labels[view];document.title=labels[view]+' · Nexus Game Admin';
     if(management.has(view)){
         $('dashboard').hidden=true;$('listView').hidden=true;$('managementView').hidden=false;$('createButton').hidden=true;
-        $('pageDescription').textContent={reports:'依台灣時間查詢各群組成員的已收集遊戲活動與目前農場。',players:'以固定帳號查詢玩家與農場，所有重要變更由後端驗證及留存。',balance:'調整護衛犬、怪物出現條件與寶箱設定。',combat:'調整怪物 HP、武器攻擊力、爆擊率與連續爆擊率；新戰鬥生效。',events:'建立活動公告、指定對象與排程，連動村落通知。',settings:'控制已接入後端的營運服務，不影響既有付費租約。'}[view];
+        $('pageDescription').textContent={refinement:'精煉參數、版本發布、交易查詢與每日統計；不開啟正式玩家功能。',reports:'依台灣時間查詢各群組成員的已收集遊戲活動與目前農場。',players:'以固定帳號查詢玩家與農場，所有重要變更由後端驗證及留存。',balance:'調整護衛犬、怪物出現條件與寶箱設定。',combat:'調整怪物 HP、武器攻擊力、爆擊率與連續爆擊率；新戰鬥生效。',events:'建立活動公告、指定對象與排程，連動村落通知。',settings:'控制已接入後端的營運服務，不影響既有付費租約。'}[view];
         document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('selected',b.dataset.view===view));
         document.body.classList.remove('menu-open');$('menuButton').setAttribute('aria-expanded','false');await management.open(view);return;
     }

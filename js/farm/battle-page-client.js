@@ -13,9 +13,9 @@ export function createBattlePage({ request, storage, events, resume = () => {}, 
     }
     const error = () => Object.assign(Error('遊戲頁面已離開，請重新載入'), { code: 'ops/battle-page-closed' });
     async function open() {
-        if (!ready) ready = request('beginBattlePage', { battlePageId: id, combatProtocol:2, damageProtocol:4 }, openId).then(response => {
+        if (!ready) ready = request('beginBattlePage', { battlePageId: id, combatProtocol:2, damageProtocol:4, refinementDamageProtocol:5, inputProtocol:1 }, openId).then(response => {
             supported = response.result?.protocolVersion === 1 && response.result.battlePageId === id;
-            if (!supported) throw Error('後端戰鬥頁面協定不符，請重新載入');
+            if (!supported) throw Object.assign(Error('後端戰鬥頁面協定不符，請重新載入'),{code:'ops/update-required'});
         }).catch(failure => {
             // 發布先後相容：僅舊後端明確不認識新 action 時維持舊行為；其他錯誤不得放行。
             if (failure.code === 'functions/invalid-argument' && /^選項無效(?: \[400\])?$/.test(failure.message || '')) return;

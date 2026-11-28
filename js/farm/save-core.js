@@ -9,6 +9,7 @@ export function copyFarmSave(value) {
 
 export function isFarmSave(farm) {
     if (!farm || typeof farm !== 'object' || Array.isArray(farm)) return false;
+    if ('refinementStones' in farm && (!Number.isSafeInteger(farm.refinementStones) || farm.refinementStones < 0)) return false;
     if (!Number.isFinite(farm.coins) || !Number.isInteger(farm.hens)) return false;
     const counts = ['coins', 'hens', 'inventoryEggs', 'silkieEggs', 'bresseEggs', 'onagadoriEggs', 'eggsReady', 'worms', 'earthworms',
         'ancientStones', 'giantLastMilestone', 'wolfFangs', 'tigerPelts', 'dragonScales', 'gorillaFangs', 'medicines', 'mace', 'battleaxe', 'katana', 'shortbow', 'huntingbow', 'paladinbow', 'eagleFeathers', 'honey', 'sweetPotatoes', 'ironhammer', 'cobraFangs', 'gardenCatchCount', 'moleLastMilestone', 'cobraLastMilestone', 'warehouseLimit'];

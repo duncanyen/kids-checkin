@@ -16,7 +16,7 @@ test('hornet defaults are 1/30 from level2 for home/visits, pool retains existin
 });
 test('real farm transactions apply bow-specific hornet damage, grant one honey, price sale at300 and keep victory idempotent',async()=>{
  for(const bow of ['shortbow','huntingbow','paladinbow']){
-  const f=setup();f.force();Object.assign(f.own(),{[bow]:1,equippedBow:bow,battleaxe:1,equippedWeapon:'battleaxe'});const battle=(await f.api.handle(f.req('homeEncounter'))).result.challenge;f.advance(4000);
+  const f=setup();f.force();Object.assign(f.own(),{[bow]:1,equippedBow:bow,battleaxe:1,equippedWeapon:'battleaxe'});const battle=(await f.api.handle(f.req('homeEncounter'))).result.challenge;f.advance(battle.approachEndsAt-battle.startedAt+4000);
   const M=await import('../../js/farm/combat-damage.js');let hits=0,total=0;while(total<battle.health)total+=M.hitDamage(battle,'ranged',hits++);
   await assert.rejects(f.api.handle(f.req('battleAttack',{battleId:battle.id,mode:'melee',count:1})),/無法攻擊/);
   const partial=(await f.api.handle(f.req('battleAttack',{battleId:battle.id,mode:'ranged',count:hits-1}))).result;assert.ok(partial.health>0);

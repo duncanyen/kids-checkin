@@ -75,3 +75,9 @@
 .farm-daily-panel[data-tab=mission] .farm-daily-reward-label{font-size:clamp(10px,2.9vw,17px)}
 .farm-daily-panel[data-tab=mission] .farm-daily-reward-amount{font-size:clamp(18px,4.9vw,28px)}
 @media(max-height:600px){.farm-daily-panel[data-tab=mission]{height:91dvh}}
+
+/* Extra material is a separate compact line; original gold-only layout is unchanged. */
+.farm-daily-material-reward{display:block;font-size:clamp(11px,3vw,15px);line-height:1.15;white-space:normal;text-align:center;overflow-wrap:anywhere}
+
+.farm-daily-panel .farm-daily-reward-panel.farm-daily-reward-panel--material{min-height:clamp(64px,18vw,90px);aspect-ratio:auto;padding-top:5px;padding-bottom:5px}
+.farm-daily-panel .farm-daily-reward-panel--material .farm-daily-reward-amount{line-height:1.1}

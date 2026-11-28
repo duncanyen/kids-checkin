@@ -31,8 +31,8 @@ function normalizeCode(value){
     if(!/^[A-Z0-9]{8,64}$/.test(normalized))fail('invalid-argument','兌換碼須為 8–64 位英文字母或數字');return normalized;
 }
 const generateCode=()=>crypto.randomBytes(12).toString('hex').toUpperCase();
-const ITEM_NAMES={honey:'蜂蜜',worms:'菜蟲',earthworms:'蚯蚓',wolfFangs:'狼牙',tigerPelts:'虎皮',dragonScales:'龍麟',gorillaFangs:'猩猩尖牙',cobraFangs:'眼鏡蛇王毒牙',eagleFeathers:'巨鷹羽毛',sweetPotatoes:'地瓜',medicines:'咕咕活力散',mace:'狼牙棒',battleaxe:'雙手斧',katana:'武士刀',ironhammer:'大鐵槌',shortbow:'短弓',huntingbow:'獵弓',paladinbow:'聖騎士弓'};
-const ITEMS=Object.freeze(['honey','worms','earthworms','wolfFangs','tigerPelts','dragonScales','gorillaFangs','cobraFangs','eagleFeathers','sweetPotatoes','medicines','mace','battleaxe','katana','ironhammer','shortbow','huntingbow','paladinbow']);
+const ITEM_NAMES={refinement_stone:'精煉石',honey:'蜂蜜',worms:'菜蟲',earthworms:'蚯蚓',wolfFangs:'狼牙',tigerPelts:'虎皮',dragonScales:'龍麟',gorillaFangs:'猩猩尖牙',cobraFangs:'眼鏡蛇王毒牙',eagleFeathers:'巨鷹羽毛',sweetPotatoes:'地瓜',medicines:'咕咕活力散',mace:'狼牙棒',battleaxe:'雙手斧',katana:'武士刀',ironhammer:'大鐵槌',shortbow:'短弓',huntingbow:'獵弓',paladinbow:'聖騎士弓'};
+const ITEMS=Object.freeze(['refinement_stone','honey','worms','earthworms','wolfFangs','tigerPelts','dragonScales','gorillaFangs','cobraFangs','eagleFeathers','sweetPotatoes','medicines','mace','battleaxe','katana','ironhammer','shortbow','huntingbow','paladinbow']);
 function rewards(value){
     if(!Array.isArray(value)||!value.length||value.length>20)fail('invalid-argument','請設定 1–20 項獎勵');
     return value.map(r=>{
@@ -63,11 +63,13 @@ function assertRedeemable(g,accountId,count,now){
     if(count>=g.maxRedemptionsPerUser)fail('already-exists','已達此帳號的兌換上限');
     rewards(g.rewards);
 }
-async function award(farm,value,now){
+async function award(farm,value,now,{allowRefinementStones=false}={}){
     const {settlePoultry,poultryPatch,coopCapacity,BREEDS}=await import('./game/poultry.js');
     const {getUsedSpace}=await import('./game/inventory-core.js');
     if(!farm||!Number.isSafeInteger(farm.coins)||farm.coins<0||!Number.isInteger(farm.hens)||farm.hens<0)fail('failed-precondition','農場存檔尚未準備完成');
+    const {REFINEMENT_STONE}=await import('./game/refinement-material.js');
     const additions=rewards(value),result=structuredClone(farm);
+    if(additions.some(r=>r.kind==='item'&&r.itemKey===REFINEMENT_STONE.id)&&!allowRefinementStones)fail('failed-precondition','精煉石發放尚未授權');
     const birds=additions.filter(r=>r.kind==='chicken').reduce((n,r)=>n+r.amount,0);
     if(birds){
         const state=settlePoultry(farm,now);
@@ -77,12 +79,12 @@ async function award(farm,value,now){
     }
     for(const r of additions){
         if(r.kind==='chicken')continue;
-        const key=r.kind==='coins'?'coins':r.kind==='eggs'?BREEDS[r.breed].eggKey:r.itemKey;
-        const previous=result[key]||0;
+        const material=r.kind==='item'&&r.itemKey===REFINEMENT_STONE.id,key=material?REFINEMENT_STONE.inventoryKey:r.kind==='coins'?'coins':r.kind==='eggs'?BREEDS[r.breed].eggKey:r.itemKey;
+        const previous=material?(result[key]??0):(result[key]||0);
         if(!Number.isSafeInteger(previous)||previous<0||!Number.isSafeInteger(previous+r.amount))fail('failed-precondition','農場數值無法安全更新');
         result[key]=previous+r.amount;
     }
-    if(additions.some(r=>['eggs','item'].includes(r.kind))&&getUsedSpace(result)>(result.warehouseLimit||10))fail('resource-exhausted','倉庫容量不足，請先整理或擴充倉庫');
+    if(additions.some(r=>['eggs','item'].includes(r.kind)&&!(r.kind==='item'&&r.itemKey===REFINEMENT_STONE.id))&&getUsedSpace(result)>(result.warehouseLimit||10))fail('resource-exhausted','倉庫容量不足，請先整理或擴充倉庫');
     return result;
 }
 function adminIdentity(auth){

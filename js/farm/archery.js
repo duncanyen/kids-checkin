@@ -1,3 +1,7 @@
+import {arenaProjection} from './verified-combat-view.js';
+import {ARENA} from './verified-combat.js';
+import {verifiedInputFor} from './backend-client.js';
+import { recordBattleModeSwitch,canAttackBackendBattle } from './backend-client.js';
 import { equippedBow, equippedWeapon } from './combat-rules.js';
 import { launchVelocity, arrowPoint, arrowHits, archeryControlLayout } from './archery-core.js';
 import { farmView } from './viewport.js';
@@ -14,10 +18,10 @@ export class ArcheryControls {
         this.layout=()=>{
             this.cancel();
             const {bow,button,help}=archeryControlLayout(farmView(s));
-            this.bow.setPosition(bow.x,bow.y);this.button.setPosition(button.x,button.y);this.label.setPosition(button.x,button.y);this.help.setPosition(help.x,help.y);
+            const verified=this.encounter.battle?.inputProtocol===1?arenaProjection(s).to(ARENA.bow):bow;this.bow.setPosition(verified.x,verified.y);this.button.setPosition(button.x,button.y);this.label.setPosition(button.x,button.y);this.help.setPosition(help.x,help.y);
         };
         s.events.on('farm-viewport-resize',this.layout);this.layout();
-        this.button.on('pointerdown',()=>{this.selected=!this.selected;this.cancel();this.refresh();});
+        this.button.on('pointerdown',()=>{this.selected=!this.selected;this.cancel();if(this.encounter.battle)recordBattleModeSwitch(this.encounter.battle.id,this.selected?'ranged':'melee',this.encounter.battle);this.refresh();});
         this.bow.on('pointerdown',pointer=>{
             if(!this.selected||!this.getBow()||this.encounter.result||s.time.now<this.nextShot||!this.ready())return;
             this.drag={id:pointer.id,origin:{x:this.bow.x,y:this.bow.y}};this.aim(pointer);
@@ -30,10 +34,11 @@ export class ArcheryControls {
         s.events.on('update',this.update);
         this.refresh();
     }
-    ready(){return this.scene.registry.get('farmLoadState')?.phase==='ready';}
+    ready(){return this.scene.registry.get('farmLoadState')?.phase==='ready'&&(!this.encounter.battle||canAttackBackendBattle(this.encounter.battle));}
     getBow(){return equippedBow(this.scene.myFarmData||this.scene.farmData);}
     aim(pointer){
         const p=pointer.positionToCamera(this.scene.cameras.main);
+        if(this.encounter.battle?.inputProtocol===1){const projection=arenaProjection(this.scene);this.verifiedPull=projection.from(p);this.velocity=launchVelocity(ARENA.bow,this.verifiedPull);this.path.clear();if(this.velocity)for(let t=0;t<1.5;t+=.055){const point=projection.to(arrowPoint(ARENA.bow,this.velocity,t));this.path.fillStyle(0xffedb2,.8).fillCircle(point.x,point.y,2);}return;}
         this.velocity=launchVelocity(this.drag.origin,p);this.path.clear();
         if(!this.velocity)return;
         this.bow.setRotation(Math.atan2(this.velocity.y,this.velocity.x));
@@ -43,6 +48,7 @@ export class ArcheryControls {
     release(pointer){
         this.aim(pointer);const origin=this.drag.origin,velocity=this.velocity,bow=this.getBow();this.cancel();
         if(!velocity||!bow||!this.ready()||this.encounter.result)return;
+        if(this.encounter.battle?.inputProtocol===1){if(verifiedInputFor(this.encounter.battle).shoot({...ARENA.bow},this.verifiedPull))this.nextShot=this.scene.time.now+250;return;}
         this.nextShot=this.scene.time.now+250;
         const image=this.scene.add.image(origin.x,origin.y,'arrow').setDisplaySize(44,10).setDepth(36);
         this.arrows.push({origin,velocity,weapon:bow,time:0,image,last:origin});
@@ -50,6 +56,7 @@ export class ArcheryControls {
     tick(delta){
         if(this.encounter.result){this.destroy();return;}
         this.refresh();
+        if(this.encounter.battle?.inputProtocol===1)return;
         for(let i=this.arrows.length-1;i>=0;i--){
             const a=this.arrows[i];a.time+=Math.max(0,delta)/1000;
             const p=arrowPoint(a.origin,a.velocity,a.time);
@@ -63,7 +70,7 @@ export class ArcheryControls {
         const bow=this.getBow(),available=!!bow;
         if(!available&&this.selected){this.selected=false;this.cancel();}
         this.button.setVisible(available);this.label.setVisible(available);this.bow.setVisible(available&&this.selected);
-        this.help.setText(available?(this.selected?'按住弓往後拉，放開射箭\n虛線為預估彈道，請預判飛行方向':'切換弓箭後，拖曳瞄準射擊'):(this.encounter.spec.archery?`點擊${this.encounter.spec.name}可用近戰武器攻擊。`:'飛行怪物需弓箭！請先到倉庫配備。'));
+        this.help.setText(!this.ready()&&!this.encounter.result?'怪物進場中，抵達後可攻擊':available?(this.selected?'按住弓往後拉，放開射箭\n虛線為預估彈道，請預判飛行方向':'切換弓箭後，拖曳瞄準射擊'):(this.encounter.spec.archery?`點擊${this.encounter.spec.name}可用近戰武器攻擊。`:'飛行怪物需弓箭！請先到倉庫配備。'));
         this.label.setText(this.selected?`切換近戰\n${equippedWeapon(this.scene.myFarmData||this.scene.farmData).name}`:`切換弓箭\n${bow?.name||''}`);
         if(bow)this.bow.setTexture(bow.icon);
         this.encounter.rangedWeapon=this.selected?bow:null;

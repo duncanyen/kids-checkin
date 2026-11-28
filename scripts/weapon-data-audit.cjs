@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+/** Reads local JSON only. Never connects to Firebase or alters input. */
+const fs=require('node:fs'),path=require('node:path'),{audit}=require('./lib/weapon-data-audit.cjs');
+function main(args=process.argv.slice(2)){const options={};for(let i=0;i<args.length;i++){if(!['--input','--output'].includes(args[i])||!args[i+1])throw Error('用法：node scripts/weapon-data-audit.cjs --input 本機快照.json [--output 報告.json]');options[args[i]]=args[++i];}if(!options['--input']||/^\w+:\/\//.test(options['--input']))throw Error('只接受本機JSON快照路徑，不接受網路或專案參數');const file=path.resolve(options['--input']);if(fs.statSync(file).size>32*1024*1024)throw Error('單批快照不得超過32MiB，請按scope分批');if(options['--output']&&path.resolve(options['--output'])===file)throw Error('不可覆寫來源快照');const source=JSON.parse(fs.readFileSync(file,'utf8'));if(source.documents?.length>100000)throw Error('單批文件超過100000安全上限');const result=audit(source),json=JSON.stringify(result,null,2)+'\n';if(options['--output'])fs.writeFileSync(options['--output'],json,{mode:0o600});else process.stdout.write(json);if(!result.valid)process.exitCode=2;else if(!result.releaseReady)process.exitCode=3;return result;}
+if(require.main===module)try{main();}catch(e){console.error(e.message);process.exitCode=1;}
+module.exports={main};

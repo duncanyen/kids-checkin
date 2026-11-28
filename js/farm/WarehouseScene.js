@@ -1,10 +1,13 @@
+import { REFINEMENT_STONE, refinementStoneBalance } from './refinement-material.js';
+import { usesWeaponInstances } from './weapon-instance-client.js';
+import { openWeaponInstances } from './weapon-instance-ui.js';
 import { openChestInventory } from './chest-ui.js';
 import { FARM_SCENES, ownedSceneIds, activeSceneId } from './farm-scenes-core.js';
 import { openOwnedScene } from './farm-scene-ui.js';
 import {FARM_BACKEND_ENABLED,farmCommand,farmCommandOrLegacy,visitPayload,recordBattleHit,settleBackendBattle,farmNow} from './backend-client.js';
 import { housingPatch, outdoorCounts } from './poultry-housing.js';
 import { openHousing } from './poultry-housing-ui.js';
-import { preloadSceneAssets, finishSceneAssets } from './assets.js';
+import { preloadSceneAssets, finishSceneAssets, ensureAssets } from './assets.js';
 import { onSceneExit } from './scene-cleanup.js';
 import { configureFarmViewport } from './viewport.js';
 import { itemCategory, addCategoryTabs, ITEM_CATEGORIES, coopName } from './item-categories.js';
@@ -48,6 +51,7 @@ export default class WarehouseScene extends Phaser.Scene {
         this.warehousePages = {};
         this.categoryTabs = addCategoryTabs(this, 250, key => this.selectWarehouseCategory(key),{categories:WAREHOUSE_CATEGORIES});
         this.allConfigItems = [
+            {key:REFINEMENT_STONE.inventoryKey,name:REFINEMENT_STONE.name,icon:REFINEMENT_STONE.texture,type:'material'},
             {key:'unopenedChest',name:'寶箱',icon:'chest_inventory',type:'chest'},
             ...Object.values(FARM_SCENES).map(item=>({key:`scene:${item.id}`,name:item.name,icon:item.thumbTexture,type:'scene',sceneId:item.id})),
             ...Object.entries(GUARD_DOG_BREEDS).map(([breedId,breed])=>({key:`guard:${breedId}`,name:breed.name,icon:breed.texture,type:'guardDog',breedId})),
@@ -117,6 +121,9 @@ export default class WarehouseScene extends Phaser.Scene {
         const apply = farm => {
             if (closed || !farm) return;
             this.farmData = farm;
+            if((farm.refinementStones||0)>0&&!this.textures.exists(REFINEMENT_STONE.texture)&&!this.materialArtLoading){
+                this.materialArtLoading=ensureAssets(this,[REFINEMENT_STONE.texture]).then(()=>{if(!closed&&this.sys.isActive())this.renderWarehouseItems();}).catch(()=>{this.materialArtLoading=null;});
+            }
             this.capacityText.setText(`容量: ${getUsedSpace(farm)}/${farm.warehouseLimit || 10}`);
             this.renderWarehouseItems();
         };
@@ -143,6 +150,15 @@ export default class WarehouseScene extends Phaser.Scene {
         this.categoryTabs.setCategories(WAREHOUSE_CATEGORIES.filter(item=>item.key!=='dogs'||hasDogs).map(item=>item.key));
         if(this.warehouseCategory==='dogs'&&!hasDogs){this.warehouseCategory='chickens';this.actionPanel.setVisible(false);}
         const category = this.warehouseCategory;
+        if(category==='weapons'&&usesWeaponInstances(this.farmData)){
+            this.categoryTabs.select(category);this.emptyText.setVisible(false);
+            for(const object of [this.warehousePageText,this.previousPage,this.previousLabel,this.nextPage,this.nextLabel])object.setVisible(false);
+            const open=this.add.rectangle(195,30,250,60,0x735038).setInteractive({cursor:'pointer'});
+            const label=this.add.text(195,30,'查看我的武器（各自獨立）',{fontSize:'16px',color:'#fff2cc'}).setOrigin(.5);
+            open.on('pointerdown',()=>openWeaponInstances(this));this.itemsPanel.add([open,label]);
+            if(!this.eggResultDialog)openWeaponInstances(this);
+            return;
+        }
         const ownedItems = this.allConfigItems.filter(item => itemCategory(item.key) === category && this.warehouseItemCount(item) > 0);
         const totalPages = Math.max(1, Math.ceil(ownedItems.length / 8));
         this.warehousePage = this.warehousePages[category] = Math.min(this.warehousePages[category] || 0, totalPages - 1);
@@ -165,7 +181,7 @@ export default class WarehouseScene extends Phaser.Scene {
 
             const bg = this.add.rectangle(x, y, 160, sceneItem?220:66, 0x000000, 0.6).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
             
-            const img = this.add.image(sceneItem?x:x - 45, sceneItem?y-20:y, item.icon);
+            const img = item.type==='material'&&!this.textures.exists(item.icon)?this.add.text(x-45,y,'石',{fontSize:'28px',color:'#d8bcff'}).setOrigin(.5):this.add.image(sceneItem?x:x - 45, sceneItem?y-20:y, item.icon);
             
             const scale = Math.min((sceneItem?145:45) / img.width, (sceneItem?145:45) / img.height);
             img.setScale(scale);
@@ -193,6 +209,7 @@ export default class WarehouseScene extends Phaser.Scene {
         const count = this.farmData[key] || 0;
         
         const itemConfig = this.allConfigItems.find(i => i.key === key);
+        if(itemConfig?.type==='material'){this.actionPanel.setVisible(false);this.showMsg('精煉材料｜獨立堆疊、不占一般容量\n不可裝備、出售、交易或贈送','#e2cdff');return;}
         if(itemConfig?.type==='chest'){this.actionPanel.setVisible(false);openChestInventory(this);return;}
         if(itemConfig?.type==='scene'){this.actionPanel.setVisible(false);openOwnedScene(this,itemConfig.sceneId);return;}
         if(itemConfig?.type==='guardDog'){this.actionPanel.setVisible(false);openGuardDogAction(this,itemConfig.breedId);return;}
@@ -221,6 +238,7 @@ export default class WarehouseScene extends Phaser.Scene {
             return;
         }
 
+        if (itemConfig?.type==='weapon'&&usesWeaponInstances(this.farmData)){openWeaponInstances(this,{weaponId:key});return;}
         if (itemConfig && itemConfig.type === 'weapon') {
             const isEquipped = this.farmData[WEAPONS_CONFIG[key]?.ranged ? 'equippedBow' : 'equippedWeapon'] === key;
             this.actionTitle.setText(isEquipped ? `已配戴在身上\n是否缷下裝備 [${name}]？` : `是否配備此物品 [${name}]？`);
@@ -279,6 +297,7 @@ export default class WarehouseScene extends Phaser.Scene {
     }
 
     warehouseItemCount(item) {
+        if(item.type==='material')return refinementStoneBalance(this.farmData);
         if(item.type==='chest')return 1;
         if(item.type==='scene')return ownedSceneIds(this.farmData).includes(item.sceneId)?1:0;
         if(item.type==='guardDog')return guardDogLeases(this.farmData).some(dog=>dog.breedId===item.breedId)?1:0;

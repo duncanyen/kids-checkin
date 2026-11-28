@@ -24,13 +24,14 @@ test('forged win, unknown battle, excessive attacks, equipped weapon and deadlin
  assert.equal(start.kind,'gorilla');const battleId=start.challenge.id;
  await assert.rejects(f.api.handle(f.req('battleSettle',{battleId,outcome:'win'})),{code:'failed-precondition'});
  await assert.rejects(f.api.handle(f.req('battleAttack',{battleId:'fake',mode:'melee',count:1,damage:999999})),{code:'failed-precondition'});
+ f.clock(start.challenge.approachEndsAt-start.challenge.startedAt);
  await assert.rejects(f.api.handle(f.req('battleAttack',{battleId,mode:'ranged',count:1})),{code:'failed-precondition'});
  await assert.rejects(f.api.handle(f.req('battleAttack',{battleId,mode:'melee',count:1000})),{code:'resource-exhausted'});
  f.clock(50000);const result=(await f.api.handle(f.req('battleSettle',{battleId,outcome:'win'}))).result;assert.equal(result.outcome,'loss');assert.equal(f.farm().coins,9900);assert.equal((await f.status()).tasks.find(t=>t.type==='DEFEAT_MONSTER').count,0);
 });
 test('server-computed victory generates one mission operation even with late settlement and concurrent retries',async()=>{
  const f=setup();f.farm().ironhammer=1;f.farm().equippedWeapon='ironhammer';f.roll(0);
- const start=(await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}))).result;f.clock(1000);
+ const start=(await f.api.handle(f.req('visitEncounter',{targetGroupId:'A',targetAccountId:'bob'}))).result;f.clock(start.challenge.approachEndsAt-start.challenge.startedAt+1000);
  await f.api.handle(f.req('battleAttack',{battleId:start.challenge.id,mode:'melee',count:22}));f.clock(50000);
  const req=f.req('battleSettle',{battleId:start.challenge.id});const results=await Promise.all([f.api.handle(req),f.api.handle(req)]);
  assert.equal(results[0].result.outcome,'win');assert.equal(f.farm().gorillaFangs,1);assert.equal((await f.status()).tasks.find(t=>t.type==='DEFEAT_MONSTER').count,1);

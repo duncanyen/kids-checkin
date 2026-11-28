@@ -1,0 +1,17 @@
+const crypto=require('node:crypto'),{MemoryDB}=require('../memory-db.cjs'),W=require('../../functions/weapon-repository.cjs'),D=require('../../functions/domain.cjs'),Core=require('../../functions/refinement-core.cjs'),Config=require('../../functions/refinement-config.cjs'),{createWeaponMigration}=require('../../functions/migrations/weapon-instances.cjs'),{createRefinementService}=require('../../functions/refinement-service.cjs'),{createFarmTransactions}=require('../../functions/farm-transactions.cjs');
+async function fixture(options={}){
+ const db=options.db||new MemoryDB(),actor=options.actor||{uid:'profile',groupId:'A',accountId:'alice'},flags={refine:true,combat:true,instances:true,trusted:true},clock={stamp:1800000000000};let roll=0,draws=0,hook=null;
+ const farmRef=db.doc(W.farmPath(actor));await farmRef.set({keep:'unchanged',farm:{coins:1000000,refinementStones:1000,hens:0,hensState:[],poultryVersion:2,readyEggs:{hen:0,silkie:0,bresse:0,onagadori:0},eggsReady:0,warehouseLimit:10000,coopLevel:1,ironhammer:3,mace:2,equippedWeapon:'ironhammer',equippedBow:null,...(options.farmPatch||{})}});
+ const player=async req=>{if(req.auth?.uid!==actor.uid)D.fail('unauthenticated','測試身分無效');if(req.data.groupId!==actor.groupId)D.fail('permission-denied','工作階段群組不符');return actor;};
+ const migration=createWeaponMigration({db,now:()=>clock.stamp,testEnvironment:true}),plan=await migration.review(actor);await migration.stage(actor,{generation:'refinement-test-generation',expectedFingerprint:plan.fingerprint});await migration.resume(actor);
+ const publish=async(config,revision)=>db.runTransaction(async t=>{const p=await Config.publish({db,t,uid:'operator',input:{config,expectedRevision:revision},requestId:crypto.randomUUID(),stamp:clock.stamp});p.commit();return p.response;});
+ if(!(await db.doc(Config.pointerPath).get()).exists)await publish(Core.defaults('refinement-v1'),0);
+ const service=createRefinementService({db,player,now:()=>clock.stamp,enabled:()=>flags.refine,combatEnabled:()=>flags.combat,instanceEnabled:()=>flags.instances,trustedReady:()=>flags.trusted,testEnvironment:true,testAccounts:[actor],testRandomInt:()=>{draws++;return roll;},testHooks:{afterIntent:async value=>hook?.(value)}});
+ const transactions=createFarmTransactions({db,player,now:()=>clock.stamp,enabled:()=>true,weaponInstanceEnabled:()=>flags.instances});
+ const request=(action,payload={},id=crypto.randomUUID())=>({auth:{uid:actor.uid},data:{action,groupId:actor.groupId,...payload,requestId:id}}),call=async(action,payload,id)=>(await service.handle(request(action,payload,id))).result;
+ const item=(await transactions.handle(request('listWeapons',{weaponId:'ironhammer'}))).result.rows.find(row=>!row.equipped);
+ const quote=async(id=item.instanceId)=>(await call('previewRefinement',{instanceId:id}));
+ const execute=(q,id=crypto.randomUUID(),extra={})=>service.handle(request('refineWeapon',{instanceId:q.instanceId,quoteId:q.quoteId,configVersion:q.configVersion,expectedLevel:q.currentLevel,...extra},id));
+ return{db,actor,flags,clock,player,service,transactions,migration,farmRef,item,request,call,quote,execute,publish,roll:value=>{roll=value;},draws:()=>draws,hook:value=>{hook=value;},farm:async()=>(await farmRef.get()).data().farm,owner:async()=>(await db.doc(W.ownerPath(actor)).get()).data(),state:async(id=item.instanceId)=>(await db.doc(W.statePath(actor,id)).get()).data()};
+}
+module.exports={fixture};

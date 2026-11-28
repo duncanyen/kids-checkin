@@ -62,7 +62,7 @@ exports.run=async({page,calls,db,errors,advance,countdownTests=false,releaseSett
    assert.equal(combatCalls().length,beforeCalls,'display-only timer adds no combat requests or settlements');
    await page.evaluate(kind=>{const s=window.__farmGame.scene.getScene('VisitScene'),c=(s[kind+'Encounter']?.healthHUD||s[kind+'HUD']).countdown;c.now=c.originalNow;c.tick(true);},kind);
   }
-  const battle=structuredClone(db.data.get(key));assert.equal(battle.combatVersion,2);assert.equal(battle.health,db.data.get('ops_game_config/combat')?.monsters?.[kind]?.hp??ENEMY_HEALTH[kind]);advance(6000);
+  const battle=structuredClone(db.data.get(key));assert.equal(battle.combatVersion,2);assert.equal(battle.health,db.data.get('ops_game_config/combat')?.monsters?.[kind]?.hp??ENEMY_HEALTH[kind]);const arrivalAdvance=Math.max(0,battle.approachEndsAt-battle.startedAt)+6000;await advance(arrivalAdvance);
   const mode=['eagle','dragon','hornet'].includes(kind)?'ranged':'melee',weapon=WEAPONS_CONFIG[mode==='ranged'?'paladinbow':'ironhammer'];
   const initial=await state(kind);assert.ok(Math.abs(initial.bar-250/3)<1e-8);assert.equal(initial.textObjects,0);assert.equal(initial.statusVisible,false);assert.ok(Math.abs(initial.gap-96/2.54*.3)<.1);assert.ok(Math.abs(initial.barX-initial.headX)<.1);
   assert.equal(await page.locator('.farm-visit-leave').isDisabled(),true);
@@ -112,7 +112,7 @@ exports.run=async({page,calls,db,errors,advance,countdownTests=false,releaseSett
   await click('farm');await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').entryChecked&&window.__farmGame.scene.getScene('VisitScene').tigerHUD);
   const expiredBattle=structuredClone(db.data.get(key)),hitsBefore=calls.filter(c=>c.action==='battleAttack').length;
   const clockJump=await page.evaluate(async()=>{const {farmNow}=await import('/js/farm/backend-client.js'),s=window.__farmGame.scene.getScene('VisitScene');return Date.now()+Math.max(0,s.backendChallenge.deadline-farmNow()+1000);});
-  advance(expiredBattle.deadline-expiredBattle.startedAt+2000);await page.clock.setSystemTime(new Date(clockJump));
+  await advance(expiredBattle.deadline-expiredBattle.startedAt+2000);await page.clock.setSystemTime(new Date(clockJump));
   await page.evaluate(()=>window.__farmGame.scene.getScene('VisitScene').tigerHUD.countdown.tick(true));await page.screenshot({path:'/tmp/gugu-battle-countdown-expired.png'});
   await strike('tiger');await page.waitForFunction(()=>window.__farmGame.scene.getScene('VisitScene').tigerHUD.countdown.destroyed);
   assert.equal(calls.filter(c=>c.action==='battleAttack').length,hitsBefore,'expired resumed battle must not submit another hit');assert.equal(db.data.get(key).result.outcome,'loss');assert.equal(await page.locator('.farm-battle-countdown').count(),0);

@@ -14,12 +14,16 @@ const cleanAudit=value=>{
  * @returns {Object} adminAPI、announcements、guardDog、redeem callable 處理介面。
  * @description 每次管理操作核對當前 Auth admin claim；users.role 不授予營運管理權。
  */
-function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,farmBackendEnabled=()=>false,farmRandom=Math.random}) {
+function createService({db,auth,verifiedCombatTestEnvironment=false,verifiedCombatTestAccounts=[],now=Date.now,privateIdentityEnabled=()=>false,farmBackendEnabled=()=>false,farmRandom=Math.random,weaponInstanceEnabled=()=>require('./weapon-instance-config.cjs').weaponInstanceEnabled,weaponRefinementEnabled=()=>require('./weapon-instance-config.cjs').weaponRefinementEnabled,refinementTestEnvironment=false,refinementRandomInt=null,refinementHooks=null,refinementTestAccounts=[],refinementCombatBonusEnabled=()=>require('./weapon-instance-config.cjs').refinementCombatBonusEnabled,refinementResetEnabled=()=>require('./weapon-instance-config.cjs').refinementResetEnabled,refinementStoneRewardEnabled=()=>require('./weapon-instance-config.cjs').refinementStoneRewardEnabled,stoneRewardTestEnvironment=false,stoneRewardRandomInt=null,refinementReleaseControlEnabled=()=>require('./weapon-instance-config.cjs').refinementReleaseControlEnabled}) {
+    const releaseControl=require('./refinement-release.cjs').createReleaseControl({db,now,enabled:refinementReleaseControlEnabled});
+    const refinementStats=require('./refinement-statistics.cjs').createRefinementStatistics({db,now});
+    const refinementOpsModule=require('./refinement-operations.cjs'),refinementOps=refinementOpsModule.createRefinementOperations({db,now,statistics:refinementStats});
+    const weaponRepository=require('./weapon-repository.cjs').createWeaponRepository({db,enabled:weaponInstanceEnabled});
     const management=createManagement({db,now}),reporting=createReporting({db,now}),farmRanking=require('./farm-ranking.cjs').createFarmRanking({db,now});
     async function admin(request){
         const uid=D.adminIdentity(request.auth),user=await auth.getUser(uid);
         if(user.disabled||user.customClaims?.role!=='admin')D.fail('permission-denied','管理權限已撤銷，請重新登入');
-        return uid;
+        return{uid,user};
     }
     async function player(request,transaction){
         if(!request.auth?.uid)D.fail('unauthenticated','請重新登入玩家帳號');
@@ -158,8 +162,16 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         return rawCode&&!result.replayed?{...result,code:rawCode}:result;
     }
     async function adminAPI(request){
-        const uid=await admin(request),{action,payload={}}=request.data||{};
+        const {uid,user}=await admin(request),{action,payload={}}=request.data||{};
         await throttle('admin:'+uid,120,60000);
+        if(['refinementReleaseStatus','refinementPreviewRelease','refinementPublishRelease','refinementPauseRelease'].includes(action)){const grants=refinementOpsModule.permissions(user);refinementOpsModule.requirePermission(grants,'read');if(action!=='refinementReleaseStatus'){refinementOpsModule.requirePermission(grants,'publish');refinementOpsModule.requirePermission(grants,'risk');}return releaseControl.admin({uid,action,payload,requestId:request.data?.requestId});}
+        if(refinementOpsModule.ACTIONS.has(action)){return refinementOps.handle({uid,user,action,payload,requestId:request.data?.requestId});}
+        if(['publishRefinementConfig','publishRefinementResetConfig','publishRefinementStoneConfig'].includes(action))D.fail('failed-precondition','請改用精煉管理草稿、預覽及發布流程');
+        if(['refinementConfig','refinementResetConfig','refinementStoneConfig'].includes(action))refinementOpsModule.requirePermission(refinementOpsModule.permissions(user),'read');
+        if(Array.isArray(user.customClaims?.refinementPermissions)&&user.customClaims.opsLegacyAccess!==true&&!['dashboard','refinementConfig','refinementResetConfig','refinementStoneConfig'].includes(action))D.fail('permission-denied','此精煉營運帳號未獲授其他營運模組權限');
+        if(action==='refinementStoneConfig')return stoneRewards.readConfiguration();
+        if(action==='refinementResetConfig')return refinementPlayer.readConfiguration();
+        if(action==='refinementConfig')return refinement.readConfiguration();
         if(action==='dashboard')return dashboard();
         if(action==='farmReport')return reporting.report(payload);
         if(action==='list')return list(payload.kind,payload);
@@ -177,8 +189,8 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         }
     }
     async function rewardCatalog(){
-        const {BREEDS}=await import('./game/poultry.js');
-        return{coins:{enabled:true},eggs:Object.entries(BREEDS).map(([key,b])=>({key,name:b.eggName,enabled:true})),chickens:Object.entries(BREEDS).map(([key,b])=>({key,name:b.name,enabled:key==='hen',reason:key==='hen'?'':'第一階段僅開放母雞獎勵'})),items:D.ITEMS.map(key=>({key,name:D.ITEM_NAMES[key],enabled:true})),limits:{coins:1000000,eggs:1000,chicken:20,item:1000}};
+        const {BREEDS}=await import('./game/poultry.js'),stoneAvailable=await stoneRewards.giftAvailable();
+        return{coins:{enabled:true},eggs:Object.entries(BREEDS).map(([key,b])=>({key,name:b.eggName,enabled:true})),chickens:Object.entries(BREEDS).map(([key,b])=>({key,name:b.name,enabled:key==='hen',reason:key==='hen'?'':'第一階段僅開放母雞獎勵'})),items:D.ITEMS.map(key=>({key,name:D.ITEM_NAMES[key],enabled:key==='refinement_stone'?stoneAvailable:true,...(key==='refinement_stone'?{reason:stoneAvailable?'':'材料獎勵尚未開放'}:{})})),limits:{coins:1000000,eggs:1000,chicken:20,item:1000}};
     }
     async function announcements(request){
         const identity=await playerSession(request);await throttle((request.data.action==='ranking'?'ranking:':'announcements:')+identity.uid,30,60000);
@@ -274,8 +286,11 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
                 const claimRef=giftRef.collection('claims').doc(D.hash(current.accountId)),claim=await t.get(claimRef);
                 const ownerRef=db.doc(`groups/${current.groupId}/users/${current.accountId}`),owner=await t.get(ownerRef),stamp=now();
                 D.assertRedeemable(g,current.accountId,claim.data()?.count||0,stamp);
-                const awarded=await D.award(owner.data()?.farm,g.rewards,stamp);
-                const response={redemptionId:receiptId,giftCodeId,name:g.name,rewards:g.rewards,createdAt:stamp};
+                const stoneReward=await stoneRewards.authorizeGift(t,g.rewards,stamp,current);
+                const awarded=await D.award(owner.data()?.farm,g.rewards,stamp,{allowRefinementStones:!!stoneReward});
+                const response={redemptionId:receiptId,giftCodeId,name:g.name,rewards:g.rewards,createdAt:stamp,...(stoneReward?{refinementStoneReward:stoneReward}:{})};
+                const weaponWrite=await weaponRepository.prepareChange({t,actor:current,before:owner.data()?.farm,next:awarded,source:'gift:'+receiptId,stamp,action:'award'});
+                weaponWrite();
                 t.update(ownerRef,{farm:awarded});
                 t.update(giftRef,{redeemedCount:g.redeemedCount+1,updatedAt:stamp});
                 t.set(claimRef,{count:(claim.data()?.count||0)+1,accountId:current.accountId,updatedAt:stamp});
@@ -289,12 +304,18 @@ function createService({db,auth,now=Date.now,privateIdentityEnabled=()=>false,fa
         }
     }
     const trustedReady=async t=>{if(!await privateIdentityEnabled()||!await farmBackendEnabled())return false;const row=(await(t?t.get(db.doc('ops_identity_state/global')):db.doc('ops_identity_state/global').get())).data();return row?.ready===true&&row?.farmReady===true;};
-    const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle,trustedReady});
-    const transactions=require('./farm-transactions.cjs').createFarmTransactions({db,now,player,random:farmRandom,enabled:t=>trustedReady(t),prepareProgress:dailyChallenges.prepareProgress});
+    const stoneRewards=require('./refinement-stone-rewards.cjs').createStoneRewardService({db,now,enabled:refinementStoneRewardEnabled,trustedReady,testEnvironment:stoneRewardTestEnvironment,testRandomInt:stoneRewardRandomInt,sourceAdmission:(t,actor)=>releaseControl.can(t,actor,'stoneSources'),sourceAvailability:t=>releaseControl.hasStoneSources(t)});
+    const dailyChallenges=createDailyChallenges({db,now,player,playerSession,throttle,trustedReady,stoneRewards});
+    const Refinement=require('./refinement-service.cjs');
+    const refinement=Refinement.createRefinementService({db,now,player,enabled:weaponRefinementEnabled,combatEnabled:refinementCombatBonusEnabled,instanceEnabled:weaponInstanceEnabled,trustedReady,testEnvironment:refinementTestEnvironment,testRandomInt:refinementRandomInt,testHooks:refinementHooks,testAccounts:refinementTestAccounts,releaseAdmission:(t,actor)=>releaseControl.can(t,actor,'refinement'),releaseVersion:async(t,actor)=>(await releaseControl.decision(t,actor)).version});
+    const PlayerRefinement=require('./refinement-player-service.cjs');
+    const refinementPlayer=PlayerRefinement.createRefinementPlayerService({db,now,player,enabled:weaponRefinementEnabled,resetEnabled:refinementResetEnabled,combatEnabled:refinementCombatBonusEnabled,instanceEnabled:weaponInstanceEnabled,trustedReady,testEnvironment:refinementTestEnvironment,testAccounts:refinementTestAccounts,releaseDecision:(t,actor)=>releaseControl.decision(t,actor)});
+    const transactions=require('./farm-transactions.cjs').createFarmTransactions({db,now,player,verifiedInputEnabled:async(t,a)=>verifiedCombatTestEnvironment===true&&require('./refinement-access.cjs').testAccess(true,verifiedCombatTestAccounts)(a),random:farmRandom,enabled:t=>trustedReady(t),prepareProgress:dailyChallenges.prepareProgress,weaponInstanceEnabled,stoneRewards,allowRefinedSales:()=>true});
+    const farmRecovery=require('./farm-recovery.cjs').createFarmRecovery({db,player,now});
     async function farmTransaction(request){
         const started=performance.now();await transactionSession(request);const verified=performance.now();
         let admissionMs=0;
-        const response=await transactions.handle(request,{admit:async actor=>{const start=performance.now();await throttle('farm:'+actor.uid,180,60000);admissionMs+=performance.now()-start;}}),finished=performance.now();
+        const response=await (request.data?.action==='getFarmTransactionResult'?farmRecovery:PlayerRefinement.ACTIONS.has(request.data?.action)?refinementPlayer:Refinement.ACTIONS.has(request.data?.action)?refinement:transactions).handle(request,{admit:async actor=>{const start=performance.now();await throttle('farm:'+actor.uid,180,60000);admissionMs+=performance.now()-start;}}),finished=performance.now();
         if(['visitEncounter','stealEgg'].includes(request.data?.action)){
             // 不記錄帳號、群組、payload 或憑證；只量測成功請求的處理階段。
             const timing={identityMs:Math.round(verified-started),rateLimitMs:Math.round(admissionMs),transactionMs:Math.round(Math.max(0,finished-verified-admissionMs)),handlerMs:Math.round(finished-started)};

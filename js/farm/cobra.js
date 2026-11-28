@@ -62,6 +62,7 @@ export class CobraEncounter extends BossEncounter {
     }
 
     patrol() {
+        if(this.battle?.inputProtocol===1)return;
         if (this.destroyed || this.result || this.phase !== 'patrol') return;
         const area = predatorPatrolArea(this.scene);
         const t = Math.max(0, ((FARM_BACKEND_ENABLED?farmNow():Date.now()) - this.approachEndsAt) / 1000);
