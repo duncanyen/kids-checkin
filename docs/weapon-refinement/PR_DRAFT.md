@@ -1,5 +1,8 @@
 # feat: stage weapon refinement, verified combat and PWA recovery
 
+> 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
+
+
 原武器按數量堆疊，無法獨立保存精煉等級、能力與歷史投入；舊戰鬥的aggregate命中回報與跨頁交易恢復也有驗證缺口。本變更新增受控的武器養成、交易驗算與用戶端恢復層，供發布前審查。
 
 ## 變更範圍

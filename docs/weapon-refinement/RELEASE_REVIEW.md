@@ -1,5 +1,8 @@
 # 武器精煉相容版本：發布分支審查入口
 
+> 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
+
+
 分支：`release/weapon-refinement-compat-20261128`。基底為Phase1盤點commit `8dbae59e619cc5382853dfeb0e6397eccddd209a`。本分支提交工作目錄中的Phase2～8與後續隔離修復，**供審查，不合併main、不部署、不執行正式資料操作**。
 
 程式與測試集中在commit `fa74b6a`；文件及歷史證據為另一提交。原始log保持原樣，gitattributes僅把大量機器紀錄標為generated／不展開diff，未移除失敗紀錄或改寫通過結果。

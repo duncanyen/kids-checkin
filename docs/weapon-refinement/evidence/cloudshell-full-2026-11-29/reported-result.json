@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "user-provided Cloud Shell console output",
+  "reportedCommit": "e7e4fd5808268441b0b5453e85f0626f84bc7c83",
+  "reportedNodeVersion": "v22.23.4",
+  "reportedOutputDirectoryName": "results-fixed-1795899338",
+  "expectedProjectFromRunbook": "demo-nexus-private-farm",
+  "result": {
+    "passed": true,
+    "tests": {
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "summaryPresent": true,
+      "observedPass": 9,
+      "observedFail": 0,
+      "exitCode": 0,
+      "passed": true
+    }
+  },
+  "rawSummaryFileReceived": false,
+  "rawLogsReceivedForThisSuccessfulRun": false,
+  "independentlyRerunByAgent": false,
+  "productionOperationAuthorized": false,
+  "notes": [
+    "Transcribed from the user's successful run; no historical failure flags were edited.",
+    "The reported runner requires source stability and native artifact hashes for passed=true; detailed hashes were not separately received or independently audited.",
+    "This is evidence for the nine existing callable/Rules contracts, not acceptance of all refinement HTTP/admin APIs, observers, physical devices or production readiness."
+  ]
+}

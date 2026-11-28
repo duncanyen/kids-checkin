@@ -1,5 +1,8 @@
 # 武器精煉漸進發布計畫（Step A交付，尚未授權執行）
 
+> 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
+
+
 > 最新復核（2026-11-28）：以下保留Phase8原始審查及B～F規劃，部分「未實作／Emulator阻擋」是當時狀態，不是目前結論。真正Firestore57項、正式scope gate／移轉工具、PWA層已完成隔離驗證；Windows/iPhone實機依使用者要求本輪略過。最新部署範圍、索引差異與未定版／正式證據缺口，請以 [略過實機後復核](predeploy-review-after-manual-skip.md) 為準。本輪未授權B～F。
 
 日期：2026-11-28（台灣時間）。**目前NO-GO**。本文件的正式命令僅供審查；本次沒有執行B～F。不可把「繼續測試」當成部署、備份、移轉、開關或合併main的授權。

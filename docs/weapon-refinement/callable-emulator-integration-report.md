@@ -1,5 +1,8 @@
 # 略過 Draft PR 後：實際 Callable 與多服務隔離驗收
 
+> 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
+
+
 日期：2026-11-28（台灣時間）。來源起點：`4fba7c2905c4c36e3f2973845adcc4ef27bf43a2`，發布分支 `release/weapon-refinement-compat-20261128`。
 
 使用者要求略過草稿 PR 並繼續下一個動作。本輪補做實際 HTTP 合約測試與可重跑工具；略過 PR 不代表合併 main、正式部署、讀取正式玩家資料、備份、移轉或開啟功能已獲授權。

@@ -1,5 +1,8 @@
 # Phase 8－整合驗證及Step A正式發布前審查
 
+> 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
+
+
 > 後續修正：進場前攻擊（SEC-02）已加入前後端共用限制，671單元、46真實Firestore／候選Rules及8組瀏覽器流程驗證通過。原報告保留為歷史證據；SEC-01及完整舊版更新流程仍未解除。見 [進場限制報告](approach-guard-report.md) 與 [合併攻擊／更新設計](batched-combat-and-update-design.md)。
 
 > 最新相容性／戰鬥驗收：667單元、43真實Firestore／候選Rules與7組瀏覽器測試完成，但重現未受可信任命中驗證的批次可在怪物進場前獲勝，仍NO-GO。詳見 [相容性與安全報告](compatibility-security-report.md)，不得將測試程式綠燈視為安全驗收通過。

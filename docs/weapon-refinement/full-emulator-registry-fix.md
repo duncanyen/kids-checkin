@@ -1,5 +1,8 @@
 # Full Emulator：Storage → Firestore Registry 接線修正
 
+> 2026-11-29 最新：使用者已在修正版 `e7e4fd5`、Node 22.23.4 的 Cloud Shell 環境完成完整 Emulator 合約 **9/9 通過**，證據為回傳的終端摘要。先前下載／Registry 阻擋為歷史狀態；其餘正式驗收與授權不因此解除。詳見 [Cloud Shell 完整驗收](cloudshell-full-acceptance.md)。
+
+
 日期：2026-11-29（台灣時間）。修正前來源：`dc0f85a`。本輪僅修改隔離驗收 runner／測試，沒有修改遊戲、候選 Rules、正式開關或正式資料。
 
 ## 使用者 Cloud Shell 日誌與診斷更正
