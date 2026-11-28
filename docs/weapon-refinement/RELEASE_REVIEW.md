@@ -15,7 +15,7 @@
 
 ## 證據及限制
 
-- 最新709項單元測試通過；正式六項預設開關皆為false。
+- 最新710項單元測試通過；正式六項預設開關皆為false。
 - 真正Firestore57項／13檔suite的來源hash重新核對符合。本證據只涵蓋本機Firestore與candidate Rules，不是正式Rules或完整Auth／Storage／Functions E2E。
 - 前階段11組瀏覽器流程最終通過，另有獨立lab預檢；初跑失敗與時序紀錄一併保留於evidence，不把重跑通過說成從未失敗。
 - Windows憑證／iPhone／Safari／行動網路由使用者明確要求本輪略過，記DEFERRED_BY_USER，未轉為PASS。
@@ -31,3 +31,5 @@
 5. [發布順序](release-plan.md)、[回復方案](rollback-runbook.md)：僅規劃，Step B～F未授權。
 
 本分支推送不包含merge/main push、Firebase部署、索引發布、正式備份／移轉、旗標開放。使用者先前設定GitHub Pages由main/root發布，因此審查應留在此發布分支，避免main push影響正式玩家。
+
+本輪後續修正與最新證據：[原交易重試與安全更新審查](release-branch-followup-review.md)。

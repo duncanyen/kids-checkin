@@ -21,3 +21,26 @@ test('updater refuses a release that changes while its graph is downloaded',asyn
 test('runtime timeout retains a durable original ID; query unknown never invokes the old mutation',async()=>{const {createFarmSafetyRuntime}=await import('../js/farm/safety-runtime.js'),storage=memory(),session=memory(),headings=[],requests=[];let complete=false,workCalls=0;const runtime=createFarmSafetyRuntime({context,storage,session,events:new EventTarget(),locks:lockManager(),channelFactory:()=>({close(){}}),ui:{show:h=>headings.push(h),hide(){}},fetcher:async()=>({ok:true,text:async()=>"export const FARM_CLIENT_RELEASE='20261128-safety-v1';"}),page:{close(){}},request:async(action,payload)=>{requests.push({action,payload});return{result:{status:complete?'completed':'unknown'}};}});await assert.rejects(runtime.execute('buyWeapon',{item:'mace',quantity:1},'operation-one',async()=>{workCalls++;throw Object.assign(Error('lost reply'),{code:'ops/timeout'});}));assert.equal(runtime.journal.list()[0].id,'operation-one');assert.equal(await runtime.recover(),false);assert.equal(workCalls,1);assert.ok(requests.every(r=>r.action==='getFarmTransactionResult'));await assert.rejects(runtime.execute('buyWeapon',{item:'mace',quantity:1},'operation-two',async()=>workCalls++));complete=true;assert.equal(await runtime.recover(),true);assert.equal(runtime.journal.list().length,0);assert.ok(headings.includes('交易結果確認中'));runtime.coordinator.close();});
 
 test('runtime stops a storage failure before transport and presents a recoverable safety message',async()=>{const {createFarmSafetyRuntime}=await import('../js/farm/safety-runtime.js'),storage=memory(),session=memory(),headings=[];storage.setItem('nexus.farm.journal.v1:'+farmScope(context())+':operation-one','corrupt');let sent=0;const runtime=createFarmSafetyRuntime({context,storage,session,events:new EventTarget(),locks:lockManager(),channelFactory:()=>({close(){}}),ui:{show:h=>headings.push(h),hide(){}},fetcher:async()=>({ok:false}),page:{close(){}},request:async()=>{sent++;}});await assert.rejects(runtime.execute('buyWeapon',{item:'mace',quantity:1},'operation-one',async()=>sent++));assert.equal(sent,0);assert.ok(headings.includes('暫時無法確認遊戲狀態'));runtime.coordinator.close();});
+
+test('explicit original-ID retry routes update and stale-page rejections without losing the unresolved transaction',async()=>{
+ const {createFarmSafetyRuntime}=await import('../js/farm/safety-runtime.js');
+ for(const [code,message,title,blocked]of[
+  ['ops/update-required','請更新遊戲','遊戲需要更新','update'],
+  ['functions/failed-precondition','目前遊戲頁面已失效，請重新載入','此遊戲頁面已失效','stale'],
+ ]){
+  const storage=memory(),session=memory(),screens=[],sent=[];
+  const runtime=createFarmSafetyRuntime({context,storage,session,events:new EventTarget(),locks:lockManager(),channelFactory:()=>({close(){}}),ui:{show:(heading,text,buttons)=>screens.push({heading,buttons}),hide(){}},fetcher:async()=>({ok:false}),page:{close(){},async execute(action,payload,id){sent.push({action,payload,id});throw Object.assign(Error(message),{code});}},request:async()=>({result:{status:'unknown'}})});
+  try{
+   await assert.rejects(runtime.execute('buyWeapon',{item:'mace',quantity:1},'operation-one',async()=>{throw Object.assign(Error('lost reply'),{code:'ops/timeout'});}));
+   const retry=screens.at(-1).buttons.find(b=>b.label==='以原請求重試');
+   await assert.rejects(retry.run(),{code});
+   assert.equal(screens.at(-1).heading,title);
+   assert.equal(runtime.blocked,blocked);
+   assert.deepEqual(sent,[{action:'buyWeapon',payload:{item:'mace',quantity:1},id:'operation-one'}]);
+   assert.equal(runtime.journal.list()[0].id,'operation-one');
+   let newWrites=0;
+   await assert.rejects(runtime.execute('cleanOwn',{},'operation-two',async()=>newWrites++));
+   assert.equal(newWrites,0);
+  }finally{runtime.coordinator.close();}
+ }
+});

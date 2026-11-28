@@ -1,0 +1,111 @@
+{
+  "passed": true,
+  "realBrowser": true,
+  "actualSafetyModules": true,
+  "actualService": true,
+  "memoryDB": true,
+  "physicalIPhone": false,
+  "fullGame": false,
+  "cases": [
+    "same-scope second tab cannot begin/steal active page",
+    "explicit handoff pauses old page and recovers original committed purchase",
+    "uncommitted result remains unknown, explicit retry preserves ID",
+    "legacy session pointer imported and queried without new debit",
+    "protocol rejection opens blocking update dialog",
+    "offline update preserves identity and unresolved journal",
+    "module graph update preserves public art and pending original IDs",
+    "explicit original-ID retry routes backend upgrade rejection to update UI while retaining journal"
+  ],
+  "calls": [
+    {
+      "action": "beginBattlePage",
+      "id": "0bc16b7b-723f-4c84-91e2-895ef6c13072"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "475a108f-e1a6-4457-b3a6-537f6da16d89"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "bda92e43-56fe-4e94-bfb9-bce8ddfe1cee"
+    },
+    {
+      "action": "abandonBattlePage",
+      "id": "fafe43d9-8fb9-4afd-a94f-8aa04667c55a"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "e0805357-0257-42f8-ab84-ccfc790a5bc3"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "4668c64a-c612-4bb1-b4db-4839aa9d989a"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "020a14b8-48f6-423a-9d24-f4514c657512"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "ea7f9a39-1fb7-47ee-a1b3-12d87138a101"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "f443be04-71f1-4cda-adeb-b62fc711387c"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "ea7f9a39-1fb7-47ee-a1b3-12d87138a101"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "60fd3bff-c8d4-4832-a8ef-29dc2ef8ae86"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "58bb38f3-a5f6-4ac9-866f-19746e891b7b"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "b00c9443-55c0-4b33-a131-d2957d5b5e78"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "04f1412b-e6a0-4e87-af1d-dbac3dc4d589"
+    },
+    {
+      "action": "ensureWelcome",
+      "id": "234765e7-64e1-4130-a763-af5f6e6c18ad"
+    },
+    {
+      "action": "homeEncounter",
+      "id": "a5b82f77-55f0-4ab0-95f7-107ca292e456"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "386dca5f-b2d7-4b72-be23-ebd2cd45530b"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "ee985438-77e1-4fcf-92b3-251e28e669a6"
+    },
+    {
+      "action": "abandonBattlePage",
+      "id": "fb56c283-5fdb-4da9-8dad-12d994ffbebc"
+    },
+    {
+      "action": "getFarmTransactionResult",
+      "id": "7112b9f8-85f2-44eb-842b-60ce6b1180d0"
+    },
+    {
+      "action": "beginBattlePage",
+      "id": "11a6856d-a432-4716-99b5-b24176c03918"
+    },
+    {
+      "action": "buyWeapon",
+      "id": "offline-original-id"
+    }
+  ],
+  "deployed": false,
+  "productionData": false
+}
